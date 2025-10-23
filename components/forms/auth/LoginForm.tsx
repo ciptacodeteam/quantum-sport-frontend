@@ -161,12 +161,12 @@ const LoginForm = ({ onRegisterClick, openVerifyPhoneOtpModal, onLoginSuccess }:
   };
 
   return (
-    <form className="p-6 md:p-8 md:pb-4" onSubmit={form.handleSubmit(onSubmit)}>
+    <form className="p-0 md:p-8 md:pb-4" onSubmit={form.handleSubmit(onSubmit)}>
       <FieldSet>
         <FieldGroup>
           <header className="flex flex-col items-center gap-2 text-center">
-            <h1 className="text-2xl font-bold">Welcome back</h1>
-            <p className="text-muted-foreground text-balance">
+            <h1 className="text-lg font-bold md:text-2xl">Welcome back</h1>
+            <p className="text-muted-foreground text-sm text-balance md:text-base">
               Please login to your Quantum Sport account.
             </p>
           </header>

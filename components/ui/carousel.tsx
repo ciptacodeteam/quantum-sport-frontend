@@ -190,6 +190,45 @@ function CarouselPrevious({
   );
 }
 
+function CarouselDots({ className, ...props }: React.ComponentProps<'div'>) {
+  const { api } = useCarousel();
+  const [selectedIndex, setSelectedIndex] = React.useState(0);
+  const [scrollSnaps, setScrollSnaps] = React.useState<number[]>([]);
+
+  React.useEffect(() => {
+    if (!api) return;
+
+    const onSelect = () => {
+      setSelectedIndex(api.selectedScrollSnap());
+    };
+
+    setScrollSnaps(api.scrollSnapList());
+    api.on('select', onSelect);
+    onSelect();
+
+    return () => {
+      api.off('select', onSelect);
+    };
+  }, [api]);
+
+  return (
+    <div className={cn('flex gap-2', className)} data-slot="carousel-dots">
+      {scrollSnaps.map((_, index) => (
+        <button
+          key={index}
+          className={cn(
+            'bg-muted size-3 rounded-full transition-colors',
+            index === selectedIndex ? 'bg-primary' : 'hover:bg-accent'
+          )}
+          onClick={() => api?.scrollTo(index)}
+          aria-label={`Go to slide ${index + 1}`}
+          aria-pressed={index === selectedIndex}
+        />
+      ))}
+    </div>
+  );
+}
+
 function CarouselNext({
   className,
   variant = 'outline',
@@ -226,5 +265,6 @@ export {
   CarouselContent,
   CarouselItem,
   CarouselPrevious,
-  CarouselNext
+  CarouselNext,
+  CarouselDots
 };

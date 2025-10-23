@@ -166,7 +166,7 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
   }, [form, onSubmit]);
 
   return (
-    <form className="p-6 md:p-8" onSubmit={form.handleSubmit(onSubmit)}>
+    <form className="py-6 md:p-8" onSubmit={form.handleSubmit(onSubmit)}>
       <FieldSet>
         <FieldGroup>
           <Field>
@@ -201,7 +201,7 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
               <div className="mt-2">
                 <ResendOtpButton
                   onSendOtp={handleResendOtp}
-                  seconds={60}
+                  seconds={5}
                   persistKey="otp:login"
                   autoStart
                 />

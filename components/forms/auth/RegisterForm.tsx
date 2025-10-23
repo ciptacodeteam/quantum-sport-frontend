@@ -93,12 +93,12 @@ const RegisterForm = ({ onRegisterSuccess, onLoginClick }: Props) => {
   };
 
   return (
-    <form className="p-6 md:p-8 md:pb-4" onSubmit={form.handleSubmit(onSubmit)}>
+    <form className="p-0 md:p-8 md:pb-4" onSubmit={form.handleSubmit(onSubmit)}>
       <FieldSet>
         <FieldGroup>
           <header className="flex flex-col items-center gap-2 text-center">
-            <h1 className="text-2xl font-bold">Create your account</h1>
-            <p className="text-muted-foreground text-balance">
+            <h1 className="text-lg font-bold md:text-2xl">Create your account</h1>
+            <p className="text-muted-foreground text-sm text-balance md:text-base">
               Please register to start using Quantum Sport.
             </p>
           </header>
