@@ -8,6 +8,7 @@ import LoginForm from '../forms/auth/LoginForm';
 import RegisterForm from '../forms/auth/RegisterForm';
 import VerifyPhoneOtpForm from '../forms/auth/VerifyPhoneOtpForm';
 import { Button } from '../ui/button';
+import { useRegisterStore } from '@/stores/useRegisterStore';
 
 const LoginModalButton = () => {
   const searchParams = useSearchParams();
@@ -18,6 +19,10 @@ const LoginModalButton = () => {
   const [registerOpen, setRegisterOpen] = useState(false);
   const [type, setType] = useState<'login' | 'register'>('login');
 
+  const setPhone = usePhoneStore((state) => state.setPhone);
+  const setRequestId = usePhoneStore((state) => state.setRequestId);
+  const clearRegisterData = useRegisterStore((state) => state.clear);
+
   // Open login modal if requireLogin param is true
   // e.g. /?requireLogin=true
   useEffect(() => {
@@ -25,15 +30,6 @@ const LoginModalButton = () => {
       setLoginOpen(true);
     }
   }, [requireLogin]);
-
-  const setPhone = usePhoneStore((state) => state.setPhone);
-  const setRequestId = usePhoneStore((state) => state.setRequestId);
-
-  const handleAfterLogin = () => {
-    setType('login');
-    setOtpOpen(true);
-    setLoginOpen(false);
-  };
 
   const handleRegisterFromLogin = () => {
     setType('register');
@@ -60,6 +56,7 @@ const LoginModalButton = () => {
           if (!value) {
             setPhone(null);
             setRequestId(null);
+            clearRegisterData();
           }
         }}
       >
@@ -69,8 +66,13 @@ const LoginModalButton = () => {
         <DialogContent>
           <main>
             <LoginForm
-              onLoginSuccess={handleAfterLogin}
               onRegisterClick={handleRegisterFromLogin}
+              onLoginSuccess={() => {
+                setLoginOpen(false);
+                setPhone(null);
+                setRequestId(null);
+                clearRegisterData();
+              }}
             />
           </main>
         </DialogContent>
@@ -82,6 +84,7 @@ const LoginModalButton = () => {
           if (!value) {
             setPhone(null);
             setRequestId(null);
+            clearRegisterData();
           }
         }}
       >
@@ -101,12 +104,13 @@ const LoginModalButton = () => {
           if (!value) {
             setPhone(null);
             setRequestId(null);
+            clearRegisterData();
           }
         }}
       >
         <DialogContent>
           <main>
-            <VerifyPhoneOtpForm type={type} onVerifySuccess={handleAfterLogin} insideModal />
+            <VerifyPhoneOtpForm type={type} onVerifySuccess={() => {}} insideModal />
           </main>
         </DialogContent>
       </Dialog>

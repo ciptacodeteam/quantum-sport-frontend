@@ -1,7 +1,21 @@
-import { loginApi, logoutApi, registerApi, sendLoginOtpApi } from '@/api/auth';
+import { checkAccountApi, loginApi, logoutApi, registerApi, sendLoginOtpApi } from '@/api/auth';
+import { profileQueryOptions } from '@/queries/profile';
 import type { MutationFuncProps } from '@/types';
 import { mutationOptions } from '@tanstack/react-query';
 import { toast } from 'sonner';
+
+export const checkAccountMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
+  mutationOptions({
+    mutationFn: checkAccountApi,
+    onSuccess: (data) => {
+      onSuccess?.(data);
+    },
+    onError: (error) => {
+      console.error('Error:', error);
+      toast.error(error.msg || 'Failed to check account. Please try again.');
+      onError?.(error);
+    }
+  });
 
 export const sendLoginOtpMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
   mutationOptions({
@@ -16,11 +30,13 @@ export const sendLoginOtpMutationOptions = ({ onSuccess, onError }: MutationFunc
       onError?.(error);
     }
   });
-export const loginMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
+
+export const loginMutationOptions = ({ onSuccess, onError, queryClient }: MutationFuncProps = {}) =>
   mutationOptions({
     mutationFn: loginApi,
     onSuccess: (data) => {
       toast.success('Login successful!');
+      queryClient?.invalidateQueries({ queryKey: profileQueryOptions.queryKey });
       onSuccess?.(data);
     },
     onError: (error) => {

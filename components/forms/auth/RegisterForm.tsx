@@ -3,6 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { InputGroup, InputGroupText } from '@/components/ui/input-group';
 import { PasswordInput } from '@/components/ui/password-input';
 import { sendPhoneOtpMutationOptions } from '@/mutations/phone';
 import { usePhoneStore } from '@/stores/usePhoneStore';
@@ -38,10 +39,13 @@ type Props = {
 };
 
 const RegisterForm = ({ onRegisterSuccess, onLoginClick }: Props) => {
+  const phone = usePhoneStore((state) => state.phone);
+  console.log('RegisterForm phone:', phone);
+
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      phone: '',
+      phone: phone && phone.startsWith('+62') ? phone.replace(/^\+62/, '') : phone || '',
       name: '',
       password: '',
       confirmPassword: ''
@@ -101,18 +105,29 @@ const RegisterForm = ({ onRegisterSuccess, onLoginClick }: Props) => {
           </Field>
           <Field>
             <FieldLabel htmlFor="phone">Phone</FieldLabel>
-            <Input
-              id="phone"
-              type="tel"
-              {...form.register('phone')}
-              placeholder="e.g. +6281234567890"
-              onBeforeInput={(e) => {
-                const char = e.data;
-                if (char && !/[\d\s]/.test(char)) {
-                  e.preventDefault();
-                }
-              }}
-            />
+            <InputGroup>
+              <InputGroupText className="px-3">+62</InputGroupText>
+              <Input
+                id="phone"
+                type="tel"
+                {...form.register('phone')}
+                placeholder="e.g. 81234567890"
+                onBlur={(e) => {
+                  const val = e.target.value ?? '';
+                  if (val.startsWith('0')) {
+                    const newVal = val.replace(/^0/, '');
+                    e.currentTarget.value = newVal;
+                    form.setValue('phone', newVal, { shouldDirty: true, shouldTouch: true });
+                  }
+                }}
+                onBeforeInput={(e) => {
+                  const char = e.data;
+                  if (char && !/[\d\s]/.test(char)) {
+                    e.preventDefault();
+                  }
+                }}
+              />
+            </InputGroup>
             <FieldError>{form.formState.errors.phone?.message}</FieldError>
           </Field>
           <Field>

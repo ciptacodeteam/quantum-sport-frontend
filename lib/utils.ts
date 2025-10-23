@@ -35,31 +35,27 @@ export function formatNumber(value: number, locale = 'id-ID'): string {
   return new Intl.NumberFormat(locale).format(value);
 }
 
-export function formatPhone(phone: string | null) {
+export function formatPhone(phone: string | null): string {
   if (!phone) return '';
 
   // Remove spaces, dashes, and parentheses
   const cleaned = phone.replace(/[\s\-()]/g, '');
 
-  // Handle numbers starting with '+62'
+  // Normalize Indonesian phone numbers to international format (+62)
   if (cleaned.startsWith('+62')) {
     return cleaned;
   }
-
-  // Handle numbers starting with '62'
   if (cleaned.startsWith('62')) {
     return `+${cleaned}`;
   }
-
-  // Handle numbers starting with '08'
   if (cleaned.startsWith('08')) {
+    // Replace leading '08' with '+628'
     return `+62${cleaned.slice(1)}`;
   }
-
-  // Default: just add '+'
-  if (!cleaned.startsWith('+')) {
-    return `+${cleaned}`;
+  if (cleaned.startsWith('8')) {
+    // Add '+62' prefix for numbers starting with '8'
+    return `+62${cleaned}`;
   }
-
-  return cleaned;
+  // Ensure the number starts with '+'
+  return cleaned.startsWith('+') ? cleaned : `+${cleaned}`;
 }

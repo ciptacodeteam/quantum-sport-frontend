@@ -1,5 +1,10 @@
 import { api } from '@/lib/api';
 
+export async function checkAccountApi(payload) {
+  const { data } = await api.post('/auth/check-account', payload);
+  return data;
+}
+
 export async function loginApi(payload) {
   const { data } = await api.post('/auth/login', payload);
   return data;
