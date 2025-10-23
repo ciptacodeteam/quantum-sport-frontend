@@ -2,6 +2,7 @@ import AppProvider from '@/providers/AppProvider';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import '@/styles/globals.css';
+import { cn } from '@/lib/utils';
 
 const inter = Inter({
   variable: '--font-inter',
@@ -20,7 +21,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id">
-      <body className={`${inter.variable} antialiased`}>
+      <body className={cn('antialiased', inter.variable)}>
         <AppProvider>{children}</AppProvider>
       </body>
     </html>
