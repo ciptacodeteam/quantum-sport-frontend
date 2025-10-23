@@ -1,13 +1,13 @@
 'use client';
 
-import { PropsWithChildren } from 'react';
-import ReactQueryProvider from './ReactQueryProvider';
 import { Toaster } from '@/components/ui/sonner';
+import type { PropsWithChildren } from 'react';
+import ReactQueryProvider from './ReactQueryProvider';
 
 import dayjs from 'dayjs';
 import localeId from 'dayjs/locale/id';
-import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);

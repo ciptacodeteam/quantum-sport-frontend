@@ -1,27 +1,27 @@
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
-import { FlatCompat } from '@eslint/eslintrc';
-import tseslint from 'typescript-eslint';
+import { defineConfig, globalIgnores } from 'eslint/config';
+import nextVitals from 'eslint-config-next/core-web-vitals';
+import tsLint from '@typescript-eslint/eslint-plugin';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname
-});
-
-export default tseslint.config(
+export default defineConfig([
+  ...nextVitals,
+  // Override default ignores of eslint-config-next.
+  globalIgnores([
+    // Default ignores of eslint-config-next:
+    '.next/**',
+    'out/**',
+    'build/**',
+    'next-env.d.ts'
+  ]),
   {
-    ignores: ['.next']
-  },
-  ...compat.extends('next/core-web-vitals'),
-  {
+    plugins: {
+      '@typescript-eslint': tsLint
+    },
     files: ['**/*.ts', '**/*.tsx'],
-    extends: [
-      ...tseslint.configs.recommended,
-      ...tseslint.configs.recommendedTypeChecked,
-      ...tseslint.configs.stylisticTypeChecked
-    ],
+    languageOptions: {
+      parserOptions: {
+        projectService: true
+      }
+    },
     rules: {
       '@typescript-eslint/array-type': 'off',
       '@typescript-eslint/consistent-type-definitions': 'off',
@@ -48,11 +48,6 @@ export default tseslint.config(
   {
     linterOptions: {
       reportUnusedDisableDirectives: true
-    },
-    languageOptions: {
-      parserOptions: {
-        projectService: true
-      }
     }
   }
-);
+]);
