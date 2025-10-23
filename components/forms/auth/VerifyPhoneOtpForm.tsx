@@ -12,7 +12,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
 import { Phone } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { Activity, useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { Controller, type SubmitHandler, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import z from 'zod';
@@ -55,6 +55,8 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type, insideModal }: Props) => {
         onVerifySuccess?.();
       },
       onError: (err) => {
+        closeModalRef.current?.click();
+        console.log('ref', closeModalRef.current);
         if (err.errors) {
           const fieldErrors = err.errors as z.ZodFlattenedError<FormSchema>;
           Object.entries(fieldErrors).forEach(([fieldName, error]) => {
@@ -145,11 +147,7 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type, insideModal }: Props) => {
 
   return (
     <form className="p-6 md:p-8" onSubmit={form.handleSubmit(onSubmit)}>
-      {insideModal && (
-        <Activity mode="hidden">
-          <DialogClose ref={closeModalRef} />
-        </Activity>
-      )}
+      {insideModal && <DialogClose ref={closeModalRef} className="invisible" />}
       <FieldSet>
         <FieldGroup>
           <Field>
