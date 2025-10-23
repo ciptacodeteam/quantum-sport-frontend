@@ -15,6 +15,11 @@ export async function logoutApi() {
   return data;
 }
 
+export async function refreshTokenApi() {
+  const { data } = await adminApi.post('/auth/refresh-token');
+  return data;
+}
+
 export async function getProfileApi() {
   const { data } = await adminApi.get('/auth/profile');
   return data;

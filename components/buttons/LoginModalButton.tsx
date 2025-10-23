@@ -10,8 +10,12 @@ import RegisterForm from '../forms/auth/RegisterForm';
 import ResetPasswordForm from '../forms/auth/ResetPasswordForm';
 import VerifyPhoneOtpForm from '../forms/auth/VerifyPhoneOtpForm';
 import { Button } from '../ui/button';
+import useAuthStore from '@/stores/useAuthStore';
+import LogoutButton from './LogoutButton';
 
 const LoginModalButton = () => {
+  const isAuthenticated = useAuthStore((state) => state.isAuth);
+
   const searchParams = useSearchParams();
   const requireLogin = searchParams.get('requireLogin');
 
@@ -54,6 +58,10 @@ const LoginModalButton = () => {
     setLoginOpen(false);
     setOtpOpen(true);
   };
+
+  if (isAuthenticated) {
+    return <LogoutButton />;
+  }
 
   return (
     <>

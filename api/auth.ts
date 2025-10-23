@@ -20,6 +20,11 @@ export async function registerApi(payload) {
   return data;
 }
 
+export async function refreshTokenApi() {
+  const { data } = await api.post('/auth/refresh-token');
+  return data;
+}
+
 export async function logoutApi() {
   const { data } = await api.post('/auth/logout');
   return data;

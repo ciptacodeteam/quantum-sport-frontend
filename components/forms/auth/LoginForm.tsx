@@ -11,6 +11,7 @@ import {
   forgotPasswordMutationOptions,
   loginMutationOptions
 } from '@/mutations/auth';
+import useAuthStore from '@/stores/useAuthStore';
 import { usePhoneStore } from '@/stores/usePhoneStore';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { IconRefresh } from '@tabler/icons-react';
@@ -102,11 +103,20 @@ const LoginForm = ({ onRegisterClick, openVerifyPhoneOtpModal, onLoginSuccess }:
   );
 
   const queryClient = useQueryClient();
+  const setToken = useAuthStore((state) => state.setToken);
 
   const { mutate: login, isPending: isLoginPending } = useMutation(
     loginMutationOptions({
       queryClient: queryClient,
-      onSuccess: () => {
+      onSuccess: (res) => {
+        const token = res?.data?.token;
+
+        if (!token) {
+          toast.error('Login failed: No token received.');
+          return;
+        }
+
+        setToken(token);
         form.reset();
         router.refresh();
         onLoginSuccess?.();

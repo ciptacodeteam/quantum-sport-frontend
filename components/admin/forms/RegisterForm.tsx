@@ -5,10 +5,12 @@ import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from '@/component
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
 import { adminRegisterMutationOptions } from '@/mutations/admin/auth';
+import useAuthStore from '@/stores/useAuthStore';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { type SubmitHandler, useForm } from 'react-hook-form';
+import { toast } from 'sonner';
 import z from 'zod';
 
 const formSchema = z.object({
@@ -32,11 +34,21 @@ const RegisterForm = () => {
   });
 
   const router = useRouter();
+  const setToken = useAuthStore((state) => state.setToken);
 
   const { mutate, isPending } = useMutation(
     adminRegisterMutationOptions({
-      onSuccess: () => {
-        router.refresh();
+      onSuccess: (res) => {
+        const token = res?.data?.token;
+
+        if (!token) {
+          toast.error('Login failed: No token received.');
+          return;
+        }
+
+        setToken(token);
+        form.reset();
+        router.push('/admin/dashboard');
       },
       onError: (err) => {
         if (err.errors) {

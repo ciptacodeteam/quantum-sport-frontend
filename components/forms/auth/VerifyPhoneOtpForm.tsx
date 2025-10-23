@@ -7,6 +7,7 @@ import { formatPhone } from '@/lib/utils';
 import { registerMutationOptions, verifyPhoneOtpMutationOptions } from '@/mutations/auth';
 import { sendPhoneOtpMutationOptions } from '@/mutations/phone';
 import { profileQueryOptions } from '@/queries/profile';
+import useAuthStore from '@/stores/useAuthStore';
 import { usePhoneStore } from '@/stores/usePhoneStore';
 import { useRegisterStore } from '@/stores/useRegisterStore';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -48,12 +49,21 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
   const router = useRouter();
 
   const queryClient = useQueryClient();
+  const setToken = useAuthStore((state) => state.setToken);
 
   const clearRegisterData = useRegisterStore((state) => state.clear);
 
   const { mutate: mutateRegister, isPending: isRegisterPending } = useMutation(
     registerMutationOptions({
-      onSuccess: () => {
+      onSuccess: (res) => {
+        const token = res?.data?.token;
+
+        if (!token) {
+          toast.error('Login failed: No token received.');
+          return;
+        }
+
+        setToken(token);
         router.push('/');
         clearRegisterData();
         queryClient.invalidateQueries({ queryKey: profileQueryOptions.queryKey });

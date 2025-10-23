@@ -1,4 +1,5 @@
 import { clsx, type ClassValue } from 'clsx';
+import { jwtDecode } from 'jwt-decode';
 import { twMerge } from 'tailwind-merge';
 
 export function cn(...inputs: ClassValue[]) {
@@ -58,4 +59,18 @@ export function formatPhone(phone: string | null): string {
   }
   // Ensure the number starts with '+'
   return cleaned.startsWith('+') ? cleaned : `+${cleaned}`;
+}
+
+export async function isJwtAndDecode(token: string): Promise<{ isJwt: boolean; decoded: any }> {
+  if (!token || typeof token !== 'string') {
+    return { isJwt: false, decoded: null };
+  }
+  try {
+    const decodedToken = jwtDecode(token);
+    // You can add further checks here if needed, e.g., for specific claims
+    return { isJwt: true, decoded: decodedToken };
+  } catch {
+    // This likely means it's not a valid JWT format
+    return { isJwt: false, decoded: null };
+  }
 }

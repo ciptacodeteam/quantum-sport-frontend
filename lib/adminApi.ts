@@ -1,68 +1,164 @@
+import { refreshTokenApi } from '@/api/auth';
 import { env } from '@/env';
-import axios, { type AxiosError, type AxiosRequestConfig } from 'axios';
+import useAuthStore from '@/stores/useAuthStore';
+import axios, { type AxiosError, HttpStatusCode, type InternalAxiosRequestConfig } from 'axios';
+import { isJwtAndDecode } from './utils';
 
 export const adminApi = axios.create({
-  baseURL: env.NEXT_PUBLIC_API_URL + '/admin',
+  baseURL: `${env.NEXT_PUBLIC_API_URL}/admin`,
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' }
 });
 
-let isRefreshing = false;
-let waiters: Array<() => void> = [];
+type RetryableConfig = InternalAxiosRequestConfig & { _retry?: boolean };
 
-// Helper: is this call an auth route? Never refresh-loop on these.
-function isAuthRoute(config?: AxiosRequestConfig) {
-  const url = (config?.url || '').toLowerCase();
-  return url.includes('/auth/login') || url.includes('/auth/refresh');
-}
+// ---------- Runtime guards ----------
+const isBrowser = typeof window !== 'undefined';
 
-async function runRefresh() {
-  // Use your Next route *proxy* so Set-Cookie reaches the browser
-  const r = await fetch('/api/auth/refresh-admin', { method: 'POST', cache: 'no-store' });
-  if (!r.ok) throw new Error('refresh-failed');
+// ---------- Local storage helpers (SSR-safe) ----------
+const storage = {
+  get(key: string) {
+    if (!isBrowser) return null;
+    try {
+      return window.localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  },
+  set(key: string, val: string) {
+    if (!isBrowser) return;
+    try {
+      window.localStorage.setItem(key, val);
+    } catch {
+      // Ignore errors
+    }
+  },
+  remove(key: string) {
+    if (!isBrowser) return;
+    try {
+      window.localStorage.removeItem(key);
+    } catch {
+      // Ignore errors
+    }
+  }
+};
+
+adminApi.interceptors.request.use(
+  async (config: RetryableConfig) => {
+    config.headers = config.headers ?? {};
+
+    // Auth header
+    const token = storage.get('token');
+    if (token) {
+      const { isJwt } = await isJwtAndDecode(token);
+      (config.headers as Record<string, string>).Authorization =
+        isJwt && !config._retry ? `Bearer ${token}` : token;
+    }
+
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// ---------- Single-flight refresh (Zustand-aware) ----------
+let refreshPromise: Promise<string | null> | null = null;
+
+async function refreshAccessToken(): Promise<string | null> {
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    const rt = storage.get('refreshToken');
+    if (!rt) return null;
+
+    try {
+      const res = await refreshTokenApi();
+      const newToken = res?.data?.token ?? null;
+
+      if (newToken) {
+        storage.set('token', newToken);
+        return newToken;
+      }
+
+      // Bad payload -> clear
+      storage.remove('token');
+      return null;
+    } catch {
+      // Refresh failed -> clear
+      storage.remove('token');
+      return null;
+    } finally {
+      // allow next attempts
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
 }
 
 adminApi.interceptors.response.use(
-  (res) => res,
-  async (err: AxiosError) => {
-    const cfg = err.config as AxiosRequestConfig | undefined;
-
-    // If no response or not 401 -> bubble
-    if (err.response?.status !== 401 || !cfg) throw err;
-
-    // Do NOT try to refresh for auth endpoints or when explicitly disabled
-    if (cfg.skipAuthRefresh || isAuthRoute(cfg)) throw err;
-
-    // Prevent infinite loop: only retry a given request once
-    if (cfg._retry) {
-      // optional: force logout/redirect here
-      // window.location.href = '/admin/auth/login'
-      throw err;
+  (response) => response,
+  async (error: AxiosError<any>) => {
+    if (!error.response) {
+      // Network/CORS
+      return Promise.reject(error);
     }
-    cfg._retry = true;
 
-    // Coalesce concurrent 401s behind a single refresh call
-    if (!isRefreshing) {
-      isRefreshing = true;
-      try {
-        await runRefresh();
-        // wake everyone waiting
-        waiters.forEach((w) => w());
-        waiters = [];
-      } catch (e) {
-        // wake with failure → their retry will throw because refresh didn't fix it
-        waiters.forEach((w) => w());
-        waiters = [];
-        throw e;
-      } finally {
-        isRefreshing = false;
+    const { status } = error.response;
+    const originalRequest = error.config as RetryableConfig;
+    const isAuthError = status === HttpStatusCode.Unauthorized;
+    const isRefreshEndpoint = (originalRequest?.url || '').includes('/auth/refresh-token');
+
+    let newResponse = error.response?.data || error.message;
+
+    if (error?.code === 'ERR_NETWORK') {
+      newResponse = {
+        ...error.response?.data,
+        message: 'Maaf, terjadi kesalahan jaringan. Silakan coba lagi nanti.'
+      };
+    }
+
+    if (isAuthError && !isRefreshEndpoint && !originalRequest?._retry) {
+      const newToken = await refreshAccessToken();
+
+      if (newToken) {
+        originalRequest._retry = true;
+        originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
+        return adminApi(originalRequest);
       }
-    } else {
-      // Wait until the in-flight refresh finishes
-      await new Promise<void>((resolve) => waiters.push(resolve));
+
+      // Refresh unavailable/failed -> sign out & redirect
+      storage.remove('token');
+      useAuthStore.getState().logout();
+      useAuthStore.getState().setLoading(false);
+
+      if (isBrowser && originalRequest?.url !== '/admin/auth/login') {
+        window.location.href = '/admin/auth/login';
+      }
+    } else if (isAuthError) {
+      // Explicit 401 with no refresh path
+      storage.remove('token');
+      useAuthStore.getState().logout();
+      useAuthStore.getState().setLoading(false);
+
+      if (isBrowser && originalRequest?.url !== '/admin/auth/login') {
+        window.location.href = '/admin/auth/login';
+      }
     }
 
-    // Retry the original request once (cookies should be updated now)
-    return adminApi(cfg);
+    if (error.response?.status == HttpStatusCode.Forbidden) {
+      newResponse = {
+        ...error.response?.data,
+        message: 'Maaf, Anda tidak memiliki izin untuk mengakses sumber daya ini.'
+      };
+    }
+
+    if (error.response?.status == HttpStatusCode.InternalServerError) {
+      newResponse = {
+        ...error.response?.data,
+        message: 'Maaf, terjadi kesalahan pada server. Silakan coba lagi nanti.'
+      };
+    }
+
+    return Promise.reject(newResponse);
   }
 );

@@ -6,11 +6,13 @@ import { Input } from '@/components/ui/input';
 import { SUPPORT_CIPTACODE_PHONE_NUMBER } from '@/lib/constants';
 import { getWhatsappMessageUrl } from '@/lib/utils';
 import { adminLoginMutationOptions } from '@/mutations/admin/auth';
+import useAuthStore from '@/stores/useAuthStore';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { type SubmitHandler, useForm } from 'react-hook-form';
+import { toast } from 'sonner';
 import z from 'zod';
 
 const formSchema = z.object({
@@ -30,10 +32,20 @@ const LoginForm = () => {
   });
 
   const router = useRouter();
+  const setToken = useAuthStore((state) => state.setToken);
 
   const { mutate, isPending } = useMutation(
     adminLoginMutationOptions({
-      onSuccess: () => {
+      onSuccess: (res) => {
+        const token = res?.data?.token;
+
+        if (!token) {
+          toast.error('Login failed: No token received.');
+          return;
+        }
+
+        setToken(token);
+        form.reset();
         router.push('/admin/dashboard');
       },
       onError: (err) => {
