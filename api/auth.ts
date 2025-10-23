@@ -5,6 +5,16 @@ export async function loginApi(payload) {
   return data;
 }
 
+export async function sendLoginOtpApi(payload) {
+  const { data } = await api.post('/auth/send-login-otp', payload);
+  return data;
+}
+
+export async function registerApi(payload) {
+  const { data } = await api.post('/auth/register', payload);
+  return data;
+}
+
 export async function logoutApi() {
   const { data } = await api.post('/auth/logout');
   return data;

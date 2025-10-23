@@ -42,7 +42,8 @@ export default defineConfig([
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unsafe-return': 'off',
       '@typescript-eslint/ban-ts-comment': 'off',
-      '@typescript-eslint/no-floating-promises': 'off'
+      '@typescript-eslint/no-floating-promises': 'off',
+      'react-hooks/set-state-in-effect': 'off'
     }
   },
   {

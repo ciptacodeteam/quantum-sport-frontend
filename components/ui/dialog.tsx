@@ -67,6 +67,7 @@ function DialogContent({
             <span className="sr-only">Close</span>
           </DialogPrimitive.Close>
         )}
+        <DialogTitle className="hidden" />
       </DialogPrimitive.Content>
     </DialogPortal>
   );
