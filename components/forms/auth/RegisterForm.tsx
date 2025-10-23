@@ -5,6 +5,7 @@ import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from '@/component
 import { Input } from '@/components/ui/input';
 import { InputGroup, InputGroupText } from '@/components/ui/input-group';
 import { PasswordInput } from '@/components/ui/password-input';
+import { formatPhone } from '@/lib/utils';
 import { sendPhoneOtpMutationOptions } from '@/mutations/phone';
 import { usePhoneStore } from '@/stores/usePhoneStore';
 import { useRegisterStore } from '@/stores/useRegisterStore';
@@ -78,12 +79,16 @@ const RegisterForm = ({ onRegisterSuccess, onLoginClick }: Props) => {
   );
 
   const onSubmit: SubmitHandler<FormSchema> = (formData) => {
-    setPhone(formData.phone);
-    mutate(formData);
+    const formatedPhone = formatPhone(formData.phone);
+    setPhone(formatedPhone);
     setRegisterData({
       name: formData.name,
-      phone: formData.phone,
+      phone: formatedPhone,
       password: formData.password
+    });
+    mutate({
+      ...formData,
+      phone: formatedPhone
     });
   };
 

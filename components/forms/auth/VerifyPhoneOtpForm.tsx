@@ -126,16 +126,18 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
         return;
       }
 
+      const formatedPhone = formatPhone(data.phone);
+
       if (type === 'register') {
         mutateRegister({
           ...registerData,
-          phone: data.phone,
+          phone: formatedPhone,
           code: data.otp,
           requestId: data.requestId
         });
       } else {
         mutate({
-          phone: data.phone,
+          phone: formatedPhone,
           code: data.otp,
           requestId: data.requestId
         });
@@ -150,7 +152,7 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
       return;
     }
 
-    resendOtp({ phone: phone });
+    resendOtp({ phone: formatPhone(phone) });
   };
 
   useEffect(() => {
