@@ -3,6 +3,14 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@utility flex-center {
+  @apply flex items-center justify-center;
+}
+
+@utility flex-between {
+  @apply flex items-center justify-between;
+}
+
 @theme inline {
   --font-inter: var(--font-inter);
   --default-font-family:
