@@ -1,9 +1,9 @@
-import CarouselSection from '@/section/beranda/CarouselSection';
+import BannerSection from '@/components/section/home/BannerSection';
 
-export default function Home() {
+export default function HomePage() {
   return (
     <>
-      <CarouselSection />
+      <BannerSection />
     </>
   );
 }
