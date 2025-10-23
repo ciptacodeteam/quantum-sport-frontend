@@ -2,17 +2,29 @@
 
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { usePhoneStore } from '@/stores/usePhoneStore';
-import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import LoginForm from '../forms/auth/LoginForm';
+import RegisterForm from '../forms/auth/RegisterForm';
 import VerifyPhoneOtpForm from '../forms/auth/VerifyPhoneOtpForm';
 import { Button } from '../ui/button';
-import RegisterForm from '../forms/auth/RegisterForm';
 
 const LoginModalButton = () => {
+  const searchParams = useSearchParams();
+  const requireLogin = searchParams.get('requireLogin');
+
   const [loginOpen, setLoginOpen] = useState(false);
   const [otpOpen, setOtpOpen] = useState(false);
   const [registerOpen, setRegisterOpen] = useState(false);
   const [type, setType] = useState<'login' | 'register'>('login');
+
+  // Open login modal if requireLogin param is true
+  // e.g. /?requireLogin=true
+  useEffect(() => {
+    if (requireLogin === 'true') {
+      setLoginOpen(true);
+    }
+  }, [requireLogin]);
 
   const setPhone = usePhoneStore((state) => state.setPhone);
   const setRequestId = usePhoneStore((state) => state.setRequestId);
