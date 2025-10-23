@@ -7,31 +7,31 @@ export const api = axios.create({
   headers: { 'Content-Type': 'application/json' }
 });
 
-let isRefreshing = false;
-let waiters: Array<() => void> = [];
+// let isRefreshing = false;
+// let waiters: Array<() => void> = [];
 
-async function handleRequestError(err: AxiosError) {
-  if (err.response?.status !== 401) throw err;
+// async function handleRequestError(err: AxiosError) {
+//   if (err.response?.status !== 401) throw err;
 
-  if (!isRefreshing) {
-    isRefreshing = true;
-    try {
-      // Proxy that forwards Set-Cookie from backend refresh to browser
-      await fetch('/auth/refresh', { method: 'POST', cache: 'no-store' });
-      waiters.forEach((w) => w());
-      waiters = [];
-      return api(err.config!);
-    } catch (e) {
-      waiters = [];
-      throw e;
-    } finally {
-      isRefreshing = false;
-    }
-  }
+//   if (!isRefreshing) {
+//     isRefreshing = true;
+//     try {
+//       // Proxy that forwards Set-Cookie from backend refresh to browser
+//       await fetch('/auth/refresh', { method: 'POST', cache: 'no-store' });
+//       waiters.forEach((w) => w());
+//       waiters = [];
+//       return api(err.config!);
+//     } catch (e) {
+//       waiters = [];
+//       throw e;
+//     } finally {
+//       isRefreshing = false;
+//     }
+//   }
 
-  await new Promise<void>((resolve) => waiters.push(resolve));
-  return api(err.config!);
-}
+//   await new Promise<void>((resolve) => waiters.push(resolve));
+//   return api(err.config!);
+// }
 
 async function handleResponseError(error: AxiosError<any>) {
   if (!error.response) {
@@ -77,6 +77,6 @@ async function handleResponseError(error: AxiosError<any>) {
   return Promise.reject(newResponse);
 }
 
-api.interceptors.response.use((r) => r, handleRequestError);
+// api.interceptors.response.use((r) => r, handleRequestError);
 
 api.interceptors.response.use((response) => response, handleResponseError);

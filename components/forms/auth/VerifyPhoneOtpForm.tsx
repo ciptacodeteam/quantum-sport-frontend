@@ -6,10 +6,11 @@ import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from '@/component
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { formatPhone } from '@/lib/utils';
 import { loginMutationOptions, registerMutationOptions } from '@/mutations/auth';
+import { profileQueryOptions } from '@/queries/profile';
 import { usePhoneStore } from '@/stores/usePhoneStore';
 import { useRegisterStore } from '@/stores/useRegisterStore';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Phone } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef } from 'react';
@@ -47,16 +48,18 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type, insideModal }: Props) => {
   const closeModalRef = useRef<HTMLButtonElement | null>(null);
   const router = useRouter();
 
+  const queryClient = useQueryClient();
+
   const { mutate: mutateLogin, isPending: isLoginPending } = useMutation(
     loginMutationOptions({
       onSuccess: () => {
         router.push('/');
         closeModalRef.current?.click();
+        queryClient.invalidateQueries({ queryKey: profileQueryOptions.queryKey });
         onVerifySuccess?.();
       },
       onError: (err) => {
         closeModalRef.current?.click();
-        console.log('ref', closeModalRef.current);
         if (err.errors) {
           const fieldErrors = err.errors as z.ZodFlattenedError<FormSchema>;
           Object.entries(fieldErrors).forEach(([fieldName, error]) => {
@@ -78,6 +81,7 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type, insideModal }: Props) => {
         router.push('/');
         clearRegisterData();
         closeModalRef.current?.click();
+        queryClient.invalidateQueries({ queryKey: profileQueryOptions.queryKey });
         onVerifySuccess?.();
       },
       onError: (err) => {
