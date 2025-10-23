@@ -1,8 +1,10 @@
 'use client';
 
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { profileQueryOptions } from '@/queries/profile';
 import { usePhoneStore } from '@/stores/usePhoneStore';
 import { useRegisterStore } from '@/stores/useRegisterStore';
+import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import LoginForm from '../forms/auth/LoginForm';
@@ -10,11 +12,8 @@ import RegisterForm from '../forms/auth/RegisterForm';
 import ResetPasswordForm from '../forms/auth/ResetPasswordForm';
 import VerifyPhoneOtpForm from '../forms/auth/VerifyPhoneOtpForm';
 import { Button } from '../ui/button';
-import useAuthStore from '@/stores/useAuthStore';
-import LogoutButton from './LogoutButton';
-import { useQuery } from '@tanstack/react-query';
-import { profileQueryOptions } from '@/queries/profile';
 import { Skeleton } from '../ui/skeleton';
+import LogoutButton from './LogoutButton';
 
 const LoginModalButton = () => {
   const { data: user, isPending: isUserPending } = useQuery(profileQueryOptions);
