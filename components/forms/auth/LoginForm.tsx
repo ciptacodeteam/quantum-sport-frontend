@@ -6,7 +6,11 @@ import { Input } from '@/components/ui/input';
 import { InputGroup, InputGroupButton, InputGroupText } from '@/components/ui/input-group';
 import { PasswordInput } from '@/components/ui/password-input';
 import { formatPhone } from '@/lib/utils';
-import { checkAccountMutationOptions, loginMutationOptions } from '@/mutations/auth';
+import {
+  checkAccountMutationOptions,
+  forgotPasswordMutationOptions,
+  loginMutationOptions
+} from '@/mutations/auth';
 import { usePhoneStore } from '@/stores/usePhoneStore';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { IconRefresh } from '@tabler/icons-react';
@@ -14,6 +18,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { type SubmitHandler, useForm } from 'react-hook-form';
+import { toast } from 'sonner';
 import z from 'zod';
 
 const formSchema = z.object({
@@ -25,10 +30,11 @@ type FormSchema = z.infer<typeof formSchema>;
 
 type Props = {
   onRegisterClick?: () => void;
+  openVerifyPhoneOtpModal?: () => void;
   onLoginSuccess?: () => void;
 };
 
-const LoginForm = ({ onRegisterClick, onLoginSuccess }: Props) => {
+const LoginForm = ({ onRegisterClick, openVerifyPhoneOtpModal, onLoginSuccess }: Props) => {
   const router = useRouter();
 
   const form = useForm({
@@ -40,6 +46,7 @@ const LoginForm = ({ onRegisterClick, onLoginSuccess }: Props) => {
   });
 
   const [isAccountExists, setIsAccountExists] = useState(false);
+  const setRequestId = usePhoneStore((state) => state.setRequestId);
   const setPhone = usePhoneStore((state) => state.setPhone);
 
   const { mutate: checkAccount, isPending: isCheckAccountPending } = useMutation(
@@ -52,6 +59,32 @@ const LoginForm = ({ onRegisterClick, onLoginSuccess }: Props) => {
         } else {
           setPhone(res?.data?.phone || '');
           onRegisterClick?.();
+        }
+      },
+      onError: (err) => {
+        if (err.errors) {
+          const fieldErrors = err.errors as z.ZodFlattenedError<FormSchema>;
+          Object.entries(fieldErrors).forEach(([fieldName, error]) => {
+            form.setError(fieldName as keyof FormSchema, {
+              type: 'server',
+              message: Array.isArray(error) ? error.join(', ') : String(error)
+            });
+          });
+        }
+      }
+    })
+  );
+
+  const { mutate: forgotPassword, isPending: isForgotPasswordPending } = useMutation(
+    forgotPasswordMutationOptions({
+      onSuccess: (res) => {
+        const requestId = res?.data?.requestId;
+
+        if (requestId) {
+          setRequestId(requestId);
+          openVerifyPhoneOtpModal?.();
+        } else {
+          toast.error('Failed to get Request ID. Please try again later.');
         }
       },
       onError: (err) => {
@@ -114,6 +147,19 @@ const LoginForm = ({ onRegisterClick, onLoginSuccess }: Props) => {
     }
   };
 
+  const handleForgotPassword = () => {
+    if (!form.getValues('phone')) {
+      form.setError('phone', {
+        message: 'Phone number is required to reset password',
+        type: 'manual'
+      });
+      return;
+    }
+
+    const phone = formatPhone(form.getValues('phone'));
+    forgotPassword({ phone });
+  };
+
   return (
     <form className="p-6 md:p-8 md:pb-4" onSubmit={form.handleSubmit(onSubmit)}>
       <FieldSet>
@@ -159,7 +205,19 @@ const LoginForm = ({ onRegisterClick, onLoginSuccess }: Props) => {
           </Field>
           {isAccountExists && (
             <Field>
-              <FieldLabel htmlFor="password">Password</FieldLabel>
+              <div className="flex items-center">
+                <FieldLabel htmlFor="password">Password</FieldLabel>
+                <button
+                  onClick={handleForgotPassword}
+                  disabled={isForgotPasswordPending}
+                  type="button"
+                  className="ml-auto inline-block"
+                >
+                  <span className="cursor-pointer text-sm underline-offset-4 hover:underline">
+                    {isForgotPasswordPending ? 'Processing...' : 'Forgot Password?'}
+                  </span>
+                </button>
+              </div>
               <PasswordInput
                 id="password"
                 {...form.register('password')}
@@ -169,7 +227,10 @@ const LoginForm = ({ onRegisterClick, onLoginSuccess }: Props) => {
             </Field>
           )}
           <Field className="mt-2">
-            <Button type="submit" loading={isCheckAccountPending || isLoginPending}>
+            <Button
+              type="submit"
+              loading={isCheckAccountPending || isLoginPending || isForgotPasswordPending}
+            >
               {isAccountExists ? 'Login' : 'Continue'}
             </Button>
           </Field>

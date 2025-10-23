@@ -1,11 +1,11 @@
 'use client';
 
 import { ResendOtpButton } from '@/components/buttons/ResendOtpButton';
-import { DialogClose } from '@/components/ui/dialog';
 import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from '@/components/ui/field';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { formatPhone } from '@/lib/utils';
-import { loginMutationOptions, registerMutationOptions } from '@/mutations/auth';
+import { registerMutationOptions, verifyPhoneOtpMutationOptions } from '@/mutations/auth';
+import { sendPhoneOtpMutationOptions } from '@/mutations/phone';
 import { profileQueryOptions } from '@/queries/profile';
 import { usePhoneStore } from '@/stores/usePhoneStore';
 import { useRegisterStore } from '@/stores/useRegisterStore';
@@ -13,7 +13,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Phone } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect } from 'react';
 import { Controller, type SubmitHandler, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import z from 'zod';
@@ -28,12 +28,12 @@ type FormSchema = z.infer<typeof formSchema>;
 
 type Props = {
   onVerifySuccess?: () => void;
-  insideModal?: boolean;
-  type?: 'login' | 'register';
+  type?: 'global' | 'register';
 };
 
-const VerifyPhoneOtpForm = ({ onVerifySuccess, type, insideModal }: Props) => {
+const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
   const requestId = usePhoneStore((state) => state.requestId);
+  const setRequestId = usePhoneStore((state) => state.setRequestId);
   const phone = usePhoneStore((state) => state.phone);
 
   const form = useForm({
@@ -45,21 +45,21 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type, insideModal }: Props) => {
     }
   });
 
-  const closeModalRef = useRef<HTMLButtonElement | null>(null);
   const router = useRouter();
 
   const queryClient = useQueryClient();
 
-  const { mutate: mutateLogin, isPending: isLoginPending } = useMutation(
-    loginMutationOptions({
+  const clearRegisterData = useRegisterStore((state) => state.clear);
+
+  const { mutate: mutateRegister, isPending: isRegisterPending } = useMutation(
+    registerMutationOptions({
       onSuccess: () => {
         router.push('/');
-        closeModalRef.current?.click();
+        clearRegisterData();
         queryClient.invalidateQueries({ queryKey: profileQueryOptions.queryKey });
         onVerifySuccess?.();
       },
       onError: (err) => {
-        closeModalRef.current?.click();
         if (err.errors) {
           const fieldErrors = err.errors as z.ZodFlattenedError<FormSchema>;
           Object.entries(fieldErrors).forEach(([fieldName, error]) => {
@@ -73,15 +73,24 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type, insideModal }: Props) => {
     })
   );
 
-  const clearRegisterData = useRegisterStore((state) => state.clear);
+  const { mutate: resendOtp, isPending: isResendOtpPending } = useMutation(
+    sendPhoneOtpMutationOptions({
+      onSuccess: (res) => {
+        const requestId = res?.data?.requestId;
+        if (requestId) {
+          form.setValue('requestId', requestId);
+          setRequestId(requestId);
+        } else {
+          toast.error('Failed to get Request ID. Please try again.');
+        }
+      }
+    })
+  );
 
-  const { mutate: mutateRegister, isPending: isRegisterPending } = useMutation(
-    registerMutationOptions({
+  const { mutate, isPending } = useMutation(
+    verifyPhoneOtpMutationOptions({
       onSuccess: () => {
-        router.push('/');
-        clearRegisterData();
-        closeModalRef.current?.click();
-        queryClient.invalidateQueries({ queryKey: profileQueryOptions.queryKey });
+        form.reset();
         onVerifySuccess?.();
       },
       onError: (err) => {
@@ -107,7 +116,7 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type, insideModal }: Props) => {
         return;
       }
 
-      if (data.requestId === null || data.phone === null) {
+      if (!data.requestId || !data.phone) {
         toast.error('Phone number or Request ID is missing');
         return;
       }
@@ -125,18 +134,23 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type, insideModal }: Props) => {
           requestId: data.requestId
         });
       } else {
-        mutateLogin({
+        mutate({
           phone: data.phone,
           code: data.otp,
           requestId: data.requestId
         });
       }
     },
-    [mutateLogin, mutateRegister, type, registerData]
+    [mutateRegister, registerData, mutate, type]
   );
 
   const handleResendOtp = () => {
-    toast.success('resending');
+    if (!phone) {
+      toast.error('Phone number is missing! Refresh and try again.');
+      return;
+    }
+
+    resendOtp({ phone: phone });
   };
 
   useEffect(() => {
@@ -151,7 +165,6 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type, insideModal }: Props) => {
 
   return (
     <form className="p-6 md:p-8" onSubmit={form.handleSubmit(onSubmit)}>
-      {insideModal && <DialogClose ref={closeModalRef} className="invisible" />}
       <FieldSet>
         <FieldGroup>
           <Field>
@@ -166,7 +179,7 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type, insideModal }: Props) => {
                 name="otp"
                 control={form.control}
                 defaultValue=""
-                disabled={isLoginPending || isRegisterPending}
+                disabled={isRegisterPending || isPending || isResendOtpPending}
                 render={({ field }) => (
                   <InputOTP
                     maxLength={4}

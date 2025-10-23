@@ -2,13 +2,14 @@
 
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { usePhoneStore } from '@/stores/usePhoneStore';
+import { useRegisterStore } from '@/stores/useRegisterStore';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import LoginForm from '../forms/auth/LoginForm';
 import RegisterForm from '../forms/auth/RegisterForm';
+import ResetPasswordForm from '../forms/auth/ResetPasswordForm';
 import VerifyPhoneOtpForm from '../forms/auth/VerifyPhoneOtpForm';
 import { Button } from '../ui/button';
-import { useRegisterStore } from '@/stores/useRegisterStore';
 
 const LoginModalButton = () => {
   const searchParams = useSearchParams();
@@ -17,7 +18,9 @@ const LoginModalButton = () => {
   const [loginOpen, setLoginOpen] = useState(false);
   const [otpOpen, setOtpOpen] = useState(false);
   const [registerOpen, setRegisterOpen] = useState(false);
-  const [type, setType] = useState<'login' | 'register'>('login');
+  const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
+
+  const [verifyType, setVerifyType] = useState<'global' | 'register'>('global');
 
   const setPhone = usePhoneStore((state) => state.setPhone);
   const setRequestId = usePhoneStore((state) => state.setRequestId);
@@ -32,7 +35,7 @@ const LoginModalButton = () => {
   }, [requireLogin]);
 
   const handleRegisterFromLogin = () => {
-    setType('register');
+    setVerifyType('register');
     setLoginOpen(false);
     setRegisterOpen(true);
   };
@@ -44,6 +47,11 @@ const LoginModalButton = () => {
 
   const handleAfterRegister = () => {
     setRegisterOpen(false);
+    setOtpOpen(true);
+  };
+
+  const handleLoginToVerifyPhone = () => {
+    setLoginOpen(false);
     setOtpOpen(true);
   };
 
@@ -66,6 +74,7 @@ const LoginModalButton = () => {
         <DialogContent>
           <main>
             <LoginForm
+              openVerifyPhoneOtpModal={handleLoginToVerifyPhone}
               onRegisterClick={handleRegisterFromLogin}
               onLoginSuccess={() => {
                 setLoginOpen(false);
@@ -110,7 +119,46 @@ const LoginModalButton = () => {
       >
         <DialogContent>
           <main>
-            <VerifyPhoneOtpForm type={type} onVerifySuccess={() => {}} insideModal />
+            <VerifyPhoneOtpForm
+              type={verifyType}
+              onVerifySuccess={() => {
+                if (verifyType === 'register') {
+                  setPhone(null);
+                  setRequestId(null);
+                  clearRegisterData();
+                  setRegisterOpen(false);
+                } else {
+                  setResetPasswordOpen(true);
+                }
+
+                setOtpOpen(false);
+              }}
+            />
+          </main>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={resetPasswordOpen}
+        onOpenChange={(value) => {
+          setResetPasswordOpen(value);
+          if (!value) {
+            setPhone(null);
+            setRequestId(null);
+            clearRegisterData();
+          }
+        }}
+      >
+        <DialogContent>
+          <main>
+            <ResetPasswordForm
+              onSuccess={() => {
+                setResetPasswordOpen(false);
+                setPhone(null);
+                setRequestId(null);
+                clearRegisterData();
+                setLoginOpen(true);
+              }}
+            />
           </main>
         </DialogContent>
       </Dialog>

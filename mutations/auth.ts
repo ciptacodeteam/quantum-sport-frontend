@@ -1,4 +1,13 @@
-import { checkAccountApi, loginApi, logoutApi, registerApi, sendLoginOtpApi } from '@/api/auth';
+import {
+  checkAccountApi,
+  forgotPasswordApi,
+  loginApi,
+  logoutApi,
+  registerApi,
+  resetPasswordApi,
+  sendLoginOtpApi
+} from '@/api/auth';
+import { verifyPhoneOtpApi } from '@/api/phone';
 import { profileQueryOptions } from '@/queries/profile';
 import type { MutationFuncProps } from '@/types';
 import { mutationOptions } from '@tanstack/react-query';
@@ -70,6 +79,47 @@ export const logoutMutationOptions = ({ onSuccess, onError }: MutationFuncProps 
     onError: (error) => {
       console.error('Error:', error);
       toast.error(error.msg || 'Logout failed. Please try again.');
+      onError?.(error);
+    }
+  });
+
+export const forgotPasswordMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
+  mutationOptions({
+    mutationFn: forgotPasswordApi,
+    onSuccess: (data) => {
+      toast.success('OTP sent successfully!');
+      onSuccess?.(data);
+    },
+    onError: (error) => {
+      console.error('Error:', error);
+      toast.error(error.msg || 'Failed to send OTP. Please try again.');
+      onError?.(error);
+    }
+  });
+
+export const resetPasswordMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
+  mutationOptions({
+    mutationFn: resetPasswordApi,
+    onSuccess: (data) => {
+      toast.success('Password reset successfully!');
+      onSuccess?.(data);
+    },
+    onError: (error) => {
+      console.error('Error:', error);
+      toast.error(error.msg || 'Failed to reset password. Please try again.');
+      onError?.(error);
+    }
+  });
+
+export const verifyPhoneOtpMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
+  mutationOptions({
+    mutationFn: verifyPhoneOtpApi,
+    onSuccess: (data) => {
+      onSuccess?.(data);
+    },
+    onError: (error) => {
+      console.error('Error:', error);
+      toast.error(error.msg || 'Failed to verify OTP. Please try again.');
       onError?.(error);
     }
   });

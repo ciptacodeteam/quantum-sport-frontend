@@ -25,6 +25,16 @@ export async function logoutApi() {
   return data;
 }
 
+export async function forgotPasswordApi(payload) {
+  const { data } = await api.post('/auth/forgot-password', payload);
+  return data;
+}
+
+export async function resetPasswordApi(payload) {
+  const { data } = await api.post('/auth/reset-password', payload);
+  return data;
+}
+
 export async function getProfileApi() {
   const { data } = await api.get('/auth/profile');
   return data;
