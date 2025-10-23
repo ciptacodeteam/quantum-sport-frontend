@@ -12,9 +12,12 @@ import VerifyPhoneOtpForm from '../forms/auth/VerifyPhoneOtpForm';
 import { Button } from '../ui/button';
 import useAuthStore from '@/stores/useAuthStore';
 import LogoutButton from './LogoutButton';
+import { useQuery } from '@tanstack/react-query';
+import { profileQueryOptions } from '@/queries/profile';
+import { Skeleton } from '../ui/skeleton';
 
 const LoginModalButton = () => {
-  const isAuthenticated = useAuthStore((state) => state.isAuth);
+  const { data: user, isPending: isUserPending } = useQuery(profileQueryOptions);
 
   const searchParams = useSearchParams();
   const requireLogin = searchParams.get('requireLogin');
@@ -59,7 +62,11 @@ const LoginModalButton = () => {
     setOtpOpen(true);
   };
 
-  if (isAuthenticated) {
+  if (isUserPending) {
+    return <Skeleton className="h-10 w-20" />;
+  }
+
+  if (user) {
     return <LogoutButton />;
   }
 
