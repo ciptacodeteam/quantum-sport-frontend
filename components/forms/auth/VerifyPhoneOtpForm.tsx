@@ -1,16 +1,18 @@
 'use client';
 
 import { ResendOtpButton } from '@/components/buttons/ResendOtpButton';
+import { DialogClose } from '@/components/ui/dialog';
 import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from '@/components/ui/field';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { formatPhone } from '@/lib/utils';
 import { loginMutationOptions, registerMutationOptions } from '@/mutations/auth';
 import { usePhoneStore } from '@/stores/usePhoneStore';
+import { useRegisterStore } from '@/stores/useRegisterStore';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
 import { Phone } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect } from 'react';
+import { Activity, useCallback, useEffect, useRef } from 'react';
 import { Controller, type SubmitHandler, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import z from 'zod';
@@ -25,10 +27,11 @@ type FormSchema = z.infer<typeof formSchema>;
 
 type Props = {
   onVerifySuccess?: () => void;
+  insideModal?: boolean;
   type?: 'login' | 'register';
 };
 
-const VerifyPhoneOtpForm = ({ onVerifySuccess, type }: Props) => {
+const VerifyPhoneOtpForm = ({ onVerifySuccess, type, insideModal }: Props) => {
   const requestId = usePhoneStore((state) => state.requestId);
   const phone = usePhoneStore((state) => state.phone);
 
@@ -41,12 +44,14 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type }: Props) => {
     }
   });
 
+  const closeModalRef = useRef<HTMLButtonElement | null>(null);
   const router = useRouter();
 
   const { mutate: mutateLogin, isPending: isLoginPending } = useMutation(
     loginMutationOptions({
       onSuccess: () => {
         router.push('/');
+        closeModalRef.current?.click();
         onVerifySuccess?.();
       },
       onError: (err) => {
@@ -63,10 +68,14 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type }: Props) => {
     })
   );
 
+  const clearRegisterData = useRegisterStore((state) => state.clear);
+
   const { mutate: mutateRegister, isPending: isRegisterPending } = useMutation(
     registerMutationOptions({
       onSuccess: () => {
         router.push('/');
+        clearRegisterData();
+        closeModalRef.current?.click();
         onVerifySuccess?.();
       },
       onError: (err) => {
@@ -82,6 +91,8 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type }: Props) => {
       }
     })
   );
+
+  const registerData = useRegisterStore((state) => state.registerData);
 
   const onSubmit: SubmitHandler<FormSchema> = useCallback(
     (data) => {
@@ -95,13 +106,27 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type }: Props) => {
         return;
       }
 
+      if (!registerData && type === 'register') {
+        toast.error('Registration data is missing');
+        return;
+      }
+
       if (type === 'register') {
-        mutateRegister(data);
+        mutateRegister({
+          ...registerData,
+          phone: data.phone,
+          code: data.otp,
+          requestId: data.requestId
+        });
       } else {
-        mutateLogin(data);
+        mutateLogin({
+          phone: data.phone,
+          code: data.otp,
+          requestId: data.requestId
+        });
       }
     },
-    [mutateLogin, mutateRegister, type]
+    [mutateLogin, mutateRegister, type, registerData]
   );
 
   const handleResendOtp = () => {
@@ -120,6 +145,11 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type }: Props) => {
 
   return (
     <form className="p-6 md:p-8" onSubmit={form.handleSubmit(onSubmit)}>
+      {insideModal && (
+        <Activity mode="hidden">
+          <DialogClose ref={closeModalRef} />
+        </Activity>
+      )}
       <FieldSet>
         <FieldGroup>
           <Field>
@@ -142,14 +172,15 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type }: Props) => {
                     onChange={(value) => field.onChange(value)}
                   >
                     <InputOTPGroup>
-                      <InputOTPSlot index={0} className="size-14" />
-                      <InputOTPSlot index={1} className="size-14" />
-                      <InputOTPSlot index={2} className="size-14" />
-                      <InputOTPSlot index={3} className="size-14" />
+                      <InputOTPSlot index={0} className="size-14 md:text-xl" />
+                      <InputOTPSlot index={1} className="size-14 md:text-xl" />
+                      <InputOTPSlot index={2} className="size-14 md:text-xl" />
+                      <InputOTPSlot index={3} className="size-14 md:text-xl" />
                     </InputOTPGroup>
                   </InputOTP>
                 )}
               />
+              <FieldError>{form.formState.errors.otp?.message}</FieldError>
               <div className="mt-2">
                 <ResendOtpButton
                   onSendOtp={handleResendOtp}
@@ -158,7 +189,6 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type }: Props) => {
                   autoStart
                 />
               </div>
-              <FieldError>{form.formState.errors.otp?.message}</FieldError>
             </div>
           </Field>
         </FieldGroup>

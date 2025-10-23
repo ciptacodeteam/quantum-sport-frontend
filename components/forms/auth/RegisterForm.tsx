@@ -3,42 +3,62 @@
 import { Button } from '@/components/ui/button';
 import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { sendLoginOtpMutationOptions } from '@/mutations/auth';
+import { PasswordInput } from '@/components/ui/password-input';
+import { sendPhoneOtpMutationOptions } from '@/mutations/phone';
 import { usePhoneStore } from '@/stores/usePhoneStore';
+import { useRegisterStore } from '@/stores/useRegisterStore';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
 import { type SubmitHandler, useForm } from 'react-hook-form';
 import z from 'zod';
 
-const formSchema = z.object({
-  phone: z.string().min(1, 'Phone number is required').max(15, 'Phone number is too long')
-});
+const formSchema = z
+  .object({
+    name: z.string().min(1, 'Name is required').max(100, 'Name is too long'),
+    phone: z.string().min(1, 'Phone number is required').max(15, 'Phone number is too long'),
+    password: z
+      .string()
+      .min(6, 'Password must be at least 6 characters long')
+      .max(100, 'Password is too long'),
+    confirmPassword: z
+      .string()
+      .min(6, 'Confirm Password must be at least 6 characters long')
+      .max(100, 'Confirm Password is too long')
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword']
+  });
 
 type FormSchema = z.infer<typeof formSchema>;
 
 type Props = {
-  onLoginSuccess?: () => void;
-  onRegisterClick?: () => void;
+  onRegisterSuccess?: () => void;
+  onLoginClick?: () => void;
 };
 
-const LoginForm = ({ onLoginSuccess, onRegisterClick }: Props) => {
+const RegisterForm = ({ onRegisterSuccess, onLoginClick }: Props) => {
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      phone: ''
+      phone: '',
+      name: '',
+      password: '',
+      confirmPassword: ''
     }
   });
 
   const setPhone = usePhoneStore((state) => state.setPhone);
   const setRequestId = usePhoneStore((state) => state.setRequestId);
+  const setRegisterData = useRegisterStore((state) => state.setRegisterData);
 
   const { mutate, isPending } = useMutation(
-    sendLoginOtpMutationOptions({
+    sendPhoneOtpMutationOptions({
       onSuccess: (res) => {
         const requestId = res?.data?.requestId as string | undefined;
         if (requestId) setRequestId(requestId);
         form.reset();
-        onLoginSuccess?.();
+        onRegisterSuccess?.();
       },
       onError: (err) => {
         if (err.errors) {
@@ -57,6 +77,11 @@ const LoginForm = ({ onLoginSuccess, onRegisterClick }: Props) => {
   const onSubmit: SubmitHandler<FormSchema> = (formData) => {
     setPhone(formData.phone);
     mutate(formData);
+    setRegisterData({
+      name: formData.name,
+      phone: formData.phone,
+      password: formData.password
+    });
   };
 
   return (
@@ -64,11 +89,16 @@ const LoginForm = ({ onLoginSuccess, onRegisterClick }: Props) => {
       <FieldSet>
         <FieldGroup>
           <header className="flex flex-col items-center gap-2 text-center">
-            <h1 className="text-2xl font-bold">Welcome back</h1>
+            <h1 className="text-2xl font-bold">Create your account</h1>
             <p className="text-muted-foreground text-balance">
-              Please login to your Quantum Sport account.
+              Please register to start using Quantum Sport.
             </p>
           </header>
+          <Field>
+            <FieldLabel htmlFor="name">Name</FieldLabel>
+            <Input id="name" {...form.register('name')} placeholder="e.g. John Doe" />
+            <FieldError>{form.formState.errors.name?.message}</FieldError>
+          </Field>
           <Field>
             <FieldLabel htmlFor="phone">Phone</FieldLabel>
             <Input
@@ -85,19 +115,37 @@ const LoginForm = ({ onLoginSuccess, onRegisterClick }: Props) => {
             />
             <FieldError>{form.formState.errors.phone?.message}</FieldError>
           </Field>
+          <Field>
+            <FieldLabel htmlFor="password">Password</FieldLabel>
+            <PasswordInput
+              id="password"
+              {...form.register('password')}
+              placeholder="Enter your password"
+            />
+            <FieldError>{form.formState.errors.password?.message}</FieldError>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="confirmPassword">Confirm Password</FieldLabel>
+            <PasswordInput
+              id="confirmPassword"
+              {...form.register('confirmPassword')}
+              placeholder="Confirm your password"
+            />
+            <FieldError>{form.formState.errors.confirmPassword?.message}</FieldError>
+          </Field>
           <Field className="mt-2">
             <Button type="submit" loading={isPending}>
-              Login
+              Register
             </Button>
           </Field>
-          {!!onRegisterClick && (
+          {!!onLoginClick && (
             <p className="text-muted-foreground text-center text-sm">
-              Don&apos;t have an account?{' '}
+              Already have an account?{' '}
               <span
                 className="text-primary cursor-pointer font-medium underline"
-                onClick={onRegisterClick}
+                onClick={onLoginClick}
               >
-                Register
+                Login
               </span>
             </p>
           )}
@@ -106,4 +154,4 @@ const LoginForm = ({ onLoginSuccess, onRegisterClick }: Props) => {
     </form>
   );
 };
-export default LoginForm;
+export default RegisterForm;
