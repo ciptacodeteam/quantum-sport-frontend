@@ -126,10 +126,6 @@ adminApi.interceptors.response.use(
 
     const token = storage.get('token') || useAuthStore.getState().token;
 
-    console.log('🚀 ~ newToken:', token);
-    console.log('🚀 ~ isAuthError:', isAuthError);
-    console.log('🚀 ~ isRefreshEndpoint:', isRefreshEndpoint);
-    console.log('🚀 ~ originalRequest:', originalRequest);
     if (isAuthError && !isRefreshEndpoint && !originalRequest?._retry && !!token) {
       const newToken = await refreshAccessToken();
 
