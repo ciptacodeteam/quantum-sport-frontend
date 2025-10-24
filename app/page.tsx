@@ -1,18 +1,18 @@
 import MainHeader from '@/components/headers/MainHeader';
-import ProfileTest from '@/components/ProfileTest';
+import ActiveCourtSection from '@/components/section/home/ActiveCourtSection';
 import BannerSection from '@/components/section/home/BannerSection';
+import MembershipCtaSection from '@/components/section/home/MembershipCtaSection';
+import MenuSection from '@/components/section/home/MenuSection';
 
 export default async function HomePage() {
-  // const cookieStore = await cookies();
-  // const token = cookieStore.get('token')?.value;
-
   return (
     <>
       <MainHeader />
-      <main className="mt-0 min-h-screen w-full md:mt-14">
-        {/* {!token ? <LoginModalButton /> : <LogoutButton />} */}
+      <main className="mt-0 w-full md:mt-14">
         <BannerSection />
-        <ProfileTest />
+        <MenuSection />
+        <ActiveCourtSection />
+        <MembershipCtaSection />
       </main>
     </>
   );

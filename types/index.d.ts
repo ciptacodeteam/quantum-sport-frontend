@@ -19,3 +19,9 @@ export type AppSidebarItem = {
     isUnrealeased?: boolean;
   }[];
 };
+
+export type MenuItem = {
+  title: string;
+  url: string;
+  icon: React.ReactNode;
+};
