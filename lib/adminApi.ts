@@ -113,7 +113,7 @@ adminApi.interceptors.response.use(
     const { status } = error.response;
     const originalRequest = error.config as RetryableConfig;
     const isAuthError = status === HttpStatusCode.Unauthorized;
-    const isRefreshEndpoint = (originalRequest?.url || '').includes('/admin/auth/refresh-token');
+    const isRefreshEndpoint = (originalRequest?.url || '').includes('/auth/refresh-token');
 
     let newResponse = error.response?.data || error.message;
 
@@ -126,6 +126,10 @@ adminApi.interceptors.response.use(
 
     const token = storage.get('token') || useAuthStore.getState().token;
 
+    console.log('🚀 ~ newToken:', token);
+    console.log('🚀 ~ isAuthError:', isAuthError);
+    console.log('🚀 ~ isRefreshEndpoint:', isRefreshEndpoint);
+    console.log('🚀 ~ originalRequest:', originalRequest);
     if (isAuthError && !isRefreshEndpoint && !originalRequest?._retry && !!token) {
       const newToken = await refreshAccessToken();
 
