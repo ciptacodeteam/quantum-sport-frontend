@@ -23,10 +23,9 @@ export default function DashboardPage() {
   );
 
   return (
-    <div className="flex-center min-h-screen flex-col gap-6 bg-gray-100">
-      <h1 className="text-2xl font-bold">DashboardPage</h1>
-
-      <Button loading={isPending} onClick={() => mutate()} className="mt-4">
+    <div>
+      <h1 className="mb-4 text-2xl font-bold">Admin Dashboard</h1>
+      <Button variant="destructive" onClick={() => mutate()} disabled={isPending}>
         Logout
       </Button>
     </div>

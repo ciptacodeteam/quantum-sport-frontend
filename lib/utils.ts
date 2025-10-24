@@ -6,6 +6,22 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export function getNameInitial(name: string | null | undefined): string {
+  if (!name) return 'U';
+  return name
+    .split(' ')
+    .map((n) => n.charAt(0).toUpperCase())
+    .join('')
+    .slice(0, 2);
+}
+
+export function getTwoWordName(fullname: string): string {
+  if (!fullname) return '';
+  const words = fullname.trim().split(/\s+/);
+  if (words.length === 1) return words[0] || '';
+  return `${words[0]} ${words[1]}`;
+}
+
 export function getPlaceholderImageUrl({
   width = 400,
   height = 300,
