@@ -113,7 +113,7 @@ adminApi.interceptors.response.use(
     const { status } = error.response;
     const originalRequest = error.config as RetryableConfig;
     const isAuthError = status === HttpStatusCode.Unauthorized;
-    const isRefreshEndpoint = (originalRequest?.url || '').includes('/auth/refresh-token');
+    const isRefreshEndpoint = (originalRequest?.url || '').includes('/admin/auth/refresh-token');
 
     let newResponse = error.response?.data || error.message;
 
