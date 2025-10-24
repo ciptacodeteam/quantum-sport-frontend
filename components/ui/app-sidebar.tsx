@@ -30,8 +30,9 @@ import {
   IconUsersGroup
 } from '@tabler/icons-react';
 import Link from 'next/link';
+import type { AppSidebarItem } from '@/types';
 
-const data = {
+const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
   navMain: [
     {
       title: 'Dashboard',
@@ -46,19 +47,23 @@ const data = {
       items: [
         {
           title: 'Lapangan',
-          url: '/admin/kelola-pemesanan/lapangan'
+          url: '/admin/kelola-pemesanan/lapangan',
+          isUnrealeased: true
         },
         {
           title: 'Inventori',
-          url: '/admin/kelola-pemesanan/inventori'
+          url: '/admin/kelola-pemesanan/inventori',
+          isUnrealeased: true
         },
         {
           title: 'Ballboy',
-          url: '/admin/kelola-pemesanan/ballboy'
+          url: '/admin/kelola-pemesanan/ballboy',
+          isUnrealeased: true
         },
         {
           title: 'Coach',
-          url: '/admin/kelola-pemesanan/coach'
+          url: '/admin/kelola-pemesanan/coach',
+          isUnrealeased: true
         }
       ]
     },
@@ -90,18 +95,21 @@ const data = {
       title: 'Kelola Kelas',
       url: '/admin/kelola-kelas',
       icon: IconSchool,
+      isUnrealeased: true,
       items: []
     },
     {
       title: 'Kelola Turnamen',
       url: '/admin/kelola-turnamen',
       icon: IconLaurelWreath1,
+      isUnrealeased: true,
       items: []
     },
     {
       title: 'Kelola Club',
       url: '/admin/kelola-club',
       icon: IconUsersGroup,
+      isUnrealeased: true,
       items: []
     },
     {

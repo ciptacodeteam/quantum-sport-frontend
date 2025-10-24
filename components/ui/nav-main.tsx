@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronRight, type LucideIcon } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
@@ -14,23 +14,11 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem
 } from '@/components/ui/sidebar';
+import type { AppSidebarItem } from '@/types';
 import Link from 'next/link';
-import type { TablerIcon } from '@tabler/icons-react';
+import { Badge } from './badge';
 
-export function NavMain({
-  items
-}: {
-  items: {
-    title: string;
-    url?: string;
-    icon: LucideIcon | TablerIcon;
-    isActive?: boolean;
-    items?: {
-      title: string;
-      url: string;
-    }[];
-  }[];
-}) {
+export function NavMain({ items }: { items: AppSidebarItem[] }) {
   return (
     <SidebarGroup>
       <SidebarGroupLabel>Main Menu</SidebarGroupLabel>
@@ -61,6 +49,11 @@ export function NavMain({
                           <SidebarMenuSubButton asChild>
                             <Link href={subItem.url} prefetch>
                               <span>{subItem.title}</span>
+                              {subItem.isUnrealeased && (
+                                <Badge variant="secondary" className="ml-auto">
+                                  Soon
+                                </Badge>
+                              )}
                             </Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
@@ -75,6 +68,11 @@ export function NavMain({
                       <Link href={item.url} prefetch>
                         <item.icon />
                         <span>{item.title}</span>
+                        {item.isUnrealeased && (
+                          <Badge variant="secondary" className="ml-auto">
+                            Soon
+                          </Badge>
+                        )}
                       </Link>
                     </SidebarMenuButton>
                   ) : (
@@ -83,6 +81,11 @@ export function NavMain({
                         <item.icon />
                         <span>{item.title}</span>
                       </div>
+                      {item.isUnrealeased && (
+                        <Badge variant="secondary" className="ml-auto">
+                          Soon
+                        </Badge>
+                      )}
                     </SidebarMenuButton>
                   )}
                 </>

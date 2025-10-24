@@ -43,7 +43,8 @@ export default defineConfig([
       '@typescript-eslint/no-unsafe-return': 'off',
       '@typescript-eslint/ban-ts-comment': 'off',
       '@typescript-eslint/no-floating-promises': 'off',
-      'react-hooks/set-state-in-effect': 'off'
+      'react-hooks/set-state-in-effect': 'off',
+      'react-hooks/purity': 'off'
     }
   },
   {

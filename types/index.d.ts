@@ -6,3 +6,16 @@ export type MutationFuncProps = {
   onSuccess?: (data: any) => void;
   onError?: (error: ApiError) => void;
 };
+
+export type AppSidebarItem = {
+  title: string;
+  url?: string;
+  icon: React.ComponentType<any>;
+  isActive?: boolean;
+  isUnrealeased?: boolean;
+  items?: {
+    title: string;
+    url: string;
+    isUnrealeased?: boolean;
+  }[];
+};
