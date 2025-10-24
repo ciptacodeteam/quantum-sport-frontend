@@ -63,12 +63,12 @@ const LoginForm = ({ onRegisterClick, openVerifyPhoneOtpModal, onLoginSuccess }:
         }
       },
       onError: (err) => {
-        if (err.errors) {
-          const fieldErrors = err.errors as z.ZodFlattenedError<FormSchema>;
-          Object.entries(fieldErrors).forEach(([fieldName, error]) => {
+        if (err.errors?.name === 'ZodError') {
+          const fieldErrors = err.errors.fields as Record<string, string>;
+          Object.entries(fieldErrors).forEach(([fieldName, message]) => {
             form.setError(fieldName as keyof FormSchema, {
               type: 'server',
-              message: Array.isArray(error) ? error.join(', ') : String(error)
+              message
             });
           });
         }
@@ -89,12 +89,12 @@ const LoginForm = ({ onRegisterClick, openVerifyPhoneOtpModal, onLoginSuccess }:
         }
       },
       onError: (err) => {
-        if (err.errors) {
-          const fieldErrors = err.errors as z.ZodFlattenedError<FormSchema>;
-          Object.entries(fieldErrors).forEach(([fieldName, error]) => {
+        if (err.errors?.name === 'ZodError') {
+          const fieldErrors = err.errors.fields as Record<string, string>;
+          Object.entries(fieldErrors).forEach(([fieldName, message]) => {
             form.setError(fieldName as keyof FormSchema, {
               type: 'server',
-              message: Array.isArray(error) ? error.join(', ') : String(error)
+              message
             });
           });
         }
@@ -122,12 +122,12 @@ const LoginForm = ({ onRegisterClick, openVerifyPhoneOtpModal, onLoginSuccess }:
         onLoginSuccess?.();
       },
       onError: (err) => {
-        if (err.errors) {
-          const fieldErrors = err.errors as z.ZodFlattenedError<FormSchema>;
-          Object.entries(fieldErrors).forEach(([fieldName, error]) => {
+        if (err.errors?.name === 'ZodError') {
+          const fieldErrors = err.errors.fields as Record<string, string>;
+          Object.entries(fieldErrors).forEach(([fieldName, message]) => {
             form.setError(fieldName as keyof FormSchema, {
               type: 'server',
-              message: Array.isArray(error) ? error.join(', ') : String(error)
+              message
             });
           });
         }

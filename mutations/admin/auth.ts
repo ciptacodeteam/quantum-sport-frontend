@@ -1,4 +1,10 @@
-import { loginApi, logoutApi, registerApi, updateProfileApi } from '@/api/admin/auth';
+import {
+  changePasswordApi,
+  loginApi,
+  logoutApi,
+  registerApi,
+  updateProfileApi
+} from '@/api/admin/auth';
 import type { MutationFuncProps } from '@/types';
 import { mutationOptions } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -55,6 +61,23 @@ export const adminUpdateProfileMutationOptions = ({ onSuccess, onError }: Mutati
     onError: (error) => {
       console.error('Error:', error);
       toast.error(error.msg || 'Profile update failed. Please try again.');
+      onError?.(error);
+    }
+  });
+
+export const adminChangePasswordMutationOptions = ({
+  onSuccess,
+  onError
+}: MutationFuncProps = {}) =>
+  mutationOptions({
+    mutationFn: changePasswordApi,
+    onSuccess: (data) => {
+      toast.success('Password changed successfully!');
+      onSuccess?.(data);
+    },
+    onError: (error) => {
+      console.error('Error:', error);
+      toast.error(error.msg || 'Password change failed. Please try again.');
       onError?.(error);
     }
   });

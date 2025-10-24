@@ -38,3 +38,8 @@ export async function checkAdminAccountApi() {
   const { data } = await adminApi.get('/auth/check-account');
   return data;
 }
+
+export async function changePasswordApi(payload) {
+  const { data } = await adminApi.post('/auth/change-password', payload);
+  return data;
+}
