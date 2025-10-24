@@ -15,18 +15,21 @@ import {
   SidebarMenuButton,
   SidebarMenuItem
 } from '@/components/ui/sidebar';
+import { SUPPORT_CIPTACODE_PHONE_NUMBER } from '@/lib/constants';
 import { getWhatsappMessageUrl } from '@/lib/utils';
 import {
   IconAd2,
   IconCategory,
   IconDatabase,
-  IconDogBowl,
+  IconLaurelWreath1,
+  IconScan,
+  IconSchool,
   IconShoppingCart,
   IconUser,
-  IconUsers
+  IconUsers,
+  IconUsersGroup
 } from '@tabler/icons-react';
 import Link from 'next/link';
-import { SUPPORT_CIPTACODE_PHONE_NUMBER } from '@/lib/constants';
 
 const data = {
   navMain: [
@@ -36,17 +39,28 @@ const data = {
       icon: IconCategory,
       items: []
     },
+
     {
-      title: 'Kelola Kustomer',
-      url: '/admin/kelola-kustomer',
-      icon: IconUsers,
-      items: []
-    },
-    {
-      title: 'Kelola Produk',
-      url: '/admin/kelola-produk',
-      icon: IconDogBowl,
-      items: []
+      title: 'Kelola Pemesanan',
+      icon: IconScan,
+      items: [
+        {
+          title: 'Lapangan',
+          url: '/admin/kelola-pemesanan/lapangan'
+        },
+        {
+          title: 'Inventori',
+          url: '/admin/kelola-pemesanan/inventori'
+        },
+        {
+          title: 'Ballboy',
+          url: '/admin/kelola-pemesanan/ballboy'
+        },
+        {
+          title: 'Coach',
+          url: '/admin/kelola-pemesanan/coach'
+        }
+      ]
     },
     {
       title: 'Penjualan',
@@ -55,12 +69,40 @@ const data = {
         {
           title: 'Kelola Transaksi',
           url: '/admin/kelola-transaksi'
-        },
-        {
-          title: 'Kelola Kupon',
-          url: '/admin/kelola-kupon'
         }
       ]
+    },
+    {
+      title: 'Kustomer',
+      icon: IconUsers,
+      items: [
+        {
+          title: 'Kelola Kustomer',
+          url: '/admin/kelola-kustomer'
+        },
+        {
+          title: 'Kustomer Membership',
+          url: '/admin/kelola-kustomer/membership'
+        }
+      ]
+    },
+    {
+      title: 'Kelola Kelas',
+      url: '/admin/kelola-kelas',
+      icon: IconSchool,
+      items: []
+    },
+    {
+      title: 'Kelola Turnamen',
+      url: '/admin/kelola-turnamen',
+      icon: IconLaurelWreath1,
+      items: []
+    },
+    {
+      title: 'Kelola Club',
+      url: '/admin/kelola-club',
+      icon: IconUsersGroup,
+      items: []
     },
     {
       title: 'Karyawan',
@@ -71,15 +113,20 @@ const data = {
           url: '/admin/kelola-karyawan'
         },
         {
-          title: 'Kelola Roles',
-          url: '/admin/kelola-roles'
+          title: 'Kelola Coach',
+          url: '/admin/kelola-coach'
         },
         {
-          title: 'Kelola Hak Akses',
-          url: '/admin/kelola-hak-akses'
+          title: 'Kelola Ballboy',
+          url: '/admin/kelola-ballboy'
+        },
+        {
+          title: 'Roles',
+          url: '/admin/kelola-roles'
         }
       ]
     },
+
     {
       title: 'Marketing',
       icon: IconAd2,
@@ -87,10 +134,6 @@ const data = {
         {
           title: 'Kelola Banner',
           url: '/admin/kelola-banner'
-        },
-        {
-          title: 'Kelola Pengumuman',
-          url: '/admin/kelola-pengumuman'
         }
       ]
     },
@@ -99,16 +142,24 @@ const data = {
       icon: IconDatabase,
       items: [
         {
-          title: 'Kelola Kategori',
-          url: '/admin/kelola-kategori'
+          title: 'Kelola Lapangan',
+          url: '/admin/kelola-lapangan'
         },
         {
-          title: 'Kelola Sub Kategori',
-          url: '/admin/kelola-sub-kategori'
+          title: 'Kelola Membership',
+          url: '/admin/kelola-membership'
         },
         {
-          title: 'Kelola Akun Bank',
-          url: '/admin/kelola-akun-bank'
+          title: 'Kelola Inventori',
+          url: '/admin/kelola-inventori'
+        },
+        {
+          title: 'Kelola Tipe Coach',
+          url: '/admin/kelola-tipe-coach'
+        },
+        {
+          title: 'Kelola Payment Method',
+          url: '/admin/kelola-payment-method'
         }
       ]
     }
