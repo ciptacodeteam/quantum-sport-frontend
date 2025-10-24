@@ -28,8 +28,8 @@ const MembershipCtaSection = () => {
                 src="/assets/img/player.png"
                 alt="Membership Cta"
                 preload
-                width={256}
-                height={256}
+                width={400}
+                height={400}
                 className="w-full rotate-12 object-contain"
               />
             </div>
