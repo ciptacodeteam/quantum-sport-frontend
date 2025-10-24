@@ -1,4 +1,4 @@
-import { refreshTokenApi } from '@/api/auth';
+import { refreshTokenApi } from '@/api/admin/auth';
 import { env } from '@/env';
 import useAuthStore from '@/stores/useAuthStore';
 import axios, { type AxiosError, HttpStatusCode, type InternalAxiosRequestConfig } from 'axios';
@@ -48,11 +48,20 @@ adminApi.interceptors.request.use(
     config.headers = config.headers ?? {};
 
     // Auth header
-    const token = storage.get('token');
+    const token = storage.get('token') || useAuthStore.getState().token;
+
     if (token) {
+      const bearerToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+
       const { isJwt } = await isJwtAndDecode(token);
-      (config.headers as Record<string, string>).Authorization =
-        isJwt && !config._retry ? `Bearer ${token}` : token;
+
+      if (!isJwt) {
+        // If token is not a valid JWT, remove it from storage and state
+        storage.remove('token');
+        useAuthStore.getState().logout();
+        return config;
+      }
+      (config.headers as Record<string, string>).Authorization = bearerToken;
     }
 
     return config;
@@ -67,15 +76,13 @@ async function refreshAccessToken(): Promise<string | null> {
   if (refreshPromise) return refreshPromise;
 
   refreshPromise = (async () => {
-    const rt = storage.get('refreshToken');
-    if (!rt) return null;
-
     try {
       const res = await refreshTokenApi();
       const newToken = res?.data?.token ?? null;
 
       if (newToken) {
         storage.set('token', newToken);
+        useAuthStore.getState().setToken(newToken);
         return newToken;
       }
 
@@ -117,7 +124,9 @@ adminApi.interceptors.response.use(
       };
     }
 
-    if (isAuthError && !isRefreshEndpoint && !originalRequest?._retry) {
+    const token = storage.get('token') || useAuthStore.getState().token;
+
+    if (isAuthError && !isRefreshEndpoint && !originalRequest?._retry && !!token) {
       const newToken = await refreshAccessToken();
 
       if (newToken) {
@@ -130,19 +139,11 @@ adminApi.interceptors.response.use(
       storage.remove('token');
       useAuthStore.getState().logout();
       useAuthStore.getState().setLoading(false);
-
-      if (isBrowser && originalRequest?.url !== '/admin/auth/login') {
-        window.location.href = '/admin/auth/login';
-      }
     } else if (isAuthError) {
       // Explicit 401 with no refresh path
       storage.remove('token');
       useAuthStore.getState().logout();
       useAuthStore.getState().setLoading(false);
-
-      if (isBrowser && originalRequest?.url !== '/admin/auth/login') {
-        window.location.href = '/admin/auth/login';
-      }
     }
 
     if (error.response?.status == HttpStatusCode.Forbidden) {

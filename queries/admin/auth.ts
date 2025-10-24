@@ -2,7 +2,7 @@ import { checkAdminAccountApi, getProfileApi } from '@/api/admin/auth';
 import type { AdminProfile } from '@/types/model';
 import { queryOptions } from '@tanstack/react-query';
 
-export const getAdminProfileQueryOptions = queryOptions({
+export const adminProfileQueryOptions = queryOptions({
   queryKey: ['admin', 'auth', 'profile'],
   queryFn: getProfileApi,
   staleTime: 5 * 60 * 1000, // 5 minutes

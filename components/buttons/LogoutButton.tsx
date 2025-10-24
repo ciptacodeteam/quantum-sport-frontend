@@ -15,16 +15,14 @@ const LogoutButton = () => {
   const { mutate, isPending } = useMutation(
     logoutMutationOptions({
       onSuccess: () => {
-        logout();
-        router.refresh();
+        router.push('/admin/auth/login');
         queryClient.clear();
+        logout();
       }
     })
   );
 
   const handleLogout = () => {
-    // Implement logout logic here
-    console.log('User logged out');
     mutate();
   };
 

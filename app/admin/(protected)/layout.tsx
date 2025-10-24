@@ -1,12 +1,20 @@
-import { cookies } from 'next/headers';
+'use client';
+
+import { adminProfileQueryOptions } from '@/queries/admin/auth';
+import { useQuery } from '@tanstack/react-query';
 import { redirect } from 'next/navigation';
 import type { PropsWithChildren } from 'react';
 
-const AdminDashboardLayout = async ({ children }: PropsWithChildren) => {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('token')?.value;
+const AdminDashboardLayout = ({ children }: PropsWithChildren) => {
+  const { data: user, isPending, isError } = useQuery(adminProfileQueryOptions);
 
-  if (!token) redirect('/admin/auth/login');
+  if (isPending) {
+    return null;
+  }
+
+  if (isError || (!isPending && !user?.id)) {
+    redirect('/admin/auth/login');
+  }
 
   return <>{children}</>;
 };
