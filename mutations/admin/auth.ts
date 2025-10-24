@@ -1,4 +1,4 @@
-import { loginApi, logoutApi, registerApi } from '@/api/admin/auth';
+import { loginApi, logoutApi, registerApi, updateProfileApi } from '@/api/admin/auth';
 import type { MutationFuncProps } from '@/types';
 import { mutationOptions } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -41,6 +41,20 @@ export const adminLogoutMutationOptions = ({ onSuccess, onError }: MutationFuncP
     onError: (error) => {
       console.error('Error:', error);
       toast.error(error.msg || 'Logout failed. Please try again.');
+      onError?.(error);
+    }
+  });
+
+export const adminUpdateProfileMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
+  mutationOptions({
+    mutationFn: updateProfileApi,
+    onSuccess: (data) => {
+      toast.success('Profile updated successfully!');
+      onSuccess?.(data);
+    },
+    onError: (error) => {
+      console.error('Error:', error);
+      toast.error(error.msg || 'Profile update failed. Please try again.');
       onError?.(error);
     }
   });
