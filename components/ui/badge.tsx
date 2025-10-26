@@ -19,7 +19,21 @@ const badgeVariants = cva(
           'border-transparent bg-warning text-warning-foreground [a&]:hover:bg-warning/90 focus-visible:ring-warning/20 dark:focus-visible:ring-warning/40 dark:bg-warning/60',
         success:
           'border-transparent bg-success text-success-foreground [a&]:hover:bg-success/90 focus-visible:ring-success/20 dark:focus-visible:ring-success/40 dark:bg-success/60',
-        info: 'border-transparent bg-info text-info-foreground [a&]:hover:bg-info/90 focus-visible:ring-info/20 dark:focus-visible:ring-info/40 dark:bg-info/60'
+        info: 'border-transparent bg-info text-info-foreground [a&]:hover:bg-info/90 focus-visible:ring-info/20 dark:focus-visible:ring-info/40 dark:bg-info/60',
+        neutral:
+          'border-transparent bg-gray-600 text-white [a&]:hover:bg-gray-600/90 focus-visible:ring-gray-600/20 dark:focus-visible:ring-gray-600/40 dark:bg-gray-600/60',
+        light:
+          'border bg-gray-100 text-gray-800 [a&]:hover:bg-gray-200 focus-visible:ring-gray-200/20 dark:focus-visible:ring-gray-200/40 dark:bg-gray-700 dark:text-gray-200',
+        lightSuccess:
+          'border bg-green-100 text-green-950 [a&]:hover:bg-green-200 focus-visible:ring-green-200/20 dark:focus-visible:ring-green-200/40 dark:bg-green-700 dark:text-green-200',
+        lightWarning:
+          'border bg-yellow-100 text-yellow-800 [a&]:hover:bg-yellow-200 focus-visible:ring-yellow-200/20 dark:focus-visible:ring-yellow-200/40 dark:bg-yellow-700 dark:text-yellow-200',
+        lightDestructive:
+          'border bg-red-100 text-red-800 [a&]:hover:bg-red-200 focus-visible:ring-red-200/20 dark:focus-visible:ring-red-200/40 dark:bg-red-700 dark:text-red-200',
+        lightInfo:
+          'border bg-blue-100 text-blue-800 [a&]:hover:bg-blue-200 focus-visible:ring-blue-200/20 dark:focus-visible:ring-blue-200/40 dark:bg-blue-700 dark:text-blue-200',
+        lightNeutral:
+          'border bg-gray-100 text-gray-800 [a&]:hover:bg-gray-200 focus-visible:ring-gray-200/20 dark:focus-visible:ring-gray-200/40 dark:bg-gray-700 dark:text-gray-200'
       }
     },
     defaultVariants: {
@@ -27,6 +41,8 @@ const badgeVariants = cva(
     }
   }
 );
+
+export type BadgeVariant = VariantProps<typeof badgeVariants>;
 
 function Badge({
   className,

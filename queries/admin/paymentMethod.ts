@@ -1,4 +1,4 @@
-import { getPaymentMethodApi, getPaymentMethodsApi } from '@/api/admin/payment-method';
+import { getPaymentMethodApi, getPaymentMethodsApi } from '@/api/admin/paymentMethod';
 import type { PaymentMethod } from '@/types/model';
 import { queryOptions } from '@tanstack/react-query';
 

@@ -52,3 +52,15 @@ export type PaymentMethod = {
   createdAt: Date;
   updatedAt: Date;
 };
+
+export type Banner = {
+  id: string;
+  isActive: boolean;
+  image: string | null;
+  link: string | null;
+  sequence: number;
+  startAt: Date | null;
+  endAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};

@@ -1,6 +1,7 @@
 'use client';
 
-import { deletePaymentMethodApi } from '@/api/admin/paymentMethod';
+import { deleteBannerApi } from '@/api/admin/banner';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import {
@@ -10,21 +11,24 @@ import {
   DialogTrigger,
   ManagedDialog
 } from '@/components/ui/dialog';
+import PreviewImage from '@/components/ui/preview-image';
 import { useConfirmMutation } from '@/hooks/useConfirmDialog';
-import { adminPaymentMethodsQueryOptions } from '@/queries/admin/paymentMethod';
-import type { PaymentMethod } from '@/types/model';
-import { IconPencil, IconPlus, IconTrash } from '@tabler/icons-react';
+import { STATUS_BADGE_VARIANT, STATUS_MAP } from '@/lib/constants';
+import { adminBannersQueryOptions } from '@/queries/admin/banner';
+import type { Banner } from '@/types/model';
+import { IconExternalLink, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
+import Link from 'next/link';
 import { useMemo } from 'react';
-import CreatePaymentMethodForm from './CreatePaymentMethodForm';
-import EditPaymentMethodForm from './EditPaymentMethodForm';
+import CreateBannerForm from './CreateBannerForm';
+import EditBannerForm from './EditBannerForm';
 
-const PaymentMethodTable = () => {
+const BannerTable = () => {
   const { confirmAndMutate } = useConfirmMutation(
     {
-      mutationFn: deletePaymentMethodApi
+      mutationFn: deleteBannerApi
     },
     {
       title: 'Hapus Data',
@@ -37,21 +41,37 @@ const PaymentMethodTable = () => {
         success: () => 'Data berhasil dihapus.',
         error: 'Gagal menghapus data.'
       },
-      invalidate: adminPaymentMethodsQueryOptions.queryKey
+      invalidate: adminBannersQueryOptions.queryKey
     }
   );
 
-  const colHelper = createColumnHelper<PaymentMethod>();
+  const colHelper = createColumnHelper<Banner>();
 
   const columns = useMemo(
     () => [
-      colHelper.accessor('name', {
-        header: 'Nama Alat',
+      colHelper.accessor('image', {
+        header: 'Preview',
+        cell: (info) => <PreviewImage src={info.getValue()} />
+      }),
+      colHelper.accessor('isActive', {
+        header: 'Status',
+        cell: (info) => (
+          <Badge variant={STATUS_BADGE_VARIANT[Number(info.getValue())]}>
+            {STATUS_MAP[Number(info.getValue())]}
+          </Badge>
+        )
+      }),
+      colHelper.accessor('sequence', {
+        header: 'Urutan',
         cell: (info) => info.getValue()
       }),
-      colHelper.accessor('description', {
-        header: 'Keterangan',
-        cell: (info) => <p className="line-clamp-2">{info.getValue() || '-'}</p>
+      colHelper.accessor('startAt', {
+        header: 'Mulai Pada',
+        cell: (info) => dayjs(info.getValue()).format('DD/MM/YYYY HH:mm')
+      }),
+      colHelper.accessor('endAt', {
+        header: 'Selesai Pada',
+        cell: (info) => (info.getValue() ? dayjs(info.getValue()).format('DD/MM/YYYY HH:mm') : '-')
       }),
       colHelper.accessor('createdAt', {
         header: 'Dibuat Pada',
@@ -62,7 +82,7 @@ const PaymentMethodTable = () => {
         header: 'Aksi',
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
-            <ManagedDialog id={`edit-paymentMethod-${row.original.id}`}>
+            <ManagedDialog id={`edit-banner-${row.original.id}`}>
               <DialogTrigger asChild>
                 <Button size="icon" variant="lightInfo">
                   <IconPencil />
@@ -70,10 +90,10 @@ const PaymentMethodTable = () => {
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader className="mb-4">
-                  <DialogTitle>Edit PaymentMethod</DialogTitle>
+                  <DialogTitle>Edit Banner</DialogTitle>
                 </DialogHeader>
-                {/* You would typically have an EditPaymentMethodForm component here */}
-                <EditPaymentMethodForm data={row.original} />
+                {/* You would typically have an EditBannerForm component here */}
+                <EditBannerForm data={row.original} />
               </DialogContent>
             </ManagedDialog>
             <Button
@@ -83,6 +103,13 @@ const PaymentMethodTable = () => {
             >
               <IconTrash />
             </Button>
+            {row.original.link && (
+              <Link href={row.original.link} target="_blank" rel="noopener noreferrer">
+                <Button size="icon" variant="secondaryInfo">
+                  <IconExternalLink />
+                </Button>
+              </Link>
+            )}
           </div>
         )
       })
@@ -90,7 +117,7 @@ const PaymentMethodTable = () => {
     [colHelper, confirmAndMutate]
   );
 
-  const { data, isPending } = useQuery(adminPaymentMethodsQueryOptions);
+  const { data, isPending } = useQuery(adminBannersQueryOptions);
 
   return (
     <DataTable
@@ -99,22 +126,22 @@ const PaymentMethodTable = () => {
       columns={columns}
       enableRowSelection={false}
       addButton={
-        <ManagedDialog id="create-payment-method">
+        <ManagedDialog id="create-banner">
           <DialogTrigger asChild>
             <Button>
               <IconPlus />
               Tambah
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="lg:min-w-xl">
             <DialogHeader className="mb-4">
               <DialogTitle>Tambah Data Baru</DialogTitle>
             </DialogHeader>
-            <CreatePaymentMethodForm />
+            <CreateBannerForm />
           </DialogContent>
         </ManagedDialog>
       }
     />
   );
 };
-export default PaymentMethodTable;
+export default BannerTable;

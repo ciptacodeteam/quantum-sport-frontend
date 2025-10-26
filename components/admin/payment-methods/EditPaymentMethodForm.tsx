@@ -7,11 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import { adminUpdatePaymentMethodMutationOptions } from '@/mutations/admin/payment-method';
+import { adminUpdatePaymentMethodMutationOptions } from '@/mutations/admin/paymentMethod';
 import {
   adminPaymentMethodsQueryOptions,
   adminPaymentMethodQueryOptions
-} from '@/queries/admin/payment-method';
+} from '@/queries/admin/paymentMethod';
 import type { PaymentMethod } from '@/types/model';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';

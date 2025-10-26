@@ -1,4 +1,4 @@
-import { createPaymentMethodApi, updatePaymentMethodApi } from '@/api/admin/payment-method';
+import { createPaymentMethodApi, updatePaymentMethodApi } from '@/api/admin/paymentMethod';
 import type { MutationFuncProps } from '@/types';
 import { mutationOptions } from '@tanstack/react-query';
 import { toast } from 'sonner';

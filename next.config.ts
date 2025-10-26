@@ -33,7 +33,7 @@ const nextConfig: NextConfig = {
         protocol: 'http',
         hostname: 'localhost',
         port: '8000',
-        pathname: 'storages/**'
+        pathname: 'storage/**'
       },
       {
         protocol: 'https',

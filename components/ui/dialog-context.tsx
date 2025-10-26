@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Dialog as RadixDialog } from './dialog';
+import { DialogProps, Dialog as RadixDialog } from './dialog';
 
 type DialogPayload = any;
 
@@ -162,7 +162,7 @@ export function ManagedDialog({
   return (
     <DialogSlot id={id}>
       {({ open, onOpenChange }) => (
-        <RadixDialog open={open} onOpenChange={onOpenChange} {...(rest as any)}>
+        <RadixDialog open={open} onOpenChange={onOpenChange} {...(rest as DialogProps)}>
           {children}
         </RadixDialog>
       )}
