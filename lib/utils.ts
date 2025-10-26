@@ -1,9 +1,24 @@
+import type { SearchParamsData } from '@/types';
 import { clsx, type ClassValue } from 'clsx';
 import { jwtDecode } from 'jwt-decode';
 import { twMerge } from 'tailwind-merge';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+export function mergedQueryParamUrl(url: string, params: SearchParamsData = {}) {
+  const urlParams = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value != null && value !== '') {
+      urlParams.set(key, String(value));
+    }
+  });
+
+  if (urlParams.toString()) url += `?${urlParams.toString()}`;
+
+  return url;
 }
 
 export function getNameInitial(name: string | null | undefined): string {

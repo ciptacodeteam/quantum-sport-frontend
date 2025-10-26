@@ -32,3 +32,13 @@ export type UserProfile = {
   createdAt: Date;
   updatedAt: Date;
 };
+
+export type Inventory = {
+  id: string;
+  name: string;
+  description: string;
+  quantity: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};

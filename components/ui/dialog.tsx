@@ -128,3 +128,5 @@ export {
   DialogTitle,
   DialogTrigger
 };
+
+export * from './dialog-context';

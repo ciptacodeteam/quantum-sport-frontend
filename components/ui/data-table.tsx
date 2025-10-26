@@ -7,7 +7,9 @@ import {
   type FilterFn,
   type GlobalFilterTableState,
   type RowData,
+  type RowSelectionState,
   type SortingState,
+  type VisibilityState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -43,10 +45,20 @@ import {
   SelectValue
 } from '@/components/ui/select';
 
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { rankItem } from '@tanstack/match-sorter-utils';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Settings2 } from 'lucide-react';
 import { Suspense, useCallback, useMemo, useState } from 'react';
 import { Label } from './label';
 
@@ -75,102 +87,223 @@ const TableEmpty = ({ columns }: TableEmptyProps) => {
   return (
     <TableRow>
       <TableCell colSpan={columns.length} className="h-24 text-center">
-        Tidak ada data.
+        No data found.
       </TableCell>
     </TableRow>
   );
 };
 
-interface DataTableProps<TData> {
+interface DataTableProps<TData extends RowData> {
   columns: ColumnDef<TData, any>[];
   data: TData[];
   loading?: boolean;
-  withAddButton?: boolean;
+  /** Search box */
   withSearch?: boolean;
-  children?: React.ReactNode;
+  /** Optional add button on the top-right */
   addButton?: React.ReactNode;
+  /** Extra content above the table (filters, etc.) */
+  children?: React.ReactNode;
+
+  /** Enable row multi-select checkboxes (default: true) */
+  enableRowSelection?: boolean;
+  /** Optional external row-id getter (recommended if your rows don't have `id`) */
+  getRowId?: (originalRow: TData, index: number, parent?: any) => string;
+  /** Called whenever selection changes (array of selected row ids) */
+  onSelectionChange?: (selectedIds: string[]) => void;
+  /** Custom bulk actions shown when there are selected rows */
+  bulkActions?: React.ReactNode;
+
+  /** Start with all columns visible; user can show/hide via dropdown (default: true) */
+  enableColumnVisibility?: boolean;
 }
 
-export function DataTable<TData>({
+export function DataTable<TData extends RowData>({
   columns,
   data,
   loading,
   addButton,
   withSearch = true,
-  children
+  children,
+
+  enableRowSelection = true,
+  getRowId,
+  onSelectionChange,
+  bulkActions,
+
+  enableColumnVisibility = true
 }: DataTableProps<TData>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-
-  const [pagination, setPagination] = useState({
-    pageIndex: 0,
-    pageSize: 10
-  });
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
 
   const fuzzyFilter = useCallback<FilterFn<RowData>>((row, columnId, value, addMeta) => {
-    // Rank the item
     const itemRank = rankItem(row.getValue(columnId), value as string);
-
-    // Store the itemRank info
     addMeta({ itemRank });
-
-    // Return if the item should be filtered in/out
     return itemRank.passed;
   }, []);
 
   const fallbackData = useMemo(() => data || [], [data]);
+  const pageCount = Math.ceil(fallbackData.length / pagination.pageSize);
+
+  // Selection column (checkboxes)
+  const selectionColumn = useMemo<ColumnDef<TData>>(
+    () => ({
+      id: '_select',
+      enableSorting: false,
+      enableHiding: false,
+      size: 50,
+      header: ({ table }) => {
+        const isAllSelected = table.getIsAllRowsSelected();
+        const isSomeSelected = table.getIsSomeRowsSelected();
+        return (
+          <div className="flex-center">
+            <Checkbox
+              checked={isAllSelected || (isSomeSelected && 'indeterminate')}
+              onCheckedChange={(checked) => table.toggleAllRowsSelected(!!checked)}
+              aria-label="Select all"
+            />
+          </div>
+        );
+      },
+      cell: ({ row }) => (
+        <div className="pl-2">
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(checked) => row.toggleSelected(!!checked)}
+            aria-label="Select row"
+          />
+        </div>
+      ),
+      meta: { width: 50 } as ColumnMeta<TData, any>
+    }),
+    []
+  );
+
+  const columnsWithSelection = useMemo(
+    () => (enableRowSelection ? [selectionColumn, ...columns] : columns),
+    [columns, enableRowSelection, selectionColumn]
+  );
 
   const table = useReactTable({
     data,
-    columns,
-    pageCount: Math.ceil(fallbackData.length / pagination.pageSize),
+    columns: columnsWithSelection,
+    pageCount,
+    getRowId,
     onSortingChange: setSorting,
+    onPaginationChange: setPagination,
+    onColumnFiltersChange: setColumnFilters,
+    onRowSelectionChange: setRowSelection,
+    onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    onPaginationChange: setPagination,
     getSortedRowModel: getSortedRowModel(),
-    onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
     globalFilterFn: 'fuzzy' as GlobalFilterTableState['globalFilter'],
     enableMultiSort: false,
+    enableRowSelection,
     state: {
       sorting,
       pagination,
-      columnFilters
+      columnFilters,
+      rowSelection,
+      columnVisibility
     },
-    filterFns: {
-      fuzzy: fuzzyFilter
-    }
+    filterFns: { fuzzy: fuzzyFilter }
   });
+
+  // expose selected ids upward
+  const selectedRowIds = useMemo(
+    () => table.getSelectedRowModel().rows.map((r) => r.id),
+    [table, rowSelection]
+  );
+  // notify parent (if requested)
+  if (onSelectionChange) {
+    // call synchronously in render is fine for idempotent callbacks, but to be safe:
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useMemo(() => {
+      onSelectionChange(selectedRowIds);
+    }, [selectedRowIds.join('|')]);
+  }
 
   const handleSearchChange = useCallback(
     (value: string) => {
-      if (value) {
-        table.setGlobalFilter(value);
-      } else {
-        table.setGlobalFilter(undefined);
-      }
+      table.setGlobalFilter(value || undefined);
     },
     [table]
   );
 
+  const hasSelection = selectedRowIds.length > 0;
+
   return (
     <div>
-      <div className="flex items-center gap-4 py-4">
+      <div className="flex flex-wrap items-center gap-3 py-4">
         {withSearch && (
           <Input
             placeholder="Search..."
             value={table.getState().globalFilter || ''}
-            onChange={(event) => handleSearchChange(event.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="max-w-60 text-sm"
             disabled={loading}
           />
         )}
-        {addButton}
+
+        <div className="flex items-center gap-2">{addButton}</div>
+
+        {/* Right-side actions */}
+        {enableColumnVisibility && (
+          <div className="flex-center ml-auto gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2" disabled={loading}>
+                  <Settings2 className="h-4 w-4" />
+                  View
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {table
+                  .getAllLeafColumns()
+                  .filter((col) => col.id !== '_select' && col.getCanHide())
+                  .map((column) => (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      className="capitalize"
+                      checked={column.getIsVisible()}
+                      onCheckedChange={(v) => column.toggleVisibility(!!v)}
+                    >
+                      {column.id === 'id'
+                        ? 'ID'
+                        : column.id
+                            .replace(/([A-Z])/g, ' $1')
+                            .trim()
+                            .toLowerCase()}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
       </div>
 
+      {/* Bulk actions bar */}
+      {hasSelection && (
+        <div className="mb-3 flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+          <div className="text-muted-foreground">{selectedRowIds.length} selected</div>
+          <div className="flex items-center gap-2">
+            {bulkActions}
+            <Button variant="ghost" size="sm" onClick={() => table.resetRowSelection()}>
+              Clear
+            </Button>
+          </div>
+        </div>
+      )}
+
       {children && <div className="py-2">{children}</div>}
-      <div className="rounded-md border">
+
+      <div className="mt-1 rounded-md border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -180,8 +313,15 @@ export function DataTable<TData>({
                   return (
                     <TableHead
                       key={header.id}
-                      className="hover:!bg-gray-100 dark:hover:!bg-gray-800"
-                      onClick={header.column.getToggleSortingHandler()}
+                      className={cn(
+                        'hover:!bg-gray-100 dark:hover:!bg-gray-800',
+                        header.column.id === '_select' && 'w-9'
+                      )}
+                      onClick={
+                        header.column.getCanSort()
+                          ? header.column.getToggleSortingHandler()
+                          : undefined
+                      }
                       style={{ width: meta?.width || 'auto' }}
                     >
                       <div
@@ -197,7 +337,7 @@ export function DataTable<TData>({
                             : flexRender(header.column.columnDef.header, header.getContext())}
                         </span>
 
-                        {header.column.getCanSort() && (
+                        {header.column.getCanSort() && header.column.id !== '_select' && (
                           <span
                             className={cn(
                               'absolute top-0 right-3 bottom-0 h-full w-3 before:absolute before:bottom-1/2 before:left-0 before:text-xs before:!leading-none before:text-gray-300 before:content-["▲"] after:absolute after:top-1/2 after:left-0 after:text-xs after:!leading-none after:text-gray-300 after:content-["▼"] dark:before:text-gray-500 dark:after:text-gray-500',
@@ -215,29 +355,39 @@ export function DataTable<TData>({
               </TableRow>
             ))}
           </TableHeader>
+
           <TableBody>
-            <Suspense fallback={<TableLoading columns={columns} />}>
+            <Suspense fallback={<TableLoading columns={columnsWithSelection} />}>
               {loading ? (
-                <TableLoading columns={columns} />
+                <TableLoading columns={columnsWithSelection} />
               ) : table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
-                    {row.getVisibleCells().map((cell) => {
-                      return (
-                        <TableCell key={cell.id} className={cn('py-3 ps-5 whitespace-nowrap')}>
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
-                      );
-                    })}
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && 'selected'}
+                    className={cn(row.getIsSelected() && 'bg-muted/40')}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell
+                        key={cell.id}
+                        className={cn(
+                          'py-3 ps-5 whitespace-nowrap',
+                          cell.column.id === '_select' && 'ps-3'
+                        )}
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
                   </TableRow>
                 ))
               ) : (
-                <TableEmpty columns={columns} />
+                <TableEmpty columns={columnsWithSelection} />
               )}
             </Suspense>
           </TableBody>
         </Table>
       </div>
+
       <footer className="flex flex-wrap items-center justify-between gap-2 pt-4">
         <div className="flex items-center space-x-2 text-sm">
           <div className="flex items-center">
@@ -245,9 +395,7 @@ export function DataTable<TData>({
               Rows per page:
             </Label>
             <Select
-              onValueChange={(value) => {
-                table.setPageSize(Number(value));
-              }}
+              onValueChange={(value) => table.setPageSize(Number(value))}
               defaultValue={table.getState().pagination.pageSize.toString()}
             >
               <SelectTrigger className="w-[80px]">
@@ -278,21 +426,15 @@ export function DataTable<TData>({
                   isActive={table.getCanPreviousPage() && !loading}
                 />
               </PaginationItem>
+
               {table.getPageCount() > 0 ? (
                 (() => {
                   const currentPage = table.getState().pagination.pageIndex;
                   const totalPages = table.getPageCount();
                   const pages: (number | 'ellipsis-left' | 'ellipsis-right')[] = [];
 
-                  // Always show first page
                   pages.push(0);
-
-                  // Show ellipsis if currentPage > 2
-                  if (currentPage > 2) {
-                    pages.push('ellipsis-left');
-                  }
-
-                  // Show previous, current, next (if in range)
+                  if (currentPage > 2) pages.push('ellipsis-left');
                   for (
                     let i = Math.max(1, currentPage - 1);
                     i <= Math.min(totalPages - 2, currentPage + 1);
@@ -300,18 +442,9 @@ export function DataTable<TData>({
                   ) {
                     pages.push(i);
                   }
+                  if (currentPage < totalPages - 3) pages.push('ellipsis-right');
+                  if (totalPages > 1) pages.push(totalPages - 1);
 
-                  // Show ellipsis if currentPage < totalPages - 3
-                  if (currentPage < totalPages - 3) {
-                    pages.push('ellipsis-right');
-                  }
-
-                  // Always show last page if more than one page
-                  if (totalPages > 1) {
-                    pages.push(totalPages - 1);
-                  }
-
-                  // Remove duplicates and sort
                   const uniquePages = Array.from(new Set(pages)).filter(
                     (p) =>
                       p === 'ellipsis-left' ||

@@ -7,6 +7,13 @@ export type MutationFuncProps = {
   onError?: (error: ApiError) => void;
 };
 
+export type CreateMutationPayload = Record<string, unknown>;
+
+export type UpdateMutationPayload<T = Record<string, unknown>> = {
+  id: string;
+  data: T;
+};
+
 export type AppSidebarItem = {
   title: string;
   url?: string;
@@ -24,4 +31,18 @@ export type MenuItem = {
   title: string;
   url: string;
   icon: React.ReactNode;
+};
+
+export type SearchParamsData = {
+  id?: number | string;
+  page?: string | number | null;
+  limit?: string | number | null;
+  slug?: string;
+  search?: string;
+  sort?: string;
+  order?: string;
+  fromDate?: string | null;
+  toDate?: string | null;
+  staffId?: number | null;
+  [key: string]: TQueryParams;
 };

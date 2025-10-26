@@ -112,7 +112,7 @@ const LoginForm = ({ onRegisterClick, openVerifyPhoneOtpModal, onLoginSuccess }:
         const token = res?.data?.token;
 
         if (!token) {
-          toast.error('Login failed: No token received.');
+          toast.error('Login failed. Please try again.');
           return;
         }
 

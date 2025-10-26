@@ -3,11 +3,13 @@
 import type { PropsWithChildren } from 'react';
 import ReactQueryProvider from './ReactQueryProvider';
 
+import { DialogProvider } from '@/components/ui/dialog-context';
 import dayjs from 'dayjs';
 import localeId from 'dayjs/locale/id';
 import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
 import { Toaster } from 'sonner';
+import { ConfirmDialogProvider } from '@/components/ui/confirm-dialog';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -18,8 +20,12 @@ const AppProvider = ({ children }: Readonly<PropsWithChildren>) => {
   return (
     <>
       <ReactQueryProvider>
-        {children}
-        <Toaster position="top-center" richColors />
+        <DialogProvider>
+          <ConfirmDialogProvider>
+            {children}
+            <Toaster position="top-center" richColors />
+          </ConfirmDialogProvider>
+        </DialogProvider>
       </ReactQueryProvider>
     </>
   );

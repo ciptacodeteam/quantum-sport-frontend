@@ -25,7 +25,7 @@ const MembershipCtaSection = () => {
 
             <div className="absolute top-1/2 -right-16 w-[290px] -translate-y-1/2 lg:-right-10 lg:w-[320px]">
               <Image
-                src="/assets/img/player.png"
+                src="/assets/img/player-membership.png"
                 alt="Membership Cta"
                 preload
                 width={400}
