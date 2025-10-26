@@ -166,8 +166,8 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
           url: '/admin/kelola-tipe-coach'
         },
         {
-          title: 'Kelola Payment Method',
-          url: '/admin/kelola-payment-method'
+          title: 'Metode Pembayaran',
+          url: '/admin/kelola-metode-pembayaran'
         }
       ]
     }

@@ -1,14 +1,14 @@
-import { createInventoryApi, updateInventoryApi } from '@/api/admin/inventory';
+import { createPaymentMethodApi, updatePaymentMethodApi } from '@/api/admin/payment-method';
 import type { MutationFuncProps } from '@/types';
 import { mutationOptions } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-export const adminCreateInventoryMutationOptions = ({
+export const adminCreatePaymentMethodMutationOptions = ({
   onSuccess,
   onError
 }: MutationFuncProps = {}) =>
   mutationOptions({
-    mutationFn: createInventoryApi,
+    mutationFn: createPaymentMethodApi,
     onSuccess: (data) => {
       toast.success('Data berhasil disimpan!');
       onSuccess?.(data);
@@ -20,12 +20,12 @@ export const adminCreateInventoryMutationOptions = ({
     }
   });
 
-export const adminUpdateInventoryMutationOptions = ({
+export const adminUpdatePaymentMethodMutationOptions = ({
   onSuccess,
   onError
 }: MutationFuncProps = {}) =>
   mutationOptions({
-    mutationFn: updateInventoryApi,
+    mutationFn: updatePaymentMethodApi,
     onSuccess: (data) => {
       toast.success('Data berhasil diperbarui!');
       onSuccess?.(data);

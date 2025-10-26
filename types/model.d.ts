@@ -42,3 +42,13 @@ export type Inventory = {
   createdAt: Date;
   updatedAt: Date;
 };
+
+export type PaymentMethod = {
+  id: string;
+  name: string;
+  description: string | null;
+  isActive: boolean;
+  icon: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
