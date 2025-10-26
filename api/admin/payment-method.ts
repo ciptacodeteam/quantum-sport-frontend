@@ -15,12 +15,20 @@ export async function getPaymentMethodApi(id: string) {
 }
 
 export async function createPaymentMethodApi(payload: CreateMutationPayload) {
-  const { data } = await adminApi.post('/payment-methods', payload);
+  const { data } = await adminApi.post('/payment-methods', payload, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
   return data;
 }
 
 export async function updatePaymentMethodApi(payload: UpdateMutationPayload) {
-  const { data } = await adminApi.put(`/payment-methods/${payload.id}`, payload.data);
+  const { data } = await adminApi.put(`/payment-methods/${payload.id}`, payload.data, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
   return data;
 }
 
