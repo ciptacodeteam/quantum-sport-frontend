@@ -18,8 +18,8 @@ export default function DashboardPage() {
     <main>
       <header>
         <AppSectionHeader
-          title="Selamat datang di Lucky Petshop Admin"
-          description="Kelola toko hewan peliharaan Anda dengan mudah dan efisien."
+          title="Selamat datang di Quantum Sport Dashboard"
+          description="Pantau kinerja lapangan dan kelola operasional bisnis Anda dengan mudah."
         />
       </header>
 

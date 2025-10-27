@@ -64,3 +64,13 @@ export type Banner = {
   createdAt: Date;
   updatedAt: Date;
 };
+
+export type Court = {
+  id: string;
+  name: string;
+  description: string | null;
+  isActive: boolean;
+  image: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};

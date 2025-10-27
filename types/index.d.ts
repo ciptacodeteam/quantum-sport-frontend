@@ -46,3 +46,5 @@ export type SearchParamsData = {
   staffId?: number | null;
   [key: string]: TQueryParams;
 };
+
+export type IdParams<T = string> = { id: T };

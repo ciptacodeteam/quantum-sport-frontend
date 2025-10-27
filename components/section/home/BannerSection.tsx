@@ -10,6 +10,7 @@ import {
   CarouselPrevious
 } from '@/components/ui/carousel';
 import Autoplay from 'embla-carousel-autoplay';
+import Image from 'next/image';
 import { useRef } from 'react';
 
 export default function BannerSection() {
@@ -27,9 +28,17 @@ export default function BannerSection() {
           {Array.from({ length: 5 }).map((_, index) => (
             <CarouselItem key={index}>
               <div className="p-1">
-                <Card className="shadow-none">
-                  <CardContent className="flex min-h-40 items-center justify-center p-6 md:min-h-72">
-                    <span className="text-4xl font-semibold">{index + 1}</span>
+                <Card className="py-0 shadow-none">
+                  <CardContent className="flex min-h-40 items-center justify-center p-0 md:min-h-72">
+                    {/* <span className="text-4xl font-semibold">{index + 1}</span> */}
+                    <Image
+                      src={'assets/img/banner-1.webp'}
+                      alt={`Banner ${index + 1}`}
+                      width={1200}
+                      unoptimized
+                      height={300}
+                      className="max-h-52 w-full rounded-md object-cover lg:max-h-80"
+                    />
                   </CardContent>
                 </Card>
               </div>
