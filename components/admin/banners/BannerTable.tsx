@@ -96,6 +96,13 @@ const BannerTable = () => {
                 <EditBannerForm data={row.original} />
               </DialogContent>
             </ManagedDialog>
+            {row.original.link && (
+              <Link href={row.original.link} target="_blank" rel="noopener noreferrer">
+                <Button size="icon" variant="lightSuccess">
+                  <IconExternalLink />
+                </Button>
+              </Link>
+            )}
             <Button
               size="icon"
               variant="lightDanger"
@@ -103,13 +110,6 @@ const BannerTable = () => {
             >
               <IconTrash />
             </Button>
-            {row.original.link && (
-              <Link href={row.original.link} target="_blank" rel="noopener noreferrer">
-                <Button size="icon" variant="secondaryInfo">
-                  <IconExternalLink />
-                </Button>
-              </Link>
-            )}
           </div>
         )
       })
