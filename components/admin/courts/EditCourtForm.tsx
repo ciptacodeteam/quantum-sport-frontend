@@ -18,7 +18,7 @@ import { toast } from 'sonner';
 import z from 'zod';
 
 const formSchema = z.object({
-  image: z.file().min(1, { message: 'Image is required.' }),
+  image: z.file().optional(),
   isActive: z.boolean().default(true),
   name: z.string().min(1, { message: 'Name is required.' }),
   description: z.string().optional()
@@ -32,7 +32,6 @@ type Props = {
 
 const EditCourtForm = ({ courtId }: Props) => {
   const { data } = useSuspenseQuery(adminCourtQueryOptions(courtId));
-  console.log('🚀 ~ EditCourtForm ~ data:', data);
 
   const form = useForm({
     resolver: zodResolver(formSchema),
