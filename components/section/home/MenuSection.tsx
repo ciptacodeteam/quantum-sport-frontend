@@ -8,7 +8,7 @@ const MenuSection = () => {
   const menuList = [
     {
       title: 'Booking',
-      url: '#',
+      url: '/booking',
       icon: <BookingMenuIcon className="size-13" />
     },
     {
