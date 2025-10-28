@@ -8,7 +8,7 @@ import MenuSection from '@/components/section/home/MenuSection';
 export default async function HomePage() {
   return (
     <>
-      <MainHeader />
+      <MainHeader withCartBadge withNotificationBadge />
       <main className="mt-0 mb-[28%] w-full md:mt-14">
         <BannerSection />
         <MenuSection />

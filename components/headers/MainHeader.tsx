@@ -16,9 +16,20 @@ import { ChevronLeft } from 'lucide-react';
 type Props = {
   onBack?: () => void;
   backHref?: string;
+  withLogo?: boolean;
+  title?: string;
+  withNotificationBadge?: boolean;
+  withCartBadge?: boolean;
 };
 
-const MainHeader = ({ onBack, backHref }: Props) => {
+const MainHeader = ({
+  onBack,
+  backHref,
+  withLogo = true,
+  title,
+  withNotificationBadge,
+  withCartBadge
+}: Props) => {
   const [openAuthModal, setOpenAuthModal] = useState(false);
 
   const { isPending: isUserPending } = useQuery(profileQueryOptions);
@@ -30,23 +41,31 @@ const MainHeader = ({ onBack, backHref }: Props) => {
       <header className={cn('flex-center top-0 right-0 left-0 z-40 min-h-20 w-full bg-white')}>
         <div className="mx-auto w-full max-w-7xl px-4">
           <main className="flex-between gap-4">
-            {onBack && (
-              <Button variant="light" size="icon-sm" onClick={onBack}>
-                <ChevronLeft className="size-6" />
-              </Button>
-            )}
-            {backHref && (
-              <Link href={backHref}>
-                <Button variant="light" size="icon-sm">
-                  <ChevronLeft className="size-6" />
-                </Button>
+            {onBack || backHref || title ? (
+              <div className="flex items-center gap-4">
+                {onBack && (
+                  <Button variant="light" size="icon-sm" onClick={onBack}>
+                    <ChevronLeft className="size-6" />
+                  </Button>
+                )}
+                {backHref && (
+                  <Link href={backHref}>
+                    <Button variant="light" size="icon-sm">
+                      <ChevronLeft className="size-6" />
+                    </Button>
+                  </Link>
+                )}
+
+                {title && <h1 className="text-lg font-semibold">{title}</h1>}
+              </div>
+            ) : null}
+            {withLogo && (
+              <Link href="/" prefetch>
+                <div className="flex-center relative my-2 h-16 w-28 md:w-32">
+                  <LogoImage className="absolute inset-0 h-full w-full object-contain" />
+                </div>
               </Link>
             )}
-            <Link href="/" prefetch>
-              <div className="flex-center relative my-2 h-16 w-28 md:w-32">
-                <LogoImage className="absolute inset-0 h-full w-full object-contain" />
-              </div>
-            </Link>
 
             <div className="flex items-center justify-end gap-4">
               {isUserPending ? (
@@ -56,22 +75,28 @@ const MainHeader = ({ onBack, backHref }: Props) => {
                 </>
               ) : (
                 <>
-                  <Button variant={'ghost'} size={'icon-sm'}>
-                    <div className="flex-center relative">
-                      <IconShoppingCart className="size-6" />
-                      <Badge className="absolute -top-2 -right-2 h-5 min-w-5 rounded-full px-1 font-mono tabular-nums">
-                        3
-                      </Badge>
-                    </div>
-                  </Button>
-                  <Button variant={'ghost'} size={'icon-sm'}>
-                    <div className="flex-center relative">
-                      <IconBell className="size-6" />
-                      <Badge className="absolute -top-2 -right-2 h-5 min-w-5 rounded-full px-1 font-mono tabular-nums">
-                        3
-                      </Badge>
-                    </div>
-                  </Button>
+                  {withCartBadge && (
+                    <Button variant={'ghost'} size={'icon-sm'}>
+                      <div className="flex-center relative">
+                        <IconShoppingCart className="size-6" />
+                        <Badge className="absolute -top-2 -right-2 h-5 min-w-5 rounded-full px-1 font-mono tabular-nums">
+                          3
+                        </Badge>
+                      </div>
+                    </Button>
+                  )}
+                  {withNotificationBadge && (
+                    <Link href="/notifications">
+                      <Button variant={'ghost'} size={'icon-sm'}>
+                        <div className="flex-center relative">
+                          <IconBell className="size-6" />
+                          <Badge className="absolute -top-2 -right-2 h-5 min-w-5 rounded-full px-1 font-mono tabular-nums">
+                            3
+                          </Badge>
+                        </div>
+                      </Button>
+                    </Link>
+                  )}
                 </>
               )}
             </div>
