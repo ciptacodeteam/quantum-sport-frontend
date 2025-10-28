@@ -17,7 +17,7 @@ export default function BannerSection() {
   const plugin = useRef(Autoplay({ delay: 5000, stopOnInteraction: true }));
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-8 md:px-6 md:py-12 lg:py-16 lg:pb-12 xl:px-0">
+    <section className="mx-auto my-8 mt-4 max-w-7xl px-4 md:my-12 md:px-6 lg:my-16 lg:pb-12 xl:px-0">
       <Carousel
         plugins={[plugin.current]}
         className="group/carousel relative mx-auto w-full"

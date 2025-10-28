@@ -18,7 +18,7 @@ const MainBottomNavigation = () => {
   const isActive = useCallback((path: string) => pathname === path, [pathname]);
 
   return (
-    <div className="fixed right-0 bottom-0 left-0">
+    <div className="fixed right-0 bottom-0 left-0 z-40">
       <div className="flex-center min-h-24 w-full border-t-2 bg-white pb-3 md:hidden">
         <nav className="w-full max-w-7xl px-4">
           <ul className="flex-between w-full">

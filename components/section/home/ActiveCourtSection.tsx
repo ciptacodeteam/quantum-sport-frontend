@@ -46,7 +46,7 @@ const courtList: CourtItem[] = [
 
 const ActiveCourtSection = () => {
   return (
-    <section className="mx-auto my-12 max-w-7xl px-4">
+    <section className="mx-auto my-6 mt-12 max-w-7xl px-4">
       <header className="flex-between py-2">
         <h2 className="text-lg font-semibold lg:text-xl">Active Courts</h2>
         <Link

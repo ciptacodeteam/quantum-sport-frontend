@@ -29,8 +29,8 @@ const MenuSection = () => {
   ];
 
   return (
-    <section className="mx-auto w-full max-w-7xl px-4">
-      <div className="flex-center mx-auto w-full max-w-xl flex-wrap gap-6">
+    <section className="mx-auto my-6 w-full max-w-7xl px-4">
+      <div className="mx-auto grid w-full max-w-xl grid-cols-4 gap-6">
         {menuList.map((item) => (
           <div key={item.title} className="flex-center flex-1">
             <MenuItem item={item} />
