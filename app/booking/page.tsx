@@ -2,9 +2,11 @@
 import MainHeader from '@/components/headers/MainHeader';
 import BottomNavigationWrapper from '@/components/ui/BottomNavigationWrapper';
 import { Button } from '@/components/ui/button';
+import { DatePickerModal, DatePickerModalTrigger } from '@/components/ui/date-picker-modal';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { IconCalendarFilled, IconInfoCircle } from '@tabler/icons-react';
+import dayjs from 'dayjs';
 
 import { useState } from 'react';
 
@@ -37,22 +39,49 @@ function isBooked(date: string, court: string, time: string) {
 
 const BookingPage = () => {
   const [selectedDate, setSelectedDate] = useState('22 Nov');
-  const [selectedCell, setSelectedCell] = useState<{ court: string; time: string } | null>(null);
+  const [selectedCell, setSelectedCell] = useState<{ court: string; time: string }[] | []>([]);
+
+  const [dateList, setDateList] =
+    useState<{ label: string; date: string; active?: boolean }[]>(mockDates);
+
+  const handleSelectDate = (date: Date | null) => {
+    if (!date) return;
+    const formattedDate = dayjs(date).format('DD MMM');
+    setSelectedDate(formattedDate);
+
+    const showedDateLimit = 5;
+    const newDateList = date.setDate(date.getDate());
+    const updatedDates = Array.from({ length: showedDateLimit }, (_, i) => {
+      const currentDate = new Date(newDateList);
+      currentDate.setDate(currentDate.getDate() + i);
+      return {
+        label: dayjs(currentDate).format('ddd'),
+        date: dayjs(currentDate).format('DD MMM'),
+        active: dayjs(currentDate).isSame(dayjs(date), 'day')
+      };
+    });
+    setDateList(updatedDates);
+  };
 
   return (
     <>
       <MainHeader backHref="/" />
+
       <main className="mt-4 mb-[32%] w-full md:mt-14">
         {/* Date selector */}
         <div className="flex items-center gap-2 border-b pb-2">
           <div className="flex items-center pl-2">
-            <Button variant="light" size={'icon-lg'} className="p-2">
-              <IconCalendarFilled className="text-primary size-6" />
-            </Button>
+            <DatePickerModal onChange={handleSelectDate} label="Select Booking Date">
+              <DatePickerModalTrigger>
+                <Button variant="light" size={'icon-lg'} className="p-2">
+                  <IconCalendarFilled className="text-primary size-6" />
+                </Button>
+              </DatePickerModalTrigger>
+            </DatePickerModal>
           </div>
           <Separator orientation="vertical" className="h-10!" />
           <div className="flex gap-1">
-            {mockDates.map((d) => (
+            {dateList.map((d) => (
               <button
                 key={d.date}
                 className={cn(
@@ -95,7 +124,9 @@ const BookingPage = () => {
                   </td>
                   {mockCourts.map((court) => {
                     const booked = isBooked(selectedDate, court, time);
-                    const selected = selectedCell?.court === court && selectedCell?.time === time;
+                    const selected = selectedCell.some(
+                      (cell) => cell.court === court && cell.time === time
+                    );
                     return (
                       <td key={court} className="border-r border-b p-1">
                         <button
@@ -108,9 +139,19 @@ const BookingPage = () => {
                                 ? 'border-green-900 bg-green-900 text-white shadow-lg'
                                 : 'border-gray-200 bg-white hover:bg-green-100'
                           )}
-                          onClick={() => setSelectedCell({ court, time })}
+                          onClick={() => {
+                            if (selected) {
+                              setSelectedCell(
+                                selectedCell.filter(
+                                  (cell) => !(cell.court === court && cell.time === time)
+                                )
+                              );
+                            } else {
+                              setSelectedCell([...selectedCell, { court, time }]);
+                            }
+                          }}
                         >
-                          <span>
+                          <span className="text-sm">
                             {mockPrices.toLocaleString('id-ID', { minimumFractionDigits: 0 })}
                           </span>
                           {booked && <span className="text-xs">booked</span>}
@@ -124,15 +165,23 @@ const BookingPage = () => {
           </table>
         </div>
       </main>
+
       <BottomNavigationWrapper className="pb-4">
         <header className="flex-between my-2 items-end">
           <div>
             <span className="text-muted-foreground text-xs">Subtotal</span>
-            <h2 className="text-lg font-semibold">Rp 200.000</h2>
+            <h2 className="text-lg font-semibold">
+              Rp{' '}
+              {(mockPrices * selectedCell.length).toLocaleString('id-ID', {
+                minimumFractionDigits: 0
+              })}
+            </h2>
           </div>
 
           <div>
-            <span className="text-muted-foreground text-xs">1 Court, 2 Hours</span>
+            <span className="text-muted-foreground text-xs">
+              {selectedCell.length} Slot Selected
+            </span>
           </div>
         </header>
 
