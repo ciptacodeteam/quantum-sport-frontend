@@ -10,6 +10,7 @@ import { useState } from 'react';
 import AuthModal from '../modals/AuthModal';
 import { Button } from '../ui/button';
 import { Skeleton } from '../ui/skeleton';
+import { Badge } from '../ui/badge';
 
 const MainHeader = () => {
   const [openAuthModal, setOpenAuthModal] = useState(false);
@@ -38,10 +39,20 @@ const MainHeader = () => {
               ) : (
                 <>
                   <Button variant={'ghost'} size={'icon-sm'}>
-                    <IconShoppingCart className="size-6" />
+                    <div className="flex-center relative">
+                      <IconShoppingCart className="size-6" />
+                      <Badge className="absolute -top-2 -right-2 h-5 min-w-5 rounded-full px-1 font-mono tabular-nums">
+                        3
+                      </Badge>
+                    </div>
                   </Button>
                   <Button variant={'ghost'} size={'icon-sm'}>
-                    <IconBell className="size-6" />
+                    <div className="flex-center relative">
+                      <IconBell className="size-6" />
+                      <Badge className="absolute -top-2 -right-2 h-5 min-w-5 rounded-full px-1 font-mono tabular-nums">
+                        3
+                      </Badge>
+                    </div>
                   </Button>
                 </>
               )}
