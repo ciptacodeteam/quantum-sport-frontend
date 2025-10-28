@@ -23,6 +23,7 @@ const buttonVariants = cva(
         secondaryWarning:
           'bg-yellow-500 text-white hover:bg-yellow-600 focus-visible:ring-yellow-300',
         secondaryDanger: 'bg-red-500 text-white hover:bg-red-600 focus-visible:ring-red-300',
+        light: 'bg-gray-100 text-gray-800 hover:bg-gray-200 focus-visible:ring-gray-300',
         lightInfo: 'bg-blue-100 text-blue-700 hover:bg-blue-200 focus-visible:ring-blue-300',
         lightSuccess: 'bg-green-100 text-green-700 hover:bg-green-200 focus-visible:ring-green-300',
         lightWarning:

@@ -11,8 +11,14 @@ import AuthModal from '../modals/AuthModal';
 import { Button } from '../ui/button';
 import { Skeleton } from '../ui/skeleton';
 import { Badge } from '../ui/badge';
+import { ChevronLeft } from 'lucide-react';
 
-const MainHeader = () => {
+type Props = {
+  onBack?: () => void;
+  backHref?: string;
+};
+
+const MainHeader = ({ onBack, backHref }: Props) => {
   const [openAuthModal, setOpenAuthModal] = useState(false);
 
   const { isPending: isUserPending } = useQuery(profileQueryOptions);
@@ -24,6 +30,18 @@ const MainHeader = () => {
       <header className={cn('flex-center top-0 right-0 left-0 z-40 min-h-20 w-full bg-white')}>
         <div className="mx-auto w-full max-w-7xl px-4">
           <main className="flex-between gap-4">
+            {onBack && (
+              <Button variant="light" size="icon-sm" onClick={onBack}>
+                <ChevronLeft className="size-6" />
+              </Button>
+            )}
+            {backHref && (
+              <Link href={backHref}>
+                <Button variant="light" size="icon-sm">
+                  <ChevronLeft className="size-6" />
+                </Button>
+              </Link>
+            )}
             <Link href="/" prefetch>
               <div className="flex-center relative my-2 h-16 w-28 md:w-32">
                 <LogoImage className="absolute inset-0 h-full w-full object-contain" />
