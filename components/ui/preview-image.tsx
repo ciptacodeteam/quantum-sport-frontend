@@ -1,14 +1,15 @@
 'use client';
 
-import { getPlaceholderImageUrl } from '@/lib/utils';
+import { cn, getPlaceholderImageUrl } from '@/lib/utils';
 import Image from 'next/image';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './dialog';
 
 type Props = {
   src: string | null | undefined;
+  className?: string;
 };
 
-const PreviewImage = ({ src }: Props) => {
+const PreviewImage = ({ src, className }: Props) => {
   return (
     <div>
       <Dialog>
@@ -19,7 +20,10 @@ const PreviewImage = ({ src }: Props) => {
             width={160}
             height={90}
             unoptimized
-            className="max-h-[90px] max-w-36 cursor-pointer rounded-md object-cover"
+            className={cn(
+              'max-h-[90px] max-w-36 cursor-pointer rounded-md object-cover',
+              className
+            )}
           />
         </DialogTrigger>
         <DialogContent className="lg:min-w-xl">

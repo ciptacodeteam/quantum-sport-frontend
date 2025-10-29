@@ -9,7 +9,7 @@ export default async function HomePage() {
   return (
     <>
       <MainHeader withCartBadge withNotificationBadge />
-      <main className="mt-0 mb-[28%] w-full md:mt-14">
+      <main className="mt-0 mb-[28%] w-full md:mt-14 lg:mb-0">
         <BannerSection />
         <MenuSection />
         <ActiveCourtSection />

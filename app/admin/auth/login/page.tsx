@@ -1,4 +1,3 @@
-import { checkAdminAccountApi } from '@/api/admin/auth';
 import LoginForm from '@/components/admin/forms/LoginForm';
 import RegisterForm from '@/components/admin/forms/RegisterForm';
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,11 +7,23 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 export default async function LoginPage() {
-  const data = await checkAdminAccountApi();
+  const data = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/auth/check-account`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    cache: 'no-store'
+  })
+    .then((res) => {
+      if (!res.ok) {
+        throw new Error('Failed to fetch admin account status');
+      }
 
-  if (!data.success) {
-    throw new Error('Failed to check admin account status');
-  }
+      return res.json();
+    })
+    .catch(() => {
+      return { data: { hasAdmin: false } };
+    });
 
   return (
     <main>

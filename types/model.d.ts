@@ -74,3 +74,16 @@ export type Court = {
   createdAt: Date;
   updatedAt: Date;
 };
+
+export type Staff = {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  phone: string | null;
+  isActive: boolean;
+  image: string | null;
+  joinedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
