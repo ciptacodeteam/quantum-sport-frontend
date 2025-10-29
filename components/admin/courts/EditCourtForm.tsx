@@ -40,7 +40,8 @@ const EditCourtForm = ({ courtId }: Props) => {
       image: undefined,
       name: data?.name || '',
       description: data?.description || ''
-    }
+    },
+    mode: 'onChange'
   });
 
   const [imagePreview, setImagePreview] = useState<string | ArrayBuffer | null>(
@@ -79,6 +80,8 @@ const EditCourtForm = ({ courtId }: Props) => {
       data: formData
     });
   };
+
+  const isSaving = isPending || form.formState.isSubmitting;
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -167,7 +170,7 @@ const EditCourtForm = ({ courtId }: Props) => {
               >
                 Batal
               </Button>
-              <Button type="submit" loading={isPending}>
+              <Button type="submit" loading={isSaving}>
                 Simpan
               </Button>
             </div>

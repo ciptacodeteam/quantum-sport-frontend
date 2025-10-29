@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { InputGroup, InputGroupText } from '@/components/ui/input-group';
-import { PasswordInput } from '@/components/ui/password-input';
 import {
   Select,
   SelectContent,
@@ -22,49 +21,50 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Role } from '@/lib/constants';
 import { cn, formatPhone, getPlaceholderImageUrl } from '@/lib/utils';
-import { adminCreateStaffMutationOptions } from '@/mutations/admin/staff';
+import { adminUpdateStaffMutationOptions } from '@/mutations/admin/staff';
+import { adminStaffQueryOptions } from '@/queries/admin/staff';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Controller, type SubmitHandler, useForm } from 'react-hook-form';
 import z from 'zod';
 
-const formSchema = z
-  .object({
-    image: z.file().optional(),
-    name: z.string().min(1, { message: 'Nama wajib diisi' }),
-    email: z.string().email({ message: 'Email tidak valid' }),
-    role: z.enum([Role.ADMIN, Role.BALLBOY, Role.COACH], { message: 'Role tidak valid' }),
-    phone: z
-      .string()
-      .min(10, { message: 'Nomor telepon minimal 10 digit' })
-      .max(15, { message: 'Nomor telepon maksimal 15 digit' }),
-    joinedAt: z.date().optional(),
-    password: z.string().min(6, { message: 'Password minimal 6 karakter' }),
-    confirmPassword: z.string().min(6, { message: 'Konfirmasi password minimal 6 karakter' })
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: 'Password dan konfirmasi password tidak sesuai',
-    path: ['confirmPassword']
-  });
+const formSchema = z.object({
+  image: z.file().optional(),
+  name: z.string().min(1, { message: 'Nama wajib diisi' }),
+  email: z.string().email({ message: 'Email tidak valid' }),
+  role: z.enum([Role.ADMIN, Role.BALLBOY, Role.COACH], { message: 'Role tidak valid' }),
+  phone: z
+    .string()
+    .min(10, { message: 'Nomor telepon minimal 10 digit' })
+    .max(15, { message: 'Nomor telepon maksimal 15 digit' }),
+  joinedAt: z.date().optional(),
+  isActive: z.boolean().optional()
+});
 
 type FormSchema = z.infer<typeof formSchema>;
 
-const CreateStaffForm = () => {
+type Props = {
+  staffId: string;
+};
+
+const EditStaffForm = ({ staffId }: Props) => {
+  const { data } = useSuspenseQuery(adminStaffQueryOptions(staffId));
+
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: '',
-      email: '',
-      role: Role.ADMIN,
-      phone: '',
-      password: '',
-      confirmPassword: '',
+      name: data?.name || '',
+      email: data?.email || '',
+      role: data?.role || undefined,
+      phone: data?.phone || '',
       image: undefined,
-      joinedAt: new Date()
+      joinedAt: data?.joinedAt ? new Date(data.joinedAt) : undefined,
+      isActive: data?.isActive || true
     }
   });
 
@@ -73,7 +73,7 @@ const CreateStaffForm = () => {
   const router = useRouter();
 
   const { mutate, isPending } = useMutation(
-    adminCreateStaffMutationOptions({
+    adminUpdateStaffMutationOptions({
       onSuccess: () => {
         form.reset();
         setImagePreview(null);
@@ -95,8 +95,11 @@ const CreateStaffForm = () => {
 
   const onSubmit: SubmitHandler<FormSchema> = (formData) => {
     mutate({
-      ...formData,
-      phone: formatPhone(formData.phone)
+      id: staffId,
+      data: {
+        ...formData,
+        phone: formatPhone(formData.phone)
+      }
     });
   };
 
@@ -234,26 +237,28 @@ const CreateStaffForm = () => {
             />
             <FieldError>{form.formState.errors.joinedAt?.message}</FieldError>
           </Field>
-          <div className="grid grid-cols-1 gap-x-4 md:grid-cols-2">
-            <Field>
-              <FieldLabel htmlFor="password">Password</FieldLabel>
-              <PasswordInput
-                id="password"
-                {...form.register('password')}
-                placeholder="Masukkan password Anda"
-              />
-              <FieldError>{form.formState.errors.password?.message}</FieldError>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="confirmPassword">Konfirmasi</FieldLabel>
-              <PasswordInput
-                id="confirmPassword"
-                {...form.register('confirmPassword')}
-                placeholder="Konfirmasi password Anda"
-              />
-              <FieldError>{form.formState.errors.confirmPassword?.message}</FieldError>
-            </Field>
-          </div>
+          <Field>
+            <FieldLabel htmlFor="isActive">Status</FieldLabel>
+            <Controller
+              control={form.control}
+              name="isActive"
+              render={({ field: { value, onChange } }) => (
+                <div className="flex items-center gap-4">
+                  <Switch id="isActive" checked={value} onCheckedChange={(v) => onChange(v)} />
+                  <label
+                    htmlFor="isActive"
+                    className={cn('text-sm font-medium', {
+                      'text-green-600': value,
+                      'text-red-600': !value
+                    })}
+                  >
+                    {value ? 'Active' : 'Inactive'}
+                  </label>
+                </div>
+              )}
+            />
+            <FieldError>{form.formState.errors.isActive?.message}</FieldError>
+          </Field>
           <Field className="mt-2">
             <Button type="submit" className="w-fit!" loading={isPending}>
               Save
@@ -264,4 +269,4 @@ const CreateStaffForm = () => {
     </form>
   );
 };
-export default CreateStaffForm;
+export default EditStaffForm;

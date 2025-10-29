@@ -17,7 +17,7 @@ const EditCourtPage = async ({ params }) => {
 
   const queryClient = createQueryClient();
 
-  await queryClient.prefetchQuery(adminCourtQueryOptions(params.id));
+  await queryClient.prefetchQuery(adminCourtQueryOptions(param.id));
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>

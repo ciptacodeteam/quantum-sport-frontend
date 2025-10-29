@@ -10,12 +10,12 @@ export async function getStaffsApi(queryParams: SearchParamsData = {}) {
 }
 
 export async function getStaffApi(id: string) {
-  const { data } = await adminApi.get(`/staff/${id}`);
+  const { data } = await adminApi.get(`/staffs/${id}`);
   return data;
 }
 
 export async function updateStaffApi(payload: UpdateMutationPayload) {
-  const { data } = await adminApi.put(`/staff/${payload.id}`, payload.data, {
+  const { data } = await adminApi.put(`/staffs/${payload.id}`, payload.data, {
     headers: { 'Content-Type': 'multipart/form-data' }
   });
   return data;
