@@ -107,12 +107,12 @@ export function useConfirmMutation<TVars = void, TResult = unknown>(
   const confirm = useConfirm();
   const qc = useQueryClient();
   const { mutateAsync } = useMutation<TResult, ApiError, TVars>({
-    ...mutationOptions,
     onSuccess: async () => {
       await runRQInvalidateOrRefetch(qc, ui?.invalidate, 'invalidate');
       await runRQInvalidateOrRefetch(qc, ui?.refetch, 'refetch');
       await runRouterInvalidate(router, ui?.router?.invalidate);
-    }
+    },
+    ...mutationOptions
   });
 
   const router = useRouter();

@@ -30,6 +30,16 @@ export function getNameInitial(name: string | null | undefined): string {
     .slice(0, 2);
 }
 
+export function maskText(text: string, unmaskedStart = 2, unmaskedEnd = 2, maskChar = '*'): string {
+  if (text.length <= unmaskedStart + unmaskedEnd) {
+    return text;
+  }
+  const start = text.slice(0, unmaskedStart);
+  const end = text.slice(-unmaskedEnd);
+  const maskedSection = maskChar.repeat(text.length - unmaskedStart - unmaskedEnd);
+  return `${start}${maskedSection}${end}`;
+}
+
 export function getTwoWordName(fullname: string): string {
   if (!fullname) return '';
   const words = fullname.trim().split(/\s+/);

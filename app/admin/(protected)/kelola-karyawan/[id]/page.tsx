@@ -1,7 +1,6 @@
 import EditStaffForm from '@/components/admin/staffs/EditStaffForm';
+import ResetStaffPassword from '@/components/admin/staffs/ResetStaffPassword';
 import RevokeStaffAccess from '@/components/admin/staffs/RevokeStaffAccess';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
 import {
   Section,
   SectionContent,
@@ -13,7 +12,6 @@ import { Separator } from '@/components/ui/separator';
 import { createQueryClient } from '@/lib/query-client';
 import { adminStaffQueryOptions } from '@/queries/admin/staff';
 import { type IdParams } from '@/types';
-import { IconInfoCircle } from '@tabler/icons-react';
 import { dehydrate, HydrationBoundary } from '@tanstack/react-query';
 
 const EditStaffPage = async ({ params }) => {
@@ -37,24 +35,7 @@ const EditStaffPage = async ({ params }) => {
             </div>
             <Separator className="mt-10 mb-6 block xl:hidden" />
             <div>
-              <Section>
-                <SectionHeader>
-                  <SectionTitle title="Reset Password Karyawan" />
-                  <SectionDescription description="Kirim tautan reset password ke email karyawan ini." />
-                </SectionHeader>
-                <SectionContent>
-                  <Alert variant="info" className="mb-4">
-                    <IconInfoCircle />
-                    <AlertDescription>
-                      Dengan mengklik tombol di bawah, anda akan generate password baru untuk
-                      karyawan ini.
-                    </AlertDescription>
-                  </Alert>
-                  <Button variant="secondaryInfo" className="mt-6 md:mt-0">
-                    Reset Password
-                  </Button>
-                </SectionContent>
-              </Section>
+              <ResetStaffPassword staffId={param.id} />
               <Separator className="my-4" />
               <RevokeStaffAccess staffId={param.id} />
             </div>
