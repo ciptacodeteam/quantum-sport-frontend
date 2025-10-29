@@ -25,7 +25,7 @@ const PreviewImage = ({ src, className, placeholder }: Props) => {
             height={90}
             unoptimized
             className={cn(
-              'max-h-[90px] max-w-36 cursor-pointer rounded-md object-cover',
+              'max-h-[90px] max-w-36 cursor-pointer rounded-md object-contain',
               className
             )}
           />

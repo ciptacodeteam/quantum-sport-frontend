@@ -50,7 +50,7 @@ const CourtTable = () => {
     () => [
       colHelper.accessor('image', {
         header: 'Preview',
-        cell: (info) => <PreviewImage src={info.getValue()} />
+        cell: (info) => <PreviewImage src={info.getValue()} className="object-cover" />
       }),
       colHelper.accessor('name', {
         header: 'Nama Lapangan',

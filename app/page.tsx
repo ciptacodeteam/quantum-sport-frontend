@@ -1,3 +1,4 @@
+import LoginModalButton from '@/components/buttons/LoginModalButton';
 import MainBottomNavigation from '@/components/footers/MainBottomNavigation';
 import MainHeader from '@/components/headers/MainHeader';
 import ActiveCourtSection from '@/components/section/home/ActiveCourtSection';
@@ -9,6 +10,7 @@ export default async function HomePage() {
   return (
     <>
       <MainHeader withCartBadge withNotificationBadge />
+      <LoginModalButton />
       <main className="mt-0 mb-[28%] w-full md:mt-14 lg:mb-0">
         <BannerSection />
         <MenuSection />

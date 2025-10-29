@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { NumberInput } from '@/components/ui/number-input';
-import { Textarea } from '@/components/ui/textarea';
 import { cn, getPlaceholderImageUrl } from '@/lib/utils';
 import { adminCreatePaymentMethodMutationOptions } from '@/mutations/admin/paymentMethod';
 import { adminPaymentMethodsQueryOptions } from '@/queries/admin/paymentMethod';
@@ -91,6 +90,7 @@ const CreatePaymentMethodForm = () => {
                         })
                   }
                   alt={'placeholder'}
+                  className="object-contain"
                 />
                 <AvatarFallback>QS</AvatarFallback>
               </Avatar>
@@ -152,15 +152,6 @@ const CreatePaymentMethodForm = () => {
               )}
             />
             <FieldError>{form.formState.errors.fees?.message}</FieldError>
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="description">Keterangan</FieldLabel>
-            <Textarea
-              id="description"
-              {...form.register('description')}
-              placeholder="e.g. Pembayaran melalui BCA Virtual Account"
-            />
-            <FieldError>{form.formState.errors.description?.message}</FieldError>
           </Field>
           <Field className="mt-2 ml-auto w-fit">
             <div className="flex items-center gap-4">

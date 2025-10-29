@@ -1,13 +1,11 @@
 'use client';
 
 import { logoutMutationOptions } from '@/mutations/auth';
+import useAuthStore from '@/stores/useAuthStore';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '../ui/button';
-import { useRouter } from 'next/navigation';
-import useAuthStore from '@/stores/useAuthStore';
 
 const LogoutButton = () => {
-  const router = useRouter();
   const queryClient = useQueryClient();
 
   const logout = useAuthStore((state) => state.logout);
@@ -15,7 +13,6 @@ const LogoutButton = () => {
   const { mutate, isPending } = useMutation(
     logoutMutationOptions({
       onSuccess: () => {
-        router.push('/admin/auth/login');
         queryClient.clear();
         logout();
       }
