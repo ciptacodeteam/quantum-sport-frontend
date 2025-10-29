@@ -1,10 +1,3 @@
-export enum Role {
-  ADMIN = 'admin',
-  USER = 'user',
-  BALLBOY = 'ballboy',
-  COACH = 'coach'
-}
-
 export type AdminProfile = {
   id: string;
   name: string;

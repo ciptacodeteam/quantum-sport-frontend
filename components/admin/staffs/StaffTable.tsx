@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import PreviewImage from '@/components/ui/preview-image';
 import { STATUS_BADGE_VARIANT, STATUS_MAP } from '@/lib/constants';
-import { formatPhone } from '@/lib/utils';
+import { formatPhone, getNameInitial } from '@/lib/utils';
 import { adminStaffsQueryOptions } from '@/queries/admin/staff';
 import type { Staff } from '@/types/model';
 import { IconPencil, IconPlus } from '@tabler/icons-react';
@@ -22,7 +22,13 @@ const StaffTable = () => {
     () => [
       colHelper.accessor('image', {
         header: 'Foto',
-        cell: (info) => <PreviewImage src={info.getValue()} className="aspect-square" />
+        cell: (info) => (
+          <PreviewImage
+            src={info.getValue()}
+            placeholder={getNameInitial(info.row.original.name)}
+            className="aspect-square w-auto"
+          />
+        )
       }),
       colHelper.accessor('name', {
         header: 'Nama Lengkap',
@@ -36,13 +42,13 @@ const StaffTable = () => {
         header: 'No. Telepon',
         cell: (info) => formatPhone(info.getValue())
       }),
-      colHelper.accessor('joinedAt', {
-        header: 'Bergabung Pada',
-        cell: (info) => dayjs(info.getValue()).format('DD/MM/YYYY HH:mm')
-      }),
       colHelper.accessor('role', {
         header: 'Role',
-        cell: (info) => <Badge>{info.getValue()}</Badge>
+        cell: (info) => <Badge variant={'lightNeutral'}>{info.getValue()}</Badge>
+      }),
+      colHelper.accessor('joinedAt', {
+        header: 'Bergabung Pada',
+        cell: (info) => dayjs(info.getValue()).format('DD/MM/YYYY')
       }),
       colHelper.accessor('isActive', {
         header: 'Status',

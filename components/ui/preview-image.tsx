@@ -7,15 +7,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 type Props = {
   src: string | null | undefined;
   className?: string;
+  placeholder?: string;
 };
 
-const PreviewImage = ({ src, className }: Props) => {
+const PreviewImage = ({ src, className, placeholder }: Props) => {
   return (
     <div>
       <Dialog>
         <DialogTrigger>
           <Image
-            src={src || getPlaceholderImageUrl({ width: 160, height: 90 })}
+            src={
+              src ||
+              getPlaceholderImageUrl({ width: 160, height: 90, text: placeholder || 'No Image' })
+            }
             alt="Banner Image"
             width={160}
             height={90}

@@ -40,7 +40,7 @@ export function getTwoWordName(fullname: string): string {
 export function getPlaceholderImageUrl({
   width = 400,
   height = 300,
-  text = 'Placeholder Image'
+  text = 'Placeholder'
 }: {
   width?: number;
   height?: number;

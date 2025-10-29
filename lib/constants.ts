@@ -25,3 +25,10 @@ export const STATUS_BADGE_VARIANT: Record<number, BadgeVariant['variant']> = {
   [ACTIVE]: 'lightSuccess',
   [INACTIVE]: 'lightDestructive'
 };
+
+export enum Role {
+  ADMIN = 'ADMIN',
+  USER = 'USER',
+  BALLBOY = 'BALLBOY',
+  COACH = 'COACH'
+}
