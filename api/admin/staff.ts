@@ -33,7 +33,7 @@ export async function resetStaffPasswordApi(id: string) {
   return data;
 }
 
-export async function revokeStaffTokenApi(id: string) {
-  const { data } = await adminApi.post(`/staffs/${id}/revoke-token`);
+export async function revokeStaffSessionApi(id: string) {
+  const { data } = await adminApi.post(`/staffs/${id}/revoke-sessions`);
   return data;
 }

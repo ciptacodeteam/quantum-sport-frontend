@@ -10,7 +10,7 @@ import {
   SectionTitle
 } from '@/components/ui/section';
 import { useConfirmMutation } from '@/hooks/useConfirmDialog';
-import { adminRevokeStaffTokenMutationOptions } from '@/mutations/admin/staff';
+import { adminRevokeStaffSessionMutationOptions } from '@/mutations/admin/staff';
 import { adminStaffQueryOptions } from '@/queries/admin/staff';
 import { IconInfoCircle } from '@tabler/icons-react';
 
@@ -21,7 +21,7 @@ type Props = {
 const RevokeStaffAccess = ({ staffId }: Props) => {
   const { confirmAndMutate } = useConfirmMutation(
     {
-      mutationFn: adminRevokeStaffTokenMutationOptions().mutationFn
+      mutationFn: adminRevokeStaffSessionMutationOptions().mutationFn
     },
     {
       title: 'Revoke Sessions',

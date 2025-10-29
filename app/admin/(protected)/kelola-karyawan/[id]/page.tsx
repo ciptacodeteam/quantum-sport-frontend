@@ -31,10 +31,11 @@ const EditStaffPage = async ({ params }) => {
             <SectionTitle title="Kelola Karyawan" />
             <SectionDescription description="Atur dan pantau karyawan Anda di sini." />
           </SectionHeader>
-          <SectionContent className="mt-4 grid grid-cols-1 justify-center xl:grid-cols-2">
-            <div className="md:max-w-2xl">
+          <SectionContent className="mt-4 grid grid-cols-1 justify-center xl:grid-cols-2 xl:gap-x-6">
+            <div className="md:max-w-3xl">
               <EditStaffForm staffId={param.id} />
             </div>
+            <Separator className="mt-10 mb-6 block xl:hidden" />
             <div>
               <Section>
                 <SectionHeader>

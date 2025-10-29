@@ -1,7 +1,7 @@
 import {
   createStaffApi,
   resetStaffPasswordApi,
-  revokeStaffTokenApi,
+  revokeStaffSessionApi,
   updateStaffApi
 } from '@/api/admin/staff';
 import type { MutationFuncProps } from '@/types';
@@ -53,19 +53,19 @@ export const adminResetStaffPasswordMutationOptions = ({
     }
   });
 
-export const adminRevokeStaffTokenMutationOptions = ({
+export const adminRevokeStaffSessionMutationOptions = ({
   onSuccess,
   onError
 }: MutationFuncProps = {}) =>
   mutationOptions({
-    mutationFn: revokeStaffTokenApi,
+    mutationFn: revokeStaffSessionApi,
     onSuccess: (data) => {
-      toast.success('Token berhasil dicabut!');
+      toast.success('Session berhasil dicabut!');
       onSuccess?.(data);
     },
     onError: (error) => {
       console.error('Error:', error);
-      toast.error(error.msg || 'Gagal mencabut token. Silakan coba lagi.');
+      toast.error(error.msg || 'Gagal mencabut session. Silakan coba lagi.');
       onError?.(error);
     }
   });
