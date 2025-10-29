@@ -20,6 +20,9 @@ import dayjs from 'dayjs';
 import { useMemo } from 'react';
 import CreatePaymentMethodForm from './CreatePaymentMethodForm';
 import EditPaymentMethodForm from './EditPaymentMethodForm';
+import PreviewImage from '@/components/ui/preview-image';
+import { Badge } from '@/components/ui/badge';
+import { STATUS_BADGE_VARIANT, STATUS_MAP } from '@/lib/constants';
 
 const PaymentMethodTable = () => {
   const { confirmAndMutate } = useConfirmMutation(
@@ -45,13 +48,31 @@ const PaymentMethodTable = () => {
 
   const columns = useMemo(
     () => [
+      colHelper.accessor('logo', {
+        header: 'Logo',
+        cell: (info) => (
+          <PreviewImage
+            src={info.getValue()}
+            className="aspect-square w-auto"
+            placeholder="No Logo"
+          />
+        )
+      }),
       colHelper.accessor('name', {
-        header: 'Nama Alat',
+        header: 'Nama Metode',
         cell: (info) => info.getValue()
       }),
-      colHelper.accessor('description', {
-        header: 'Keterangan',
-        cell: (info) => <p className="line-clamp-2">{info.getValue() || '-'}</p>
+      colHelper.accessor('fees', {
+        header: 'Biaya Layanan',
+        cell: (info) => 'Rp ' + info.getValue().toLocaleString('id-ID')
+      }),
+      colHelper.accessor('isActive', {
+        header: 'Status',
+        cell: (info) => (
+          <Badge variant={STATUS_BADGE_VARIANT[Number(info.getValue())]}>
+            {STATUS_MAP[Number(info.getValue())]}
+          </Badge>
+        )
       }),
       colHelper.accessor('createdAt', {
         header: 'Dibuat Pada',
@@ -62,7 +83,7 @@ const PaymentMethodTable = () => {
         header: 'Aksi',
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
-            <ManagedDialog id={`edit-paymentMethod-${row.original.id}`}>
+            <ManagedDialog id={`edit-payment-method-${row.original.id}`}>
               <DialogTrigger asChild>
                 <Button size="icon" variant="lightInfo">
                   <IconPencil />
@@ -70,7 +91,7 @@ const PaymentMethodTable = () => {
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader className="mb-4">
-                  <DialogTitle>Edit PaymentMethod</DialogTitle>
+                  <DialogTitle>Edit Metode Pembayaran</DialogTitle>
                 </DialogHeader>
                 {/* You would typically have an EditPaymentMethodForm component here */}
                 <EditPaymentMethodForm data={row.original} />

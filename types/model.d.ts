@@ -39,9 +39,9 @@ export type Inventory = {
 export type PaymentMethod = {
   id: string;
   name: string;
-  description: string | null;
   isActive: boolean;
-  icon: string | null;
+  fees: number;
+  logo: string | null;
   createdAt: Date;
   updatedAt: Date;
 };

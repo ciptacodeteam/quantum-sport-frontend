@@ -1,28 +1,38 @@
 'use client';
 
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useDialog } from '@/components/ui/dialog';
-import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from '@/components/ui/field';
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldSet
+} from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
 import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
-import { cn } from '@/lib/utils';
+import { cn, getPlaceholderImageUrl } from '@/lib/utils';
 import { adminUpdatePaymentMethodMutationOptions } from '@/mutations/admin/paymentMethod';
 import {
-  adminPaymentMethodsQueryOptions,
-  adminPaymentMethodQueryOptions
+  adminPaymentMethodQueryOptions,
+  adminPaymentMethodsQueryOptions
 } from '@/queries/admin/paymentMethod';
 import type { PaymentMethod } from '@/types/model';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { Controller, type SubmitHandler, useForm } from 'react-hook-form';
 import z from 'zod';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   description: z.string().optional(),
-  icon: z.file().optional(),
-  isActive: z.boolean().optional()
+  logo: z.file().optional(),
+  isActive: z.boolean().optional(),
+  fees: z.number().min(0, { message: 'Fees must be at least 0.' })
 });
 
 type FormSchema = z.infer<typeof formSchema>;
@@ -36,9 +46,9 @@ const EditPaymentMethodForm = ({ data }: Props) => {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: data?.name || '',
-      description: data?.description || '',
-      icon: undefined,
-      isActive: data?.isActive || true
+      logo: undefined,
+      isActive: data?.isActive,
+      fees: data?.fees || 0
     }
   });
 
@@ -69,10 +79,15 @@ const EditPaymentMethodForm = ({ data }: Props) => {
     })
   );
 
+  const [imagePreview, setImagePreview] = useState<string | ArrayBuffer | null>(data?.logo || null);
+
   const onSubmit: SubmitHandler<FormSchema> = (formData) => {
     mutate({
       id: data.id,
-      data: formData
+      data: {
+        ...formData,
+        isActive: Number(formData.isActive)
+      }
     });
   };
 
@@ -82,19 +97,81 @@ const EditPaymentMethodForm = ({ data }: Props) => {
     <form onSubmit={form.handleSubmit(onSubmit)}>
       <FieldSet>
         <FieldGroup>
+          <div className="flex items-center justify-center gap-6">
+            {imagePreview && (
+              <Avatar className="border-muted h-32 w-32 border">
+                <AvatarImage
+                  src={
+                    typeof imagePreview === 'string'
+                      ? imagePreview
+                      : getPlaceholderImageUrl({
+                          width: 128,
+                          height: 128,
+                          text: 'QS'
+                        })
+                  }
+                  alt={'placeholder'}
+                />
+                <AvatarFallback>QS</AvatarFallback>
+              </Avatar>
+            )}
+
+            <Field>
+              <FieldLabel htmlFor="logo">Logo</FieldLabel>
+              <Controller
+                control={form.control}
+                name="logo"
+                render={({ field }) => (
+                  <Input
+                    id="logo"
+                    type="file"
+                    className={cn(imagePreview ? 'max-w-sm' : 'w-full')}
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      field.onChange(file);
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setImagePreview(reader.result);
+                        };
+                        reader.readAsDataURL(file);
+                      } else {
+                        setImagePreview(null);
+                      }
+                    }}
+                  />
+                )}
+              />
+              <FieldDescription>Max file size 500KB.</FieldDescription>
+              <FieldError>{form.formState.errors.logo?.message}</FieldError>
+            </Field>
+          </div>
           <Field>
             <FieldLabel htmlFor="name">Nama</FieldLabel>
             <Input id="name" {...form.register('name')} placeholder="e.g. Raket" />
             <FieldError>{form.formState.errors.name?.message}</FieldError>
           </Field>
           <Field>
-            <FieldLabel htmlFor="description">Keterangan</FieldLabel>
-            <Textarea
-              id="description"
-              {...form.register('description')}
-              placeholder="e.g. Raket padel merk Yonex"
+            <FieldLabel htmlFor="fees">Biaya Layanan</FieldLabel>
+            <Controller
+              control={form.control}
+              name="fees"
+              render={({ field }) => (
+                <NumberInput
+                  id="fees"
+                  thousandSeparator="."
+                  decimalSeparator=","
+                  prefix="Rp "
+                  min={0}
+                  allowNegative={false}
+                  placeholder="e.g. Rp 5.000"
+                  value={field.value}
+                  onValueChange={field.onChange}
+                />
+              )}
             />
-            <FieldError>{form.formState.errors.description?.message}</FieldError>
+            <FieldError>{form.formState.errors.fees?.message}</FieldError>
           </Field>
           <Field>
             <FieldLabel htmlFor="isActive">Status</FieldLabel>
