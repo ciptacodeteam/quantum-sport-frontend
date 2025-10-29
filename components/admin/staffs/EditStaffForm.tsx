@@ -53,7 +53,8 @@ type Props = {
 };
 
 const EditStaffForm = ({ staffId }: Props) => {
-  const { data } = useSuspenseQuery(adminStaffQueryOptions(staffId));
+  const { data, refetch } = useSuspenseQuery(adminStaffQueryOptions(staffId));
+  console.log('🚀 ~ EditStaffForm ~ data:', data);
 
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -61,11 +62,12 @@ const EditStaffForm = ({ staffId }: Props) => {
       name: data?.name || '',
       email: data?.email || '',
       role: data?.role || undefined,
-      phone: data?.phone || '',
+      phone: data?.phone ? formatPhone(data.phone).replace(/^\+62/, '') : '',
       image: undefined,
       joinedAt: data?.joinedAt ? new Date(data.joinedAt) : undefined,
-      isActive: data?.isActive || true
-    }
+      isActive: data?.isActive
+    },
+    mode: 'onChange'
   });
 
   const [imagePreview, setImagePreview] = useState<string | ArrayBuffer | null>(null);
@@ -75,9 +77,9 @@ const EditStaffForm = ({ staffId }: Props) => {
   const { mutate, isPending } = useMutation(
     adminUpdateStaffMutationOptions({
       onSuccess: () => {
-        form.reset();
         setImagePreview(null);
-        router.push('/admin/kelola-karyawan');
+        refetch();
+        router.refresh();
       },
       onError: (err) => {
         if (err.errors?.name === 'ZodError') {
@@ -98,7 +100,8 @@ const EditStaffForm = ({ staffId }: Props) => {
       id: staffId,
       data: {
         ...formData,
-        phone: formatPhone(formData.phone)
+        phone: formatPhone(formData.phone),
+        isActive: formData.isActive ? 1 : 0
       }
     });
   };
