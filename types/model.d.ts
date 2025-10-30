@@ -80,3 +80,253 @@ export type Staff = {
   createdAt: Date;
   updatedAt: Date;
 };
+
+export type Membership = {
+  id: string;
+  name: string;
+  description: string | null;
+  content: string | null;
+  price: number;
+  sessions: number;
+  duration: number; // in days
+  sequence: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+
+  benefits?: MembershipBenefit[];
+  membershipUser?: MembershipUser[];
+};
+
+export type MembershipBenefit = {
+  id: string;
+  membershipId: string;
+  benefit: string;
+  createdAt: Date;
+  updatedAt: Date;
+
+  membership?: Membership;
+};
+
+export type MembershipUser = {
+  id: string;
+  membershipId: string;
+  userId: string;
+  startDate: Date;
+  endDate: Date | null;
+  remainingSessions: number;
+  remainingDuration: number; // in days
+  isExpired: boolean;
+  isSuspended: boolean;
+  suspensionReason: string | null;
+  suspensionEndDate: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+
+  user?: UserProfile;
+  membership?: Membership;
+};
+
+enum Gender {
+  MALE,
+  FEMALE,
+  OTHER
+}
+
+export type Class = {
+  id: string;
+  name: string;
+  description: string | null;
+  content: string | null;
+  organizerName: string | null;
+  speakerName: string | null;
+  image: string | null;
+  startDate: Date;
+  endDate: Date;
+  startTime: string;
+  endTime: string;
+  price: number;
+  sessions: number;
+  capacity: number;
+  remaining: number;
+  maxBookingPax: number;
+  gender: Gender;
+  ageMin: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type ClassBooking = {
+  id: string;
+  classId: string;
+  userId: string;
+  status: BookingStatus;
+  totalPrice: number;
+  processingFee: number;
+  createdAt: Date;
+  updatedAt: Date;
+  cancelledAt: Date | null;
+  cancellationReason: string | null;
+
+  user?: UserProfile;
+  class?: Class;
+  details?: ClassBookingDetail[];
+  invoice?: Invoice;
+};
+
+export type ClassBookingDetail = {
+  id: string;
+  classBookingId: string;
+  date: Date;
+  time: string;
+  price: number;
+  attendance: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type Invoice = {
+  id: string;
+  bookingId: string;
+  classBookingId: string | null;
+  membershipUserId: string | null;
+  number: string;
+  userId: string;
+  paymentId: string | null;
+  subtotal: number;
+  processingFee: number;
+  total: number;
+  status: PaymentStatus;
+
+  issuedAt: Date;
+  dueAt: Date | null;
+  paidAt: Date | null;
+  cancelledAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+
+  user?: UserProfile;
+  payment?: Payment;
+  booking?: Booking;
+  classBooking?: ClassBooking;
+  membershipUser?: MembershipUser;
+};
+
+enum BookingStatus {
+  HOLD, // temporary hold on slots before payment (expiry)
+  CONFIRMED, // paid; slots locked
+  CANCELLED
+}
+
+enum SlotType {
+  COURT,
+  COACH,
+  BALLBOY
+}
+
+export type Slot = {
+  id: string;
+  type: SlotType;
+  courtId: string | null;
+  staffId: string | null;
+  startAt: Date;
+  endAt: Date;
+  price: number;
+  isAvailable: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+
+  court?: Court;
+  staff?: Staff;
+};
+
+export type Booking = {
+  id: string;
+  userId: string;
+  status: BookingStatus;
+  totalPrice: number;
+  processingFee: number;
+  createdAt: Date;
+  updatedAt: Date;
+  holdExpiresAt: Date | null;
+  cancelledAt: Date | null;
+  cancellationReason: string | null;
+
+  user?: UserProfile;
+  details?: BookingDetail[];
+  inventories?: Inventory[];
+  ballboys?: Staff[];
+  coaches?: Staff[];
+  invoice?: Invoice;
+};
+
+export type BookingDetail = {
+  id: string;
+  bookingId: string;
+  slotId: string;
+  courtId: string | null;
+  price: number;
+  createdAt: Date;
+  updatedAt: Date;
+
+  booking?: Booking;
+  slot?: Slot;
+  court?: Court;
+};
+
+export type BookingInventory = {
+  id: string;
+  bookingId: string;
+  inventoryId: string;
+  quantity: number;
+  price: number;
+  createdAt: Date;
+  updatedAt: Date;
+
+  booking?: Booking;
+  inventory?: Inventory;
+};
+
+export type BookingBallboy = Omit<BookingInventory, 'inventory', 'inventoryId', 'quantity'> & {
+  slotId: string;
+  slot?: Slot;
+};
+
+export type BookingCoachType = {
+  id: string;
+  name: string;
+  description: string | null;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+
+  bookingCoach?: BookingCoach[];
+  coachTypeStaffPrices?: CoachTypeStaffPrice[];
+};
+
+export type CoachTypeStaffPrice = {
+  id: string;
+  staffId: string;
+  coachTypeId: string;
+  basePrice: number;
+  createdAt: Date;
+  updatedAt: Date;
+
+  staff?: Staff;
+  coachType?: BookingCoachType;
+};
+
+export type BookingCoach = {
+  id: string;
+  bookingId: string;
+  slotId: string;
+  bookingCoachTypeId: string;
+  price: number;
+  createdAt: Date;
+  updatedAt: Date;
+
+  booking?: Booking;
+  slot?: Slot;
+  bookingCoachType?: BookingCoachType;
+};

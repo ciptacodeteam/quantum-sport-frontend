@@ -32,3 +32,51 @@ export enum Role {
   BALLBOY = 'BALLBOY',
   COACH = 'COACH'
 }
+
+export enum SlotType {
+  COURT = 'COURT',
+  COACH = 'COACH',
+  BALLBOY = 'BALLBOY'
+}
+
+export const SLOT_TYPE_MAP: Record<SlotType, string> = {
+  [SlotType.COURT]: 'Court',
+  [SlotType.COACH]: 'Coach',
+  [SlotType.BALLBOY]: 'Ballboy'
+};
+
+export const SLOT_TYPE_OPTIONS: Array<{ label: string; value: SlotType }> = [
+  { label: 'Court', value: SlotType.COURT },
+  { label: 'Coach', value: SlotType.COACH },
+  { label: 'Ballboy', value: SlotType.BALLBOY }
+];
+
+export const SLOT_TYPE_BADGE_VARIANT: Record<SlotType, BadgeVariant['variant']> = {
+  [SlotType.COURT]: 'lightSuccess',
+  [SlotType.COACH]: 'lightWarning',
+  [SlotType.BALLBOY]: 'lightInfo'
+};
+
+export enum BookingStatus {
+  HOLD = 'HOLD', // temporary hold on slots before payment (expiry)
+  CONFIRMED = 'CONFIRMED', // paid; slots locked
+  CANCELLED = 'CANCELLED'
+}
+
+export const BOOKING_STATUS_MAP: Record<BookingStatus, string> = {
+  [BookingStatus.HOLD]: 'Hold',
+  [BookingStatus.CONFIRMED]: 'Confirmed',
+  [BookingStatus.CANCELLED]: 'Cancelled'
+};
+
+export const BOOKING_STATUS_OPTIONS: Array<{ label: string; value: BookingStatus }> = [
+  { label: 'Hold', value: BookingStatus.HOLD },
+  { label: 'Confirmed', value: BookingStatus.CONFIRMED },
+  { label: 'Cancelled', value: BookingStatus.CANCELLED }
+];
+
+export const BOOKING_STATUS_BADGE_VARIANT: Record<BookingStatus, BadgeVariant['variant']> = {
+  [BookingStatus.HOLD]: 'lightWarning',
+  [BookingStatus.CONFIRMED]: 'lightSuccess',
+  [BookingStatus.CANCELLED]: 'lightDestructive'
+};
