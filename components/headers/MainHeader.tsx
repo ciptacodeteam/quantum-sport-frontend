@@ -3,13 +3,13 @@
 import LogoImage from '@/assets/img/logo.svg';
 import { cn } from '@/lib/utils';
 import { profileQueryOptions } from '@/queries/profile';
-import { IconBellFilled, IconShoppingCartFilled } from '@tabler/icons-react';
+import { IconBellFilled } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
+import CartSheet from '../CartSheet';
 import AuthModal from '../modals/AuthModal';
-import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Skeleton } from '../ui/skeleton';
 
@@ -43,7 +43,7 @@ const MainHeader = ({
           'flex-center fixed top-0 right-0 left-0 z-40 min-h-20 w-full border-b bg-white'
         )}
       >
-        <div className="mx-auto w-full max-w-7xl px-4">
+        <div className="mx-auto w-full max-w-7xl px-4 pl-5">
           <main className="flex-between gap-4">
             {onBack || backHref || title ? (
               <div className="flex items-center gap-4">
@@ -65,7 +65,7 @@ const MainHeader = ({
             ) : null}
             {withLogo && (
               <Link href="/" prefetch>
-                <div className="flex-center relative my-2 h-16 w-28 md:w-32">
+                <div className="flex-center relative my-2 h-16 w-28 pl-2 md:w-32">
                   <LogoImage className="absolute inset-0 h-full w-full object-contain" />
                 </div>
               </Link>
@@ -79,16 +79,7 @@ const MainHeader = ({
                 </>
               ) : (
                 <>
-                  {withCartBadge && (
-                    <Button variant={'ghost'} size={'icon-sm'}>
-                      <div className="flex-center relative">
-                        <IconShoppingCartFilled className="text-primary size-7" />
-                        <Badge className="bg-badge absolute -top-2 -right-2 h-5 min-w-5 rounded-full px-1 font-mono tabular-nums">
-                          3
-                        </Badge>
-                      </div>
-                    </Button>
-                  )}
+                  {withCartBadge && <CartSheet />}
                   {withNotificationBadge && (
                     <Link href="/notifications">
                       <Button variant={'ghost'} size={'icon-sm'}>

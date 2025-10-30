@@ -33,7 +33,7 @@ const NotificationPage = () => {
     <>
       <MainHeader backHref="/" title={'Notifikasi'} withLogo={false} />
 
-      <main className="mt-4 mb-[5%] w-full md:mt-14">
+      <main className="mt-26 mb-[5%] w-full md:mt-14">
         <section className="mx-auto max-w-md px-2">
           {mockNotifications.length === 0 ? (
             <div className="text-muted-foreground flex flex-col items-center justify-center py-16">

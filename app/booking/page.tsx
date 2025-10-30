@@ -186,7 +186,7 @@ const BookingPage = () => {
         </header>
 
         <main>
-          <Button className="w-full" size={'lg'}>
+          <Button className="w-full" size={'xl'}>
             Pilih Jadwal
           </Button>
         </main>
