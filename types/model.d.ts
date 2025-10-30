@@ -136,7 +136,7 @@ export type MembershipUser = {
 enum Gender {
   MALE,
   FEMALE,
-  OTHER
+  ALL
 }
 
 export type Class = {

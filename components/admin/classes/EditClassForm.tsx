@@ -4,16 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { adminUpdateClassMutationOptions } from '@/mutations/admin/class';
-import { adminClassesQueryOptions } from '@/queries/admin/class';
-import type { Class } from '@/types/model';
+import { adminClassesQueryOptions, adminClassQueryOptions } from '@/queries/admin/class';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { type SubmitHandler, useForm } from 'react-hook-form';
 import z from 'zod';
 
 type Props = {
-  data: Class;
+  classId: string;
 };
 
 const formSchema = z.object({
@@ -38,7 +37,9 @@ const formSchema = z.object({
 
 type FormSchema = z.infer<typeof formSchema>;
 
-const EditClassForm = ({ data }: Props) => {
+const EditClassForm = ({ classId }: Props) => {
+  const { data } = useSuspenseQuery(adminClassQueryOptions(classId));
+
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {

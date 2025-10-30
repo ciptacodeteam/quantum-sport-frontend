@@ -67,7 +67,7 @@ export function Plugins({ placeholder }: Props) {
                 <ContentEditable
                   placeholder={placeholder || 'Mulai menulis...'}
                   className="ContentEditable__root relative block h-52 min-h-full overflow-auto px-4 py-2 focus:outline-none"
-                  placeholderClassName="text-muted-foreground pointer-events-none absolute top-0 left-0 overflow-hidden px-4 py-2 text-ellipsis select-none"
+                  placeholderClassName="text-muted-foreground pointer-events-none absolute top-0 left-0 overflow-hidden px-4 py-2 text-ellipsis select-none placeholder:text-sm"
                 />
               </div>
             </div>

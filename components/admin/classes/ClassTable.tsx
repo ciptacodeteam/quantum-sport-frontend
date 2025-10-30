@@ -4,13 +4,6 @@ import { deleteClassApi } from '@/api/admin/class';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
-import {
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  ManagedDialog
-} from '@/components/ui/dialog';
 import PreviewImage from '@/components/ui/preview-image';
 import { useConfirmMutation } from '@/hooks/useConfirmDialog';
 import { STATUS_BADGE_VARIANT, STATUS_MAP } from '@/lib/constants';
@@ -20,9 +13,8 @@ import { IconPencil, IconPlus, IconTrash } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
+import Link from 'next/link';
 import { useMemo } from 'react';
-import CreateClassForm from './CreateClassForm';
-import EditClassForm from './EditClassForm';
 
 const ClassTable = () => {
   const { confirmAndMutate } = useConfirmMutation(
@@ -90,20 +82,11 @@ const ClassTable = () => {
         header: 'Aksi',
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
-            <ManagedDialog id={`edit-class-${row.original.id}`}>
-              <DialogTrigger asChild>
-                <Button size="icon" variant="lightInfo">
-                  <IconPencil />
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader className="mb-4">
-                  <DialogTitle>Edit Kelas</DialogTitle>
-                </DialogHeader>
-                {/* You would typically have an EditClassForm component here */}
-                <EditClassForm data={row.original} />
-              </DialogContent>
-            </ManagedDialog>
+            <Link href={`/admin/kelola-kelas/${row.original.id}`}>
+              <Button size="icon" variant="lightInfo">
+                <IconPencil />
+              </Button>
+            </Link>
             <Button
               size="icon"
               variant="lightDanger"
@@ -127,20 +110,12 @@ const ClassTable = () => {
       columns={columns}
       enableRowSelection={false}
       addButton={
-        <ManagedDialog id="create-class">
-          <DialogTrigger asChild>
-            <Button>
-              <IconPlus />
-              Tambah
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="lg:min-w-xl">
-            <DialogHeader className="mb-4">
-              <DialogTitle>Tambah Data Baru</DialogTitle>
-            </DialogHeader>
-            <CreateClassForm />
-          </DialogContent>
-        </ManagedDialog>
+        <Link href="/admin/kelola-kelas/tambah">
+          <Button>
+            <IconPlus />
+            Tambah
+          </Button>
+        </Link>
       }
     />
   );

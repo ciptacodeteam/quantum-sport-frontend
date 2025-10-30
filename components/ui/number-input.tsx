@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { NumericFormat, type NumericFormatProps } from 'react-number-format';
 import { Button } from './button';
 import { Input } from './input';
+import { cn } from '@/lib/utils';
 
 export interface NumberInputProps extends Omit<NumericFormatProps, 'value' | 'onValueChange'> {
   stepper?: number;
@@ -33,8 +34,9 @@ export const NumberInput = ({
   prefix,
   value: controlledValue,
   ref,
+  withControl = true,
   ...props
-}: NumberInputProps & { ref?: React.RefObject<HTMLInputElement> }) => {
+}: NumberInputProps & { ref?: React.RefObject<HTMLInputElement>; withControl?: boolean }) => {
   const [value, setValue] = useState<number | undefined>(controlledValue ?? defaultValue);
 
   const handleIncrement = useCallback(() => {
@@ -114,33 +116,38 @@ export const NumberInput = ({
         prefix={prefix}
         customInput={Input}
         placeholder={placeholder}
-        className="relative [appearance:textfield] rounded-r-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        className={cn(
+          'relative [appearance:textfield] text-sm placeholder:text-sm [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none',
+          withControl && 'rounded-r-none'
+        )}
         getInputRef={ref}
         {...props}
       />
 
-      <div className="flex flex-col">
-        <Button
-          aria-label="Increase value"
-          className="border-input h-4.5 rounded-l-none rounded-br-none border-b-[0.5px] border-l-0 px-2 focus-visible:relative"
-          variant="outline"
-          type="button"
-          onClick={handleIncrement}
-          disabled={value === max}
-        >
-          <ChevronUp size={15} />
-        </Button>
-        <Button
-          aria-label="Decrease value"
-          className="border-input h-4.5 rounded-l-none rounded-tr-none border-t-[0.5px] border-l-0 px-2 focus-visible:relative"
-          variant="outline"
-          type="button"
-          onClick={handleDecrement}
-          disabled={value === min}
-        >
-          <ChevronDown size={15} />
-        </Button>
-      </div>
+      {withControl && (
+        <div className="flex flex-col">
+          <Button
+            aria-label="Increase value"
+            className="border-input h-4.5 rounded-l-none rounded-br-none border-b-[0.5px] border-l-0 px-2 focus-visible:relative"
+            variant="outline"
+            type="button"
+            onClick={handleIncrement}
+            disabled={value === max}
+          >
+            <ChevronUp size={15} />
+          </Button>
+          <Button
+            aria-label="Decrease value"
+            className="border-input h-4.5 rounded-l-none rounded-tr-none border-t-[0.5px] border-l-0 px-2 focus-visible:relative"
+            variant="outline"
+            type="button"
+            onClick={handleDecrement}
+            disabled={value === min}
+          >
+            <ChevronDown size={15} />
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

@@ -36,8 +36,26 @@ export enum Role {
 export enum Gender {
   MALE = 'MALE',
   FEMALE = 'FEMALE',
-  OTHER = 'OTHER'
+  ALL = 'ALL'
 }
+
+export const GENDER_MAP: Record<Gender, string> = {
+  [Gender.MALE]: 'Male',
+  [Gender.FEMALE]: 'Female',
+  [Gender.ALL]: 'All'
+};
+
+export const GENDER_OPTIONS: Array<{ label: string; value: Gender }> = [
+  { label: 'Male', value: Gender.MALE },
+  { label: 'Female', value: Gender.FEMALE },
+  { label: 'All', value: Gender.ALL }
+];
+
+export const GENDER_BADGE_VARIANT: Record<Gender, BadgeVariant['variant']> = {
+  [Gender.MALE]: 'lightInfo',
+  [Gender.FEMALE]: 'lightInfo',
+  [Gender.ALL]: 'lightSuccess'
+};
 
 export const ROLE_MAP: Record<Role, string> = {
   [Role.ADMIN]: 'Admin',
