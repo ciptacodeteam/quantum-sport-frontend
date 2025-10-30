@@ -101,7 +101,6 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
       title: 'Kelola Kelas',
       url: '/admin/kelola-kelas',
       icon: IconSchool,
-      isUnrealeased: true,
       items: []
     },
     {

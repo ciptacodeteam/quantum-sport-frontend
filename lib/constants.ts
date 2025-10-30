@@ -33,6 +33,12 @@ export enum Role {
   COACH = 'COACH'
 }
 
+export enum Gender {
+  MALE = 'MALE',
+  FEMALE = 'FEMALE',
+  OTHER = 'OTHER'
+}
+
 export const ROLE_MAP: Record<Role, string> = {
   [Role.ADMIN]: 'Admin',
   [Role.USER]: 'User',
