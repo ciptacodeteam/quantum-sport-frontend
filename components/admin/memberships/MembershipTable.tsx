@@ -31,12 +31,12 @@ const MembershipTable = () => {
       }),
       colHelper.accessor('duration', {
         header: 'Durasi (hari)',
-        cell: (info) => info.getValue(),
+        cell: (info) => info.getValue() + ' hari',
         meta: { width: 150 }
       }),
       colHelper.accessor('sessions', {
         header: 'Sesi',
-        cell: (info) => info.getValue(),
+        cell: (info) => info.getValue() + ' sesi',
         meta: { width: 100 }
       }),
       colHelper.accessor('sequence', {
