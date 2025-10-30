@@ -92,6 +92,12 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
       ]
     },
     {
+      title: 'Kelola Karyawan',
+      url: '/admin/kelola-karyawan',
+      icon: IconUser,
+      items: []
+    },
+    {
       title: 'Kelola Kelas',
       url: '/admin/kelola-kelas',
       icon: IconSchool,
@@ -112,17 +118,6 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
       isUnrealeased: true,
       items: []
     },
-    {
-      title: 'Karyawan',
-      icon: IconUser,
-      items: [
-        {
-          title: 'Kelola Karyawan',
-          url: '/admin/kelola-karyawan'
-        }
-      ]
-    },
-
     {
       title: 'Marketing',
       icon: IconAd2,
