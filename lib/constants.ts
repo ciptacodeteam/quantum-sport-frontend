@@ -33,6 +33,27 @@ export enum Role {
   COACH = 'COACH'
 }
 
+export const ROLE_MAP: Record<Role, string> = {
+  [Role.ADMIN]: 'Admin',
+  [Role.USER]: 'User',
+  [Role.BALLBOY]: 'Ballboy',
+  [Role.COACH]: 'Coach'
+};
+
+export const ROLE_OPTIONS: Array<{ label: string; value: Role }> = [
+  { label: 'Admin', value: Role.ADMIN },
+  { label: 'User', value: Role.USER },
+  { label: 'Ballboy', value: Role.BALLBOY },
+  { label: 'Coach', value: Role.COACH }
+];
+
+export const ROLE_BADGE_VARIANT: Record<Role, BadgeVariant['variant']> = {
+  [Role.ADMIN]: 'lightSuccess',
+  [Role.USER]: 'lightNeutral',
+  [Role.BALLBOY]: 'lightInfo',
+  [Role.COACH]: 'lightWarning'
+};
+
 export enum SlotType {
   COURT = 'COURT',
   COACH = 'COACH',

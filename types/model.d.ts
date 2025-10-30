@@ -1,3 +1,9 @@
+enum Role {
+  ADMIN,
+  COACH,
+  BALLBOY
+}
+
 export type AdminProfile = {
   id: string;
   name: string;
