@@ -30,9 +30,8 @@ export default function BannerSection() {
               <div className="p-1">
                 <Card className="py-0 shadow-none">
                   <CardContent className="flex min-h-40 items-center justify-center p-0 md:min-h-72">
-                    {/* <span className="text-4xl font-semibold">{index + 1}</span> */}
                     <Image
-                      src={'assets/img/banner-1.webp'}
+                      src={'assets/img/banner-1.png'}
                       alt={`Banner ${index + 1}`}
                       width={1200}
                       unoptimized
@@ -47,7 +46,7 @@ export default function BannerSection() {
         </CarouselContent>
         <CarouselPrevious className="invisible -left-4.5 size-12 shadow-md lg:group-hover/carousel:visible" />
         <CarouselNext className="invisible -right-4.5 size-12 shadow-md lg:group-hover/carousel:visible" />
-        <CarouselDots className="absolute bottom-0 left-1/2 mb-6 -translate-x-1/2 lg:invisible" />
+        <CarouselDots className="absolute bottom-0 left-1/2 mb-5 -translate-x-1/2 lg:invisible" />
       </Carousel>
     </section>
   );

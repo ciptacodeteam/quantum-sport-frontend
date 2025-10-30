@@ -1,8 +1,8 @@
 import MenuItem from './MenuItem';
-import BookingMenuIcon from '@/aseets/icons/menus/booking.svg';
-import ClubMenuIcon from '@/aseets/icons/menus/club.svg';
-import MembershipMenuIcon from '@/aseets/icons/menus/membership.svg';
-import TournamentMenuIcon from '@/aseets/icons/menus/tournament.svg';
+import BookingMenuIcon from '@/assets/icons/menus/booking.svg';
+import ClubMenuIcon from '@/assets/icons/menus/club.svg';
+import MembershipMenuIcon from '@/assets/icons/menus/membership.svg';
+import TournamentMenuIcon from '@/assets/icons/menus/tournament.svg';
 
 const MenuSection = () => {
   const menuList = [

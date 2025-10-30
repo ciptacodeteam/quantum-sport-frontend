@@ -1,17 +1,17 @@
 'use client';
 
-import LogoImage from '@/aseets/img/logo.svg';
+import LogoImage from '@/assets/img/logo.svg';
 import { cn } from '@/lib/utils';
 import { profileQueryOptions } from '@/queries/profile';
-import { IconBell, IconShoppingCart } from '@tabler/icons-react';
+import { IconBellFilled, IconShoppingCartFilled } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
+import { ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import AuthModal from '../modals/AuthModal';
+import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Skeleton } from '../ui/skeleton';
-import { Badge } from '../ui/badge';
-import { ChevronLeft } from 'lucide-react';
 
 type Props = {
   onBack?: () => void;
@@ -38,7 +38,11 @@ const MainHeader = ({
     <>
       <AuthModal open={openAuthModal} onOpenChange={setOpenAuthModal} />
 
-      <header className={cn('flex-center top-0 right-0 left-0 z-40 min-h-20 w-full bg-white')}>
+      <header
+        className={cn(
+          'flex-center fixed top-0 right-0 left-0 z-40 min-h-20 w-full border-b bg-white'
+        )}
+      >
         <div className="mx-auto w-full max-w-7xl px-4">
           <main className="flex-between gap-4">
             {onBack || backHref || title ? (
@@ -78,8 +82,8 @@ const MainHeader = ({
                   {withCartBadge && (
                     <Button variant={'ghost'} size={'icon-sm'}>
                       <div className="flex-center relative">
-                        <IconShoppingCart className="size-6" />
-                        <Badge className="absolute -top-2 -right-2 h-5 min-w-5 rounded-full px-1 font-mono tabular-nums">
+                        <IconShoppingCartFilled className="size-7" />
+                        <Badge className="bg-badge absolute -top-2 -right-2 h-5 min-w-5 rounded-full px-1 font-mono tabular-nums">
                           3
                         </Badge>
                       </div>
@@ -89,10 +93,8 @@ const MainHeader = ({
                     <Link href="/notifications">
                       <Button variant={'ghost'} size={'icon-sm'}>
                         <div className="flex-center relative">
-                          <IconBell className="size-6" />
-                          <Badge className="absolute -top-2 -right-2 h-5 min-w-5 rounded-full px-1 font-mono tabular-nums">
-                            3
-                          </Badge>
+                          <IconBellFilled className="size-7" />
+                          <div className="bg-badge absolute -top-0.5 right-0 size-3 rounded-full"></div>
                         </div>
                       </Button>
                     </Link>

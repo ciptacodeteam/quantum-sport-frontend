@@ -65,12 +65,12 @@ const BookingPage = () => {
 
   return (
     <>
-      <MainHeader backHref="/" />
+      <MainHeader backHref="/" title="Booking Court" withLogo={false} withCartBadge />
 
-      <main className="mt-4 mb-[32%] w-full md:mt-14">
+      <main className="mt-24 mb-[32%] w-full md:mt-14">
         {/* Date selector */}
         <div className="flex items-center gap-2 border-b pb-2">
-          <div className="flex items-center pl-2">
+          <div className="flex items-center px-2 pl-4">
             <DatePickerModal onChange={handleSelectDate} label="Select Booking Date">
               <DatePickerModalTrigger>
                 <Button variant="light" size={'icon-lg'} className="p-2">

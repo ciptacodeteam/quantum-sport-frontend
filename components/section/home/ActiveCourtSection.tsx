@@ -46,54 +46,58 @@ const courtList: CourtItem[] = [
 
 const ActiveCourtSection = () => {
   return (
-    <section className="mx-auto my-6 mt-12 max-w-7xl px-4">
-      <header className="flex-between py-2">
-        <h2 className="text-lg font-semibold lg:text-xl">Active Courts</h2>
-        <Link
+    <section className="mx-auto my-6 mt-10 max-w-7xl">
+      <header className="flex-between px-4 py-2">
+        <h2 className="text-lg font-semibold lg:text-xl">Lapangan Padel</h2>
+        {/* <Link
           href="#"
           prefetch
           className="text-primary text-sm font-medium hover:underline md:text-base"
         >
           See All
-        </Link>
+        </Link> */}
       </header>
 
       <main className="py-4">
-        <Carousel className="group/carousel relative mx-auto w-full">
-          <CarouselContent className="max-w-80">
+        <Carousel
+          className="group/carousel relative mx-auto w-full"
+          opts={{
+            slidesToScroll: 1,
+            align: 'start'
+          }}
+        >
+          <CarouselContent>
             {courtList.map((court, index) => (
-              <CarouselItem key={index}>
-                <div className="p-1">
-                  <Card className="min-h-72 max-w-80 gap-y-0 overflow-hidden pt-0 shadow-none">
-                    <CardHeader className="px-0">
-                      <Image
-                        src={court.image}
-                        alt={court.name}
-                        width={320}
-                        height={180}
-                        className="h-52 w-full object-cover"
-                      />
-                    </CardHeader>
-                    <CardContent className="space-y-1 px-4 pt-2 pb-2">
-                      <div className="flex flex-col items-start gap-1">
-                        <span className="line-clamp-2 text-base font-semibold md:text-lg">
-                          {court.name}
+              <CarouselItem key={index} className="max-w-8/12 pl-4 first:pl-6">
+                <Card className="min-h-60 gap-y-0 overflow-hidden pt-0 pb-4 shadow-none">
+                  <CardHeader className="px-0">
+                    <Image
+                      src={court.image}
+                      alt={court.name}
+                      width={320}
+                      height={180}
+                      className="h-40 w-full object-cover"
+                    />
+                  </CardHeader>
+                  <CardContent className="space-y-1 px-4 pt-2 pb-2">
+                    <div className="flex flex-col items-start gap-1">
+                      <span className="line-clamp-2 text-base font-semibold md:text-lg">
+                        {court.name}
+                      </span>
+                      <span className="text-muted-foreground text-sm">
+                        Mulai{' '}
+                        <span className="text-foreground text-base font-bold md:text-lg">
+                          Rp {court.startingPrice.toLocaleString('id-ID')}
                         </span>
-                        <span className="text-muted-foreground text-sm">
-                          Mulai{' '}
-                          <span className="text-foreground text-base font-bold md:text-lg">
-                            Rp {court.startingPrice.toLocaleString('id-ID')}
-                          </span>
-                        </span>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="px-4 pt-4 pb-0">
-                      <Link href="#" prefetch className="w-full">
-                        <Button className="w-full">Book Now</Button>
-                      </Link>
-                    </CardFooter>
-                  </Card>
-                </div>
+                      </span>
+                    </div>
+                  </CardContent>
+                  <CardFooter className="px-4 pt-3 pb-0">
+                    <Link href="#" prefetch className="w-full">
+                      <Button className="w-full">Book Now</Button>
+                    </Link>
+                  </CardFooter>
+                </Card>
               </CarouselItem>
             ))}
           </CarouselContent>
