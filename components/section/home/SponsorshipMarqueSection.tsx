@@ -40,6 +40,12 @@ const SponsorshipMarqueSection = () => {
 
       <main className="mx-auto py-4">
         <div className="relative overflow-hidden">
+          {/* left gradient overlay */}
+          <div className="pointer-events-none absolute top-0 left-0 z-10 h-full w-8 bg-linear-to-r from-white via-white/80 to-transparent" />
+
+          {/* right gradient overlay */}
+          <div className="pointer-events-none absolute top-0 right-0 z-10 h-full w-8 bg-linear-to-l from-white via-white/80 to-transparent" />
+
           <Marquee autoFill speed={50}>
             {[...sponsorList, ...sponsorList].map((client, i) => (
               <Image
