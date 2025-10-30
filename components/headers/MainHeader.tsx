@@ -82,7 +82,7 @@ const MainHeader = ({
                   {withCartBadge && (
                     <Button variant={'ghost'} size={'icon-sm'}>
                       <div className="flex-center relative">
-                        <IconShoppingCartFilled className="size-7" />
+                        <IconShoppingCartFilled className="text-primary size-7" />
                         <Badge className="bg-badge absolute -top-2 -right-2 h-5 min-w-5 rounded-full px-1 font-mono tabular-nums">
                           3
                         </Badge>
@@ -93,7 +93,7 @@ const MainHeader = ({
                     <Link href="/notifications">
                       <Button variant={'ghost'} size={'icon-sm'}>
                         <div className="flex-center relative">
-                          <IconBellFilled className="size-7" />
+                          <IconBellFilled className="text-primary size-7" />
                           <div className="bg-badge absolute -top-0.5 right-0 size-3 rounded-full"></div>
                         </div>
                       </Button>
