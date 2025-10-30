@@ -119,7 +119,7 @@ const BookingPage = () => {
             <tbody>
               {mockTimes.map((time) => (
                 <tr key={time}>
-                  <td className="sticky left-0 z-10 border-r border-b bg-white px-2 py-2 text-left text-xs font-semibold">
+                  <td className="sticky left-0 z-10 border-r border-b bg-white px-4 py-2 text-left text-sm font-medium">
                     {time}
                   </td>
                   {mockCourts.map((court) => {
@@ -187,7 +187,7 @@ const BookingPage = () => {
 
         <main>
           <Button className="w-full" size={'lg'}>
-            Proceed to Payment
+            Pilih Jadwal
           </Button>
         </main>
       </BottomNavigationWrapper>
