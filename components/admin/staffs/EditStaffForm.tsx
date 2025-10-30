@@ -54,7 +54,6 @@ type Props = {
 
 const EditStaffForm = ({ staffId }: Props) => {
   const { data, refetch } = useSuspenseQuery(adminStaffQueryOptions(staffId));
-  console.log('🚀 ~ EditStaffForm ~ data:', data);
 
   const form = useForm({
     resolver: zodResolver(formSchema),

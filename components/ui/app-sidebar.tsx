@@ -121,14 +121,6 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
           url: '/admin/kelola-karyawan'
         },
         {
-          title: 'Kelola Coach',
-          url: '/admin/kelola-coach'
-        },
-        {
-          title: 'Kelola Ballboy',
-          url: '/admin/kelola-ballboy'
-        },
-        {
           title: 'Roles',
           url: '/admin/kelola-roles'
         }

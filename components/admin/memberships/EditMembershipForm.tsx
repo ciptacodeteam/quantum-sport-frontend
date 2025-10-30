@@ -6,11 +6,14 @@ import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from '@/component
 import { Input } from '@/components/ui/input';
 import { NumberInput } from '@/components/ui/number-input';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { adminCreateMembershipMutationOptions } from '@/mutations/admin/membership';
+import { cn } from '@/lib/utils';
+import { adminUpdateMembershipMutationOptions } from '@/mutations/admin/membership';
+import { adminMembershipQueryOptions } from '@/queries/admin/membership';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { IconTrash } from '@tabler/icons-react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { Controller, type SubmitHandler, useFieldArray, useForm } from 'react-hook-form';
 import z from 'zod';
@@ -29,20 +32,31 @@ const formSchema = z.object({
 
 type FormSchema = z.infer<typeof formSchema>;
 
-const CreateMembershipForm = () => {
+type Props = {
+  membershipId: string;
+};
+
+const EditMembershipForm = ({ membershipId }: Props) => {
+  const { data, refetch } = useSuspenseQuery(adminMembershipQueryOptions(membershipId));
+
   const form = useForm<FormSchema>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: '',
-      description: '',
-      content: '',
-      price: 0,
-      sessions: 0,
-      duration: 30,
-      sequence: 1,
-      isActive: true,
-      benefits: [{ value: '' }]
-    }
+      name: data?.name || '',
+      description: data?.description || '',
+      content: data?.content || '',
+      price: data?.price || 0,
+      sessions: data?.sessions || 0,
+      duration: data?.duration || 30,
+      sequence: data?.sequence || 1,
+      isActive: data?.isActive,
+      benefits: data?.benefits
+        ? data.benefits.map((b) => ({
+            value: b.benefit
+          }))
+        : [{ value: '' }]
+    },
+    mode: 'onChange'
   });
 
   // Benefits field array logic (must be after form is defined)
@@ -54,10 +68,10 @@ const CreateMembershipForm = () => {
   const router = useRouter();
 
   const { mutate, isPending } = useMutation(
-    adminCreateMembershipMutationOptions({
+    adminUpdateMembershipMutationOptions({
       onSuccess: () => {
-        form.reset();
-        router.push('/admin/kelola-membership');
+        refetch();
+        router.refresh();
       },
       onError: (err) => {
         if (err.errors?.name === 'ZodError') {
@@ -75,8 +89,11 @@ const CreateMembershipForm = () => {
 
   const onSubmit: SubmitHandler<FormSchema> = (formData) => {
     mutate({
-      ...formData,
-      benefits: formData.benefits.map((b) => b.value)
+      id: membershipId,
+      data: {
+        ...formData,
+        benefits: formData.benefits.map((b) => b.value)
+      }
     });
   };
 
@@ -198,6 +215,29 @@ const CreateMembershipForm = () => {
                 />
                 <FieldError>{form.formState.errors.content?.message}</FieldError>
               </Field>
+
+              <Field>
+                <FieldLabel htmlFor="isActive">Status</FieldLabel>
+                <Controller
+                  control={form.control}
+                  name="isActive"
+                  render={({ field: { value, onChange } }) => (
+                    <div className="flex items-center gap-4">
+                      <Switch id="isActive" checked={value} onCheckedChange={(v) => onChange(v)} />
+                      <label
+                        htmlFor="isActive"
+                        className={cn('text-sm font-medium', {
+                          'text-green-600': value,
+                          'text-red-600': !value
+                        })}
+                      >
+                        {value ? 'Active' : 'Inactive'}
+                      </label>
+                    </div>
+                  )}
+                />
+                <FieldError>{form.formState.errors.isActive?.message}</FieldError>
+              </Field>
             </FieldGroup>
 
             <FieldGroup>
@@ -271,4 +311,4 @@ const CreateMembershipForm = () => {
     </form>
   );
 };
-export default CreateMembershipForm;
+export default EditMembershipForm;
