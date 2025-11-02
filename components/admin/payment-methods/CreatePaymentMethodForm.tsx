@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { NumberInput } from '@/components/ui/number-input';
+import { Switch } from '@/components/ui/switch';
 import { cn, getPlaceholderImageUrl } from '@/lib/utils';
 import { adminCreatePaymentMethodMutationOptions } from '@/mutations/admin/paymentMethod';
 import { adminPaymentMethodsQueryOptions } from '@/queries/admin/paymentMethod';
@@ -22,11 +23,19 @@ import { useState } from 'react';
 import { Controller, type SubmitHandler, useForm } from 'react-hook-form';
 import z from 'zod';
 
-const formSchema = z.object({
-  name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
-  description: z.string().optional(),
-  logo: z.file(),
-  fees: z.number().min(0, { message: 'Fees must be at least 0.' })
+export const formSchema = z.object({
+  name: z.string().min(3).max(100),
+  logo: z.file().optional(),
+  fees: z.coerce.number().min(0),
+  percentage: z.string().refine(
+    (val) => {
+      const num = parseFloat(val);
+      return !isNaN(num) && num >= 0;
+    },
+    { message: 'Percentage must be a non-negative number' }
+  ),
+  channel: z.string().min(3).max(50).optional(),
+  isActive: z.boolean().optional().default(true)
 });
 
 type FormSchema = z.infer<typeof formSchema>;
@@ -36,9 +45,11 @@ const CreatePaymentMethodForm = () => {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
-      description: '',
       logo: undefined,
-      fees: 0
+      fees: 0,
+      percentage: '0',
+      channel: '',
+      isActive: true
     }
   });
 
@@ -132,26 +143,68 @@ const CreatePaymentMethodForm = () => {
             <Input id="name" {...form.register('name')} placeholder="e.g. BCA Virtual Account" />
             <FieldError>{form.formState.errors.name?.message}</FieldError>
           </Field>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <Field>
+              <FieldLabel htmlFor="fees">Biaya Layanan</FieldLabel>
+              <Controller
+                control={form.control}
+                name="fees"
+                render={({ field }) => (
+                  <NumberInput
+                    id="fees"
+                    thousandSeparator="."
+                    decimalSeparator=","
+                    prefix="Rp "
+                    withControl={false}
+                    min={0}
+                    allowNegative={false}
+                    placeholder="e.g. Rp 5.000"
+                    value={field.value as number}
+                    onValueChange={field.onChange}
+                  />
+                )}
+              />
+              <FieldError>{form.formState.errors.fees?.message}</FieldError>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="percentage">Persentase (%)</FieldLabel>
+              <Input
+                id="percentage"
+                type="number"
+                step="any"
+                min={0}
+                {...form.register('percentage')}
+                placeholder="e.g. 2.5"
+              />
+              <FieldError>{form.formState.errors.percentage?.message}</FieldError>
+            </Field>
+          </div>
           <Field>
-            <FieldLabel htmlFor="fees">Biaya Layanan</FieldLabel>
+            <FieldLabel htmlFor="channel">Channel</FieldLabel>
+            <Input id="channel" {...form.register('channel')} placeholder="e.g. VA, QRIS, etc." />
+            <FieldError>{form.formState.errors.channel?.message}</FieldError>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="isActive">Status</FieldLabel>
             <Controller
               control={form.control}
-              name="fees"
-              render={({ field }) => (
-                <NumberInput
-                  id="fees"
-                  thousandSeparator="."
-                  decimalSeparator=","
-                  prefix="Rp "
-                  min={0}
-                  allowNegative={false}
-                  placeholder="e.g. Rp 5.000"
-                  value={field.value}
-                  onValueChange={field.onChange}
-                />
+              name="isActive"
+              render={({ field: { value, onChange } }) => (
+                <div className="flex items-center gap-4">
+                  <Switch id="isActive" checked={value} onCheckedChange={(v) => onChange(v)} />
+                  <label
+                    htmlFor="isActive"
+                    className={cn('text-sm font-medium', {
+                      'text-green-600': value,
+                      'text-red-600': !value
+                    })}
+                  >
+                    {value ? 'Active' : 'Inactive'}
+                  </label>
+                </div>
               )}
             />
-            <FieldError>{form.formState.errors.fees?.message}</FieldError>
+            <FieldError>{form.formState.errors.isActive?.message}</FieldError>
           </Field>
           <Field className="mt-2 ml-auto w-fit">
             <div className="flex items-center gap-4">

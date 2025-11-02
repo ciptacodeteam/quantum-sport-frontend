@@ -27,12 +27,19 @@ import { useState } from 'react';
 import { Controller, type SubmitHandler, useForm } from 'react-hook-form';
 import z from 'zod';
 
-const formSchema = z.object({
-  name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
-  description: z.string().optional(),
+export const formSchema = z.object({
+  name: z.string().min(3).max(100),
   logo: z.file().optional(),
-  isActive: z.boolean().optional(),
-  fees: z.number().min(0, { message: 'Fees must be at least 0.' })
+  fees: z.coerce.number().min(0),
+  percentage: z.string().refine(
+    (val) => {
+      const num = parseFloat(val);
+      return !isNaN(num) && num >= 0;
+    },
+    { message: 'Percentage must be a non-negative number' }
+  ),
+  channel: z.string().min(3).max(50).optional(),
+  isActive: z.boolean().optional().default(true)
 });
 
 type FormSchema = z.infer<typeof formSchema>;
@@ -48,7 +55,9 @@ const EditPaymentMethodForm = ({ data }: Props) => {
       name: data?.name || '',
       logo: undefined,
       isActive: data?.isActive,
-      fees: data?.fees || 0
+      fees: data?.fees || 0,
+      percentage: data?.percentage.toString() || '0',
+      channel: data?.channel || ''
     }
   });
 
@@ -152,26 +161,46 @@ const EditPaymentMethodForm = ({ data }: Props) => {
             <Input id="name" {...form.register('name')} placeholder="e.g. Raket" />
             <FieldError>{form.formState.errors.name?.message}</FieldError>
           </Field>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <Field>
+              <FieldLabel htmlFor="fees">Biaya Layanan</FieldLabel>
+              <Controller
+                control={form.control}
+                name="fees"
+                render={({ field }) => (
+                  <NumberInput
+                    id="fees"
+                    thousandSeparator="."
+                    decimalSeparator=","
+                    prefix="Rp "
+                    withControl={false}
+                    min={0}
+                    allowNegative={false}
+                    placeholder="e.g. Rp 5.000"
+                    value={field.value as number}
+                    onValueChange={field.onChange}
+                  />
+                )}
+              />
+              <FieldError>{form.formState.errors.fees?.message}</FieldError>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="percentage">Persentase (%)</FieldLabel>
+              <Input
+                id="percentage"
+                type="number"
+                step="any"
+                min={0}
+                {...form.register('percentage')}
+                placeholder="e.g. 2.5"
+              />
+              <FieldError>{form.formState.errors.percentage?.message}</FieldError>
+            </Field>
+          </div>
           <Field>
-            <FieldLabel htmlFor="fees">Biaya Layanan</FieldLabel>
-            <Controller
-              control={form.control}
-              name="fees"
-              render={({ field }) => (
-                <NumberInput
-                  id="fees"
-                  thousandSeparator="."
-                  decimalSeparator=","
-                  prefix="Rp "
-                  min={0}
-                  allowNegative={false}
-                  placeholder="e.g. Rp 5.000"
-                  value={field.value}
-                  onValueChange={field.onChange}
-                />
-              )}
-            />
-            <FieldError>{form.formState.errors.fees?.message}</FieldError>
+            <FieldLabel htmlFor="channel">Channel</FieldLabel>
+            <Input id="channel" {...form.register('channel')} placeholder="e.g. VA, QRIS, etc." />
+            <FieldError>{form.formState.errors.channel?.message}</FieldError>
           </Field>
           <Field>
             <FieldLabel htmlFor="isActive">Status</FieldLabel>

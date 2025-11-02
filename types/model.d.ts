@@ -47,6 +47,8 @@ export type PaymentMethod = {
   name: string;
   isActive: boolean;
   fees: number;
+  percentage: string;
+  channel: string | null;
   logo: string | null;
   createdAt: Date;
   updatedAt: Date;
