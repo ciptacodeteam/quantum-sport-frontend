@@ -7,10 +7,11 @@ import {
   SectionTitle
 } from '@/components/ui/section';
 import { createQueryClient } from '@/lib/query-client';
-import { adminCourtQueryOptions } from '@/queries/admin/court';
+import { adminCourtCostingQueryOptions, adminCourtQueryOptions } from '@/queries/admin/court';
 import type { IdParams } from '@/types';
 import { dehydrate, HydrationBoundary } from '@tanstack/react-query';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import CourtCostingTable from '@/components/admin/courts/CourtCostingTable';
 
 const EditCourtPage = async ({ params }) => {
   const param = (await params) as IdParams;
@@ -18,6 +19,7 @@ const EditCourtPage = async ({ params }) => {
   const queryClient = createQueryClient();
 
   await queryClient.prefetchQuery(adminCourtQueryOptions(param.id));
+  await queryClient.prefetchQuery(adminCourtCostingQueryOptions(param.id));
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
@@ -39,7 +41,7 @@ const EditCourtPage = async ({ params }) => {
             </TabsContent>
             <TabsContent value="costing">
               <div className="mt-4">
-                <p>Costing management coming soon...</p>
+                <CourtCostingTable courtId={param.id} />
               </div>
             </TabsContent>
           </Tabs>

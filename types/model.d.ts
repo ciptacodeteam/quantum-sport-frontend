@@ -336,3 +336,16 @@ export type BookingCoach = {
   slot?: Slot;
   bookingCoachType?: BookingCoachType;
 };
+
+export type CourtCostSchedule = {
+  id: string;
+  courtId: string;
+  startAt: string;
+  endAt: string;
+  price: number;
+  isAvailable: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+
+  court?: Court;
+};

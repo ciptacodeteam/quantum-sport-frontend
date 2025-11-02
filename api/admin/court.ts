@@ -14,6 +14,11 @@ export async function getCourtApi(id: string) {
   return data;
 }
 
+export async function getCourtCostingApi(id: string) {
+  const { data } = await adminApi.get(`/courts/${id}/costing`);
+  return data;
+}
+
 export async function createCourtApi(payload: CreateMutationPayload) {
   const { data } = await adminApi.post('/courts', payload, {
     headers: { 'Content-Type': 'multipart/form-data' }
@@ -30,5 +35,27 @@ export async function updateCourtApi(payload: UpdateMutationPayload) {
 
 export async function deleteCourtApi(id: string) {
   const { data } = await adminApi.delete(`/courts/${id}`);
+  return data;
+}
+
+export async function createCourtCostApi(payload: CreateMutationPayload) {
+  const { data } = await adminApi.post('/court-costs', payload);
+  return data;
+}
+
+export async function getAllCourtCostApi(queryParams: SearchParamsData = {}) {
+  const url = '/court-costs';
+  const mergedUrl = mergedQueryParamUrl(url, queryParams);
+  const res = await adminApi.get(mergedUrl);
+  return res.data;
+}
+
+export async function updateCourtCostApi(payload: UpdateMutationPayload) {
+  const { data } = await adminApi.put(`/court-costs/${payload.id}`, payload.data);
+  return data;
+}
+
+export async function overrideCourtCostApi(payload: UpdateMutationPayload) {
+  const { data } = await adminApi.put(`/court-costs/${payload.id}/override`, payload.data);
   return data;
 }

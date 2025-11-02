@@ -125,3 +125,18 @@ export const BOOKING_STATUS_BADGE_VARIANT: Record<BookingStatus, BadgeVariant['v
   [BookingStatus.CONFIRMED]: 'lightSuccess',
   [BookingStatus.CANCELLED]: 'lightDestructive'
 };
+
+export const daysOfWeek = [
+  { label: 'Senin', value: 1 },
+  { label: 'Selasa', value: 2 },
+  { label: 'Rabu', value: 3 },
+  { label: 'Kamis', value: 4 },
+  { label: 'Jumat', value: 5 },
+  { label: 'Sabtu', value: 6 },
+  { label: 'Minggu', value: 7 }
+];
+
+export const hoursInDay = Array.from({ length: 24 }, (_, i) => ({
+  label: i === 0 ? '00:00' : i < 10 ? `0${i}:00` : `${i}:00`,
+  value: i
+}));

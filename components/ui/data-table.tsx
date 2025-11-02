@@ -12,6 +12,7 @@ import {
   type VisibilityState,
   flexRender,
   getCoreRowModel,
+  getExpandedRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
@@ -98,7 +99,7 @@ interface DataTableProps<TData extends RowData> {
   data: TData[];
   loading?: boolean;
   /** Search box */
-  withSearch?: boolean;
+  enableGlobalSearch?: boolean;
   /** Optional add button on the top-right */
   addButton?: React.ReactNode;
   /** Extra content above the table (filters, etc.) */
@@ -115,6 +116,9 @@ interface DataTableProps<TData extends RowData> {
 
   /** Start with all columns visible; user can show/hide via dropdown (default: true) */
   enableColumnVisibility?: boolean;
+  enableExpandAllRows?: boolean;
+  enablePagination?: boolean;
+  enablePageSize?: boolean;
 }
 
 export function DataTable<TData extends RowData>({
@@ -122,7 +126,7 @@ export function DataTable<TData extends RowData>({
   data,
   loading,
   addButton,
-  withSearch = true,
+  enableGlobalSearch = true,
   children,
 
   enableRowSelection = true,
@@ -130,13 +134,30 @@ export function DataTable<TData extends RowData>({
   onSelectionChange,
   bulkActions,
 
-  enableColumnVisibility = true
-}: DataTableProps<TData>) {
+  enableColumnVisibility = true,
+  enableExpandAllRows = false,
+  enablePagination = true,
+  enablePageSize = true,
+
+  /**
+   * Optional: Provide a function to return sub rows for a given row.
+   * If provided, enables expandable rows.
+   */
+  getSubRows,
+  /**
+   * Optional: Render function for sub row content.
+   */
+  renderSubRow
+}: DataTableProps<TData> & {
+  getSubRows?: (row: any) => TData[] | undefined;
+  renderSubRow?: (row: any) => React.ReactNode;
+}) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
+  const [expanded, setExpanded] = useState({});
 
   const fuzzyFilter = useCallback<FilterFn<RowData>>((row, columnId, value, addMeta) => {
     const itemRank = rankItem(row.getValue(columnId), value as string);
@@ -145,7 +166,8 @@ export function DataTable<TData extends RowData>({
   }, []);
 
   const fallbackData = useMemo(() => data || [], [data]);
-  const pageCount = Math.ceil(fallbackData.length / pagination.pageSize);
+  // If enablePageSize is true, show all data (no pagination)
+  const pageCount = enablePageSize ? 1 : Math.ceil(fallbackData.length / pagination.pageSize);
 
   // Selection column (checkboxes)
   const selectionColumn = useMemo<ColumnDef<TData>>(
@@ -191,6 +213,7 @@ export function DataTable<TData extends RowData>({
     columns: columnsWithSelection,
     pageCount,
     getRowId,
+    getSubRows,
     onSortingChange: setSorting,
     onPaginationChange: setPagination,
     onColumnFiltersChange: setColumnFilters,
@@ -200,6 +223,8 @@ export function DataTable<TData extends RowData>({
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    getExpandedRowModel: getSubRows ? getExpandedRowModel() : undefined,
+    onExpandedChange: setExpanded,
     globalFilterFn: 'fuzzy' as GlobalFilterTableState['globalFilter'],
     enableMultiSort: false,
     enableRowSelection,
@@ -208,10 +233,14 @@ export function DataTable<TData extends RowData>({
       pagination,
       columnFilters,
       rowSelection,
-      columnVisibility
+      columnVisibility,
+      expanded
     },
     filterFns: { fuzzy: fuzzyFilter }
   });
+
+  // If enablePageSize is true, override the row model to show all data
+  const rowModel = !enablePageSize ? table.getPrePaginationRowModel() : table.getRowModel();
 
   // expose selected ids upward
   const selectedRowIds = useMemo(
@@ -234,12 +263,20 @@ export function DataTable<TData extends RowData>({
     [table]
   );
 
+  const handleExpandAll = () => {
+    table.toggleAllRowsExpanded();
+    setPagination((old) => ({
+      ...old,
+      pageIndex: 0
+    }));
+  };
+
   const hasSelection = selectedRowIds.length > 0;
 
   return (
     <div>
       <div className="flex flex-wrap items-center gap-3 py-4">
-        {withSearch && (
+        {enableGlobalSearch && (
           <Input
             placeholder="Search..."
             value={table.getState().globalFilter || ''}
@@ -284,6 +321,14 @@ export function DataTable<TData extends RowData>({
                   ))}
               </DropdownMenuContent>
             </DropdownMenu>
+          </div>
+        )}
+
+        {enableExpandAllRows && (
+          <div className="flex-center">
+            <Button variant="outline" size="sm" onClick={handleExpandAll} disabled={loading}>
+              {table.getIsAllRowsExpanded() ? 'Collapse All' : 'Expand All'}
+            </Button>
           </div>
         )}
       </div>
@@ -360,26 +405,40 @@ export function DataTable<TData extends RowData>({
             <Suspense fallback={<TableLoading columns={columnsWithSelection} />}>
               {loading ? (
                 <TableLoading columns={columnsWithSelection} />
-              ) : table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && 'selected'}
-                    className={cn(row.getIsSelected() && 'bg-muted/40')}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell
-                        key={cell.id}
-                        className={cn(
-                          'py-3 ps-5 whitespace-nowrap',
-                          cell.column.id === '_select' && 'ps-3'
-                        )}
-                      >
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
+              ) : rowModel.rows?.length ? (
+                rowModel.rows.flatMap((row) => {
+                  const mainRow = (
+                    <TableRow
+                      key={row.id}
+                      data-state={row.getIsSelected() && 'selected'}
+                      className={cn(row.getIsSelected() && 'bg-muted/40')}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell
+                          key={cell.id}
+                          className={cn(
+                            'py-3 ps-5 whitespace-nowrap',
+                            cell.column.id === '_select' && 'ps-3'
+                          )}
+                        >
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  );
+                  const subRow =
+                    row.getIsExpanded() && getSubRows && renderSubRow ? (
+                      <TableRow key={row.id + '-sub'}>
+                        <TableCell
+                          colSpan={columnsWithSelection.length}
+                          className="bg-gray-50 dark:bg-gray-900"
+                        >
+                          {renderSubRow(row.original)}
+                        </TableCell>
+                      </TableRow>
+                    ) : null;
+                  return subRow ? [mainRow, subRow] : [mainRow];
+                })
               ) : (
                 <TableEmpty columns={columnsWithSelection} />
               )}
@@ -389,128 +448,132 @@ export function DataTable<TData extends RowData>({
       </div>
 
       <footer className="flex flex-wrap items-center justify-between gap-2 pt-4">
-        <div className="flex items-center space-x-2 text-sm">
-          <div className="flex items-center">
-            <Label htmlFor="page-size" className="text-muted-foreground mr-2 text-sm">
-              Rows per page:
-            </Label>
-            <Select
-              onValueChange={(value) => table.setPageSize(Number(value))}
-              defaultValue={table.getState().pagination.pageSize.toString()}
-            >
-              <SelectTrigger className="w-[80px]">
-                <SelectValue placeholder="Page Size" />
-              </SelectTrigger>
-              <SelectContent>
-                {[10, 20, 30, 40, 50].map((pageSize) => (
-                  <SelectItem key={pageSize} value={pageSize.toString()}>
-                    {pageSize}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        {enablePageSize && (
+          <div className="flex items-center space-x-2 text-sm">
+            <div className="flex items-center">
+              <Label htmlFor="page-size" className="text-muted-foreground mr-2 text-sm">
+                Rows per page:
+              </Label>
+              <Select
+                onValueChange={(value) => table.setPageSize(Number(value))}
+                defaultValue={table.getState().pagination.pageSize.toString()}
+              >
+                <SelectTrigger className="w-20">
+                  <SelectValue placeholder="Page Size" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[10, 20, 30, 40, 50].map((pageSize) => (
+                    <SelectItem key={pageSize} value={pageSize.toString()}>
+                      {pageSize}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-        </div>
+        )}
 
-        <div className="mt-4 flex w-full items-center justify-center space-x-2 lg:mt-0 lg:w-fit lg:justify-end">
-          <Pagination>
-            <PaginationContent className="mx-auto lg:mx-0 lg:ml-auto lg:w-fit">
-              <PaginationItem
-                className={cn(
-                  'cursor-pointer',
-                  (!table.getCanPreviousPage() || loading) && 'cursor-not-allowed opacity-50'
-                )}
-              >
-                <PaginationPrevious
-                  onClick={() => table.previousPage()}
-                  isActive={table.getCanPreviousPage() && !loading}
-                />
-              </PaginationItem>
+        {enablePagination && (
+          <div className="mt-4 flex w-full items-center justify-center space-x-2 lg:mt-0 lg:w-fit lg:justify-end">
+            <Pagination>
+              <PaginationContent className="mx-auto lg:mx-0 lg:ml-auto lg:w-fit">
+                <PaginationItem
+                  className={cn(
+                    'cursor-pointer',
+                    (!table.getCanPreviousPage() || loading) && 'cursor-not-allowed opacity-50'
+                  )}
+                >
+                  <PaginationPrevious
+                    onClick={() => table.previousPage()}
+                    isActive={table.getCanPreviousPage() && !loading}
+                  />
+                </PaginationItem>
 
-              {table.getPageCount() > 0 ? (
-                (() => {
-                  const currentPage = table.getState().pagination.pageIndex;
-                  const totalPages = table.getPageCount();
-                  const pages: (number | 'ellipsis-left' | 'ellipsis-right')[] = [];
+                {table.getPageCount() > 0 ? (
+                  (() => {
+                    const currentPage = table.getState().pagination.pageIndex;
+                    const totalPages = table.getPageCount();
+                    const pages: (number | 'ellipsis-left' | 'ellipsis-right')[] = [];
 
-                  pages.push(0);
-                  if (currentPage > 2) pages.push('ellipsis-left');
-                  for (
-                    let i = Math.max(1, currentPage - 1);
-                    i <= Math.min(totalPages - 2, currentPage + 1);
-                    i++
-                  ) {
-                    pages.push(i);
-                  }
-                  if (currentPage < totalPages - 3) pages.push('ellipsis-right');
-                  if (totalPages > 1) pages.push(totalPages - 1);
-
-                  const uniquePages = Array.from(new Set(pages)).filter(
-                    (p) =>
-                      p === 'ellipsis-left' ||
-                      p === 'ellipsis-right' ||
-                      (typeof p === 'number' && p >= 0 && p < totalPages)
-                  );
-
-                  return uniquePages.map((page, idx) => {
-                    if (page === 'ellipsis-left') {
-                      return (
-                        <PaginationItem key={`ellipsis-left-${idx}`}>
-                          <PaginationEllipsis
-                            onClick={() => table.setPageIndex(Math.max(currentPage - 2, 0))}
-                            className="cursor-pointer"
-                          />
-                        </PaginationItem>
-                      );
+                    pages.push(0);
+                    if (currentPage > 2) pages.push('ellipsis-left');
+                    for (
+                      let i = Math.max(1, currentPage - 1);
+                      i <= Math.min(totalPages - 2, currentPage + 1);
+                      i++
+                    ) {
+                      pages.push(i);
                     }
-                    if (page === 'ellipsis-right') {
-                      return (
-                        <PaginationItem key={`ellipsis-right-${idx}`}>
-                          <PaginationEllipsis
-                            onClick={() =>
-                              table.setPageIndex(Math.min(currentPage + 2, totalPages - 1))
-                            }
-                            className="cursor-pointer"
-                          />
-                        </PaginationItem>
-                      );
-                    }
-                    if (typeof page === 'number') {
-                      return (
-                        <PaginationItem
-                          key={page}
-                          className={cn('cursor-pointer', currentPage === page && 'rounded')}
-                        >
-                          <PaginationLink
-                            isActive={currentPage === page}
-                            onClick={() => table.setPageIndex(page)}
+                    if (currentPage < totalPages - 3) pages.push('ellipsis-right');
+                    if (totalPages > 1) pages.push(totalPages - 1);
+
+                    const uniquePages = Array.from(new Set(pages)).filter(
+                      (p) =>
+                        p === 'ellipsis-left' ||
+                        p === 'ellipsis-right' ||
+                        (typeof p === 'number' && p >= 0 && p < totalPages)
+                    );
+
+                    return uniquePages.map((page, idx) => {
+                      if (page === 'ellipsis-left') {
+                        return (
+                          <PaginationItem key={`ellipsis-left-${idx}`}>
+                            <PaginationEllipsis
+                              onClick={() => table.setPageIndex(Math.max(currentPage - 2, 0))}
+                              className="cursor-pointer"
+                            />
+                          </PaginationItem>
+                        );
+                      }
+                      if (page === 'ellipsis-right') {
+                        return (
+                          <PaginationItem key={`ellipsis-right-${idx}`}>
+                            <PaginationEllipsis
+                              onClick={() =>
+                                table.setPageIndex(Math.min(currentPage + 2, totalPages - 1))
+                              }
+                              className="cursor-pointer"
+                            />
+                          </PaginationItem>
+                        );
+                      }
+                      if (typeof page === 'number') {
+                        return (
+                          <PaginationItem
+                            key={page}
+                            className={cn('cursor-pointer', currentPage === page && 'rounded')}
                           >
-                            {page + 1}
-                          </PaginationLink>
-                        </PaginationItem>
-                      );
-                    }
-                    return null;
-                  });
-                })()
-              ) : (
-                <div className="flex items-center gap-1 px-2 text-sm font-medium">No results</div>
-              )}
-
-              <PaginationItem
-                className={cn(
-                  'cursor-pointer',
-                  (!table.getCanNextPage() || loading) && 'cursor-not-allowed opacity-50'
+                            <PaginationLink
+                              isActive={currentPage === page}
+                              onClick={() => table.setPageIndex(page)}
+                            >
+                              {page + 1}
+                            </PaginationLink>
+                          </PaginationItem>
+                        );
+                      }
+                      return null;
+                    });
+                  })()
+                ) : (
+                  <div className="flex items-center gap-1 px-2 text-sm font-medium">No results</div>
                 )}
-              >
-                <PaginationNext
-                  onClick={() => table.nextPage()}
-                  isActive={table.getCanNextPage() && !loading}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </div>
+
+                <PaginationItem
+                  className={cn(
+                    'cursor-pointer',
+                    (!table.getCanNextPage() || loading) && 'cursor-not-allowed opacity-50'
+                  )}
+                >
+                  <PaginationNext
+                    onClick={() => table.nextPage()}
+                    isActive={table.getCanNextPage() && !loading}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
       </footer>
     </div>
   );
