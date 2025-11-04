@@ -14,8 +14,17 @@ export async function getCourtApi(id: string) {
   return data;
 }
 
-export async function getCourtCostingApi(id: string) {
-  const { data } = await adminApi.get(`/courts/${id}/costing`);
+export async function getCourtSlotsApi(courtId: string, queryParams?: SearchParamsData) {
+  const url = `/courts/${courtId}/slots`;
+  const mergedUrl = mergedQueryParamUrl(url, queryParams);
+  const { data } = await adminApi.get(mergedUrl);
+  return data;
+}
+
+export async function getCourtCostingApi(id: string, queryParams?: SearchParamsData) {
+  const url = `/courts/${id}/costing`;
+  const mergedUrl = mergedQueryParamUrl(url, queryParams);
+  const { data } = await adminApi.get(mergedUrl);
   return data;
 }
 

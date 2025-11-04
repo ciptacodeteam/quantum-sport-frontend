@@ -43,7 +43,7 @@ const CreateCourtForm = () => {
   const { mutate, isPending } = useMutation(
     adminCreateCourtMutationOptions({
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: adminCourtsQueryOptions.queryKey });
+        queryClient.invalidateQueries({ queryKey: adminCourtsQueryOptions().queryKey });
         closeDialog('create-court');
       },
       onError: (err) => {
