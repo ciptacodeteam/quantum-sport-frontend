@@ -10,10 +10,10 @@ export default async function HomePage() {
   return (
     <>
       <MainHeader withNotificationBadge />
-      <main className="mt-24 mb-[28%] w-full md:mt-14 lg:mb-0">
+      <main className="mt-28 lg:mt-24">
         <BannerSection />
         <MenuSection />
-        <ActiveCourtSection />
+        {/* <ActiveCourtSection /> */}
         <SponsorshipMarqueSection />
         <MembershipCtaSection />
       </main>

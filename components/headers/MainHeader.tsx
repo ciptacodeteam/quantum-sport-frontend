@@ -12,6 +12,7 @@ import CartSheet from '../CartSheet';
 import AuthModal from '../modals/AuthModal';
 import { Button } from '../ui/button';
 import { Skeleton } from '../ui/skeleton';
+import { usePathname } from 'next/navigation';
 
 type Props = {
   onBack?: () => void;
@@ -31,8 +32,16 @@ const MainHeader = ({
   withCartBadge
 }: Props) => {
   const [openAuthModal, setOpenAuthModal] = useState(false);
-
   const { isPending: isUserPending } = useQuery(profileQueryOptions);
+  const pathname = usePathname();
+
+  const isBeranda = pathname === '/';
+  const navItems = [
+    { title: 'Beranda', path: '/' },
+    { title: 'Pemesanan', path: '/activities' },
+    { title: 'Riwayat', path: '/sports' },
+    { title: 'Profil', path: '/profile' },
+  ];
 
   return (
     <>
@@ -40,13 +49,19 @@ const MainHeader = ({
 
       <header
         className={cn(
-          'flex-center fixed top-0 right-0 left-0 z-40 min-h-20 w-full border-b bg-white'
+          'fixed top-0 right-0 left-0 z-40 border-b bg-white',
         )}
       >
-        <div className="mx-auto w-full max-w-7xl px-4 pl-5">
-          <main className="flex-between gap-4">
-            {onBack || backHref || title ? (
-              <div className="flex items-center gap-4">
+        <div className="mx-auto w-11/12 lg:max-w-7xl lg:px-4 px-2 py-2">
+          <main
+            className={cn(
+              'flex items-center min-h-[72px] gap-4',
+              isBeranda ? 'justify-between' : 'justify-start'
+            )}
+          >
+            {/* Kiri: tombol back / title */}
+            {(onBack || backHref || title) && (
+              <div className="flex items-center gap-6">
                 {onBack && (
                   <Button variant="light" size="icon-sm" onClick={onBack}>
                     <ChevronLeft className="size-6" />
@@ -59,19 +74,38 @@ const MainHeader = ({
                     </Button>
                   </Link>
                 )}
-
-                {title && <h1 className="text-lg font-semibold">{title}</h1>}
+                {title && <h1 className="text-xl text-primary font-semibold">{title}</h1>}
               </div>
-            ) : null}
+            )}
+
+            {/* Tengah: Logo */}
             {withLogo && (
               <Link href="/" prefetch>
-                <div className="flex-center relative my-2 h-16 w-28 pl-2 md:w-32">
+                <div className="flex items-center justify-center h-16 w-28 relative">
                   <LogoImage className="absolute inset-0 h-full w-full object-contain" />
                 </div>
               </Link>
             )}
 
-            <div className="flex items-center justify-end gap-4">
+            {/* Kanan: Navigasi + Notifikasi */}
+            <div className="flex items-center justify-end gap-6 ml-auto">
+              {/* Menu navigasi (desktop only) */}
+              <div className="hidden lg:flex items-center gap-8">
+                {navItems.map((item) => (
+                  <Link
+                    key={item.path}
+                    href={item.path}
+                    className={cn(
+                      'text-gray-600 hover:text-primary transition-colors',
+                      pathname === item.path && 'text-primary font-medium'
+                    )}
+                  >
+                    {item.title}
+                  </Link>
+                ))}
+              </div>
+
+              {/* Icon notifikasi & cart */}
               {isUserPending ? (
                 <>
                   <Skeleton className="size-8 rounded-lg" />
@@ -82,10 +116,10 @@ const MainHeader = ({
                   {withCartBadge && <CartSheet />}
                   {withNotificationBadge && (
                     <Link href="/notifications">
-                      <Button variant={'ghost'} size={'icon-sm'}>
-                        <div className="flex-center relative">
+                      <Button variant="ghost" size="icon-sm">
+                        <div className="flex items-center justify-center relative">
                           <IconBellFilled className="text-primary size-7" />
-                          <div className="bg-badge absolute -top-0.5 right-0 size-3 rounded-full"></div>
+                          <div className="bg-badge absolute top-1 right-1 size-2 rounded-full"></div>
                         </div>
                       </Button>
                     </Link>
@@ -99,4 +133,5 @@ const MainHeader = ({
     </>
   );
 };
+
 export default MainHeader;

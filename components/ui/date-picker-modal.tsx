@@ -53,9 +53,12 @@ function DatePickerModal({
         <div className="flex-center p-4 pt-0">
           <Calendar
             mode="single"
+            disabled={{ before: new Date() }}
             classNames={{
               root: 'w-full'
             }}
+            fromYear={new Date().getFullYear()}        
+            toYear={new Date().getFullYear() + 5}
             captionLayout="dropdown"
             selected={internalValue ?? undefined}
             onSelect={handleSelect}

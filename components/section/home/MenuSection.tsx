@@ -17,20 +17,20 @@ const MenuSection = () => {
       icon: <ClubMenuIcon className="size-9" />
     },
     {
-      title: 'Membership',
+      title: 'Value Pack',
       url: '#',
       icon: <MembershipMenuIcon className="size-9" />
     },
     {
-      title: 'Tournament',
+      title: 'Turnamen',
       url: '#',
       icon: <TournamentMenuIcon className="size-9" />
     }
   ];
 
   return (
-    <section className="mx-auto my-6 w-full max-w-7xl px-4">
-      <div className="mx-auto grid w-full max-w-xl grid-cols-4 gap-6">
+    <section className="mx-auto max-w-7xl w-11/12 my-8">
+      <div className="mx-auto grid w-full grid-cols-4 gap-6">
         {menuList.map((item) => (
           <div key={item.title} className="flex-center flex-1">
             <MenuItem item={item} />

@@ -31,10 +31,10 @@ const mockNotifications = [
 const NotificationPage = () => {
   return (
     <>
-      <MainHeader backHref="/" title={'Notifikasi'} withLogo={false} />
+      <MainHeader backHref="/" title={'Notifikasi'} withLogo={false}/>
 
-      <main className="mt-26 mb-[5%] w-full md:mt-14">
-        <section className="mx-auto max-w-md px-4">
+      <main>
+        <section className="mx-auto w-11/12 mt-28">
           {mockNotifications.length === 0 ? (
             <div className="text-muted-foreground flex min-h-svh flex-col items-center justify-center py-16">
               <BellIcon className="mb-2 h-10 w-10 opacity-40" />

@@ -33,9 +33,9 @@ const sponsorList: SponsorItem[] = [
 
 const SponsorshipMarqueSection = () => {
   return (
-    <section className="mx-auto my-6 max-w-7xl">
-      <header className="flex-between px-4 py-2">
-        <h2 className="text-lg font-semibold lg:text-xl">Partners & Sponsorship</h2>
+    <section className="mx-auto my-6 lg:max-w-7xl w-11/12">
+      <header className="flex-between py-2">
+        <h2 className="text-xl text-primary font-semibold lg:text-xl">Partners & Sponsorship</h2>
       </header>
 
       <main className="mx-auto py-4">
@@ -52,9 +52,9 @@ const SponsorshipMarqueSection = () => {
                 key={`${client.name}-${i}`}
                 src={client.image}
                 alt={client.name}
-                className="h-auto w-32 object-contain px-4 transition duration-300 ease-in-out sm:h-12 md:w-42 lg:w-42 lg:px-4"
-                width={300}
-                height={300}
+                className="h-auto w-30 object-contain px-4 transition duration-300 ease-in-out sm:h-12 md:w-42 lg:w-42 lg:px-4"
+                width={200}
+                height={200}
               />
             ))}
           </Marquee>
