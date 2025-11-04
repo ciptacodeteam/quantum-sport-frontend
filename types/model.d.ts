@@ -32,6 +32,8 @@ export type UserProfile = {
   updatedAt: Date;
 };
 
+export type Customer = UserProfile;
+
 export type Inventory = {
   id: string;
   name: string;

@@ -1,11 +1,19 @@
-import { banUserApi, createUserApi, unbanUserApi, updateUserApi } from '@/api/admin/user';
+import {
+  banCustomerApi,
+  createCustomerApi,
+  unbanCustomerApi,
+  updateCustomerApi
+} from '@/api/admin/customer';
 import type { MutationFuncProps } from '@/types';
 import { mutationOptions } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-export const adminCreateUserMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
+export const adminCreateCustomerMutationOptions = ({
+  onSuccess,
+  onError
+}: MutationFuncProps = {}) =>
   mutationOptions({
-    mutationFn: createUserApi,
+    mutationFn: createCustomerApi,
     onSuccess: (data) => {
       toast.success('Data berhasil disimpan!');
       onSuccess?.(data);
@@ -17,9 +25,12 @@ export const adminCreateUserMutationOptions = ({ onSuccess, onError }: MutationF
     }
   });
 
-export const adminUpdateUserMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
+export const adminUpdateCustomerMutationOptions = ({
+  onSuccess,
+  onError
+}: MutationFuncProps = {}) =>
   mutationOptions({
-    mutationFn: updateUserApi,
+    mutationFn: updateCustomerApi,
     onSuccess: (data) => {
       toast.success('Data berhasil diperbarui!');
       onSuccess?.(data);
@@ -31,9 +42,9 @@ export const adminUpdateUserMutationOptions = ({ onSuccess, onError }: MutationF
     }
   });
 
-export const adminBanUserMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
+export const adminBanCustomerMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
   mutationOptions({
-    mutationFn: banUserApi,
+    mutationFn: banCustomerApi,
     onSuccess: (data) => {
       toast.success('Data berhasil dibanned!');
       onSuccess?.(data);
@@ -45,9 +56,9 @@ export const adminBanUserMutationOptions = ({ onSuccess, onError }: MutationFunc
     }
   });
 
-export const adminUnbanUserMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
+export const adminUnbanCustomerMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
   mutationOptions({
-    mutationFn: unbanUserApi,
+    mutationFn: unbanCustomerApi,
     onSuccess: (data) => {
       toast.success('Data berhasil diunbanned!');
       onSuccess?.(data);

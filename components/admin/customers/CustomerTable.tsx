@@ -1,49 +1,42 @@
 'use client';
 
-import { deleteUserApi } from '@/api/admin/user';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import PreviewImage from '@/components/ui/preview-image';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useConfirmMutation } from '@/hooks/useConfirmDialog';
 import { STATUS_BADGE_VARIANT, STATUS_MAP } from '@/lib/constants';
 import { formatPhone, getNameInitial } from '@/lib/utils';
-import { adminUsersQueryOptions } from '@/queries/admin/user';
-import type { UserProfile } from '@/types/model';
-import {
-  IconCircleCheckFilled,
-  IconCircleXFilled,
-  IconPencil,
-  IconTrash
-} from '@tabler/icons-react';
+import { adminCustomersQueryOptions } from '@/queries/admin/customer';
+import type { Customer } from '@/types/model';
+import { IconCircleCheckFilled, IconCircleXFilled, IconPencil } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
 import Link from 'next/link';
 import { useMemo } from 'react';
 
-const UserTable = () => {
-  const { confirmAndMutate } = useConfirmMutation(
-    {
-      mutationFn: deleteUserApi
-    },
-    {
-      title: 'Hapus Data',
-      description: 'Apakah Anda yakin ingin menghapus data ini?',
-      confirmText: 'Hapus',
-      cancelText: 'Batal',
-      destructive: true,
-      toastMessages: {
-        loading: 'Menghapus data...',
-        success: () => 'Data berhasil dihapus.',
-        error: 'Gagal menghapus data.'
-      },
-      invalidate: adminUsersQueryOptions.queryKey
-    }
-  );
+const CustomerTable = () => {
+  // const { confirmAndMutate } = useConfirmMutation(
+  //   {
+  //     mutationFn: deleteCustomerApi
+  //   },
+  //   {
+  //     title: 'Hapus Data',
+  //     description: 'Apakah Anda yakin ingin menghapus data ini?',
+  //     confirmText: 'Hapus',
+  //     cancelText: 'Batal',
+  //     destructive: true,
+  //     toastMessages: {
+  //       loading: 'Menghapus data...',
+  //       success: () => 'Data berhasil dihapus.',
+  //       error: 'Gagal menghapus data.'
+  //     },
+  //     invalidate: adminCustomersQueryOptions.queryKey
+  //   }
+  // );
 
-  const colHelper = createColumnHelper<UserProfile>();
+  const colHelper = createColumnHelper<Customer>();
 
   const columns = useMemo(
     () => [
@@ -134,24 +127,17 @@ const UserTable = () => {
                 <IconPencil />
               </Button>
             </Link>
-            <Button
-              size="icon"
-              variant="lightDanger"
-              onClick={async () => await confirmAndMutate(row.original.id)}
-            >
-              <IconTrash />
-            </Button>
           </div>
         )
       })
     ],
-    [colHelper, confirmAndMutate]
+    [colHelper]
   );
 
-  const { data, isPending } = useQuery(adminUsersQueryOptions);
+  const { data, isPending } = useQuery(adminCustomersQueryOptions);
 
   return (
     <DataTable loading={isPending} data={data || []} columns={columns} enableRowSelection={false} />
   );
 };
-export default UserTable;
+export default CustomerTable;
