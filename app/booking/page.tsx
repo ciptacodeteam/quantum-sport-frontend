@@ -14,16 +14,15 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from '@/components/ui/dialog';
 import Image from 'next/image';
 
 // mock data
 const mockCourts = [
-  { name: 'Court 1', image: '/assets/img/court-3.jpg'},
-  { name: 'Court 2', image: '/assets/img/court-3.jpg'},
-  { name: 'Court 3', image: '/assets/img/court-3.jpg'},
-  { name: 'Court 4', image: '/assets/img/court-3.jpg'},
+  { name: 'Court 1', image: '/assets/img/court-3.jpg' },
+  { name: 'Court 2', image: '/assets/img/court-3.jpg' },
+  { name: 'Court 3', image: '/assets/img/court-3.jpg' },
+  { name: 'Court 4', image: '/assets/img/court-3.jpg' },
 ];
 
 const mockTimes = [
@@ -32,7 +31,7 @@ const mockTimes = [
 ];
 const mockPrices = 350000;
 const mockBooked = {
-  '04 Nov': {
+  '05 Nov': {
     'Court 1': ['06:00'],
     'Court 2': [],
     'Court 3': [],
@@ -75,6 +74,10 @@ const BookingPage = () => {
     if (!date) return;
     const formattedDate = dayjs(date).format('DD MMM');
     setSelectedDate(formattedDate);
+
+    // scroll otomatis ke tanggal yang dipilih (opsional)
+    const el = document.getElementById(`date-${dayjs(date).format('YYYY-MM-DD')}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
   };
 
   return (
@@ -96,21 +99,24 @@ const BookingPage = () => {
 
             <Separator orientation="vertical" className="h-10" />
 
-            <div className="flex gap-1 overflow-x-auto scrollbar-hide flex-nowrap">
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide flex-nowrap">
               {dateList.map((d) => (
                 <button
+                  id={`date-${d.fullDate}`}
                   key={d.fullDate}
                   className={cn(
-                    "flex flex-col items-center justify-center min-w-14 h-16 rounded px-2 py-1 font-semibold transition-colors",
+                    "flex flex-col items-center justify-center min-w-14 h-14 rounded px-2 py-1 font-semibold transition-colors",
                     selectedDate === d.date
                       ? "bg-primary text-white"
-                      : "hover:bg-muted text-muted-foreground"
+                      : "hover:bg-muted text-black"
                   )}
                   onClick={() => setSelectedDate(d.date)}
                 >
-                  <span className="text-xs leading-none">{d.label}</span>
-                  <span className="text-sm font-bold leading-none mt-1">{dayjs(d.fullDate).format('DD')}</span>
-                  <span className="text-xs leading-none mt-1">{dayjs(d.fullDate).format('MMM')}</span>
+                  <span className="text-xs font-normal">{d.label}</span>
+                  <div className="flex mt-0.5">
+                    <span className="text-sm font-semibold me-0.5">{dayjs(d.fullDate).format('DD')}</span>
+                    <span className="text-sm font-semibold">{dayjs(d.fullDate).format('MMM')}</span>
+                  </div>
                 </button>
               ))}
             </div>
@@ -143,7 +149,7 @@ const BookingPage = () => {
 
             <tbody>
               {mockTimes.map((time) => (
-                <tr key={time} className="even:bg-gray-50">
+                <tr key={time}>
                   <td className="sticky left-0 z-10 border border-gray-200 bg-white px-4 py-2 text-left text-sm font-medium w-20">
                     {time}
                   </td>
