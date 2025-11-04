@@ -4,17 +4,19 @@ import { Button } from '@/components/ui/button';
 import { useDialog } from '@/components/ui/dialog';
 import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
 import { Textarea } from '@/components/ui/textarea';
 import { adminCreateInventoryMutationOptions } from '@/mutations/admin/inventory';
 import { adminInventoriesQueryOptions } from '@/queries/admin/inventory';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { type SubmitHandler, useForm } from 'react-hook-form';
+import { Controller, type SubmitHandler, useForm } from 'react-hook-form';
 import z from 'zod';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   description: z.string().optional(),
+  price: z.number().min(0, { message: 'Price must be at least 0.' }),
   quantity: z.number().min(1, { message: 'Quantity must be at least 1.' })
 });
 
@@ -26,7 +28,8 @@ const CreateInventoryForm = () => {
     defaultValues: {
       name: '',
       description: '',
-      quantity: 1
+      quantity: 1,
+      price: 0
     }
   });
 
@@ -85,6 +88,27 @@ const CreateInventoryForm = () => {
               placeholder="e.g. 10"
             />
             <FieldError>{form.formState.errors.quantity?.message}</FieldError>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="price">Harga</FieldLabel>
+            <Controller
+              control={form.control}
+              name="price"
+              render={({ field }) => (
+                <NumberInput
+                  id="price"
+                  thousandSeparator="."
+                  decimalSeparator=","
+                  prefix="Rp "
+                  withControl={false}
+                  min={0}
+                  placeholder="e.g. Rp 100.000"
+                  value={field.value as number}
+                  onValueChange={field.onChange}
+                />
+              )}
+            />
+            <FieldError>{form.formState.errors.price?.message}</FieldError>
           </Field>
           <Field className="mt-2 ml-auto w-fit">
             <div className="flex items-center gap-4">

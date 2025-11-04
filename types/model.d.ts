@@ -39,6 +39,7 @@ export type Inventory = {
   name: string;
   description: string;
   quantity: number;
+  price: number;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;

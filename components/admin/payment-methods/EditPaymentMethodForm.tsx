@@ -38,7 +38,7 @@ export const formSchema = z.object({
     },
     { message: 'Percentage must be a non-negative number' }
   ),
-  channel: z.string().min(3).max(50).optional(),
+  channel: z.string().min(2).max(50).optional(),
   isActive: z.boolean().optional().default(true)
 });
 

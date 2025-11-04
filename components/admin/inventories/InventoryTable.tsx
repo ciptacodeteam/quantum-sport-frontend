@@ -11,6 +11,7 @@ import {
   ManagedDialog
 } from '@/components/ui/dialog';
 import { useConfirmMutation } from '@/hooks/useConfirmDialog';
+import { formatNumber } from '@/lib/utils';
 import { adminInventoriesQueryOptions } from '@/queries/admin/inventory';
 import type { Inventory } from '@/types/model';
 import { IconPencil, IconPlus, IconTrash } from '@tabler/icons-react';
@@ -56,6 +57,10 @@ const InventoryTable = () => {
       colHelper.accessor('quantity', {
         header: 'Qty',
         cell: (info) => info.getValue() || 0
+      }),
+      colHelper.accessor('price', {
+        header: 'Harga',
+        cell: (info) => `Rp ${formatNumber(info.getValue() as number)}`
       }),
       colHelper.accessor('createdAt', {
         header: 'Dibuat Pada',
