@@ -154,7 +154,7 @@ const BookingPage = () => {
 
                 <tbody>
                   {mockTimes.map((time) => (
-                    <tr key={time} className="even:bg-gray-50">
+                    <tr key={time}>
                       <td className="sticky left-0 z-10 border border-gray-200 bg-white px-4 py-2 text-left text-sm font-medium w-20">
                         {time}
                       </td>
