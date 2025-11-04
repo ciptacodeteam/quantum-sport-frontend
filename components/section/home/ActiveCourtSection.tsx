@@ -48,7 +48,7 @@ const ActiveCourtSection = () => {
   return (
     <section className="mx-auto my-6 mt-10 max-w-7xl">
       <header className="flex-between px-4 py-2">
-        <h2 className="text-lg font-semibold lg:text-xl">Lapangan Padel</h2>
+        <h2 className="text-xl font-semibold lg:text-xl text-primary">Court Padel</h2>
         {/* <Link
           href="#"
           prefetch

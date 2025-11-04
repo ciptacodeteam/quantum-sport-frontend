@@ -17,7 +17,7 @@ export default function BannerSection() {
   const plugin = useRef(Autoplay({ delay: 5000, stopOnInteraction: true }));
 
   return (
-    <section className="mx-auto my-8 mt-4 max-w-7xl px-4 md:my-12 md:px-6 lg:my-16 lg:pb-12 xl:px-0">
+    <section className="mx-auto lg:max-w-7xl w-11/12">
       <Carousel
         plugins={[plugin.current]}
         className="group/carousel relative mx-auto w-full"
@@ -27,11 +27,11 @@ export default function BannerSection() {
         <CarouselContent>
           {Array.from({ length: 5 }).map((_, index) => (
             <CarouselItem key={index}>
-              <div className="p-1">
+              <div>
                 <Card className="py-0 shadow-none">
                   <CardContent className="flex min-h-40 items-center justify-center p-0 md:min-h-72">
                     <Image
-                      src={'assets/img/banner-1.png'}
+                      src={'assets/img/banner.webp'}
                       alt={`Banner ${index + 1}`}
                       width={1200}
                       unoptimized
@@ -44,9 +44,9 @@ export default function BannerSection() {
             </CarouselItem>
           ))}
         </CarouselContent>
-        <CarouselPrevious className="invisible -left-4.5 size-12 shadow-md lg:group-hover/carousel:visible" />
-        <CarouselNext className="invisible -right-4.5 size-12 shadow-md lg:group-hover/carousel:visible" />
-        <CarouselDots className="absolute bottom-0 left-1/2 mb-5 -translate-x-1/2 lg:invisible" />
+        {/* <CarouselPrevious className="invisible -left-4.5 size-12 shadow-md lg:group-hover/carousel:visible" />
+        <CarouselNext className="invisible -right-4.5 size-12 shadow-md lg:group-hover/carousel:visible" /> */}
+        <CarouselDots className="absolute bottom-0 left-1/2 mb-4 -translate-x-1/2 lg:invisible" />
       </Carousel>
     </section>
   );
