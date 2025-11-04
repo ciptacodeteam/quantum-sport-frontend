@@ -14,17 +14,16 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from '@/components/ui/dialog';
 import Image from 'next/image';
 import AddOnsCoach from '@/components/AddOnsCoach';
 
 // mock data
 const mockCourts = [
-  { name: 'Court 1', image: '/assets/img/court-3.jpg'},
-  { name: 'Court 2', image: '/assets/img/court-3.jpg'},
-  { name: 'Court 3', image: '/assets/img/court-3.jpg'},
-  { name: 'Court 4', image: '/assets/img/court-3.jpg'},
+  { name: 'Court 1', image: '/assets/img/court-3.jpg' },
+  { name: 'Court 2', image: '/assets/img/court-3.jpg' },
+  { name: 'Court 3', image: '/assets/img/court-3.jpg' },
+  { name: 'Court 4', image: '/assets/img/court-3.jpg' },
 ];
 
 const mockTimes = [
@@ -33,7 +32,7 @@ const mockTimes = [
 ];
 const mockPrices = 350000;
 const mockBooked = {
-  '04 Nov': {
+  '05 Nov': {
     'Court 1': ['06:00'],
     'Court 2': [],
     'Court 3': [],
@@ -80,6 +79,10 @@ const BookingPage = () => {
     if (!date) return;
     const formattedDate = dayjs(date).format('DD MMM');
     setSelectedDate(formattedDate);
+
+    // scroll otomatis ke tanggal yang dipilih (opsional)
+    const el = document.getElementById(`date-${dayjs(date).format('YYYY-MM-DD')}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
   };
 
   return (
@@ -103,7 +106,31 @@ const BookingPage = () => {
                   </DatePickerModal>
                 </div>
 
-                <Separator orientation="vertical" className="h-10" />
+            <Separator orientation="vertical" className="h-10" />
+
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide flex-nowrap">
+              {dateList.map((d) => (
+                <button
+                  id={`date-${d.fullDate}`}
+                  key={d.fullDate}
+                  className={cn(
+                    "flex flex-col items-center justify-center min-w-14 h-14 rounded px-2 py-1 font-semibold transition-colors",
+                    selectedDate === d.date
+                      ? "bg-primary text-white"
+                      : "hover:bg-muted text-black"
+                  )}
+                  onClick={() => setSelectedDate(d.date)}
+                >
+                  <span className="text-xs font-normal">{d.label}</span>
+                  <div className="flex mt-0.5">
+                    <span className="text-sm font-semibold me-0.5">{dayjs(d.fullDate).format('DD')}</span>
+                    <span className="text-sm font-semibold">{dayjs(d.fullDate).format('MMM')}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
 
                 <div className="flex gap-1 overflow-x-auto scrollbar-hide flex-nowrap">
                   {dateList.map((d) => (
@@ -117,30 +144,48 @@ const BookingPage = () => {
                       )}
                       onClick={() => setSelectedDate(d.date)}
                     >
-                      <span className="text-xs leading-none">{d.label}</span>
-                      <span className="text-sm font-bold leading-none mt-1">{dayjs(d.fullDate).format('DD')}</span>
-                      <span className="text-xs leading-none mt-1">{dayjs(d.fullDate).format('MMM')}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
+                      {court.name}
+                      <IconInfoCircle className="inline-block size-4" />
+                    </Button>
+                  </th>
+                ))}
+              </tr>
+            </thead>
 
-            {/* Scroll area for table only */}
-            <div className="overflow-x-auto max-h-[70vh]">
-              <table className="min-w-full border border-gray-200 rounded-lg text-center border-collapse">
-                <thead className="sticky top-0 z-20 bg-gray-50 shadow-sm">
-                  <tr>
-                    <th className="sticky left-0 z-30 border-r border-b bg-gray-50 px-2 py-2 text-left font-semibold w-20"></th>
-                    {mockCourts.map((court) => (
-                      <th
-                        key={court.name}
-                        className="border border-gray-200 px-4 py-2 text-xs font-semibold bg-gray-50"
-                      >
-                        <Button
-                          variant={'ghost'}
-                          className="flex items-center gap-1 text-gray-700"
-                          onClick={() => setSelectedCourt(court)}
+            <tbody>
+              {mockTimes.map((time) => (
+                <tr key={time}>
+                  <td className="sticky left-0 z-10 border border-gray-200 bg-white px-4 py-2 text-left text-sm font-medium w-20">
+                    {time}
+                  </td>
+                  {mockCourts.map((court) => {
+                    const booked = isBooked(selectedDate, court.name, time);
+                    const selected = selectedCell.some(
+                      (cell) => cell.court === court.name && cell.time === time
+                    );
+                    return (
+                      <td key={court.name} className="border border-gray-200 p-1">
+                        <button
+                          disabled={booked}
+                          className={cn(
+                            `flex h-14 w-full flex-col items-start justify-between rounded px-2 py-1 text-base font-semibold transition-all`,
+                            booked
+                              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                              : selected
+                                ? 'border-primary bg-primary text-white shadow-lg'
+                                : 'bg-white hover:bg-green-100'
+                          )}
+                          onClick={() => {
+                            if (selected) {
+                              setSelectedCell(
+                                selectedCell.filter(
+                                  (cell) => !(cell.court === court.name && cell.time === time)
+                                )
+                              );
+                            } else {
+                              setSelectedCell([...selectedCell, { court: court.name, time }]);
+                            }
+                          }}
                         >
                           {court.name}
                           <IconInfoCircle className="inline-block size-4" />
