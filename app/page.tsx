@@ -13,7 +13,7 @@ export default async function HomePage() {
       <main className="mt-28 lg:mt-24">
         <BannerSection />
         <MenuSection />
-        {/* <ActiveCourtSection /> */}
+        <ActiveCourtSection />
         <SponsorshipMarqueSection />
         <MembershipCtaSection />
       </main>

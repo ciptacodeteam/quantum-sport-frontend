@@ -96,6 +96,16 @@ const CourtCostingTable = ({ courtId }: Props) => {
                     {info.getValue() ? 'Tersedia' : 'Tidak Tersedia'}
                   </Badge>
                 )
+              },
+              {
+                accessorKey: 'price',
+                header: 'Harga (IDR)',
+                cell: (info) =>
+                  info.getValue().toLocaleString('id-ID', {
+                    style: 'currency',
+                    currency: 'IDR',
+                    minimumFractionDigits: 0
+                })
               }
             ]}
             enableRowSelection={false}
