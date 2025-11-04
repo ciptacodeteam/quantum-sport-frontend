@@ -17,6 +17,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import Image from 'next/image';
+import AddOnsCoach from '@/components/AddOnsCoach';
 
 // mock data
 const mockCourts = [
@@ -52,6 +53,10 @@ const BookingPage = () => {
   >([]);
   const [selectedCourt, setSelectedCourt] = useState<null | typeof mockCourts[0]>(null);
 
+  const [ trackBookingState, setTrackBookingState ] = useState<number>(2);
+
+  // const [  ]
+
   useEffect(() => {
     const today = dayjs();
     const endDate = today.add(3, 'month');
@@ -81,137 +86,151 @@ const BookingPage = () => {
     <>
       <MainHeader backHref="/" title="Booking Court" withLogo={false} withCartBadge />
 
-      <main className="mt-24 mb-[31%] w-full md:mt-14">
-        <div className="sticky z-30 bg-white border-b pb-2">
-          <div className="flex items-center gap-2">
-            <div className="flex items-center px-2 pl-4">
-              <DatePickerModal onChange={handleSelectDate} label="Select Booking Date">
-                <DatePickerModalTrigger>
-                  <Button variant="light" size={'icon-lg'} className="p-2">
-                    <IconCalendarFilled className="text-primary size-6" />
-                  </Button>
-                </DatePickerModalTrigger>
-              </DatePickerModal>
-            </div>
+      {
+        trackBookingState === 1
+        ?
+        <div>
+          <main className="mt-24 mb-[31%] w-full md:mt-14">
+            <div className="sticky z-30 bg-white border-b pb-2">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center px-2 pl-4">
+                  <DatePickerModal onChange={handleSelectDate} label="Select Booking Date">
+                    <DatePickerModalTrigger>
+                      <Button variant="light" size={'icon-lg'} className="p-2">
+                        <IconCalendarFilled className="text-primary size-6" />
+                      </Button>
+                    </DatePickerModalTrigger>
+                  </DatePickerModal>
+                </div>
 
-            <Separator orientation="vertical" className="h-10" />
+                <Separator orientation="vertical" className="h-10" />
 
-            <div className="flex gap-1 overflow-x-auto scrollbar-hide flex-nowrap">
-              {dateList.map((d) => (
-                <button
-                  key={d.fullDate}
-                  className={cn(
-                    "flex flex-col items-center justify-center min-w-14 h-16 rounded px-2 py-1 font-semibold transition-colors",
-                    selectedDate === d.date
-                      ? "bg-primary text-white"
-                      : "hover:bg-muted text-muted-foreground"
-                  )}
-                  onClick={() => setSelectedDate(d.date)}
-                >
-                  <span className="text-xs leading-none">{d.label}</span>
-                  <span className="text-sm font-bold leading-none mt-1">{dayjs(d.fullDate).format('DD')}</span>
-                  <span className="text-xs leading-none mt-1">{dayjs(d.fullDate).format('MMM')}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Scroll area for table only */}
-        <div className="overflow-x-auto max-h-[70vh]">
-          <table className="min-w-full border border-gray-200 rounded-lg text-center border-collapse">
-            <thead className="sticky top-0 z-20 bg-gray-50 shadow-sm">
-              <tr>
-                <th className="sticky left-0 z-30 border-r border-b bg-gray-50 px-2 py-2 text-left font-semibold w-20"></th>
-                {mockCourts.map((court) => (
-                  <th
-                    key={court.name}
-                    className="border border-gray-200 px-4 py-2 text-xs font-semibold bg-gray-50"
-                  >
-                    <Button
-                      variant={'ghost'}
-                      className="flex items-center gap-1 text-gray-700"
-                      onClick={() => setSelectedCourt(court)}
+                <div className="flex gap-1 overflow-x-auto scrollbar-hide flex-nowrap">
+                  {dateList.map((d) => (
+                    <button
+                      key={d.fullDate}
+                      className={cn(
+                        "flex flex-col items-center justify-center min-w-14 h-16 rounded px-2 py-1 font-semibold transition-colors",
+                        selectedDate === d.date
+                          ? "bg-primary text-white"
+                          : "hover:bg-muted text-muted-foreground"
+                      )}
+                      onClick={() => setSelectedDate(d.date)}
                     >
-                      {court.name}
-                      <IconInfoCircle className="inline-block size-4" />
-                    </Button>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-
-            <tbody>
-              {mockTimes.map((time) => (
-                <tr key={time} className="even:bg-gray-50">
-                  <td className="sticky left-0 z-10 border border-gray-200 bg-white px-4 py-2 text-left text-sm font-medium w-20">
-                    {time}
-                  </td>
-                  {mockCourts.map((court) => {
-                    const booked = isBooked(selectedDate, court.name, time);
-                    const selected = selectedCell.some(
-                      (cell) => cell.court === court.name && cell.time === time
-                    );
-                    return (
-                      <td key={court.name} className="border border-gray-200 p-1">
-                        <button
-                          disabled={booked}
-                          className={cn(
-                            `flex h-14 w-full flex-col items-start justify-between rounded px-2 py-1 text-base font-semibold transition-all`,
-                            booked
-                              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                              : selected
-                                ? 'border-primary bg-primary text-white shadow-lg'
-                                : 'bg-white hover:bg-green-100'
-                          )}
-                          onClick={() => {
-                            if (selected) {
-                              setSelectedCell(
-                                selectedCell.filter(
-                                  (cell) => !(cell.court === court.name && cell.time === time)
-                                )
-                              );
-                            } else {
-                              setSelectedCell([...selectedCell, { court: court.name, time }]);
-                            }
-                          }}
-                        >
-                          <span className="text-sm">
-                            {mockPrices.toLocaleString('id-ID')}
-                          </span>
-                          {booked && <span className="text-xs">booked</span>}
-                        </button>
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </main>
-
-      {/* Court Detail Modal */}
-      <Dialog open={!!selectedCourt} onOpenChange={() => setSelectedCourt(null)}>
-        <DialogContent className="max-w-sm">
-          {selectedCourt && (
-            <>
-              <DialogHeader>
-                <DialogTitle>{selectedCourt.name}</DialogTitle>
-              </DialogHeader>
-              <div className="mt-1">
-                <Image
-                  src={selectedCourt.image}
-                  alt={selectedCourt.name}
-                  width={600}
-                  height={400}
-                  className="rounded-sm object-cover w-full"
-                />
+                      <span className="text-xs leading-none">{d.label}</span>
+                      <span className="text-sm font-bold leading-none mt-1">{dayjs(d.fullDate).format('DD')}</span>
+                      <span className="text-xs leading-none mt-1">{dayjs(d.fullDate).format('MMM')}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+            </div>
+
+            {/* Scroll area for table only */}
+            <div className="overflow-x-auto max-h-[70vh]">
+              <table className="min-w-full border border-gray-200 rounded-lg text-center border-collapse">
+                <thead className="sticky top-0 z-20 bg-gray-50 shadow-sm">
+                  <tr>
+                    <th className="sticky left-0 z-30 border-r border-b bg-gray-50 px-2 py-2 text-left font-semibold w-20"></th>
+                    {mockCourts.map((court) => (
+                      <th
+                        key={court.name}
+                        className="border border-gray-200 px-4 py-2 text-xs font-semibold bg-gray-50"
+                      >
+                        <Button
+                          variant={'ghost'}
+                          className="flex items-center gap-1 text-gray-700"
+                          onClick={() => setSelectedCourt(court)}
+                        >
+                          {court.name}
+                          <IconInfoCircle className="inline-block size-4" />
+                        </Button>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {mockTimes.map((time) => (
+                    <tr key={time} className="even:bg-gray-50">
+                      <td className="sticky left-0 z-10 border border-gray-200 bg-white px-4 py-2 text-left text-sm font-medium w-20">
+                        {time}
+                      </td>
+                      {mockCourts.map((court) => {
+                        const booked = isBooked(selectedDate, court.name, time);
+                        const selected = selectedCell.some(
+                          (cell) => cell.court === court.name && cell.time === time
+                        );
+                        return (
+                          <td key={court.name} className="border border-gray-200 p-1">
+                            <button
+                              disabled={booked}
+                              className={cn(
+                                `flex h-14 w-full flex-col items-start justify-between rounded px-2 py-1 text-base font-semibold transition-all`,
+                                booked
+                                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                  : selected
+                                    ? 'border-primary bg-primary text-white shadow-lg'
+                                    : 'bg-white hover:bg-green-100'
+                              )}
+                              onClick={() => {
+                                if (selected) {
+                                  setSelectedCell(
+                                    selectedCell.filter(
+                                      (cell) => !(cell.court === court.name && cell.time === time)
+                                    )
+                                  );
+                                } else {
+                                  setSelectedCell([...selectedCell, { court: court.name, time }]);
+                                }
+                              }}
+                            >
+                              <span className="text-sm">
+                                {mockPrices.toLocaleString('id-ID')}
+                              </span>
+                              {booked && <span className="text-xs">booked</span>}
+                            </button>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </main>
+
+          {/* Court Detail Modal */}
+          <Dialog open={!!selectedCourt} onOpenChange={() => setSelectedCourt(null)}>
+            <DialogContent className="max-w-sm">
+              {selectedCourt && (
+                <>
+                  <DialogHeader>
+                    <DialogTitle>{selectedCourt.name}</DialogTitle>
+                  </DialogHeader>
+                  <div className="mt-1">
+                    <Image
+                      src={selectedCourt.image}
+                      alt={selectedCourt.name}
+                      width={600}
+                      height={400}
+                      className="rounded-sm object-cover w-full"
+                    />
+                  </div>
+                </>
+              )}
+            </DialogContent>
+          </Dialog>
+        </div>
+        :
+        trackBookingState === 2
+        ?
+        <div className="mt-24 mb-[31%] w-full md:mt-14">
+          <AddOnsCoach />
+        </div>
+        :
+        <></>
+      }
 
       <BottomNavigationWrapper className="pb-4">
         <header className="flex-between my-2 items-end">
