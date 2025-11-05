@@ -79,6 +79,25 @@ export type Court = {
   updatedAt: Date;
 };
 
+export type Tournament = {
+  id: string;
+  name: string;
+  description: string | null;
+  rules: string | null;
+  image: string | null;
+  startDate: Date;
+  endDate: Date;
+  startTime: string;
+  endTime: string;
+  maxTeams: number;
+  teamSize: number;
+  entryFee: number;
+  location: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 export type Staff = {
   id: string;
   name: string;

@@ -30,6 +30,7 @@ import {
   IconUsersGroup
 } from '@tabler/icons-react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import type { AppSidebarItem } from '@/types';
 
 const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
@@ -42,13 +43,26 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
     },
 
     {
+      title: 'Booking System',
+      icon: IconScan,
+      items: [
+        {
+          title: 'Book Courts',
+          url: '/admin/booking-lapangan',
+        },
+        {
+          title: 'Add-ons & Equipment',
+          url: '/admin/booking-add-ons',
+        }
+      ]
+    },
+    {
       title: 'Kelola Pemesanan',
       icon: IconScan,
       items: [
         {
           title: 'Lapangan',
           url: '/admin/kelola-pemesanan/lapangan',
-          isUnrealeased: true
         },
         {
           title: 'Inventori',
@@ -163,12 +177,15 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const pathname = usePathname();
+  const isDashboardActive = pathname === '/admin/dashboard' || pathname === '/admin/dashboard/';
+
   return (
     <Sidebar variant="inset" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
+            <SidebarMenuButton size="lg" asChild isActive={isDashboardActive}>
               <Link href="/admin/dashboard" prefetch>
                 <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
                   <Command className="size-4" />

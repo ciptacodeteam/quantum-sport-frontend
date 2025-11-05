@@ -55,7 +55,7 @@ const EditCourtForm = ({ courtId }: Props) => {
   const { mutate, isPending } = useMutation(
     adminUpdateCourtMutationOptions({
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: adminCourtsQueryOptions.queryKey });
+        queryClient.invalidateQueries({ queryKey: adminCourtsQueryOptions().queryKey });
         closeDialog(`edit-court-${courtId}`);
       },
       onError: (err) => {

@@ -40,7 +40,7 @@ const CourtTable = () => {
         success: () => 'Data berhasil dihapus.',
         error: 'Gagal menghapus data.'
       },
-      invalidate: adminCourtsQueryOptions.queryKey
+      invalidate: adminCourtsQueryOptions().queryKey
     }
   );
 
@@ -96,7 +96,7 @@ const CourtTable = () => {
     [colHelper, confirmAndMutate]
   );
 
-  const { data, isPending } = useQuery(adminCourtsQueryOptions);
+  const { data, isPending } = useQuery(adminCourtsQueryOptions());
 
   return (
     <DataTable

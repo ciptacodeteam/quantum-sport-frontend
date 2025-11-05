@@ -3,10 +3,10 @@
 import MainHeader from '@/components/headers/MainHeader';
 import BottomNavigationWrapper from '@/components/ui/BottomNavigationWrapper';
 import { Button } from '@/components/ui/button';
-import { DatePickerModal, DatePickerModalTrigger } from '@/components/ui/date-picker-modal';
-import { Separator } from '@/components/ui/separator';
-import { cn } from '@/lib/utils';
-import { IconCalendarFilled, IconInfoCircle } from '@tabler/icons-react';
+import BookingCalendar from '@/components/booking/BookingCalendar';
+import { createBookingMutationOptions } from '@/mutations/booking';
+import { courtsWithSlotsQueryOptions } from '@/queries/court';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import {
@@ -41,10 +41,6 @@ const mockBooked = {
   }
 };
 
-function isBooked(date: string, court: string, time: string) {
-  return mockBooked[date]?.[court]?.includes(time);
-}
-
 const BookingPage = () => {
   const [selectedDate, setSelectedDate] = useState(dayjs().format('DD MMM'));
   const [selectedCell, setSelectedCell] = useState<{ court: string; time: string }[]>([]);
@@ -58,15 +54,10 @@ const BookingPage = () => {
     const endDate = today.add(3, 'month');
     const updatedDates: { label: string; date: string; fullDate: string; active?: boolean }[] = [];
 
-    let current = today;
-    while (current.isBefore(endDate)) {
-      updatedDates.push({
-        label: current.format('ddd'),
-        date: current.format('DD MMM'),
-        fullDate: current.format('YYYY-MM-DD'),
-        active: current.isSame(today, 'day'),
-      });
-      current = current.add(1, 'day');
+  const handleBooking = () => {
+    if (selectedSlots.length === 0) {
+      toast.error('Pilih minimal satu slot');
+      return;
     }
 
     setDateList(updatedDates);
@@ -80,6 +71,8 @@ const BookingPage = () => {
     const el = document.getElementById(`date-${dayjs(date).format('YYYY-MM-DD')}`);
     if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
   };
+
+  const totalPrice = selectedSlots.reduce((sum, slot) => sum + slot.price, 0);
 
   return (
     <>
@@ -239,17 +232,23 @@ const BookingPage = () => {
           <div>
             <span className="text-muted-foreground text-xs">Subtotal</span>
             <h2 className="text-lg font-semibold">
-              Rp {(mockPrices * selectedCell.length).toLocaleString('id-ID')}
+              Rp {totalPrice.toLocaleString('id-ID')}
             </h2>
           </div>
           <div>
             <span className="text-muted-foreground text-xs">
-              {selectedCell.length} Slot Terpilih
+              {selectedSlots.length} Slot Terpilih
             </span>
           </div>
         </header>
         <main>
-          <Button className="w-full" size={'xl'}>
+          <Button 
+            className="w-full" 
+            size={'xl'}
+            onClick={handleBooking}
+            disabled={selectedSlots.length === 0 || isPending}
+            loading={isPending}
+          >
             Pilih Jadwal
           </Button>
         </main>
