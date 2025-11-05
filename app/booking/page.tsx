@@ -3,10 +3,8 @@
 import MainHeader from '@/components/headers/MainHeader';
 import BottomNavigationWrapper from '@/components/ui/BottomNavigationWrapper';
 import { Button } from '@/components/ui/button';
-import BookingCalendar from '@/components/booking/BookingCalendar';
 import { createBookingMutationOptions } from '@/mutations/booking';
-import { courtsWithSlotsQueryOptions } from '@/queries/court';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { useEffect, useState } from 'react';
 import {
@@ -15,7 +13,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
+import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import { IconCalendarFilled, IconInfoCircle } from '@tabler/icons-react';
+import { DatePickerModal, DatePickerModalTrigger } from '@/components/ui/date-picker-modal';
 
 // mock data
 const mockCourts = [
@@ -49,10 +52,39 @@ const BookingPage = () => {
   >([]);
   const [selectedCourt, setSelectedCourt] = useState<null | typeof mockCourts[0]>(null);
 
+  // Create booking mutation
+  const { mutate: createBooking, isPending } = useMutation(createBookingMutationOptions());
+
+  // Create selectedSlots based on selectedCell
+  const selectedSlots = selectedCell.map(cell => ({
+    court: cell.court,
+    time: cell.time,
+    price: mockPrices,
+    date: selectedDate
+  }));
+
   useEffect(() => {
     const today = dayjs();
     const endDate = today.add(3, 'month');
     const updatedDates: { label: string; date: string; fullDate: string; active?: boolean }[] = [];
+
+    let currentDate = today;
+    while (currentDate.isBefore(endDate) || currentDate.isSame(endDate, 'day')) {
+      updatedDates.push({
+        label: currentDate.format('ddd'),
+        date: currentDate.format('DD MMM'),
+        fullDate: currentDate.format('YYYY-MM-DD'),
+        active: currentDate.isSame(today, 'day')
+      });
+      currentDate = currentDate.add(1, 'day');
+    }
+
+    setDateList(updatedDates);
+  }, []);
+
+  const isBooked = (date: string, court: string, time: string) => {
+    return mockBooked[date]?.[court]?.includes(time) || false;
+  };
 
   const handleBooking = () => {
     if (selectedSlots.length === 0) {
@@ -60,8 +92,12 @@ const BookingPage = () => {
       return;
     }
 
-    setDateList(updatedDates);
-  }, []);
+    // Here you would typically call the booking mutation
+    createBooking({
+      slots: selectedSlots,
+      date: selectedDate
+    });
+  };
 
   const handleSelectDate = (date: Date | null) => {
     if (!date) return;
@@ -71,6 +107,7 @@ const BookingPage = () => {
     const el = document.getElementById(`date-${dayjs(date).format('YYYY-MM-DD')}`);
     if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
   };
+
 
   const totalPrice = selectedSlots.reduce((sum, slot) => sum + slot.price, 0);
 
