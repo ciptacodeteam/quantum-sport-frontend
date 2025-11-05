@@ -43,6 +43,20 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
     },
 
     {
+      title: 'Booking System',
+      icon: IconScan,
+      items: [
+        {
+          title: 'Book Courts',
+          url: '/admin/booking-lapangan',
+        },
+        {
+          title: 'Add-ons & Equipment',
+          url: '/admin/booking-add-ons',
+        }
+      ]
+    },
+    {
       title: 'Kelola Pemesanan',
       icon: IconScan,
       items: [
