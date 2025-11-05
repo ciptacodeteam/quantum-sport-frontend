@@ -16,7 +16,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import Image from 'next/image';
-import AddOnsCoach from '@/components/AddOnsCoach';
 
 // mock data
 const mockCourts = [
@@ -28,7 +27,9 @@ const mockCourts = [
 
 const mockTimes = [
   '06:00', '08:00', '09:00', '10:00', '11:00',
-  '12:00', '13:00', '14:00', '15:00', '16:00'
+  '12:00', '13:00', '14:00', '15:00', '16:00',
+  '18:00', '19:00', '20:00', '21:00', '22:00',
+  '23:00', '24:00'
 ];
 const mockPrices = 350000;
 const mockBooked = {
@@ -51,10 +52,6 @@ const BookingPage = () => {
     { label: string; date: string; fullDate: string; active?: boolean }[]
   >([]);
   const [selectedCourt, setSelectedCourt] = useState<null | typeof mockCourts[0]>(null);
-
-  const [ trackBookingState, setTrackBookingState ] = useState<number>(2);
-
-  // const [  ]
 
   useEffect(() => {
     const today = dayjs();
@@ -80,7 +77,6 @@ const BookingPage = () => {
     const formattedDate = dayjs(date).format('DD MMM');
     setSelectedDate(formattedDate);
 
-    // scroll otomatis ke tanggal yang dipilih (opsional)
     const el = document.getElementById(`date-${dayjs(date).format('YYYY-MM-DD')}`);
     if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
   };
@@ -89,22 +85,25 @@ const BookingPage = () => {
     <>
       <MainHeader backHref="/" title="Booking Court" withLogo={false} withCartBadge />
 
-          <main className="mt-24 mb-[31%] w-full md:mt-14">
-            <div className="sticky z-30 bg-white border-b pb-2">
-              <div className="flex items-center gap-2">
-                <div className="flex items-center px-2 pl-4">
-                  <DatePickerModal onChange={handleSelectDate} label="Select Booking Date">
-                    <DatePickerModalTrigger>
-                      <Button variant="light" size={'icon-lg'} className="p-2">
-                        <IconCalendarFilled className="text-primary size-6" />
-                      </Button>
-                    </DatePickerModalTrigger>
-                  </DatePickerModal>
-                </div>
+      {/* ⬇️ Area scroll utama dibatasi hanya di sini */}
+      <main className="mt-24 w-full md:mt-14 flex flex-col h-[calc(100dvh-180px)]">
+        {/* Sticky header (tanggal & tombol kalender) */}
+        <div className="sticky top-24 md:top-14 z-30 bg-white border-b pb-2">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center px-2 pl-4">
+              <DatePickerModal onChange={handleSelectDate} label="Select Booking Date">
+                <DatePickerModalTrigger>
+                  <Button variant="light" size={'icon-lg'} className="p-2">
+                    <IconCalendarFilled className="text-primary size-6" />
+                  </Button>
+                </DatePickerModalTrigger>
+              </DatePickerModal>
+            </div>
 
             <Separator orientation="vertical" className="h-10" />
 
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide flex-nowrap">
+            {/* Scroll kanan kiri hanya untuk tanggal */}
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide flex-nowrap px-2">
               {dateList.map((d) => (
                 <button
                   id={`date-${d.fullDate}`}
@@ -128,32 +127,41 @@ const BookingPage = () => {
           </div>
         </div>
 
-            {/* Scroll area for table only */}
-            <div className="overflow-x-auto max-h-[70vh]">
-              <table className="min-w-full border border-gray-200 rounded-lg text-center border-collapse">
-                <thead className="sticky top-0 z-20 bg-gray-50 shadow-sm">
-                  <tr>
-                    <th className="sticky left-0 z-30 border-r border-b bg-gray-50 px-2 py-2 text-left font-semibold w-20"></th>
-                    {mockCourts.map((court) => (
-                      <th
-                        key={court.name}
-                        className="border border-gray-200 px-4 py-2 text-xs font-semibold bg-gray-50"
+        {/* Scroll area hanya untuk tabel */}
+        <div className="flex-1 overflow-auto scrollbar-hide pb-10">
+          <div className="overflow-x-auto h-full">
+            <table className="min-w-full border border-gray-200 text-center border-separate border-spacing-0">
+              <thead className="sticky top-0 z-20 bg-gray-50 shadow-sm">
+                <tr>
+                  <th className="sticky left-0 z-30 border-r border-b bg-gray-50 px-2 py-2 text-left font-semibold w-20"></th>
+                  {mockCourts.map((court) => (
+                    <th
+                      key={court.name}
+                      className="border border-gray-200 px-4 py-2 text-xs font-semibold bg-gray-50"
+                    >
+                      <Button
+                        variant={'ghost'}
+                        className="flex items-center gap-1 text-gray-700"
+                        onClick={() => setSelectedCourt(court)}
                       >
-                        <Button
-                          variant={'ghost'}
-                          className="flex items-center gap-1 text-gray-700"
-                          onClick={() => setSelectedCourt(court)}
-                        >
-                          {court.name}
-                          <IconInfoCircle className="inline-block size-4" />
-                        </Button>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
+                        {court.name}
+                        <IconInfoCircle className="inline-block size-4" />
+                      </Button>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
 
-                <tbody>
-                  {mockTimes.map((time) => (
+              <tbody>
+                {mockTimes
+                  .filter((time) => {
+                    const now = dayjs();
+
+                    const timeMoment = dayjs(`${dayjs().year()}-${selectedDate} ${time}`, "YYYY-DD MMM HH:mm");
+
+                    return dayjs(selectedDate, "DD MMM").isAfter(now, "day") || timeMoment.isAfter(now);
+                  })
+                  .map((time) => (
                     <tr key={time}>
                       <td className="sticky left-0 z-10 border border-gray-200 bg-white px-4 py-2 text-left text-sm font-medium w-20">
                         {time}
@@ -170,10 +178,10 @@ const BookingPage = () => {
                               className={cn(
                                 `flex h-14 w-full flex-col items-start justify-between rounded px-2 py-1 text-base font-semibold transition-all`,
                                 booked
-                                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                  ? "bg-gray-200 text-gray-400 cursor-not-allowed"
                                   : selected
-                                    ? 'border-primary bg-primary text-white shadow-lg'
-                                    : 'bg-white hover:bg-green-100'
+                                    ? "border-primary bg-primary text-white shadow-lg"
+                                    : "bg-white hover:bg-green-100"
                               )}
                               onClick={() => {
                                 if (selected) {
@@ -187,9 +195,7 @@ const BookingPage = () => {
                                 }
                               }}
                             >
-                              <span className="text-sm">
-                                {mockPrices.toLocaleString('id-ID')}
-                              </span>
+                              <span className="text-sm">{mockPrices.toLocaleString("id-ID")}</span>
                               {booked && <span className="text-xs">booked</span>}
                             </button>
                           </td>
@@ -197,30 +203,36 @@ const BookingPage = () => {
                       })}
                     </tr>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          </main>
-          <Dialog open={!!selectedCourt} onOpenChange={() => setSelectedCourt(null)}>
-            <DialogContent className="max-w-sm">
-              {selectedCourt && (
-                <>
-                  <DialogHeader>
-                    <DialogTitle>{selectedCourt.name}</DialogTitle>
-                  </DialogHeader>
-                  <div className="mt-1">
-                    <Image
-                      src={selectedCourt.image}
-                      alt={selectedCourt.name}
-                      width={600}
-                      height={400}
-                      className="rounded-sm object-cover w-full"
-                    />
-                  </div>
-                </>
-              )}
-            </DialogContent>
-          </Dialog>
+
+              </tbody>
+            </table>
+
+            <div className="h-2 pointer-events-none"></div>
+          </div>
+        </div>
+      </main>
+
+
+      <Dialog open={!!selectedCourt} onOpenChange={() => setSelectedCourt(null)}>
+        <DialogContent className="w-11/12">
+          {selectedCourt && (
+            <>
+              <DialogHeader>
+                <DialogTitle>{selectedCourt.name}</DialogTitle>
+              </DialogHeader>
+              <div className="mt-1">
+                <Image
+                  src={selectedCourt.image}
+                  alt={selectedCourt.name}
+                  width={600}
+                  height={400}
+                  className="rounded-sm object-cover w-full"
+                />
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <BottomNavigationWrapper className="pb-4">
         <header className="flex-between my-2 items-end">

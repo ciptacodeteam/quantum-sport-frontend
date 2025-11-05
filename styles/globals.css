@@ -138,3 +138,7 @@
     @apply cursor-pointer;
   }
 }
+
+.scrollable {
+  -webkit-overflow-scrolling: touch;
+}

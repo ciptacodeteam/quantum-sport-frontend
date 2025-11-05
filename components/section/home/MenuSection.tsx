@@ -18,7 +18,7 @@ const MenuSection = () => {
     },
     {
       title: 'Value Pack',
-      url: '#',
+      url: '/valuepack',
       icon: <MembershipMenuIcon className="size-9" />
     },
     {
