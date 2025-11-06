@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
+import Link from 'next/link';
 
 const MembershipCtaSection = () => {
   return (
@@ -28,8 +29,8 @@ const MembershipCtaSection = () => {
           </div>
         </div>
         <footer className="w-full px-4">
-          <Button variant="secondary" className="mt-4 w-full">
-            Gabung Sekarang
+          <Button asChild variant="secondary" className="mt-4 w-full">
+            <Link href="/valuepack">Gabung Sekarang</Link>
           </Button>
         </footer>
       </div>

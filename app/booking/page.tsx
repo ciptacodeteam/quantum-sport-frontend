@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import Image from 'next/image';
+import Link from 'next/link';
 
 // mock data
 const mockCourts = [
@@ -230,7 +231,7 @@ const BookingPage = () => {
                 />
               </div>
             </>
-          )}
+          )} 
         </DialogContent>
       </Dialog>
 
@@ -249,8 +250,19 @@ const BookingPage = () => {
           </div>
         </header>
         <main>
-          <Button className="w-full" size={'xl'}>
-            Pilih Jadwal
+          <Button
+            asChild
+            className={cn(
+              "w-full",
+              selectedCell.length === 0
+                ? "bg-gray-300 text-gray-500 pointer-events-none"
+                : ""
+            )}
+            size="xl"
+          >
+            <Link href={selectedCell.length > 0 ? "/add-ons" : "#"}>
+              Pilih Jadwal
+            </Link>
           </Button>
         </main>
       </BottomNavigationWrapper>

@@ -48,7 +48,7 @@ const ValuePackPage = () => {
         <>
             <MainHeader backHref="/" title={"Value Pack"} withLogo={false} />
 
-            <main className="flex flex-col gap-4 mt-28 mx-auto w-11/12 pb-12">
+            <main className="flex flex-col gap-4 pt-28 mx-auto w-11/12 pb-12">
                 {valuePacks.map((pack) => (
                     <Card key={pack.id} className="shadow-xs">
                         <CardHeader>
