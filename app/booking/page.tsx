@@ -7,8 +7,9 @@ import { createBookingMutationOptions } from '@/mutations/booking';
 import { courtsSlotsQueryOptions } from '@/queries/court';
 import type { Court, Slot } from '@/types/model';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import type { BookingItem } from '@/stores/useBookingStore';
 import dayjs from 'dayjs';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -17,7 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
-import { cn } from '@/lib/utils';
+import { cn, getPlaceholderImageUrl } from '@/lib/utils';
 import { toast } from 'sonner';
 import { IconCalendarFilled, IconInfoCircle } from '@tabler/icons-react';
 import {
@@ -47,6 +48,7 @@ const BookingPage = () => {
     setBookingItems,
     setSelectedDate: setBookingDate,
     courtTotal,
+    setCartOpen,
   } = useBookingStore();
 
   const [selectedDate, setSelectedDate] = useState(dayjs().format('DD MMM'));
@@ -54,6 +56,13 @@ const BookingPage = () => {
   const [dateList, setDateList] = useState<
     { label: string; date: string; fullDate: string; active?: boolean }[]
   >([]);
+  // Store selections per date to preserve them when switching dates
+  const [selectionsByDate, setSelectionsByDate] = useState<Record<string, SelectedCell[]>>({});
+  const previousDateRef = useRef<string>(selectedDate);
+  const selectedCellRef = useRef<SelectedCell[]>(selectedCell);
+  const previousBookingItemsCountRef = useRef(bookingItems.length);
+  const hasHydratedFromStoreRef = useRef(false);
+  const skipStoreSyncRef = useRef(true);
   const [selectedCourt, setSelectedCourt] = useState<null | {
     id: string;
     name: string;
@@ -91,7 +100,7 @@ const BookingPage = () => {
         map.set(courtId, {
           id: courtId,
           name: slot.court?.name || `Court ${map.size + 1}`,
-          image: (slot.court as Court | undefined)?.image || '/assets/img/court-3.jpg',
+          image: (slot.court as Court | undefined)?.image || getPlaceholderImageUrl({ width: 160, height: 90, text: 'No Image' }),
         });
       }
     });
@@ -101,7 +110,7 @@ const BookingPage = () => {
         {
           id: 'default-court',
           name: 'Court',
-          image: '/assets/img/court-3.jpg',
+          image: getPlaceholderImageUrl({ width: 160, height: 90, text: 'No Image' }),
         },
       ];
     }
@@ -120,9 +129,105 @@ const BookingPage = () => {
     return map;
   }, [slots]);
 
+  // Hydrate local selections from persisted booking items on initial load
   useEffect(() => {
-    setSelectedCell([]);
-  }, [selectedDate]);
+    const hydrateFromState = () => {
+      const state = useBookingStore.getState();
+      const items = state.bookingItems;
+
+      if (!items || items.length === 0) {
+        hasHydratedFromStoreRef.current = true;
+        skipStoreSyncRef.current = false;
+        previousBookingItemsCountRef.current = 0;
+        selectedCellRef.current = [];
+        setSelectionsByDate({});
+        setSelectedCell([]);
+        return;
+      }
+
+      const hydratedSelections: Record<string, SelectedCell[]> = {};
+      items.forEach((item) => {
+        if (!hydratedSelections[item.date]) {
+          hydratedSelections[item.date] = [];
+        }
+        hydratedSelections[item.date].push({
+          slotId: `${item.courtId}-${item.timeSlot}`,
+          courtId: item.courtId,
+          courtName: item.courtName,
+          time: item.timeSlot,
+          price: item.price,
+        });
+      });
+
+      setSelectionsByDate(hydratedSelections);
+
+      let targetDate = selectedDate;
+      if (!hydratedSelections[targetDate]?.length) {
+        const availableDates = Object.keys(hydratedSelections);
+        if (availableDates.length > 0) {
+          targetDate = availableDates[0];
+          setSelectedDate(targetDate);
+        }
+      }
+
+      const targetCells = hydratedSelections[targetDate] ?? [];
+      setSelectedCell(targetCells);
+      selectedCellRef.current = targetCells;
+      previousDateRef.current = targetDate;
+      previousBookingItemsCountRef.current = items.length;
+
+      hasHydratedFromStoreRef.current = true;
+      skipStoreSyncRef.current = false;
+    };
+
+    const finishHydrationHandler = useBookingStore.persist?.onFinishHydration?.(() => {
+      hydrateFromState();
+    });
+
+    if (useBookingStore.persist?.hasHydrated?.()) {
+      hydrateFromState();
+    }
+
+    return () => {
+      finishHydrationHandler?.();
+    };
+  }, [selectedDate, setSelectedDate]);
+
+  // Keep ref updated with latest selectedCell and date
+  useEffect(() => {
+    selectedCellRef.current = selectedCell;
+  }, [selectedCell]);
+  
+  // Save selections for the current date whenever they change (but not when date changes)
+  useEffect(() => {
+    const currentDateRef = previousDateRef.current;
+    if (currentDateRef === selectedDate) {
+      setSelectionsByDate((prev) => ({
+        ...prev,
+        [selectedDate]: selectedCell,
+      }));
+    }
+  }, [selectedCell, selectedDate]);
+  
+  // When date changes, save old selections and restore new selections
+  useEffect(() => {
+    const previousDate = previousDateRef.current;
+    
+    if (previousDate !== selectedDate) {
+      // Save selections for the previous date
+      setSelectionsByDate((prev) => ({
+        ...prev,
+        [previousDate]: selectedCellRef.current,
+      }));
+      
+      // Restore selections for the new date
+      const savedSelections = selectionsByDate[selectedDate] || [];
+      setSelectedCell(savedSelections);
+      
+      // Update ref to current date
+      previousDateRef.current = selectedDate;
+    }
+  }, [selectedDate, selectionsByDate]);
 
   useEffect(() => {
     setSelectedCell((prev) =>
@@ -132,20 +237,88 @@ const BookingPage = () => {
       })
     );
   }, [slotMap]);
-
+  
+  // Sync deletions from CartSheet back to local selections
   useEffect(() => {
-    const newBookingItems = selectedCell.map((cell) => ({
-      courtId: cell.courtId,
-      courtName: cell.courtName,
-      timeSlot: cell.time,
-      price: cell.price,
-      date: selectedDate,
-      endTime: dayjs(cell.time, 'HH:mm').add(1, 'hour').format('HH:mm'),
-    }));
+    const previousCount = previousBookingItemsCountRef.current;
+    const currentCount = bookingItems.length;
+    
+    // Only sync when items are deleted (count decreased) and we have previous selections
+    if (currentCount < previousCount && Object.keys(selectionsByDate).length > 0) {
+      // Create a map of existing booking items for quick lookup
+      const bookingItemsMap = new Map(
+        bookingItems.map(item => [`${item.courtId}-${item.timeSlot}-${item.date}`, true])
+      );
+      
+      // Update selectionsByDate to remove deleted items
+      const updatedSelectionsByDate: Record<string, SelectedCell[]> = {};
+      let hasChanges = false;
+      
+      Object.entries(selectionsByDate).forEach(([date, cells]) => {
+        const filteredCells = cells.filter(cell => 
+          bookingItemsMap.has(`${cell.courtId}-${cell.time}-${date}`)
+        );
+        if (filteredCells.length !== cells.length) {
+          hasChanges = true;
+        }
+        if (filteredCells.length > 0) {
+          updatedSelectionsByDate[date] = filteredCells;
+        }
+      });
+      
+      // Only update if there are actual changes
+      if (hasChanges) {
+        setSelectionsByDate(updatedSelectionsByDate);
+        
+        // Update selectedCell for current date
+        const currentDateCells = updatedSelectionsByDate[selectedDate] || [];
+        setSelectedCell(currentDateCells);
+      }
+    }
+    
+    previousBookingItemsCountRef.current = currentCount;
+  }, [bookingItems.length, bookingItems, selectionsByDate, selectedDate]);
 
-    setBookingItems(newBookingItems);
+  // Update booking items from all dates (not just current date)
+  useEffect(() => {
+    if (skipStoreSyncRef.current) {
+      return;
+    }
+
+    // Combine selections from all dates
+    const allSelections: BookingItem[] = [];
+    
+    // Add current date selections
+    selectedCell.forEach((cell) => {
+      allSelections.push({
+        courtId: cell.courtId,
+        courtName: cell.courtName,
+        timeSlot: cell.time,
+        price: cell.price,
+        date: selectedDate,
+        endTime: dayjs(cell.time, 'HH:mm').add(1, 'hour').format('HH:mm'),
+      });
+    });
+    
+    // Add selections from other dates
+    Object.entries(selectionsByDate).forEach(([date, cells]) => {
+      if (date !== selectedDate) {
+        cells.forEach((cell) => {
+          allSelections.push({
+            courtId: cell.courtId,
+            courtName: cell.courtName,
+            timeSlot: cell.time,
+            price: cell.price,
+            date: date,
+            endTime: dayjs(cell.time, 'HH:mm').add(1, 'hour').format('HH:mm'),
+          });
+        });
+      }
+    });
+
+    setBookingItems(allSelections);
     setBookingDate(dayjs(selectedFullDate).toDate());
-  }, [selectedCell, selectedDate, selectedFullDate, setBookingItems, setBookingDate]);
+  }, [selectedCell, selectedDate, selectedFullDate, setBookingItems, setBookingDate, selectionsByDate]);
 
   useEffect(() => {
     const today = dayjs();
@@ -186,7 +359,7 @@ const BookingPage = () => {
       return;
     }
 
-    toast.success(`${bookingItems.length} slot tersimpan ke booking store!`);
+    setCartOpen(true);
   };
 
   return (
@@ -342,11 +515,12 @@ const BookingPage = () => {
               </DialogHeader>
               <div className="mt-1">
                 <Image
-                  src={selectedCourt.image || '/assets/img/court-3.jpg'}
+                  src={selectedCourt.image || getPlaceholderImageUrl({ width: 600, height: 400, text: 'No Image' })}
                   alt={selectedCourt.name}
                   width={600}
                   height={400}
                   className="rounded-sm object-cover w-full"
+                  unoptimized
                 />
               </div>
             </>

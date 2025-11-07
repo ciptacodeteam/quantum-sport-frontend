@@ -13,22 +13,6 @@ import type { Membership } from '@/types/model';
 import { membershipsQueryOptions } from '@/queries/membership';
 import { useQuery } from '@tanstack/react-query';
 
-const formatFeatures = (membership: Membership) => {
-  const description = membership.description ? [membership.description] : [];
-  const summary = [
-    membership.sessions ? `${membership.sessions.toLocaleString('id-ID')} sesi bermain` : null,
-    membership.duration ? `Masa berlaku ${membership.duration.toLocaleString('id-ID')} hari` : null
-  ].filter(Boolean) as string[];
-
-  const contentLines = membership.content
-    ? membership.content
-        .split('\n')
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0)
-    : [];
-
-  return [...description, ...summary, ...contentLines];
-};
 
 const ValuePackPage = () => {
   const { data, isLoading, isError } = useQuery(membershipsQueryOptions());
@@ -72,8 +56,8 @@ const ValuePackPage = () => {
                                     </span>
                                 </div>
                                 <ul className="list-disc list-outside pl-4 space-y-1 text-muted-foreground">
-                                    {pack.features.map((feature, idx) => (
-                                        <li key={idx}>{feature}</li>
+                                    {pack.benefits?.map((feature, idx) => (
+                                        <li key={idx}>{feature.benefit}</li>
                                     ))}
                                 </ul>
                             </CardDescription>

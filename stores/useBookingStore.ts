@@ -1,7 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 export interface BookingItem {
   courtId: string;
@@ -72,8 +72,12 @@ interface BookingState {
   coachTotal: number;
   inventoryTotal: number;
   
+  // Cart Sheet
+  isCartOpen: boolean;
+  
   // Actions
   setBookingItems: (items: BookingItem[]) => void;
+  removeBookingItem: (courtId: string, timeSlot: string, date: string) => void;
   setSelectedDate: (date: Date) => void;
   addCoach: (coach: SelectedCoach) => void;
   removeCoach: (coachId: string, timeSlot: string) => void;
@@ -84,6 +88,7 @@ interface BookingState {
   getTotalAmount: () => number;
   getTotalWithTax: () => number;
   getTax: () => number;
+  setCartOpen: (open: boolean) => void;
 }
 
 export const useBookingStore = create<BookingState>()(
@@ -96,11 +101,21 @@ export const useBookingStore = create<BookingState>()(
       courtTotal: 0,
       coachTotal: 0,
       inventoryTotal: 0,
+      isCartOpen: false,
 
       // Actions
       setBookingItems: (items) => {
         const courtTotal = items.reduce((sum, item) => sum + item.price, 0);
         set({ bookingItems: items, courtTotal });
+      },
+
+      removeBookingItem: (courtId, timeSlot, date) => {
+        const state = get();
+        const newItems = state.bookingItems.filter(
+          item => !(item.courtId === courtId && item.timeSlot === timeSlot && item.date === date)
+        );
+        const courtTotal = newItems.reduce((sum, item) => sum + item.price, 0);
+        set({ bookingItems: newItems, courtTotal });
       },
 
       setSelectedDate: (date) => set({ selectedDate: date }),
@@ -197,9 +212,12 @@ export const useBookingStore = create<BookingState>()(
         const total = state.courtTotal + state.coachTotal + state.inventoryTotal;
         return total * 0.1; // 10% tax
       },
+
+      setCartOpen: (open) => set({ isCartOpen: open }),
     }),
     {
       name: 'booking-storage',
+      storage: typeof window !== 'undefined' ? createJSONStorage(() => sessionStorage) : undefined,
       partialize: (state) => ({
         bookingItems: state.bookingItems,
         selectedDate: state.selectedDate,
