@@ -1,4 +1,4 @@
-import { getCourtApi, getCourtsApi, getCourtSlotsApi } from '@/api/court';
+import { getCourtApi, getCourtsApi, getCourtSlotsApi, getCourtsSlotsApi } from '@/api/court';
 import type { Court, Slot } from '@/types/model';
 import { queryOptions } from '@tanstack/react-query';
 import type { SearchParamsData } from '@/types';
@@ -16,6 +16,13 @@ export const courtQueryOptions = (id: string) =>
     queryKey: ['courts', id],
     queryFn: () => getCourtApi(id),
     select: (res) => res.data as Court
+  });
+
+export const courtsSlotsQueryOptions = (queryParams: SearchParamsData) =>
+  queryOptions({
+    queryKey: ['courts', 'slots', queryParams],
+    queryFn: () => getCourtsSlotsApi(queryParams),
+    select: (res) => res.data as (Slot & { court?: Court })[]
   });
 
 // Query to get courts with available slots for a specific date

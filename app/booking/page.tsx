@@ -4,9 +4,11 @@ import MainHeader from '@/components/headers/MainHeader';
 import BottomNavigationWrapper from '@/components/ui/BottomNavigationWrapper';
 import { Button } from '@/components/ui/button';
 import { createBookingMutationOptions } from '@/mutations/booking';
-import { useMutation } from '@tanstack/react-query';
+import { courtsSlotsQueryOptions } from '@/queries/court';
+import type { Court, Slot } from '@/types/model';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -20,46 +22,105 @@ import { toast } from 'sonner';
 import { IconCalendarFilled, IconInfoCircle } from '@tabler/icons-react';
 import { DatePickerModal, DatePickerModalTrigger } from '@/components/ui/date-picker-modal';
 
-// mock data
-const mockCourts = [
-  { name: 'Court 1', image: '/assets/img/court-3.jpg' },
-  { name: 'Court 2', image: '/assets/img/court-3.jpg' },
-  { name: 'Court 3', image: '/assets/img/court-3.jpg' },
-  { name: 'Court 4', image: '/assets/img/court-3.jpg' },
+const timeSlots = [
+  '06:00', '07:00', '08:00', '09:00', '10:00',
+  '11:00', '12:00', '13:00', '14:00', '15:00',
+  '16:00', '17:00', '18:00', '19:00', '20:00',
+  '21:00', '22:00', '23:00'
 ];
 
-const mockTimes = [
-  '06:00', '08:00', '09:00', '10:00', '11:00',
-  '12:00', '13:00', '14:00', '15:00', '16:00',
-  '18:00', '19:00', '20:00', '21:00', '22:00',
-  '23:00', '24:00'
-];
-const mockPrices = 350000;
-const mockBooked = {
-  '05 Nov': {
-    'Court 1': ['06:00'],
-    'Court 2': [],
-    'Court 3': [],
-    'Court 4': []
-  }
+type SelectedCell = {
+  slotId: string;
+  courtId: string;
+  courtName: string;
+  time: string;
+  price: number;
 };
 
 const BookingPage = () => {
   const [selectedDate, setSelectedDate] = useState(dayjs().format('DD MMM'));
-  const [selectedCell, setSelectedCell] = useState<{ court: string; time: string }[]>([]);
+  const [selectedCell, setSelectedCell] = useState<SelectedCell[]>([]);
   const [dateList, setDateList] = useState<
     { label: string; date: string; fullDate: string; active?: boolean }[]
   >([]);
-  const [selectedCourt, setSelectedCourt] = useState<null | typeof mockCourts[0]>(null);
+  const [selectedCourt, setSelectedCourt] = useState<null | { id: string; name: string; image?: string | null }>(null);
 
   // Create booking mutation
   const { mutate: createBooking, isPending } = useMutation(createBookingMutationOptions());
 
+  const activeDate = useMemo(() => dateList.find((item) => item.date === selectedDate), [dateList, selectedDate]);
+  const selectedFullDate = activeDate?.fullDate ?? dayjs().format('YYYY-MM-DD');
+
+  const slotQueryParams = useMemo(
+    () => ({
+      startAt: dayjs(selectedFullDate).startOf('day').toISOString(),
+      endAt: dayjs(selectedFullDate).endOf('day').toISOString()
+    }),
+    [selectedFullDate]
+  );
+
+  const { data: slotsData, isLoading: isSlotsLoading } = useQuery(
+    courtsSlotsQueryOptions(slotQueryParams)
+  );
+
+  const slots = useMemo(() => slotsData ?? [], [slotsData]);
+
+  const courts = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; image?: string | null }>();
+    slots.forEach((slot) => {
+      const courtId = slot.courtId || slot.court?.id;
+      if (!courtId) return;
+      if (!map.has(courtId)) {
+        map.set(courtId, {
+          id: courtId,
+          name: slot.court?.name || `Court ${map.size + 1}`,
+          image: (slot.court as Court | undefined)?.image || '/assets/img/court-3.jpg'
+        });
+      }
+    });
+
+    if (map.size === 0) {
+      return [
+        {
+          id: 'default-court',
+          name: 'Court',
+          image: '/assets/img/court-3.jpg'
+        }
+      ];
+    }
+
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [slots]);
+
+  const slotMap = useMemo(() => {
+    const map = new Map<string, Slot & { court?: Court }>();
+    slots.forEach((slot) => {
+      const courtId = slot.courtId || slot.court?.id;
+      if (!courtId || !slot.startAt) return;
+      const time = dayjs(slot.startAt).format('HH:mm');
+      map.set(`${courtId}-${time}`, slot);
+    });
+    return map;
+  }, [slots]);
+
+  useEffect(() => {
+    setSelectedCell([]);
+  }, [selectedDate]);
+
+  useEffect(() => {
+    setSelectedCell((prev) => prev.filter((cell) => {
+      const slot = slotMap.get(`${cell.courtId}-${cell.time}`);
+      return !!slot && slot.isAvailable;
+    }));
+  }, [slotMap]);
+
   // Create selectedSlots based on selectedCell
   const selectedSlots = selectedCell.map(cell => ({
-    court: cell.court,
+    slotId: cell.slotId,
+    courtId: cell.courtId,
+    court: cell.courtName,
     time: cell.time,
-    price: mockPrices,
+    price: cell.price,
     date: selectedDate
   }));
 
@@ -81,10 +142,6 @@ const BookingPage = () => {
 
     setDateList(updatedDates);
   }, []);
-
-  const isBooked = (date: string, court: string, time: string) => {
-    return mockBooked[date]?.[court]?.includes(time) || false;
-  };
 
   const handleBooking = () => {
     if (selectedSlots.length === 0) {
@@ -159,14 +216,17 @@ const BookingPage = () => {
 
         {/* Scroll area hanya untuk tabel */}
         <div className="flex-1 overflow-auto scrollbar-hide pb-10">
+          {isSlotsLoading && (
+            <div className="p-4 text-center text-sm text-muted-foreground">Memuat slot...</div>
+          )}
           <div className="overflow-x-auto h-full">
             <table className="min-w-full border border-gray-200 text-center border-separate border-spacing-0">
               <thead className="sticky top-0 z-20 bg-gray-50 shadow-sm">
                 <tr>
                   <th className="sticky left-0 z-30 border-r border-b bg-gray-50 px-2 py-2 text-left font-semibold w-20"></th>
-                  {mockCourts.map((court) => (
+                  {courts.map((court) => (
                     <th
-                      key={court.name}
+                      key={court.id}
                       className="border border-gray-200 px-4 py-2 text-xs font-semibold bg-gray-50"
                     >
                       <Button
@@ -183,7 +243,7 @@ const BookingPage = () => {
               </thead>
 
               <tbody>
-                {mockTimes
+                {timeSlots
                   .filter((time) => {
                     const now = dayjs();
 
@@ -196,37 +256,51 @@ const BookingPage = () => {
                       <td className="sticky left-0 z-10 border border-gray-200 bg-white px-4 py-2 text-left text-sm font-medium w-20">
                         {time}
                       </td>
-                      {mockCourts.map((court) => {
-                        const booked = isBooked(selectedDate, court.name, time);
-                        const selected = selectedCell.some(
-                          (cell) => cell.court === court.name && cell.time === time
-                        );
+                      {courts.map((court) => {
+                        const slot = slotMap.get(`${court.id}-${time}`);
+                        const hasSlot = !!slot;
+                        const isAvailable = !!slot?.isAvailable;
+                        const selected = slot ? selectedCell.some((cell) => cell.slotId === slot.id) : false;
                         return (
                           <td key={court.name} className="border border-gray-200 p-1">
                             <button
-                              disabled={booked}
+                              disabled={!hasSlot || !isAvailable}
                               className={cn(
                                 `flex h-14 w-full flex-col items-start justify-between rounded px-2 py-1 text-base font-semibold transition-all`,
-                                booked
-                                  ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                                  : selected
-                                    ? "border-primary bg-primary text-white shadow-lg"
-                                    : "bg-white hover:bg-green-100"
+                                !hasSlot
+                                  ? "bg-gray-100 text-muted-foreground cursor-not-allowed"
+                                  : !isAvailable
+                                    ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                    : selected
+                                      ? "border-primary bg-primary text-white shadow-lg"
+                                      : "bg-white hover:bg-green-100"
                               )}
                               onClick={() => {
+                                if (!slot || !isAvailable) return;
                                 if (selected) {
-                                  setSelectedCell(
-                                    selectedCell.filter(
-                                      (cell) => !(cell.court === court.name && cell.time === time)
-                                    )
-                                  );
+                                  setSelectedCell(selectedCell.filter((cell) => cell.slotId !== slot.id));
                                 } else {
-                                  setSelectedCell([...selectedCell, { court: court.name, time }]);
+                                  setSelectedCell([
+                                    ...selectedCell,
+                                    {
+                                      slotId: slot.id,
+                                      courtId: court.id,
+                                      courtName: court.name,
+                                      time,
+                                      price: slot.price ?? 0
+                                    }
+                                  ]);
                                 }
                               }}
                             >
-                              <span className="text-sm">{mockPrices.toLocaleString("id-ID")}</span>
-                              {booked && <span className="text-xs">booked</span>}
+                              {hasSlot ? (
+                                <>
+                                  <span className="text-sm">{`Rp${(slot.price ?? 0).toLocaleString('id-ID')}`}</span>
+                                  {!isAvailable && <span className="text-xs">Booked</span>}
+                                </>
+                              ) : (
+                                <span className="text-xs">Booked</span>
+                              )}
                             </button>
                           </td>
                         );
@@ -245,14 +319,14 @@ const BookingPage = () => {
 
       <Dialog open={!!selectedCourt} onOpenChange={() => setSelectedCourt(null)}>
         <DialogContent className="w-11/12">
-          {selectedCourt && (
+        {selectedCourt && (
             <>
               <DialogHeader>
                 <DialogTitle>{selectedCourt.name}</DialogTitle>
               </DialogHeader>
               <div className="mt-1">
                 <Image
-                  src={selectedCourt.image}
+                src={selectedCourt.image || '/assets/img/court-3.jpg'}
                   alt={selectedCourt.name}
                   width={600}
                   height={400}

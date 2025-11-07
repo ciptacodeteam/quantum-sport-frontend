@@ -21,6 +21,13 @@ export async function getCourtSlotsApi(courtId: string, queryParams?: SearchPara
   return res.data;
 }
 
+export async function getCourtsSlotsApi(queryParams: SearchParamsData = {}) {
+  const url = '/courts/slots';
+  const mergedUrl = mergedQueryParamUrl(url, queryParams);
+  const res = await api.get(mergedUrl);
+  return res.data;
+}
+
 export async function getAllCourtsSlotsApi(date: string) {
   const { data } = await api.get('/slots', {
     params: { date }

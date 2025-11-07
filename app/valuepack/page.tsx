@@ -1,83 +1,94 @@
-import MainHeader from "@/components/headers/MainHeader";
-import { Button } from "@/components/ui/button";
+'use client';
+
+import MainHeader from '@/components/headers/MainHeader';
+import { Button } from '@/components/ui/button';
 import {
-    Card,
-    CardDescription,
-    CardFooter,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
+  Card,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle
+} from '@/components/ui/card';
+import type { Membership } from '@/types/model';
+import { membershipsQueryOptions } from '@/queries/membership';
+import { useQuery } from '@tanstack/react-query';
 
-const valuePacks = [
-    {
-        id: 1,
-        name: "Quantum Premium",
-        price: 30000000,
-        features: [
-            "Akses penuh ke semua fitur premium",
-            "Dukungan prioritas dari tim Quantum",
-            "Pembaruan otomatis dan fitur eksklusif",
-            "Cocok untuk pengguna profesional dan tim",
-        ],
-    },
-    {
-        id: 2,
-        name: "Quantum Standard",
-        price: 15000000,
-        features: [
-            "Fitur utama untuk kebutuhan dasar",
-            "Akses terbatas ke dukungan prioritas",
-            "Cocok untuk pengguna individu",
-        ],
-    },
+const formatFeatures = (membership: Membership) => {
+  const description = membership.description ? [membership.description] : [];
+  const summary = [
+    membership.sessions ? `${membership.sessions.toLocaleString('id-ID')} sesi bermain` : null,
+    membership.duration ? `Masa berlaku ${membership.duration.toLocaleString('id-ID')} hari` : null
+  ].filter(Boolean) as string[];
 
-    {
-        id: 3,
-        name: "Quantum Standard",
-        price: 15000000,
-        features: [
-            "Fitur utama untuk kebutuhan dasar",
-            "Akses terbatas ke dukungan prioritas",
-            "Cocok untuk pengguna individu",
-        ],
-    },
-];
+  const contentLines = membership.content
+    ? membership.content
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0)
+    : [];
+
+  return [...description, ...summary, ...contentLines];
+};
 
 const ValuePackPage = () => {
-    return (
-        <>
-            <MainHeader backHref="/" title={"Value Pack"} withLogo={false} />
+  const { data, isLoading, isError } = useQuery(membershipsQueryOptions());
 
-            <main className="flex flex-col gap-4 mt-28 mx-auto w-11/12 pb-12">
-                {valuePacks.map((pack) => (
-                    <Card key={pack.id} className="shadow-xs">
-                        <CardHeader>
-                            <CardTitle className={`uppercase font-semibold`}>
-                                {pack.name}
-                            </CardTitle>
-                            <CardDescription>
-                                <div className="mb-2">
-                                    <span className="text-xl font-bold text-primary">
-                                        Rp{pack.price.toLocaleString("id-ID")}
-                                    </span>
-                                </div>
-                                <ul className="list-disc list-outside pl-4 space-y-1 text-muted-foreground">
-                                    {pack.features.map((feature, idx) => (
-                                        <li key={idx}>{feature}</li>
-                                    ))}
-                                </ul>
-                            </CardDescription>
-                        </CardHeader>
-                        <CardFooter>
-                            <Button className="w-full" size={"lg"}>
-                                Pesan Sekarang
-                            </Button>
-                        </CardFooter>
-                    </Card>
-                ))}
-            </main>
-        </>
-    );
+  const valuePacks = data ?? [];
+
+  return (
+    <>
+      <MainHeader backHref="/" title="Value Pack" withLogo={false} />
+
+      <main className="flex flex-col gap-4 mt-28 mx-auto w-11/12 pb-12">
+        {isLoading && (
+          <div className="py-10 text-center text-sm text-muted-foreground">
+            Memuat membership...
+          </div>
+        )}
+
+        {isError && !isLoading && (
+          <div className="py-10 text-center text-sm text-destructive">
+            Gagal memuat membership. Silakan coba lagi.
+          </div>
+        )}
+
+        {!isLoading && !isError && valuePacks.length === 0 && (
+          <div className="py-10 text-center text-sm text-muted-foreground">
+            Membership belum tersedia.
+          </div>
+        )}
+
+        {!isLoading && !isError &&
+          valuePacks.map((pack) => {
+            const features = formatFeatures(pack);
+            return (
+              <Card key={pack.id} className="shadow-xs">
+                <CardHeader>
+                  <CardTitle className="uppercase font-semibold">{pack.name}</CardTitle>
+                  <CardDescription>
+                    <div className="mb-2">
+                      <span className="text-xl font-bold text-primary">
+                        Rp{pack.price.toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                    <ul className="list-disc list-outside pl-4 space-y-1 text-muted-foreground">
+                      {features.map((feature, idx) => (
+                        <li key={`${pack.id}-feature-${idx}`}>{feature}</li>
+                      ))}
+                    </ul>
+                  </CardDescription>
+                </CardHeader>
+                <CardFooter>
+                  <Button className="w-full" size="lg">
+                    Pesan Sekarang
+                  </Button>
+                </CardFooter>
+              </Card>
+            );
+          })}
+      </main>
+    </>
+  );
 };
 
 export default ValuePackPage;
