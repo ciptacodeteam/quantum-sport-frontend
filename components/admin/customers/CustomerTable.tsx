@@ -122,7 +122,7 @@ const CustomerTable = () => {
         header: 'Aksi',
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
-            <Link href={`/admin/kelola-lapangan/${row.original.id}`} prefetch>
+            <Link href={`/admin/kelola-kustomer/${row.original.id}`} prefetch>
               <Button size="icon" variant="lightInfo">
                 <IconPencil />
               </Button>
