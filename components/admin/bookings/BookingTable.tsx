@@ -11,6 +11,7 @@ import {
   DialogTrigger,
   ManagedDialog
 } from '@/components/ui/dialog';
+import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useConfirmMutation } from '@/hooks/useConfirmDialog';
 import {
@@ -27,7 +28,6 @@ import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
 import { useMemo } from 'react';
 import { toast } from 'sonner';
-import CreateBookingForm from './CreateBookingForm';
 
 // Helper function to convert numeric status to BookingStatus enum
 const getBookingStatus = (status: number | BookingStatus): BookingStatus => {
@@ -346,20 +346,12 @@ const BookingTable = () => {
       columns={columns}
       enableRowSelection={false}
       addButton={
-        <ManagedDialog id="create-booking">
-          <DialogTrigger asChild>
-            <Button>
-              <IconPlus />
-              Tambah
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="lg:min-w-xl">
-            <DialogHeader className="mb-4">
-              <DialogTitle>Tambah Pemesanan Baru</DialogTitle>
-            </DialogHeader>
-            <CreateBookingForm />
-          </DialogContent>
-        </ManagedDialog>
+        <Link href="/admin/kelola-pemesanan/lapangan/tambah" prefetch>
+          <Button>
+            <IconPlus />
+            Tambah
+          </Button>
+        </Link>
       }
     />
   );
