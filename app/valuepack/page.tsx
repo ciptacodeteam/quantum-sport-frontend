@@ -58,6 +58,36 @@ const ValuePackPage = () => {
           </div>
         )}
 
+            <main className="flex flex-col gap-4 pt-28 mx-auto w-11/12 pb-12">
+                {valuePacks.map((pack) => (
+                    <Card key={pack.id} className="shadow-xs">
+                        <CardHeader>
+                            <CardTitle className={`uppercase font-semibold`}>
+                                {pack.name}
+                            </CardTitle>
+                            <CardDescription>
+                                <div className="mb-2">
+                                    <span className="text-xl font-bold text-primary">
+                                        Rp{pack.price.toLocaleString("id-ID")}
+                                    </span>
+                                </div>
+                                <ul className="list-disc list-outside pl-4 space-y-1 text-muted-foreground">
+                                    {pack.features.map((feature, idx) => (
+                                        <li key={idx}>{feature}</li>
+                                    ))}
+                                </ul>
+                            </CardDescription>
+                        </CardHeader>
+                        <CardFooter>
+                            <Button className="w-full" size={"lg"}>
+                                Pesan Sekarang
+                            </Button>
+                        </CardFooter>
+                    </Card>
+                ))}
+            </main>
+        </>
+    );
         {!isLoading && !isError &&
           valuePacks.map((pack) => {
             const features = formatFeatures(pack);

@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { IconCalendarFilled, IconInfoCircle } from '@tabler/icons-react';
@@ -334,7 +335,7 @@ const BookingPage = () => {
                 />
               </div>
             </>
-          )}
+          )} 
         </DialogContent>
       </Dialog>
 
