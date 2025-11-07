@@ -1,51 +1,127 @@
 'use client';
 
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger
-} from '@/components/ui/sheet';
+import { useBookingStore } from '@/stores/useBookingStore';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import { IconShoppingCartFilled } from '@tabler/icons-react';
-import { ChevronLeft } from 'lucide-react';
-import { Badge } from './ui/badge';
-import { Button } from './ui/button';
+import { Badge } from 'lucide-react';
 
-const CartSheet = () => {
+export default function CartSheet() {
+  const {
+    bookingItems,
+    selectedCoaches,
+    selectedInventories,
+    courtTotal,
+    coachTotal,
+    inventoryTotal,
+    getTotalAmount,
+    getTax,
+    getTotalWithTax,
+    clearAll,
+  } = useBookingStore();
+
+
+  console.log("booking",bookingItems.length)
   return (
     <Sheet>
-      <SheetTrigger asChild>
+       <SheetTrigger asChild>
         <Button variant={'ghost'} size={'icon-sm'}>
           <div className="flex-center relative">
             <IconShoppingCartFilled className="text-primary size-7" />
-            <Badge className="bg-badge absolute -top-2 -right-2 h-5 min-w-5 rounded-full px-1 font-mono tabular-nums">
-              3
-            </Badge>
+            {bookingItems.length > 0 && (
+              <Badge className="bg-badge absolute -top-2 -right-2 h-5 min-w-5 rounded-full px-1 font-mono tabular-nums">
+                {bookingItems.length}
+              </Badge>
+            )}
           </div>
         </Button>
       </SheetTrigger>
-      <SheetContent className="w-full" withClose={false}>
-        <SheetHeader className="flex min-h-20 flex-row items-center justify-start gap-4 border-b">
-          <SheetClose asChild>
-            <Button variant="light" size="icon-sm">
-              <ChevronLeft className="size-6" />
-            </Button>
-          </SheetClose>
-          <SheetTitle className="text-lg font-semibold">Keranjang Saya</SheetTitle>
+      <SheetContent side="right" className="w-full sm:w-[400px] overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>Keranjang Booking</SheetTitle>
         </SheetHeader>
-        <main className="p-4 py-2">
-          <p>Cart content goes here.</p>
-        </main>
-        <SheetFooter>
-          <Button type="submit" size={'xl'}>
-            Lanjutkan ke Pembayaran
-          </Button>
-        </SheetFooter>
+
+        <div className="space-y-4 mt-4">
+          {/* COURT */}
+          {bookingItems.length > 0 && (
+            <div>
+              <h3 className="font-semibold mb-2">Court</h3>
+              <div className="space-y-2">
+                {bookingItems.map((item, idx) => (
+                  <div key={idx} className="flex justify-between text-sm">
+                    <span>{item.courtName} ({item.timeSlot})</span>
+                    <span>Rp {item.price.toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="text-right text-sm font-medium mt-1">Subtotal: Rp {courtTotal.toLocaleString()}</div>
+            </div>
+          )}
+
+          <Separator />
+
+          {/* COACH */}
+          {selectedCoaches.length > 0 && (
+            <div>
+              <h3 className="font-semibold mb-2">Coach</h3>
+              <div className="space-y-2">
+                {selectedCoaches.map((coach, idx) => (
+                  <div key={idx} className="flex justify-between text-sm">
+                    <span>{coach.coachName} ({coach.timeSlot})</span>
+                    <span>Rp {coach.price.toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="text-right text-sm font-medium mt-1">Subtotal: Rp {coachTotal.toLocaleString()}</div>
+            </div>
+          )}
+
+          <Separator />
+
+          {/* INVENTORY */}
+          {selectedInventories.length > 0 && (
+            <div>
+              <h3 className="font-semibold mb-2">Peralatan</h3>
+              <div className="space-y-2">
+                {selectedInventories.map((inv, idx) => (
+                  <div key={idx} className="flex justify-between text-sm">
+                    <span>{inv.inventoryName} × {inv.quantity}</span>
+                    <span>Rp {inv.price.toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="text-right text-sm font-medium mt-1">Subtotal: Rp {inventoryTotal.toLocaleString()}</div>
+            </div>
+          )}
+
+          <Separator />
+
+          {/* TOTAL */}
+          <div className="space-y-1 text-sm">
+            <div className="flex justify-between">
+              <span>Subtotal</span>
+              <span>Rp {getTotalAmount().toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Pajak (10%)</span>
+              <span>Rp {getTax().toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between font-semibold text-base">
+              <span>Total</span>
+              <span>Rp {getTotalWithTax().toLocaleString()}</span>
+            </div>
+          </div>
+
+          {/* ACTION BUTTONS */}
+          <div className="mt-4 flex gap-2">
+            <Button className="w-full">Lanjut ke Pembayaran</Button>
+            <Button variant="outline" className="w-full" onClick={clearAll}>
+              Hapus Semua
+            </Button>
+          </div>
+        </div>
       </SheetContent>
     </Sheet>
   );
-};
-export default CartSheet;
+}

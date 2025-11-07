@@ -6,26 +6,25 @@ import { Button } from '@/components/ui/button'
 import MainHeader from '@/components/headers/MainHeader'
 import Image from 'next/image'
 import { ChevronRight, Minus, Plus } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import dayjs from 'dayjs'
 import 'dayjs/locale/id'
 import OpenScheduleModal from './openScheduleModal'
+
 dayjs.locale('id')
 
 export default function AddOnsPage() {
     const [activeTab, setActiveTab] = useState<'coach' | 'raket' | 'ballboy'>('coach')
     const [activeSubTab, setActiveSubTab] = useState<'guided' | 'coaching'>('guided')
-
     const [showModal, setShowModal] = useState(false)
-    const [selectedCoach, setSelectedCoach] = useState<any>(null)
-    const [selectedBallboy, setSelectedBallboy] = useState<any>(null)
+    const [selectedItem, setSelectedItem] = useState<any>(null)
 
-    // 🏟 contoh data lapangan (nanti dari parent)
+    // 🏟 contoh data lapangan
     const selectedCourts = [
         { id: 1, name: 'Court 1', date: '2025-11-07' },
         { id: 2, name: 'Court 2', date: '2025-11-09' },
     ]
 
+    // 🕓 contoh jadwal
     const mockSchedules = [
         { time: '08:00', available: true },
         { time: '09:00', available: false },
@@ -54,19 +53,30 @@ export default function AddOnsPage() {
         { id: 2, name: 'Ball Boy B', price: 100000, image: '' },
     ]
 
+    const handleSelectItem = (item: any) => {
+        setSelectedItem(item)
+        setShowModal(true)
+    }
+
     return (
         <>
-            <MainHeader backHref="/" title={"Produk Tambahan"} withLogo={false} />
+            <MainHeader backHref="/" title="Produk Tambahan" withLogo={false} />
 
-            <div className='w-11/12 mx-auto pt-28'>
+            <div className="w-11/12 mx-auto pt-28">
                 {/* Tabs utama */}
                 <div className="flex gap-2 mb-4">
                     {['Coach', 'Raket', 'Ball boy'].map((item) => (
                         <Button
                             key={item}
-                            variant={activeTab === item.toLowerCase().replace(' ', '') ? 'default' : 'outline'}
+                            variant={
+                                activeTab === item.toLowerCase().replace(' ', '')
+                                    ? 'default'
+                                    : 'outline'
+                            }
                             className="flex-1"
-                            onClick={() => setActiveTab(item.toLowerCase().replace(' ', '') as any)}
+                            onClick={() =>
+                                setActiveTab(item.toLowerCase().replace(' ', '') as any)
+                            }
                         >
                             {item}
                         </Button>
@@ -93,7 +103,7 @@ export default function AddOnsPage() {
                     </div>
                 )}
 
-                {/* COACH LIST */}
+                {/* === COACH LIST === */}
                 {activeTab === 'coach' && (
                     <div className="flex flex-col gap-3 mb-4">
                         {coaches
@@ -101,19 +111,19 @@ export default function AddOnsPage() {
                             .map((coach) => (
                                 <Card
                                     key={coach.id}
-                                    onClick={() => {
-                                        setSelectedCoach(coach)
-                                        setSelectedBallboy(null) // reset ballboy
-                                        setShowModal(true)
-                                    }}
+                                    onClick={() => handleSelectItem(coach)}
                                     className="cursor-pointer hover:border-primary transition"
                                 >
-                                    <div className='px-4 py-3'>
-                                        <div className='flex items-center justify-between'>
-                                            <div className='flex gap-4'>
+                                    <div className="px-4 py-3">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex gap-4">
                                                 <div className="rounded-full overflow-hidden bg-gray-200 shrink-0">
                                                     <Image
-                                                        src={coach.image && coach.image.trim() !== '' ? coach.image : '/assets/img/avatar.webp'}
+                                                        src={
+                                                            coach.image && coach.image.trim() !== ''
+                                                                ? coach.image
+                                                                : '/assets/img/avatar.webp'
+                                                        }
                                                         alt={coach.name}
                                                         width={48}
                                                         height={48}
@@ -122,18 +132,22 @@ export default function AddOnsPage() {
                                                 </div>
                                                 <div className="flex flex-col gap-0.5">
                                                     <p className="font-semibold">{coach.name}</p>
-                                                    <p className="text-xs text-muted-foreground">Pilih jadwal coach</p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Pilih jadwal coach
+                                                    </p>
                                                 </div>
                                             </div>
-                                            <ChevronRight className='text-primary' />
+                                            <ChevronRight className="text-primary" />
                                         </div>
 
-                                        <div className='flex py-2 px-4 bg-muted rounded-sm mt-4'>
+                                        <div className="flex py-2 px-4 bg-muted rounded-sm mt-4">
                                             <p className="text-foreground">
-                                                <span className='font-semibold text-primary'>
+                                                <span className="font-semibold text-primary">
                                                     Rp{coach.price.toLocaleString('id-ID')}{' '}
                                                 </span>
-                                                <span className="text-muted-foreground text-sm">/sesi</span>
+                                                <span className="text-muted-foreground text-sm">
+                                                    /sesi
+                                                </span>
                                             </p>
                                         </div>
                                     </div>
@@ -142,11 +156,11 @@ export default function AddOnsPage() {
                     </div>
                 )}
 
-                {/* RAKET */}
+                {/* === RAKET === */}
                 {activeTab === 'raket' && (
                     <div className="flex flex-col gap-3 mb-4">
                         <Card>
-                            <div className='px-4 py-3'>
+                            <div className="px-4 py-3">
                                 <div className="flex justify-between items-center">
                                     <div>
                                         <p className="font-semibold">Sewa Raket</p>
@@ -159,16 +173,24 @@ export default function AddOnsPage() {
                                         <Button
                                             variant="outline"
                                             size="icon"
-                                            onClick={() => setRacketQty((prev) => Math.max(prev - 1, 0))}
+                                            onClick={() =>
+                                                setRacketQty((prev) => Math.max(prev - 1, 0))
+                                            }
                                             disabled={racketQty <= 0}
                                         >
                                             <Minus size={16} />
                                         </Button>
-                                        <span className="font-semibold w-6 text-center">{racketQty}</span>
+                                        <span className="font-semibold w-6 text-center">
+                                            {racketQty}
+                                        </span>
                                         <Button
                                             variant="outline"
                                             size="icon"
-                                            onClick={() => setRacketQty((prev) => Math.min(prev + 1, availableRacket))}
+                                            onClick={() =>
+                                                setRacketQty((prev) =>
+                                                    Math.min(prev + 1, availableRacket)
+                                                )
+                                            }
                                             disabled={racketQty >= availableRacket}
                                         >
                                             <Plus size={16} />
@@ -176,18 +198,21 @@ export default function AddOnsPage() {
                                     </div>
                                 </div>
 
-                                <div className='flex py-2 px-4 bg-muted rounded-sm mt-4'>
+                                <div className="flex py-2 px-4 bg-muted rounded-sm mt-4">
                                     <p className="text-foreground">
-                                        <span className='font-semibold text-primary'>
+                                        <span className="font-semibold text-primary">
                                             Rp{racketPrice.toLocaleString('id-ID')}{' '}
                                         </span>
-                                        <span className="text-muted-foreground text-sm">/raket</span>
+                                        <span className="text-muted-foreground text-sm">
+                                            /raket
+                                        </span>
                                     </p>
                                 </div>
 
                                 {racketQty > 0 && (
                                     <p className="mt-2 text-sm text-primary font-medium">
-                                        Total: Rp{(racketQty * racketPrice).toLocaleString('id-ID')}
+                                        Total: Rp
+                                        {(racketQty * racketPrice).toLocaleString('id-ID')}
                                     </p>
                                 )}
                             </div>
@@ -195,25 +220,25 @@ export default function AddOnsPage() {
                     </div>
                 )}
 
-                {/* BALLBOY */}
+                {/* === BALLBOY === */}
                 {activeTab === 'ballboy' && (
                     <div className="flex flex-col gap-3 mb-4">
                         {ballboys.map((b) => (
                             <Card
                                 key={b.id}
-                                onClick={() => {
-                                    setSelectedBallboy(b)
-                                    setSelectedCoach(null) // reset coach
-                                    setShowModal(true)
-                                }}
+                                onClick={() => handleSelectItem(b)}
                                 className="cursor-pointer hover:border-primary transition"
                             >
-                                <div className='px-4 py-3'>
-                                    <div className='flex items-center justify-between'>
-                                        <div className='flex gap-4'>
+                                <div className="px-4 py-3">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex gap-4">
                                             <div className="rounded-full overflow-hidden bg-gray-200 shrink-0">
                                                 <Image
-                                                    src={b.image && b.image.trim() !== '' ? b.image : '/assets/img/avatar.webp'}
+                                                    src={
+                                                        b.image && b.image.trim() !== ''
+                                                            ? b.image
+                                                            : '/assets/img/avatar.webp'
+                                                    }
                                                     alt={b.name}
                                                     width={48}
                                                     height={48}
@@ -222,18 +247,22 @@ export default function AddOnsPage() {
                                             </div>
                                             <div className="flex flex-col gap-0.5">
                                                 <p className="font-semibold">{b.name}</p>
-                                                <p className="text-xs text-muted-foreground">Pilih jadwal ball boy</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Pilih jadwal ball boy
+                                                </p>
                                             </div>
                                         </div>
-                                        <ChevronRight className='text-primary' />
+                                        <ChevronRight className="text-primary" />
                                     </div>
 
-                                    <div className='flex py-2 px-4 bg-muted rounded-sm mt-4'>
+                                    <div className="flex py-2 px-4 bg-muted rounded-sm mt-4">
                                         <p className="text-foreground">
-                                            <span className='font-semibold text-primary'>
+                                            <span className="font-semibold text-primary">
                                                 Rp{b.price.toLocaleString('id-ID')}{' '}
                                             </span>
-                                            <span className="text-muted-foreground text-sm">/sesi</span>
+                                            <span className="text-muted-foreground text-sm">
+                                                /sesi
+                                            </span>
                                         </p>
                                     </div>
                                 </div>
@@ -243,20 +272,15 @@ export default function AddOnsPage() {
                 )}
             </div>
 
-            {/* MODAL JADWAL */}
+            {/* === MODAL JADWAL === */}
             <OpenScheduleModal
                 open={showModal}
                 onOpenChange={setShowModal}
-                title={
-                    selectedCoach
-                        ? `Pilih Jadwal - ${selectedCoach.name}`
-                        : selectedBallboy
-                            ? `Pilih Jadwal - ${selectedBallboy.name}`
-                            : 'Pilih Jadwal'
-                }
+                title={`Pilih Jadwal - ${selectedItem?.name ?? ''}`}
                 selectedCourts={selectedCourts}
-                schedules={mockSchedules}
-            />
+                schedules={mockSchedules} onSelectSchedule={function (): void {
+                    throw new Error('Function not implemented.')
+                } }            />
         </>
     )
 }

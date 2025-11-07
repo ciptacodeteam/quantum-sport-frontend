@@ -85,38 +85,8 @@ const ValuePackPage = () => {
                         </CardFooter>
                     </Card>
                 ))}
-            </main>
-        </>
-    );
-        {!isLoading && !isError &&
-          valuePacks.map((pack) => {
-            const features = formatFeatures(pack);
-            return (
-              <Card key={pack.id} className="shadow-xs">
-                <CardHeader>
-                  <CardTitle className="uppercase font-semibold">{pack.name}</CardTitle>
-                  <CardDescription>
-                    <div className="mb-2">
-                      <span className="text-xl font-bold text-primary">
-                        Rp{pack.price.toLocaleString('id-ID')}
-                      </span>
-                    </div>
-                    <ul className="list-disc list-outside pl-4 space-y-1 text-muted-foreground">
-                      {features.map((feature, idx) => (
-                        <li key={`${pack.id}-feature-${idx}`}>{feature}</li>
-                      ))}
-                    </ul>
-                  </CardDescription>
-                </CardHeader>
-                <CardFooter>
-                  <Button className="w-full" size="lg">
-                    Pesan Sekarang
-                  </Button>
-                </CardFooter>
-              </Card>
-            );
-          })}
-      </main>
+            </main>    
+       </main>
     </>
   );
 };

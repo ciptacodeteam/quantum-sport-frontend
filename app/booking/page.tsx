@@ -17,17 +17,20 @@ import {
 } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import Image from 'next/image';
-import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { IconCalendarFilled, IconInfoCircle } from '@tabler/icons-react';
-import { DatePickerModal, DatePickerModalTrigger } from '@/components/ui/date-picker-modal';
+import {
+  DatePickerModal,
+  DatePickerModalTrigger,
+} from '@/components/ui/date-picker-modal';
+import { useBookingStore } from '@/stores/useBookingStore';
 
 const timeSlots = [
   '06:00', '07:00', '08:00', '09:00', '10:00',
   '11:00', '12:00', '13:00', '14:00', '15:00',
   '16:00', '17:00', '18:00', '19:00', '20:00',
-  '21:00', '22:00', '23:00'
+  '21:00', '22:00', '23:00',
 ];
 
 type SelectedCell = {
@@ -39,23 +42,36 @@ type SelectedCell = {
 };
 
 const BookingPage = () => {
+  const {
+    bookingItems,
+    setBookingItems,
+    setSelectedDate: setBookingDate,
+    courtTotal,
+  } = useBookingStore();
+
   const [selectedDate, setSelectedDate] = useState(dayjs().format('DD MMM'));
   const [selectedCell, setSelectedCell] = useState<SelectedCell[]>([]);
   const [dateList, setDateList] = useState<
     { label: string; date: string; fullDate: string; active?: boolean }[]
   >([]);
-  const [selectedCourt, setSelectedCourt] = useState<null | { id: string; name: string; image?: string | null }>(null);
+  const [selectedCourt, setSelectedCourt] = useState<null | {
+    id: string;
+    name: string;
+    image?: string | null;
+  }>(null);
 
-  // Create booking mutation
   const { mutate: createBooking, isPending } = useMutation(createBookingMutationOptions());
 
-  const activeDate = useMemo(() => dateList.find((item) => item.date === selectedDate), [dateList, selectedDate]);
+  const activeDate = useMemo(
+    () => dateList.find((item) => item.date === selectedDate),
+    [dateList, selectedDate]
+  );
   const selectedFullDate = activeDate?.fullDate ?? dayjs().format('YYYY-MM-DD');
 
   const slotQueryParams = useMemo(
     () => ({
       startAt: dayjs(selectedFullDate).startOf('day').toISOString(),
-      endAt: dayjs(selectedFullDate).endOf('day').toISOString()
+      endAt: dayjs(selectedFullDate).endOf('day').toISOString(),
     }),
     [selectedFullDate]
   );
@@ -75,7 +91,7 @@ const BookingPage = () => {
         map.set(courtId, {
           id: courtId,
           name: slot.court?.name || `Court ${map.size + 1}`,
-          image: (slot.court as Court | undefined)?.image || '/assets/img/court-3.jpg'
+          image: (slot.court as Court | undefined)?.image || '/assets/img/court-3.jpg',
         });
       }
     });
@@ -85,8 +101,8 @@ const BookingPage = () => {
         {
           id: 'default-court',
           name: 'Court',
-          image: '/assets/img/court-3.jpg'
-        }
+          image: '/assets/img/court-3.jpg',
+        },
       ];
     }
 
@@ -109,26 +125,37 @@ const BookingPage = () => {
   }, [selectedDate]);
 
   useEffect(() => {
-    setSelectedCell((prev) => prev.filter((cell) => {
-      const slot = slotMap.get(`${cell.courtId}-${cell.time}`);
-      return !!slot && slot.isAvailable;
-    }));
+    setSelectedCell((prev) =>
+      prev.filter((cell) => {
+        const slot = slotMap.get(`${cell.courtId}-${cell.time}`);
+        return !!slot && slot.isAvailable;
+      })
+    );
   }, [slotMap]);
 
-  // Create selectedSlots based on selectedCell
-  const selectedSlots = selectedCell.map(cell => ({
-    slotId: cell.slotId,
-    courtId: cell.courtId,
-    court: cell.courtName,
-    time: cell.time,
-    price: cell.price,
-    date: selectedDate
-  }));
+  useEffect(() => {
+    const newBookingItems = selectedCell.map((cell) => ({
+      courtId: cell.courtId,
+      courtName: cell.courtName,
+      timeSlot: cell.time,
+      price: cell.price,
+      date: selectedDate,
+      endTime: dayjs(cell.time, 'HH:mm').add(1, 'hour').format('HH:mm'),
+    }));
+
+    setBookingItems(newBookingItems);
+    setBookingDate(dayjs(selectedFullDate).toDate());
+  }, [selectedCell, selectedDate, selectedFullDate, setBookingItems, setBookingDate]);
 
   useEffect(() => {
     const today = dayjs();
     const endDate = today.add(3, 'month');
-    const updatedDates: { label: string; date: string; fullDate: string; active?: boolean }[] = [];
+    const updatedDates: {
+      label: string;
+      date: string;
+      fullDate: string;
+      active?: boolean;
+    }[] = [];
 
     let currentDate = today;
     while (currentDate.isBefore(endDate) || currentDate.isSame(endDate, 'day')) {
@@ -136,26 +163,13 @@ const BookingPage = () => {
         label: currentDate.format('ddd'),
         date: currentDate.format('DD MMM'),
         fullDate: currentDate.format('YYYY-MM-DD'),
-        active: currentDate.isSame(today, 'day')
+        active: currentDate.isSame(today, 'day'),
       });
       currentDate = currentDate.add(1, 'day');
     }
 
     setDateList(updatedDates);
   }, []);
-
-  const handleBooking = () => {
-    if (selectedSlots.length === 0) {
-      toast.error('Pilih minimal satu slot');
-      return;
-    }
-
-    // Here you would typically call the booking mutation
-    createBooking({
-      slots: selectedSlots,
-      date: selectedDate
-    });
-  };
 
   const handleSelectDate = (date: Date | null) => {
     if (!date) return;
@@ -166,16 +180,20 @@ const BookingPage = () => {
     if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
   };
 
+  const handleBooking = () => {
+    if (bookingItems.length === 0) {
+      toast.error('Pilih minimal satu slot');
+      return;
+    }
 
-  const totalPrice = selectedSlots.reduce((sum, slot) => sum + slot.price, 0);
+    toast.success(`${bookingItems.length} slot tersimpan ke booking store!`);
+  };
 
   return (
     <>
       <MainHeader backHref="/" title="Booking Court" withLogo={false} withCartBadge />
 
-      {/* ⬇️ Area scroll utama dibatasi hanya di sini */}
       <main className="mt-24 w-full md:mt-14 flex flex-col h-[calc(100dvh-180px)]">
-        {/* Sticky header (tanggal & tombol kalender) */}
         <div className="sticky top-24 md:top-14 z-30 bg-white border-b pb-2">
           <div className="flex items-center gap-2">
             <div className="flex items-center px-2 pl-4">
@@ -190,24 +208,27 @@ const BookingPage = () => {
 
             <Separator orientation="vertical" className="h-10" />
 
-            {/* Scroll kanan kiri hanya untuk tanggal */}
             <div className="flex gap-2 overflow-x-auto scrollbar-hide flex-nowrap px-2">
               {dateList.map((d) => (
                 <button
                   id={`date-${d.fullDate}`}
                   key={d.fullDate}
                   className={cn(
-                    "flex flex-col items-center justify-center min-w-14 h-14 rounded px-2 py-1 font-semibold transition-colors",
+                    'flex flex-col items-center justify-center min-w-14 h-14 rounded px-2 py-1 font-semibold transition-colors',
                     selectedDate === d.date
-                      ? "bg-primary text-white"
-                      : "hover:bg-muted text-black"
+                      ? 'bg-primary text-white'
+                      : 'hover:bg-muted text-black'
                   )}
                   onClick={() => setSelectedDate(d.date)}
                 >
                   <span className="text-xs font-normal">{d.label}</span>
                   <div className="flex mt-0.5">
-                    <span className="text-sm font-semibold me-0.5">{dayjs(d.fullDate).format('DD')}</span>
-                    <span className="text-sm font-semibold">{dayjs(d.fullDate).format('MMM')}</span>
+                    <span className="text-sm font-semibold me-0.5">
+                      {dayjs(d.fullDate).format('DD')}
+                    </span>
+                    <span className="text-sm font-semibold">
+                      {dayjs(d.fullDate).format('MMM')}
+                    </span>
                   </div>
                 </button>
               ))}
@@ -215,10 +236,11 @@ const BookingPage = () => {
           </div>
         </div>
 
-        {/* Scroll area hanya untuk tabel */}
         <div className="flex-1 overflow-auto scrollbar-hide pb-10">
           {isSlotsLoading && (
-            <div className="p-4 text-center text-sm text-muted-foreground">Memuat slot...</div>
+            <div className="p-4 text-center text-sm text-muted-foreground">
+              Memuat slot...
+            </div>
           )}
           <div className="overflow-x-auto h-full">
             <table className="min-w-full border border-gray-200 text-center border-separate border-spacing-0">
@@ -244,90 +266,83 @@ const BookingPage = () => {
               </thead>
 
               <tbody>
-                {timeSlots
-                  .filter((time) => {
-                    const now = dayjs();
-
-                    const timeMoment = dayjs(`${dayjs().year()}-${selectedDate} ${time}`, "YYYY-DD MMM HH:mm");
-
-                    return dayjs(selectedDate, "DD MMM").isAfter(now, "day") || timeMoment.isAfter(now);
-                  })
-                  .map((time) => (
-                    <tr key={time}>
-                      <td className="sticky left-0 z-10 border border-gray-200 bg-white px-4 py-2 text-left text-sm font-medium w-20">
-                        {time}
-                      </td>
-                      {courts.map((court) => {
-                        const slot = slotMap.get(`${court.id}-${time}`);
-                        const hasSlot = !!slot;
-                        const isAvailable = !!slot?.isAvailable;
-                        const selected = slot ? selectedCell.some((cell) => cell.slotId === slot.id) : false;
-                        return (
-                          <td key={court.name} className="border border-gray-200 p-1">
-                            <button
-                              disabled={!hasSlot || !isAvailable}
-                              className={cn(
-                                `flex h-14 w-full flex-col items-start justify-between rounded px-2 py-1 text-base font-semibold transition-all`,
-                                !hasSlot
-                                  ? "bg-gray-100 text-muted-foreground cursor-not-allowed"
-                                  : !isAvailable
-                                    ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                                    : selected
-                                      ? "border-primary bg-primary text-white shadow-lg"
-                                      : "bg-white hover:bg-green-100"
-                              )}
-                              onClick={() => {
-                                if (!slot || !isAvailable) return;
-                                if (selected) {
-                                  setSelectedCell(selectedCell.filter((cell) => cell.slotId !== slot.id));
-                                } else {
-                                  setSelectedCell([
-                                    ...selectedCell,
-                                    {
-                                      slotId: slot.id,
-                                      courtId: court.id,
-                                      courtName: court.name,
-                                      time,
-                                      price: slot.price ?? 0
-                                    }
-                                  ]);
-                                }
-                              }}
-                            >
-                              {hasSlot ? (
-                                <>
-                                  <span className="text-sm">{`Rp${(slot.price ?? 0).toLocaleString('id-ID')}`}</span>
-                                  {!isAvailable && <span className="text-xs">Booked</span>}
-                                </>
-                              ) : (
-                                <span className="text-xs">Booked</span>
-                              )}
-                            </button>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-
+                {timeSlots.map((time) => (
+                  <tr key={time}>
+                    <td className="sticky left-0 z-10 border border-gray-200 bg-white px-4 py-2 text-left text-sm font-medium w-20">
+                      {time}
+                    </td>
+                    {courts.map((court) => {
+                      const slot = slotMap.get(`${court.id}-${time}`);
+                      const hasSlot = !!slot;
+                      const isAvailable = !!slot?.isAvailable;
+                      const selected = slot
+                        ? selectedCell.some((cell) => cell.slotId === slot.id)
+                        : false;
+                      return (
+                        <td key={court.name} className="border border-gray-200 p-1">
+                          <button
+                            disabled={!hasSlot || !isAvailable}
+                            className={cn(
+                              `flex h-14 w-full flex-col items-start justify-between rounded px-2 py-1 text-base font-semibold transition-all`,
+                              !hasSlot
+                                ? 'bg-gray-100 text-muted-foreground cursor-not-allowed'
+                                : !isAvailable
+                                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                  : selected
+                                    ? 'border-primary bg-primary text-white shadow-lg'
+                                    : 'bg-white hover:bg-green-100'
+                            )}
+                            onClick={() => {
+                              if (!slot || !isAvailable) return;
+                              if (selected) {
+                                setSelectedCell(
+                                  selectedCell.filter((cell) => cell.slotId !== slot.id)
+                                );
+                              } else {
+                                setSelectedCell([
+                                  ...selectedCell,
+                                  {
+                                    slotId: slot.id,
+                                    courtId: court.id,
+                                    courtName: court.name,
+                                    time,
+                                    price: slot.price ?? 0,
+                                  },
+                                ]);
+                              }
+                            }}
+                          >
+                            {hasSlot ? (
+                              <>
+                                <span className="text-sm">{`Rp${(slot.price ?? 0).toLocaleString('id-ID')}`}</span>
+                                {!isAvailable && <span className="text-xs">Booked</span>}
+                              </>
+                            ) : (
+                              <span className="text-xs">Booked</span>
+                            )}
+                          </button>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
               </tbody>
             </table>
-
             <div className="h-2 pointer-events-none"></div>
           </div>
         </div>
       </main>
 
-
       <Dialog open={!!selectedCourt} onOpenChange={() => setSelectedCourt(null)}>
         <DialogContent className="w-11/12">
-        {selectedCourt && (
+          {selectedCourt && (
             <>
               <DialogHeader>
                 <DialogTitle>{selectedCourt.name}</DialogTitle>
               </DialogHeader>
               <div className="mt-1">
                 <Image
-                src={selectedCourt.image || '/assets/img/court-3.jpg'}
+                  src={selectedCourt.image || '/assets/img/court-3.jpg'}
                   alt={selectedCourt.name}
                   width={600}
                   height={400}
@@ -335,7 +350,7 @@ const BookingPage = () => {
                 />
               </div>
             </>
-          )} 
+          )}
         </DialogContent>
       </Dialog>
 
@@ -344,21 +359,21 @@ const BookingPage = () => {
           <div>
             <span className="text-muted-foreground text-xs">Subtotal</span>
             <h2 className="text-lg font-semibold">
-              Rp {totalPrice.toLocaleString('id-ID')}
+              Rp {courtTotal.toLocaleString('id-ID')}
             </h2>
           </div>
           <div>
             <span className="text-muted-foreground text-xs">
-              {selectedSlots.length} Slot Terpilih
+              {bookingItems.length} Slot Terpilih
             </span>
           </div>
         </header>
         <main>
-          <Button 
-            className="w-full" 
+          <Button
+            className="w-full"
             size={'xl'}
             onClick={handleBooking}
-            disabled={selectedSlots.length === 0 || isPending}
+            disabled={bookingItems.length === 0 || isPending}
             loading={isPending}
           >
             Pilih Jadwal

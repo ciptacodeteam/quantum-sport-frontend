@@ -123,6 +123,7 @@ export type Membership = {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+  features: [];
 
   benefits?: MembershipBenefit[];
   membershipUser?: MembershipUser[];

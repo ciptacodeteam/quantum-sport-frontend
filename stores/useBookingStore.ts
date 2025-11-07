@@ -2,7 +2,6 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import dayjs from 'dayjs';
 
 export interface BookingItem {
   courtId: string;
@@ -90,7 +89,6 @@ interface BookingState {
 export const useBookingStore = create<BookingState>()(
   persist(
     (set, get) => ({
-      // Initial state
       bookingItems: [],
       selectedDate: new Date(),
       selectedCoaches: [],
