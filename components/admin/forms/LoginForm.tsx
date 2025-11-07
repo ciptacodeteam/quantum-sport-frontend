@@ -3,6 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { SUPPORT_CIPTACODE_PHONE_NUMBER } from '@/lib/constants';
 import { getWhatsappMessageUrl } from '@/lib/utils';
 import { adminLoginMutationOptions } from '@/mutations/admin/auth';
@@ -86,9 +87,8 @@ const LoginForm = () => {
           </Field>
           <Field>
             <FieldLabel htmlFor="password">Password</FieldLabel>
-            <Input
+            <PasswordInput
               id="password"
-              type="password"
               {...form.register('password')}
               placeholder="Your password"
             />
