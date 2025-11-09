@@ -1,22 +1,25 @@
-import { Suspense } from 'react';
-import BookingContent from './booking-content';
+'use client';
 
-function BookingLoadingFallback() {
-  return (
-    <div className="flex h-dvh w-full items-center justify-center">
-      <div className="text-muted-foreground">Loading booking...</div>
-    </div>
-  );
-}
+import MainHeader from '@/components/headers/MainHeader';
+import BottomNavigationWrapper from '@/components/ui/BottomNavigationWrapper';
+import { Button } from '@/components/ui/button';
+import { DatePickerModal, DatePickerModalTrigger } from '@/components/ui/date-picker-modal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
+import { cn, getPlaceholderImageUrl } from '@/lib/utils';
+import { createBookingMutationOptions } from '@/mutations/booking';
+import { courtsSlotsQueryOptions } from '@/queries/court';
+import type { BookingItem } from '@/stores/useBookingStore';
+import { useBookingStore } from '@/stores/useBookingStore';
+import type { Court, Slot } from '@/types/model';
+import { IconCalendarFilled, IconInfoCircle } from '@tabler/icons-react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import dayjs from 'dayjs';
+import Image from 'next/image';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
-export default function BookingPage() {
-  return (
-    <Suspense fallback={<BookingLoadingFallback />}>
-      <BookingContent />
-    </Suspense>
-  );
-}
-
+const timeSlots = [
   '06:00',
   '07:00',
   '08:00',
@@ -65,7 +68,7 @@ const normalizeDateKey = (value: string) => {
   return dayjs().format('YYYY-MM-DD');
 };
 
-const BookingPage = () => {
+const BookingContent = () => {
   const {
     bookingItems,
     setBookingItems,
@@ -182,7 +185,7 @@ const BookingPage = () => {
           courtName: item.courtName,
           time: item.timeSlot,
           price: item.price,
-          dateKey
+          dateKey,
         });
       });
 
@@ -196,7 +199,7 @@ const BookingPage = () => {
 
       previousBookingItemsCountRef.current = items.length;
       hasHydratedFromStoreRef.current = true;
-
+      
       // Allow sync after a brief delay to ensure state is settled
       setTimeout(() => {
         skipStoreSyncRef.current = false;
@@ -216,7 +219,7 @@ const BookingPage = () => {
       unsubscribe?.();
     };
   }, []);
-
+  
   useEffect(() => {
     // Skip this filter during initial hydration
     if (!hasHydratedFromStoreRef.current) {
@@ -250,7 +253,7 @@ const BookingPage = () => {
       return next;
     });
   }, [slotMap, selectedDate]);
-
+  
   // Sync deletions from CartSheet back to local selections
   useEffect(() => {
     // Skip during initial hydration
@@ -263,9 +266,7 @@ const BookingPage = () => {
 
     if (currentCount < previousCount) {
       const existingKeys = new Set(
-        bookingItems.map(
-          (item) => `${item.courtId}-${item.timeSlot}-${normalizeDateKey(item.date)}`
-        )
+        bookingItems.map((item) => `${item.courtId}-${item.timeSlot}-${normalizeDateKey(item.date)}`)
       );
 
       setSelectionsByDate((prev) => {
@@ -310,7 +311,7 @@ const BookingPage = () => {
           timeSlot: cell.time,
           price: cell.price,
           date,
-          endTime: dayjs(cell.time, 'HH:mm').add(1, 'hour').format('HH:mm')
+          endTime: dayjs(cell.time, 'HH:mm').add(1, 'hour').format('HH:mm'),
         });
       });
     });
@@ -322,14 +323,15 @@ const BookingPage = () => {
     const newKeys = new Set(
       allSelections.map((item) => `${item.courtId}-${item.timeSlot}-${normalizeDateKey(item.date)}`)
     );
-
-    const hasChanges =
-      currentKeys.size !== newKeys.size || [...currentKeys].some((key) => !newKeys.has(key));
+    
+    const hasChanges = 
+      currentKeys.size !== newKeys.size ||
+      [...currentKeys].some(key => !newKeys.has(key));
 
     if (hasChanges) {
       setBookingItems(allSelections);
     }
-
+    
     setBookingDate(dayjs(selectedFullDate).toDate());
   }, [selectionsByDate, selectedFullDate, setBookingItems, setBookingDate, bookingItems]);
 
@@ -400,7 +402,7 @@ const BookingPage = () => {
                   id={`date-${d.fullDate}`}
                   key={d.fullDate}
                   className={cn(
-                    'flex h-14 min-w-14 flex-col items-center justify-center rounded px-2 py-1 font-semibold transition-colors',
+                    'flex flex-col items-center justify-center min-w-14 h-14 rounded px-2 py-1 font-semibold transition-colors',
                     selectedDate === d.fullDate
                       ? 'bg-primary text-white'
                       : 'hover:bg-muted text-black'
@@ -497,8 +499,8 @@ const BookingPage = () => {
                                       courtName: court.name,
                                       time,
                                       price: slot.price ?? 0,
-                                      dateKey
-                                    }
+                                      dateKey,
+                                    },
                                   ];
                                 }
 
@@ -587,4 +589,4 @@ const BookingPage = () => {
   );
 };
 
-export default BookingPage;
+export default BookingContent;

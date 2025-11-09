@@ -37,6 +37,12 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'quantum-sport-backend.vercel.app',
+        port: '8000',
+        pathname: '/api/storage/**'
+      },
+      {
+        protocol: 'https',
         hostname: 'placehold.co',
         pathname: '/**'
       }
