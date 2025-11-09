@@ -1,6 +1,5 @@
 'use client';
 
-
 import MainHeader from '@/components/headers/MainHeader';
 import AuthModal from '@/components/modals/AuthModal';
 import { Button } from '@/components/ui/button';
@@ -57,7 +56,7 @@ const getSlotDisplayRange = (timeSlot: string) => {
   return { start, end };
 };
 
-const CheckoutPage = () => {
+const CheckoutContent = () => {
   const router = useRouter();
   const bookingItems = useBookingStore((state) => state.bookingItems);
   const courtTotal = useBookingStore((state) => state.courtTotal);
@@ -528,4 +527,4 @@ const CheckoutPage = () => {
   );
 };
 
-export default CheckoutPage;
+export default CheckoutContent;

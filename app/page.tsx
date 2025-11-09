@@ -1,22 +1,18 @@
-import MainBottomNavigation from '@/components/footers/MainBottomNavigation';
-import MainHeader from '@/components/headers/MainHeader';
-import BannerSection from '@/components/section/home/BannerSection';
-import MembershipCtaSection from '@/components/section/home/MembershipCtaSection';
-import MenuSection from '@/components/section/home/MenuSection';
-import SponsorshipMarqueSection from '@/components/section/home/SponsorshipMarqueSection';
+import { Suspense } from 'react';
+import HomeContent from './home-content';
 
-export default async function HomePage() {
+function HomeLoadingFallback() {
   return (
-    <>
-      <MainHeader withNotificationBadge />
-      <main className="mt-28 lg:mt-24">
-        <BannerSection />
-        <MenuSection />
-        {/* <ActiveCourtSection /> */}
-        <SponsorshipMarqueSection />
-        <MembershipCtaSection />
-      </main>
-      <MainBottomNavigation />
-    </>
+    <div className="flex h-dvh w-full items-center justify-center">
+      <div className="text-muted-foreground">Loading home...</div>
+    </div>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={<HomeLoadingFallback />}>
+      <HomeContent />
+    </Suspense>
   );
 }
