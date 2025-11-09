@@ -1,6 +1,6 @@
 import {
-  createCoachCostApi,
   createStaffApi,
+  createStaffCostApi,
   resetStaffPasswordApi,
   revokeStaffSessionApi,
   updateStaffApi
@@ -71,12 +71,12 @@ export const adminRevokeStaffSessionMutationOptions = ({
     }
   });
 
-export const adminCreateCoachCostMutationOptions = ({
+export const adminCreateStaffCostMutationOptions = ({
   onSuccess,
   onError
 }: MutationFuncProps = {}) =>
   mutationOptions({
-    mutationFn: createCoachCostApi,
+    mutationFn: createStaffCostApi,
     onSuccess: (data) => {
       toast.success('Data berhasil disimpan!');
       onSuccess?.(data);

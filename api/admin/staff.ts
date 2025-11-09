@@ -45,7 +45,7 @@ export async function revokeStaffSessionApi(id: string) {
   return data;
 }
 
-export async function createCoachCostApi(payload: CreateMutationPayload) {
-  const { data } = await adminApi.post('/coach-costs', payload);
+export async function createStaffCostApi(payload: CreateMutationPayload) {
+  const { data } = await adminApi.post('/staff-costs', payload);
   return data;
 }
