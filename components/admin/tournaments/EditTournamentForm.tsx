@@ -17,32 +17,37 @@ import {
 import type { Tournament } from '@/types/model';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import dayjs from 'dayjs';
 import { Controller, type SubmitHandler, useForm } from 'react-hook-form';
 import z from 'zod';
-import dayjs from 'dayjs';
 
-const formSchema = z.object({
-  name: z.string().min(2, { message: 'Nama harus minimal 2 karakter.' }),
-  description: z.string().optional(),
-  rules: z.string().optional(),
-  startDate: z.date({ required_error: 'Tanggal mulai harus diisi.' }),
-  endDate: z.date({ required_error: 'Tanggal selesai harus diisi.' }),
-  startTime: z.string().min(1, { message: 'Waktu mulai harus diisi.' }),
-  endTime: z.string().min(1, { message: 'Waktu selesai harus diisi.' }),
-  maxTeams: z.number().min(1, { message: 'Minimal 1 tim.' }),
-  teamSize: z.number().min(1, { message: 'Minimal 1 pemain per tim.' }),
-  entryFee: z.number().min(0, { message: 'Biaya pendaftaran minimal 0.' }),
-  location: z.string().min(1, { message: 'Lokasi harus diisi.' }),
-  isActive: z.boolean().optional()
-}).refine((data) => {
-  if (data.endDate && data.startDate) {
-    return data.endDate >= data.startDate;
-  }
-  return true;
-}, {
-  message: 'Tanggal selesai harus setelah tanggal mulai.',
-  path: ['endDate']
-});
+const formSchema = z
+  .object({
+    name: z.string().min(2, { message: 'Nama harus minimal 2 karakter.' }),
+    description: z.string().optional(),
+    rules: z.string().optional(),
+    startDate: z.date(),
+    endDate: z.date(),
+    startTime: z.string().min(1, { message: 'Waktu mulai harus diisi.' }),
+    endTime: z.string().min(1, { message: 'Waktu selesai harus diisi.' }),
+    maxTeams: z.number().min(1, { message: 'Minimal 1 tim.' }),
+    teamSize: z.number().min(1, { message: 'Minimal 1 pemain per tim.' }),
+    entryFee: z.number().min(0, { message: 'Biaya pendaftaran minimal 0.' }),
+    location: z.string().min(1, { message: 'Lokasi harus diisi.' }),
+    isActive: z.boolean().optional()
+  })
+  .refine(
+    (data) => {
+      if (data.endDate && data.startDate) {
+        return data.endDate >= data.startDate;
+      }
+      return true;
+    },
+    {
+      message: 'Tanggal selesai harus setelah tanggal mulai.',
+      path: ['endDate']
+    }
+  );
 
 type FormSchema = z.infer<typeof formSchema>;
 
@@ -115,7 +120,11 @@ const EditTournamentForm = ({ data }: Props) => {
         <FieldGroup>
           <Field>
             <FieldLabel htmlFor="name">Nama Turnamen</FieldLabel>
-            <Input id="name" {...form.register('name')} placeholder="e.g. Turnamen Badminton 2025" />
+            <Input
+              id="name"
+              {...form.register('name')}
+              placeholder="e.g. Turnamen Badminton 2025"
+            />
             <FieldError>{form.formState.errors.name?.message}</FieldError>
           </Field>
           <Field>
@@ -142,10 +151,7 @@ const EditTournamentForm = ({ data }: Props) => {
               control={form.control}
               name="startDate"
               render={({ field }) => (
-                <DatePickerInput
-                  value={field.value}
-                  onValueChange={field.onChange}
-                />
+                <DatePickerInput value={field.value} onValueChange={field.onChange} />
               )}
             />
             <FieldError>{form.formState.errors.startDate?.message}</FieldError>
@@ -156,37 +162,28 @@ const EditTournamentForm = ({ data }: Props) => {
               control={form.control}
               name="endDate"
               render={({ field }) => (
-                <DatePickerInput
-                  value={field.value}
-                  onValueChange={field.onChange}
-                />
+                <DatePickerInput value={field.value} onValueChange={field.onChange} />
               )}
             />
             <FieldError>{form.formState.errors.endDate?.message}</FieldError>
           </Field>
           <Field>
             <FieldLabel htmlFor="startTime">Waktu Mulai</FieldLabel>
-            <Input
-              id="startTime"
-              type="time"
-              {...form.register('startTime')}
-              placeholder="HH:mm"
-            />
+            <Input id="startTime" type="time" {...form.register('startTime')} placeholder="HH:mm" />
             <FieldError>{form.formState.errors.startTime?.message}</FieldError>
           </Field>
           <Field>
             <FieldLabel htmlFor="endTime">Waktu Selesai</FieldLabel>
-            <Input
-              id="endTime"
-              type="time"
-              {...form.register('endTime')}
-              placeholder="HH:mm"
-            />
+            <Input id="endTime" type="time" {...form.register('endTime')} placeholder="HH:mm" />
             <FieldError>{form.formState.errors.endTime?.message}</FieldError>
           </Field>
           <Field>
             <FieldLabel htmlFor="location">Lokasi</FieldLabel>
-            <Input id="location" {...form.register('location')} placeholder="e.g. Lapangan Badminton Sentral" />
+            <Input
+              id="location"
+              {...form.register('location')}
+              placeholder="e.g. Lapangan Badminton Sentral"
+            />
             <FieldError>{form.formState.errors.location?.message}</FieldError>
           </Field>
           <Field>
