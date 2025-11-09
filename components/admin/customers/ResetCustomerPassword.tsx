@@ -27,8 +27,8 @@ const ResetCustomerPassword = ({ customerId }: Props) => {
   return (
     <Section>
       <SectionHeader>
-        <SectionTitle title="Hapus Akses Kustomer" />
-        <SectionDescription description="Hapus akses kustomer ini ke platform kami." />
+        <SectionTitle title="Reset Password Kustomer" />
+        <SectionDescription description="Kirim link untuk mereset kata sandi kustomer ini." />
       </SectionHeader>
       <SectionContent>
         <Alert variant="info" className="mb-4">
@@ -39,12 +39,12 @@ const ResetCustomerPassword = ({ customerId }: Props) => {
         </Alert>
 
         <Button
-          variant="secondarySuccess"
+          variant="secondaryInfo"
           className="mt-6 md:mt-0"
           onClick={() => sendResetPasswordLinkMutate(customerId)}
           loading={isPending}
         >
-          Unban Akses Kustomer
+          Kirim Link Reset Password
         </Button>
       </SectionContent>
     </Section>
