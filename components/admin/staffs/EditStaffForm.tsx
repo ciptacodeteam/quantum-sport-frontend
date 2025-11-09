@@ -60,7 +60,7 @@ const EditStaffForm = ({ staffId }: Props) => {
     defaultValues: {
       name: data?.name || '',
       email: data?.email || '',
-      role: data?.role || undefined,
+      role: data?.role,
       phone: data?.phone ? formatPhone(data.phone).replace(/^\+62/, '') : '',
       image: undefined,
       joinedAt: data?.joinedAt ? new Date(data.joinedAt) : undefined,
