@@ -105,7 +105,7 @@ const CourtCostingTable = ({ courtId }: Props) => {
                     style: 'currency',
                     currency: 'IDR',
                     minimumFractionDigits: 0
-                })
+                  })
               }
             ]}
             enableRowSelection={false}

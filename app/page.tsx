@@ -1,6 +1,5 @@
 import MainBottomNavigation from '@/components/footers/MainBottomNavigation';
 import MainHeader from '@/components/headers/MainHeader';
-import ActiveCourtSection from '@/components/section/home/ActiveCourtSection';
 import BannerSection from '@/components/section/home/BannerSection';
 import MembershipCtaSection from '@/components/section/home/MembershipCtaSection';
 import MenuSection from '@/components/section/home/MenuSection';

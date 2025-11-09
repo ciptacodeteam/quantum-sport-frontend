@@ -10,10 +10,8 @@ import {
   SectionTitle
 } from '@/components/ui/section';
 import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Role } from '@/lib/constants';
 import { createQueryClient } from '@/lib/query-client';
-import { adminCoachCostingQueryOptions, adminStaffQueryOptions } from '@/queries/admin/staff';
+import { adminStaffQueryOptions } from '@/queries/admin/staff';
 import { type IdParams } from '@/types';
 import { dehydrate, HydrationBoundary } from '@tanstack/react-query';
 
@@ -22,23 +20,23 @@ const EditStaffPage = async ({ params }) => {
 
   const queryClient = createQueryClient();
 
-  const staff = await queryClient.fetchQuery(adminStaffQueryOptions(param.id));
-  const roleValue = staff.role;
-  const normalizedRole = typeof roleValue === 'string' ? roleValue.trim().toUpperCase() : '';
+  await queryClient.prefetchQuery(adminStaffQueryOptions(param.id));
+  // const roleValue = staff.role;
+  // const normalizedRole = typeof roleValue === 'string' ? roleValue.trim().toUpperCase() : '';
 
-  const role = Role;
+  // const role = Role;
 
-  const isCoach =
-    normalizedRole === role.COACH ||
-    roleValue === role.COACH ||
-    roleValue === 'coach' ||
-    roleValue === 'COACH' ||
-    roleValue === 1 ||
-    roleValue === '1';
+  // const isCoach =
+  //   normalizedRole === role.COACH ||
+  //   roleValue === role.COACH ||
+  //   roleValue === 'coach' ||
+  //   roleValue === 'COACH' ||
+  //   roleValue === 1 ||
+  //   roleValue === '1';
 
-  if (isCoach) {
-    await queryClient.prefetchQuery(adminCoachCostingQueryOptions(param.id));
-  }
+  // if (isCoach) {
+  //   await queryClient.prefetchQuery(adminCoachCostingQueryOptions(param.id));
+  // }
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
@@ -49,7 +47,19 @@ const EditStaffPage = async ({ params }) => {
             <SectionDescription description="Atur dan pantau karyawan Anda di sini." />
           </SectionHeader>
           <SectionContent className="mt-4">
-            <Tabs defaultValue="edit" className="mt-2">
+            <div className="mt-4 grid grid-cols-1 justify-center xl:grid-cols-2 xl:gap-x-6">
+              <div className="md:max-w-3xl">
+                <EditStaffForm staffId={param.id} />
+              </div>
+              <Separator className="mt-10 mb-6 block xl:hidden" />
+              <div>
+                <ResetStaffPassword staffId={param.id} />
+                <Separator className="my-4" />
+                <RevokeStaffAccess staffId={param.id} />
+              </div>
+            </div>
+            <CoachCostingTable coachId={param.id} />
+            {/* <Tabs defaultValue="edit" className="mt-2">
               <TabsList>
                 <TabsTrigger value="edit">Edit</TabsTrigger>
                 {isCoach ? <TabsTrigger value="costing">Costing</TabsTrigger> : null}
@@ -74,7 +84,7 @@ const EditStaffPage = async ({ params }) => {
                   </div>
                 </TabsContent>
               ) : null}
-            </Tabs>
+            </Tabs> */}
           </SectionContent>
         </Section>
       </main>

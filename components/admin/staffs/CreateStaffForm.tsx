@@ -25,8 +25,9 @@ import {
 import { Role } from '@/lib/constants';
 import { cn, formatPhone, getPlaceholderImageUrl } from '@/lib/utils';
 import { adminCreateStaffMutationOptions } from '@/mutations/admin/staff';
+import { adminStaffsQueryOptions } from '@/queries/admin/staff';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Controller, type SubmitHandler, useForm } from 'react-hook-form';
@@ -72,9 +73,12 @@ const CreateStaffForm = () => {
 
   const router = useRouter();
 
+  const queryClient = useQueryClient();
+
   const { mutate, isPending } = useMutation(
     adminCreateStaffMutationOptions({
       onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: adminStaffsQueryOptions.queryKey });
         form.reset();
         setImagePreview(null);
         router.push('/admin/kelola-karyawan');

@@ -9,7 +9,7 @@ import { NumberInput } from '@/components/ui/number-input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { daysOfWeek, hoursInDay } from '@/lib/constants';
 import { adminCreateCoachCostMutationOptions } from '@/mutations/admin/staff';
-import { adminCoachCostingQueryOptions } from '@/queries/admin/staff';
+import { adminCoachCostingQueryOptions, adminStaffQueryOptions } from '@/queries/admin/staff';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { IconInfoCircle } from '@tabler/icons-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -18,7 +18,7 @@ import { Controller, type SubmitHandler, useForm } from 'react-hook-form';
 import z from 'zod';
 
 const formSchema = z.object({
-  staffId: z.string(),
+  coachId: z.string(),
   fromDate: z.date(),
   toDate: z.date(),
   days: z.array(z.number().min(0).max(7)),
@@ -39,7 +39,7 @@ const CreateCoachCostForm = ({ coachId }: Props) => {
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      staffId: coachId,
+      coachId: coachId,
       fromDate: dayjs().toDate(),
       toDate: dayjs().add(7, 'day').toDate(),
       days: [],
@@ -56,6 +56,9 @@ const CreateCoachCostForm = ({ coachId }: Props) => {
       onSuccess: () => {
         queryClient.invalidateQueries({
           queryKey: adminCoachCostingQueryOptions(coachId).queryKey
+        });
+        queryClient.invalidateQueries({
+          queryKey: adminStaffQueryOptions(coachId).queryKey
         });
         form.reset();
         closeDialog('create-coach-costing');
@@ -138,7 +141,9 @@ const CreateCoachCostForm = ({ coachId }: Props) => {
               <Controller
                 control={form.control}
                 name="fromDate"
-                render={({ field }) => <DatePickerInput value={field.value} onValueChange={field.onChange} />}
+                render={({ field }) => (
+                  <DatePickerInput value={field.value} onValueChange={field.onChange} />
+                )}
               />
               <FieldError>{form.formState.errors.fromDate?.message}</FieldError>
             </Field>
@@ -147,7 +152,9 @@ const CreateCoachCostForm = ({ coachId }: Props) => {
               <Controller
                 control={form.control}
                 name="toDate"
-                render={({ field }) => <DatePickerInput value={field.value} onValueChange={field.onChange} />}
+                render={({ field }) => (
+                  <DatePickerInput value={field.value} onValueChange={field.onChange} />
+                )}
               />
               <FieldError>{form.formState.errors.toDate?.message}</FieldError>
             </Field>
@@ -191,14 +198,15 @@ const CreateCoachCostForm = ({ coachId }: Props) => {
           </Field>
           <Field>
             <div className="inline-flex gap-2">
-              <FieldLabel htmlFor="closedHours">Jam Tutup (Opsional)</FieldLabel>
+              <FieldLabel htmlFor="closedHours">Jam Coach Tidak Tersedia (Opsional)</FieldLabel>
               <Tooltip>
                 <TooltipTrigger>
                   <IconInfoCircle className="text-muted-foreground size-4 cursor-pointer" />
                 </TooltipTrigger>
                 <TooltipContent>
                   <span>
-                    Pilih jam tutup jika coach tidak tersedia pada jam-jam tertentu di hari-hari yang dipilih.
+                    Pilih jam tutup jika coach tidak tersedia pada jam-jam tertentu di hari-hari
+                    yang dipilih.
                   </span>
                 </TooltipContent>
               </Tooltip>
@@ -234,7 +242,11 @@ const CreateCoachCostForm = ({ coachId }: Props) => {
           </Field>
           <Field className="mt-2 ml-auto w-fit">
             <div className="flex items-center gap-4">
-              <Button type="button" variant="ghost" onClick={() => closeDialog('create-coach-costing')}>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => closeDialog('create-coach-costing')}
+              >
                 Batal
               </Button>
               <Button type="submit" loading={isPending}>
@@ -249,4 +261,3 @@ const CreateCoachCostForm = ({ coachId }: Props) => {
 };
 
 export default CreateCoachCostForm;
-
