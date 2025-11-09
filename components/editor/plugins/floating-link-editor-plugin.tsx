@@ -7,7 +7,7 @@
  * LICENSE file in the root directory of this source tree.
  *
  */
-import { Dispatch, JSX, useCallback, useEffect, useRef, useState } from "react"
+import { type Dispatch, type JSX, useCallback, useEffect, useRef, useState } from "react"
 import {
   $createLinkNode,
   $isAutoLinkNode,
@@ -21,13 +21,13 @@ import {
   $isLineBreakNode,
   $isNodeSelection,
   $isRangeSelection,
-  BaseSelection,
+  type BaseSelection,
   CLICK_COMMAND,
   COMMAND_PRIORITY_CRITICAL,
   COMMAND_PRIORITY_HIGH,
   COMMAND_PRIORITY_LOW,
   KEY_ESCAPE_COMMAND,
-  LexicalEditor,
+  type LexicalEditor,
   SELECTION_CHANGE_COMMAND,
 } from "lexical"
 import { Check, Pencil, Trash, X } from "lucide-react"

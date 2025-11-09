@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { DialogProps, Dialog as RadixDialog } from './dialog';
+import { type DialogProps, Dialog as RadixDialog } from './dialog';
 
 type DialogPayload = any;
 
