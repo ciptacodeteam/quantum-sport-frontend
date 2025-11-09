@@ -17,6 +17,8 @@ import { IconInfoCircle } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import BanCustomerForm from './BanCustomerForm';
 import { adminUnbanCustomerMutationOptions } from '@/mutations/admin/customer';
+import dayjs from 'dayjs';
+import { useRouter } from 'next/navigation';
 
 interface Props {
   customerId: string;
@@ -24,6 +26,8 @@ interface Props {
 
 const BanCustomerAccess = ({ customerId }: Props) => {
   const { data } = useQuery(adminCustomerQueryOptions(customerId));
+
+  const router = useRouter();
 
   const { confirmAndMutate: unbanCustomerMutate } = useConfirmMutation(
     {
@@ -40,7 +44,10 @@ const BanCustomerAccess = ({ customerId }: Props) => {
         success: () => 'Data berhasil dibuka kembali.',
         error: 'Gagal membuka kembali akses kustomer.'
       },
-      invalidate: adminCustomersQueryOptions.queryKey
+      invalidate: adminCustomersQueryOptions.queryKey,
+      router: {
+        invalidate: router.refresh
+      }
     }
   );
 
@@ -58,24 +65,37 @@ const BanCustomerAccess = ({ customerId }: Props) => {
             secara permanen.
           </AlertDescription>
         </Alert>
+
+        {data?.banned && !dayjs(data.banExpires).isAfter(dayjs()) && (
+          <Alert variant="warning" className="mb-5">
+            <AlertDescription>
+              Kustomer ini diban hingga{' '}
+              {data.banExpires
+                ? dayjs(data.banExpires).format('DD MMMM YYYY HH:mm')
+                : 'waktu yang tidak ditentukan'}
+              . <br />
+              Alasan: {data.banReason}
+            </AlertDescription>
+          </Alert>
+        )}
         {data?.banned ? (
           <Button
-            variant="secondaryInfo"
+            variant="secondarySuccess"
             className="mt-6 md:mt-0"
             onClick={() => unbanCustomerMutate(customerId)}
           >
-            Buka Kembali Akses Kustomer {data?.name}
+            Unban Akses Kustomer
           </Button>
         ) : (
           <ManagedDialog id="ban-customer-dialog">
             <DialogTrigger asChild>
-              <Button variant="secondaryInfo" className="mt-6 md:mt-0">
-                Hapus Akses Kustomer {data?.name}
+              <Button variant="destructive" className="mt-6 md:mt-0">
+                Ban Akses Kustomer
               </Button>
             </DialogTrigger>
             <DialogContent className="lg:min-w-xl">
               <DialogHeader className="mb-4">
-                <DialogTitle>Buat Cost Lapangan</DialogTitle>
+                <DialogTitle>Ban Akses Kustomer</DialogTitle>
               </DialogHeader>
               <BanCustomerForm customerId={customerId} />
             </DialogContent>

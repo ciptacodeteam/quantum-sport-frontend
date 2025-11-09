@@ -1,6 +1,7 @@
 import {
   banCustomerApi,
   createCustomerApi,
+  sendResetPasswordLinkApi,
   unbanCustomerApi,
   updateCustomerApi
 } from '@/api/admin/customer';
@@ -66,6 +67,23 @@ export const adminUnbanCustomerMutationOptions = ({ onSuccess, onError }: Mutati
     onError: (error) => {
       console.error('Error:', error);
       toast.error(error.msg || 'Gagal mengunbanned data. Silakan coba lagi.');
+      onError?.(error);
+    }
+  });
+
+export const adminSendCustomerResetPasswordMutationOptions = ({
+  onSuccess,
+  onError
+}: MutationFuncProps = {}) =>
+  mutationOptions({
+    mutationFn: sendResetPasswordLinkApi,
+    onSuccess: (data) => {
+      toast.success('Link reset kata sandi berhasil dikirim!');
+      onSuccess?.(data);
+    },
+    onError: (error) => {
+      console.error('Error:', error);
+      toast.error(error.msg || 'Gagal mengirim link reset kata sandi. Silakan coba lagi.');
       onError?.(error);
     }
   });
