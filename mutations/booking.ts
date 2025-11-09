@@ -26,8 +26,7 @@ export const checkoutMutationOptions = ({ onSuccess, onError }: MutationFuncProp
     },
     onError: (error) => {
       console.error('Error:', error);
-      toast.error(error.msg || error.message || 'Gagal melakukan checkout. Silakan coba lagi.');
+      toast.error(error.msg || 'Gagal melakukan checkout. Silakan coba lagi.');
       onError?.(error);
     }
   });
-
