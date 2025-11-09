@@ -42,3 +42,8 @@ export async function unbanCustomerApi(id: string) {
   const { data } = await adminApi.post(`/customers/${id}/unban`);
   return data;
 }
+
+export async function sendResetPasswordLinkApi(id: string) {
+  const { data } = await adminApi.post(`/customers/${id}/send-reset-password`);
+  return data;
+}
