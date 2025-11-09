@@ -1,26 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import dayjs from 'dayjs';
-import { useBookingStore } from '@/stores/useBookingStore';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
-import {
-  IconCalendar,
-  IconClock,
-  IconMapPin,
-  IconChevronLeft,
-  IconChevronRight,
-  IconCheck,
-  IconX
-} from '@tabler/icons-react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import Image from 'next/image';
+import { useBookingStore } from '@/stores/useBookingStore';
+import { IconCalendar, IconCheck, IconClock, IconMapPin, IconX } from '@tabler/icons-react';
+import dayjs from 'dayjs';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 // Mock data for courts
