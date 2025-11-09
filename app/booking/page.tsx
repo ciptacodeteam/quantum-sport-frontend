@@ -3,35 +3,41 @@
 import MainHeader from '@/components/headers/MainHeader';
 import BottomNavigationWrapper from '@/components/ui/BottomNavigationWrapper';
 import { Button } from '@/components/ui/button';
+import { DatePickerModal, DatePickerModalTrigger } from '@/components/ui/date-picker-modal';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Separator } from '@/components/ui/separator';
+import { cn, getPlaceholderImageUrl } from '@/lib/utils';
 import { createBookingMutationOptions } from '@/mutations/booking';
 import { courtsSlotsQueryOptions } from '@/queries/court';
-import type { Court, Slot } from '@/types/model';
-import { useMutation, useQuery } from '@tanstack/react-query';
 import type { BookingItem } from '@/stores/useBookingStore';
-import dayjs from 'dayjs';
-import { useEffect, useMemo, useState, useRef } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Separator } from '@/components/ui/separator';
-import Image from 'next/image';
-import { cn, getPlaceholderImageUrl } from '@/lib/utils';
-import { toast } from 'sonner';
-import { IconCalendarFilled, IconInfoCircle } from '@tabler/icons-react';
-import {
-  DatePickerModal,
-  DatePickerModalTrigger,
-} from '@/components/ui/date-picker-modal';
 import { useBookingStore } from '@/stores/useBookingStore';
+import type { Court, Slot } from '@/types/model';
+import { IconCalendarFilled, IconInfoCircle } from '@tabler/icons-react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import dayjs from 'dayjs';
+import Image from 'next/image';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 const timeSlots = [
-  '06:00', '07:00', '08:00', '09:00', '10:00',
-  '11:00', '12:00', '13:00', '14:00', '15:00',
-  '16:00', '17:00', '18:00', '19:00', '20:00',
-  '21:00', '22:00', '23:00',
+  '06:00',
+  '07:00',
+  '08:00',
+  '09:00',
+  '10:00',
+  '11:00',
+  '12:00',
+  '13:00',
+  '14:00',
+  '15:00',
+  '16:00',
+  '17:00',
+  '18:00',
+  '19:00',
+  '20:00',
+  '21:00',
+  '22:00',
+  '23:00'
 ];
 
 type SelectedCell = {
@@ -68,7 +74,7 @@ const BookingPage = () => {
     setBookingItems,
     setSelectedDate: setBookingDate,
     courtTotal,
-    setCartOpen,
+    setCartOpen
   } = useBookingStore();
 
   const [selectedDate, setSelectedDate] = useState(dayjs().format('YYYY-MM-DD'));
@@ -101,7 +107,7 @@ const BookingPage = () => {
   const slotQueryParams = useMemo(
     () => ({
       startAt: dayjs(selectedFullDate).startOf('day').toISOString(),
-      endAt: dayjs(selectedFullDate).endOf('day').toISOString(),
+      endAt: dayjs(selectedFullDate).endOf('day').toISOString()
     }),
     [selectedFullDate]
   );
@@ -121,7 +127,9 @@ const BookingPage = () => {
         map.set(courtId, {
           id: courtId,
           name: slot.court?.name || `Court ${map.size + 1}`,
-          image: (slot.court as Court | undefined)?.image || getPlaceholderImageUrl({ width: 160, height: 90, text: 'No Image' }),
+          image:
+            (slot.court as Court | undefined)?.image ||
+            getPlaceholderImageUrl({ width: 160, height: 90, text: 'No Image' })
         });
       }
     });
@@ -131,8 +139,8 @@ const BookingPage = () => {
         {
           id: 'default-court',
           name: 'Court',
-          image: getPlaceholderImageUrl({ width: 160, height: 90, text: 'No Image' }),
-        },
+          image: getPlaceholderImageUrl({ width: 160, height: 90, text: 'No Image' })
+        }
       ];
     }
 
@@ -179,6 +187,7 @@ const BookingPage = () => {
           time: item.timeSlot,
           price: item.price,
           dateKey,
+
         });
       });
 
@@ -313,7 +322,7 @@ const BookingPage = () => {
         label: currentDate.format('ddd'),
         date: currentDate.format('DD MMM'),
         fullDate: currentDate.format('YYYY-MM-DD'),
-        active: currentDate.isSame(today, 'day'),
+        active: currentDate.isSame(today, 'day')
       });
       currentDate = currentDate.add(1, 'day');
     }
@@ -343,8 +352,8 @@ const BookingPage = () => {
     <>
       <MainHeader backHref="/" title="Booking Court" withLogo={false} withCartBadge />
 
-      <main className="mt-24 w-full md:mt-14 flex flex-col h-[calc(100dvh-180px)]">
-        <div className="sticky top-24 md:top-14 z-30 bg-white border-b pb-2">
+      <main className="mt-24 flex h-[calc(100dvh-180px)] w-full flex-col md:mt-14">
+        <div className="sticky top-24 z-30 border-b bg-white pb-2 md:top-14">
           <div className="flex items-center gap-2">
             <div className="flex items-center px-2 pl-4">
               <DatePickerModal onChange={handleSelectDate} label="Select Booking Date">
@@ -358,7 +367,7 @@ const BookingPage = () => {
 
             <Separator orientation="vertical" className="h-10" />
 
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide flex-nowrap px-2">
+            <div className="scrollbar-hide flex flex-nowrap gap-2 overflow-x-auto px-2">
               {dateList.map((d) => (
                 <button
                   id={`date-${d.fullDate}`}
@@ -372,13 +381,11 @@ const BookingPage = () => {
                   onClick={() => setSelectedDate(d.fullDate)}
                 >
                   <span className="text-xs font-normal">{d.label}</span>
-                  <div className="flex mt-0.5">
-                    <span className="text-sm font-semibold me-0.5">
+                  <div className="mt-0.5 flex">
+                    <span className="me-0.5 text-sm font-semibold">
                       {dayjs(d.fullDate).format('DD')}
                     </span>
-                    <span className="text-sm font-semibold">
-                      {dayjs(d.fullDate).format('MMM')}
-                    </span>
+                    <span className="text-sm font-semibold">{dayjs(d.fullDate).format('MMM')}</span>
                   </div>
                 </button>
               ))}
@@ -386,21 +393,19 @@ const BookingPage = () => {
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto scrollbar-hide pb-10">
+        <div className="scrollbar-hide flex-1 overflow-auto pb-10">
           {isSlotsLoading && (
-            <div className="p-4 text-center text-sm text-muted-foreground">
-              Memuat slot...
-            </div>
+            <div className="text-muted-foreground p-4 text-center text-sm">Memuat slot...</div>
           )}
-          <div className="overflow-x-auto h-full">
-            <table className="min-w-full border border-gray-200 text-center border-separate border-spacing-0">
+          <div className="h-full overflow-x-auto">
+            <table className="min-w-full border-separate border-spacing-0 border border-gray-200 text-center">
               <thead className="sticky top-0 z-20 bg-gray-50 shadow-sm">
                 <tr>
-                  <th className="sticky left-0 z-30 border-r border-b bg-gray-50 px-2 py-2 text-left font-semibold w-20"></th>
+                  <th className="sticky left-0 z-30 w-20 border-r border-b bg-gray-50 px-2 py-2 text-left font-semibold"></th>
                   {courts.map((court) => (
                     <th
                       key={court.id}
-                      className="border border-gray-200 px-4 py-2 text-xs font-semibold bg-gray-50"
+                      className="border border-gray-200 bg-gray-50 px-4 py-2 text-xs font-semibold"
                     >
                       <Button
                         variant={'ghost'}
@@ -418,7 +423,7 @@ const BookingPage = () => {
               <tbody>
                 {timeSlots.map((time) => (
                   <tr key={time}>
-                    <td className="sticky left-0 z-10 border border-gray-200 bg-white px-4 py-2 text-left text-sm font-medium w-20">
+                    <td className="sticky left-0 z-10 w-20 border border-gray-200 bg-white px-4 py-2 text-left text-sm font-medium">
                       {time}
                     </td>
                     {courts.map((court) => {
@@ -435,9 +440,9 @@ const BookingPage = () => {
                             className={cn(
                               `flex h-14 w-full flex-col items-start justify-between rounded px-2 py-1 text-base font-semibold transition-all`,
                               !hasSlot
-                                ? 'bg-gray-100 text-muted-foreground cursor-not-allowed'
+                                ? 'text-muted-foreground cursor-not-allowed bg-gray-100'
                                 : !isAvailable
-                                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                  ? 'cursor-not-allowed bg-gray-200 text-gray-400'
                                   : selected
                                     ? 'border-primary bg-primary text-white shadow-lg'
                                     : 'bg-white hover:bg-green-100'
@@ -493,7 +498,7 @@ const BookingPage = () => {
                 ))}
               </tbody>
             </table>
-            <div className="h-2 pointer-events-none"></div>
+            <div className="pointer-events-none h-2"></div>
           </div>
         </div>
       </main>
@@ -507,11 +512,14 @@ const BookingPage = () => {
               </DialogHeader>
               <div className="mt-1">
                 <Image
-                  src={selectedCourt.image || getPlaceholderImageUrl({ width: 600, height: 400, text: 'No Image' })}
+                  src={
+                    selectedCourt.image ||
+                    getPlaceholderImageUrl({ width: 600, height: 400, text: 'No Image' })
+                  }
                   alt={selectedCourt.name}
                   width={600}
                   height={400}
-                  className="rounded-sm object-cover w-full"
+                  className="w-full rounded-sm object-cover"
                   unoptimized
                 />
               </div>
@@ -524,9 +532,7 @@ const BookingPage = () => {
         <header className="flex-between my-2 items-end">
           <div>
             <span className="text-muted-foreground text-xs">Subtotal</span>
-            <h2 className="text-lg font-semibold">
-              Rp {courtTotal.toLocaleString('id-ID')}
-            </h2>
+            <h2 className="text-lg font-semibold">Rp {courtTotal.toLocaleString('id-ID')}</h2>
           </div>
           <div>
             <span className="text-muted-foreground text-xs">

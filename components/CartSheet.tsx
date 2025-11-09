@@ -50,7 +50,7 @@ export default function CartSheet() {
 
     return Array.from(map.entries()).sort((a, b) => dayjs(a[0]).valueOf() - dayjs(b[0]).valueOf());
   }, [bookingItems]);
-  
+
   const getEndTime = (timeSlot: string) => {
     const [hours, minutes] = timeSlot.split(':').map(Number);
     if (Number.isNaN(hours) || Number.isNaN(minutes)) return timeSlot;
@@ -67,7 +67,7 @@ export default function CartSheet() {
   
   return (
     <Sheet open={isCartOpen} onOpenChange={setCartOpen}>
-       <SheetTrigger asChild>
+      <SheetTrigger asChild>
         <Button variant={'ghost'} size={'icon-sm'}>
           <div className="flex-center relative">
             <IconShoppingCartFilled className="text-primary size-7" />
@@ -215,7 +215,9 @@ export default function CartSheet() {
             <Button className="w-full" size="lg" disabled={bookingItems.length === 0} onClick={handleCheckout}>
               Lanjut ke Checkout
             </Button>
-            {(bookingItems.length > 0 || selectedCoaches.length > 0 || selectedInventories.length > 0) && (
+            {(bookingItems.length > 0 ||
+              selectedCoaches.length > 0 ||
+              selectedInventories.length > 0) && (
               <Button variant="outline" className="w-full" onClick={clearAll}>
                 Hapus Semua
               </Button>
