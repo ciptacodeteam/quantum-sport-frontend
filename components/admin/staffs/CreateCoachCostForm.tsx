@@ -8,7 +8,7 @@ import MultiSelectInput from '@/components/ui/multi-select-input';
 import { NumberInput } from '@/components/ui/number-input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { daysOfWeek, hoursInDay } from '@/lib/constants';
-import { adminCreateCoachCostMutationOptions } from '@/mutations/admin/staff';
+import { adminCreateStaffCostMutationOptions } from '@/mutations/admin/staff';
 import { adminCoachCostingQueryOptions, adminStaffQueryOptions } from '@/queries/admin/staff';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { IconInfoCircle } from '@tabler/icons-react';
@@ -52,7 +52,7 @@ const CreateCoachCostForm = ({ coachId }: Props) => {
   const queryClient = useQueryClient();
 
   const { mutate, isPending } = useMutation(
-    adminCreateCoachCostMutationOptions({
+    adminCreateStaffCostMutationOptions({
       onSuccess: () => {
         queryClient.invalidateQueries({
           queryKey: adminCoachCostingQueryOptions(coachId).queryKey

@@ -86,41 +86,41 @@ type SelectedBooking = {
 };
 
 // Indonesian day and month mappings
-const indonesianDays = {
-  Sun: 'Min',
-  Mon: 'Sen',
-  Tue: 'Sel',
-  Wed: 'Rab',
-  Thu: 'Kam',
-  Fri: 'Jum',
-  Sat: 'Sab'
-};
+// const indonesianDays = {
+//   Sun: 'Min',
+//   Mon: 'Sen',
+//   Tue: 'Sel',
+//   Wed: 'Rab',
+//   Thu: 'Kam',
+//   Fri: 'Jum',
+//   Sat: 'Sab'
+// };
 
-const indonesianMonths = {
-  Jan: 'Jan',
-  Feb: 'Feb',
-  Mar: 'Mar',
-  Apr: 'Apr',
-  May: 'Mei',
-  Jun: 'Jun',
-  Jul: 'Jul',
-  Aug: 'Agu',
-  Sep: 'Sep',
-  Oct: 'Okt',
-  Nov: 'Nov',
-  Dec: 'Des'
-};
+// const indonesianMonths = {
+//   Jan: 'Jan',
+//   Feb: 'Feb',
+//   Mar: 'Mar',
+//   Apr: 'Apr',
+//   May: 'Mei',
+//   Jun: 'Jun',
+//   Jul: 'Jul',
+//   Aug: 'Agu',
+//   Sep: 'Sep',
+//   Oct: 'Okt',
+//   Nov: 'Nov',
+//   Dec: 'Des'
+// };
 
 // Helper functions for Indonesian formatting
-const getIndonesianDay = (date: dayjs.Dayjs) => {
-  const englishDay = date.format('ddd');
-  return indonesianDays[englishDay as keyof typeof indonesianDays] || englishDay;
-};
+// const getIndonesianDay = (date: dayjs.Dayjs) => {
+//   const englishDay = date.format('ddd');
+//   return indonesianDays[englishDay as keyof typeof indonesianDays] || englishDay;
+// };
 
-const getIndonesianMonth = (date: dayjs.Dayjs) => {
-  const englishMonth = date.format('MMM');
-  return indonesianMonths[englishMonth as keyof typeof indonesianMonths] || englishMonth;
-};
+// const getIndonesianMonth = (date: dayjs.Dayjs) => {
+//   const englishMonth = date.format('MMM');
+//   return indonesianMonths[englishMonth as keyof typeof indonesianMonths] || englishMonth;
+// };
 
 export default function BookingLapangan() {
   const router = useRouter();
@@ -128,9 +128,9 @@ export default function BookingLapangan() {
     bookingItems,
     selectedDate,
     setBookingItems,
-    setSelectedDate: setStoreDate,
-    getTotalAmount,
-    getTotalWithTax
+    setSelectedDate: setStoreDate
+    // getTotalAmount,
+    // getTotalWithTax
   } = useBookingStore();
 
   const [localSelectedDate, setLocalSelectedDate] = useState<Date>(selectedDate);
@@ -283,36 +283,36 @@ export default function BookingLapangan() {
   const totalPrice = bookings.reduce((sum, booking) => sum + booking.price, 0);
 
   // Check if time slot is already booked (system bookings + user selections)
-  const isTimeSlotBooked = (timeSlot: string, courtId?: string, checkDate?: string) => {
-    const dateToCheck = checkDate || dayjs(localSelectedDate).format('YYYY-MM-DD');
+  // const isTimeSlotBooked = (timeSlot: string, courtId?: string, checkDate?: string) => {
+  //   const dateToCheck = checkDate || dayjs(localSelectedDate).format('YYYY-MM-DD');
 
-    // System bookings (mock data - assuming they're for current date)
-    const systemBooked = bookedSlots.some(
-      (slot) => slot.timeSlot === timeSlot && (!courtId || slot.courtId === courtId)
-    );
+  //   // System bookings (mock data - assuming they're for current date)
+  //   const systemBooked = bookedSlots.some(
+  //     (slot) => slot.timeSlot === timeSlot && (!courtId || slot.courtId === courtId)
+  //   );
 
-    // User bookings - only check for the specific date
-    const userBooked = bookings.some(
-      (booking) =>
-        booking.timeSlot === timeSlot &&
-        booking.date === dateToCheck &&
-        (!courtId || booking.courtId === courtId)
-    );
+  //   // User bookings - only check for the specific date
+  //   const userBooked = bookings.some(
+  //     (booking) =>
+  //       booking.timeSlot === timeSlot &&
+  //       booking.date === dateToCheck &&
+  //       (!courtId || booking.courtId === courtId)
+  //   );
 
-    return systemBooked || userBooked;
-  };
+  //   return systemBooked || userBooked;
+  // };
 
   // Get available time slots (not booked by system)
-  const getAvailableTimeSlots = () => {
-    return timeSlots.filter((timeSlot) => {
-      // Check if this time is available for any court
-      return mockCourts.some(
-        (court) =>
-          !isTimeSlotBooked(timeSlot, court.id) ||
-          bookings.some((b) => b.timeSlot === timeSlot && b.courtId === court.id)
-      );
-    });
-  };
+  // const getAvailableTimeSlots = () => {
+  //   return timeSlots.filter((timeSlot) => {
+  //     // Check if this time is available for any court
+  //     return mockCourts.some(
+  //       (court) =>
+  //         !isTimeSlotBooked(timeSlot, court.id) ||
+  //         bookings.some((b) => b.timeSlot === timeSlot && b.courtId === court.id)
+  //     );
+  //   });
+  // };
 
   // Check if a time slot is available for the selected court
   const isTimeSlotAvailableForCourt = (timeSlot: string, courtId: string, checkDate?: string) => {
