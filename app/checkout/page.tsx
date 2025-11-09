@@ -1,33 +1,27 @@
 'use client';
 
 import MainHeader from '@/components/headers/MainHeader';
+import AuthModal from '@/components/modals/AuthModal';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { cn, resolveMediaUrl } from '@/lib/utils';
+import { checkoutMutationOptions } from '@/mutations/booking';
+import { paymentMethodsQueryOptions } from '@/queries/paymentMethod';
+import { profileQueryOptions } from '@/queries/profile';
 import { useBookingStore } from '@/stores/useBookingStore';
+import type { PaymentMethod } from '@/types/model';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import 'dayjs/locale/id';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
-import { useEffect, useMemo, useState } from 'react';
-import { cn } from '@/lib/utils';
-import { resolveMediaUrl } from '@/lib/utils';
-import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { paymentMethodsQueryOptions } from '@/queries/paymentMethod';
-import type { PaymentMethod } from '@/types/model';
-import { checkoutMutationOptions } from '@/mutations/booking';
-import AuthModal from '@/components/modals/AuthModal';
-import { profileQueryOptions } from '@/queries/profile';
+import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
 
 const currencyFormatter = new Intl.NumberFormat('id-ID', {
   style: 'currency',
   currency: 'IDR',
-  minimumFractionDigits: 0,
+  minimumFractionDigits: 0
 });
 
 dayjs.locale('id');
@@ -52,7 +46,7 @@ const getSlotDisplayRange = (timeSlot: string) => {
   if (!parsed) {
     return {
       start: timeSlot,
-      end: timeSlot,
+      end: timeSlot
     };
   }
 
@@ -77,51 +71,54 @@ const CheckoutPage = () => {
   const [openAuthModal, setOpenAuthModal] = useState(false);
   const isAuthenticated = !!user?.id;
 
-  const {
-    data: paymentMethods = [],
-    isPending: isLoadingPaymentMethods,
-  } = useQuery(paymentMethodsQueryOptions());
+  const { data: paymentMethods = [], isPending: isLoadingPaymentMethods } = useQuery(
+    paymentMethodsQueryOptions()
+  );
 
   const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
 
-  const checkoutMutation = useMutation(checkoutMutationOptions({
-    onSuccess: (data) => {
-      // Enhance checkout data with payment method info and court details for display
-      const enhancedData = {
-        ...data,
-        paymentMethod: selectedPaymentMethod ? {
-          id: selectedPaymentMethod.id,
-          name: selectedPaymentMethod.name,
-          channel: selectedPaymentMethod.channel,
-          logo: selectedPaymentMethod.logo,
-        } : undefined,
-        // Store full court slot details for the payment detail page display
-        courtSlots: bookingItems.map(item => ({
-          courtId: item.courtId,
-          courtName: item.courtName,
-          timeSlot: item.timeSlot,
-          date: item.date,
-          price: item.price,
-        })),
-        breakdown: data.breakdown || {
-          courtTotal,
-          addOnsTotal,
-          processingFee: paymentFeeBreakdown.totalFee,
-          total: totalWithPaymentFee,
-        },
-      };
-      
-      // Store enhanced checkout data
-      sessionStorage.setItem('checkoutData', JSON.stringify(enhancedData));
-      
-      // Clear booking store after successful checkout
-      // useBookingStore.getState().clearAll();
-      
-      // Redirect to payment detail page
-      router.push('/checkout/payment');
-    }
-  }));
+  const checkoutMutation = useMutation(
+    checkoutMutationOptions({
+      onSuccess: (data) => {
+        // Enhance checkout data with payment method info and court details for display
+        const enhancedData = {
+          ...data,
+          paymentMethod: selectedPaymentMethod
+            ? {
+                id: selectedPaymentMethod.id,
+                name: selectedPaymentMethod.name,
+                channel: selectedPaymentMethod.channel,
+                logo: selectedPaymentMethod.logo
+              }
+            : undefined,
+          // Store full court slot details for the payment detail page display
+          courtSlots: bookingItems.map((item) => ({
+            courtId: item.courtId,
+            courtName: item.courtName,
+            timeSlot: item.timeSlot,
+            date: item.date,
+            price: item.price
+          })),
+          breakdown: data.breakdown || {
+            courtTotal,
+            addOnsTotal,
+            processingFee: paymentFeeBreakdown.totalFee,
+            total: totalWithPaymentFee
+          }
+        };
+
+        // Store enhanced checkout data
+        sessionStorage.setItem('checkoutData', JSON.stringify(enhancedData));
+
+        // Clear booking store after successful checkout
+        // useBookingStore.getState().clearAll();
+
+        // Redirect to payment detail page
+        router.push('/checkout/payment');
+      }
+    })
+  );
 
   // Show login modal if user is not authenticated and has items in cart
   useEffect(() => {
@@ -144,27 +141,29 @@ const CheckoutPage = () => {
     }
   }, [paymentMethods, selectedPaymentMethod]);
 
-  const paymentFeeBreakdown = useMemo(() => {
+  const paymentFeeBreakdown = (() => {
     if (!selectedPaymentMethod) {
       return {
         fixedFee: 0,
         percentageRate: 0,
         percentageFee: 0,
-        totalFee: 0,
+        totalFee: 0
       };
     }
 
     const percentageRate = Number(selectedPaymentMethod.percentage ?? 0);
-    const fixedFee = Number.isFinite(selectedPaymentMethod.fees) ? Number(selectedPaymentMethod.fees) : 0;
+    const fixedFee = Number.isFinite(selectedPaymentMethod.fees)
+      ? Number(selectedPaymentMethod.fees)
+      : 0;
     const percentageFee = Math.round((grandTotal * percentageRate) / 100);
 
     return {
       fixedFee,
       percentageRate,
       percentageFee,
-      totalFee: Math.round(fixedFee + percentageFee),
+      totalFee: Math.round(fixedFee + percentageFee)
     };
-  }, [selectedPaymentMethod, grandTotal]);
+  })();
 
   const totalWithPaymentFee = grandTotal + paymentFeeBreakdown.totalFee;
 
@@ -190,7 +189,7 @@ const CheckoutPage = () => {
         map.set(key, {
           courtName: item.courtName,
           date: normalizedDate,
-          slots: [],
+          slots: []
         });
       }
       map.get(key)!.slots.push({ ...item, date: normalizedDate });
@@ -205,12 +204,17 @@ const CheckoutPage = () => {
     return (
       <>
         <AuthModal open={openAuthModal} onOpenChange={setOpenAuthModal} />
-        
-        <div className="min-h-screen bg-background">
-          <MainHeader title="Detail Pembayaran" backHref="/booking" withCartBadge withLogo={false} />
+
+        <div className="bg-background min-h-screen">
+          <MainHeader
+            title="Detail Pembayaran"
+            backHref="/booking"
+            withCartBadge
+            withLogo={false}
+          />
           <main className="flex min-h-[calc(100vh-96px)] flex-col items-center justify-center gap-4 px-6 text-center">
             <h1 className="text-xl font-semibold">Tidak ada pesanan</h1>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Tambahkan slot booking terlebih dahulu untuk melihat ringkasan pembayaran.
             </p>
             <Button onClick={() => router.push('/booking')}>Kembali ke Booking</Button>
@@ -245,12 +249,12 @@ const CheckoutPage = () => {
     const selectedInventories = useBookingStore.getState().selectedInventories;
 
     // Prepare court slots data - send only slot IDs as per API requirement
-    const courtSlots = bookingItems.map(item => item.slotId);
+    const courtSlots = bookingItems.map((item) => item.slotId);
 
     // Prepare payload with additional information for the backend
     const payload: any = {
       paymentMethodId: selectedPaymentMethod.id,
-      courtSlots,
+      courtSlots
     };
 
     // Add coaches if any
@@ -269,224 +273,256 @@ const CheckoutPage = () => {
   return (
     <>
       <AuthModal open={openAuthModal} onOpenChange={setOpenAuthModal} />
-      
-      <div className="min-h-screen bg-muted/20 pb-28">
+
+      <div className="bg-muted/20 min-h-screen pb-28">
         <MainHeader title="Detail Pembayaran" backHref="/booking" withCartBadge withLogo={false} />
 
-      <main className="mx-auto flex w-11/12 max-w-4xl flex-col gap-6 pt-24 pb-28">
-        <section className="space-y-4 rounded-2xl border border-muted bg-white p-5 shadow-sm">
-          {groupedCourts.map((group, index) => (
-            <div key={`${group.courtName}-${group.date}`} className={cn('space-y-3', index < groupedCourts.length - 1 && 'pb-4 border-b border-dashed border-muted/80')}>
-              <header className="space-y-1">
-                <h2 className="text-base font-semibold text-primary">{group.courtName}</h2>
-                <p className="text-sm text-muted-foreground">{dayjs(group.date).format('dddd, DD MMM YYYY')}</p>
-              </header>
+        <main className="mx-auto flex w-11/12 max-w-4xl flex-col gap-6 pt-24 pb-28">
+          <section className="border-muted space-y-4 rounded-2xl border bg-white p-5 shadow-sm">
+            {groupedCourts.map((group, index) => (
+              <div
+                key={`${group.courtName}-${group.date}`}
+                className={cn(
+                  'space-y-3',
+                  index < groupedCourts.length - 1 && 'border-muted/80 border-b border-dashed pb-4'
+                )}
+              >
+                <header className="space-y-1">
+                  <h2 className="text-primary text-base font-semibold">{group.courtName}</h2>
+                  <p className="text-muted-foreground text-sm">
+                    {dayjs(group.date).format('dddd, DD MMM YYYY')}
+                  </p>
+                </header>
 
-              <div className="space-y-2">
-                {[...group.slots]
-                  .sort((a, b) => a.timeSlot.localeCompare(b.timeSlot))
-                  .map((slot, slotIndex) => (
-                    <div
-                      key={`${slot.courtId}-${slot.timeSlot}-${slotIndex}`}
-                      className="flex items-center justify-between rounded-xl border border-muted/60 bg-muted/15 px-4 py-3"
-                    >
-                      <div className="flex flex-col">
-                        {(() => {
-                          const range = getSlotDisplayRange(slot.timeSlot);
-                          return (
-                            <span className="text-sm font-medium">
-                              {range.start} - {range.end}
-                            </span>
-                          );
-                        })()}
+                <div className="space-y-2">
+                  {[...group.slots]
+                    .sort((a, b) => a.timeSlot.localeCompare(b.timeSlot))
+                    .map((slot, slotIndex) => (
+                      <div
+                        key={`${slot.courtId}-${slot.timeSlot}-${slotIndex}`}
+                        className="border-muted/60 bg-muted/15 flex items-center justify-between rounded-xl border px-4 py-3"
+                      >
+                        <div className="flex flex-col">
+                          {(() => {
+                            const range = getSlotDisplayRange(slot.timeSlot);
+                            return (
+                              <span className="text-sm font-medium">
+                                {range.start} - {range.end}
+                              </span>
+                            );
+                          })()}
+                        </div>
+                        <span className="text-foreground text-sm font-semibold">
+                          {formatCurrency(slot.price)}
+                        </span>
                       </div>
-                      <span className="text-sm font-semibold text-foreground">
-                        {formatCurrency(slot.price)}
-                      </span>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          ))}
-        </section>
-
-        <section className="grid gap-4">
-          <Button
-            variant="outline"
-            className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-primary/50 bg-primary/5 py-3 text-sm font-semibold text-primary transition-colors hover:bg-primary/10"
-            onClick={() => router.push('/add-ons')}
-          >
-            Tambah Add-Ons
-          </Button>
-
-          <div className="rounded-2xl border border-muted bg-white p-5 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {selectedPaymentMethod ? (
-                  resolveMediaUrl(selectedPaymentMethod.logo) ? (
-                  <Image
-                    src={resolveMediaUrl(selectedPaymentMethod.logo)!}
-                    alt={selectedPaymentMethod.name}
-                    width={48}
-                    height={48}
-                    className="h-12 w-12 rounded-md object-contain"
-                    unoptimized
-                  />
-                  ) : (
-                    <div className="flex h-12 w-12 items-center justify-center rounded-md bg-muted text-sm font-semibold text-muted-foreground">
-                      {selectedPaymentMethod.name.slice(0, 2).toUpperCase()}
-                    </div>
-                  )
-                ) : null}
-                <div>
-                  <p className="text-sm font-medium">
-                    {selectedPaymentMethod ? selectedPaymentMethod.name : 'Pilih Metode Pembayaran'}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {selectedPaymentMethod ? selectedPaymentMethod.channel : 'Klik untuk memilih metode pembayaran'}
-                  </p>
+                    ))}
                 </div>
               </div>
-              <Button variant="link" className="text-primary px-0" onClick={handlePaymentMethodClick}>
-                Ganti Metode
+            ))}
+          </section>
+
+          <section className="grid gap-4">
+            <Button
+              variant="outline"
+              className="border-primary/50 bg-primary/5 text-primary hover:bg-primary/10 flex items-center justify-center gap-2 rounded-2xl border border-dashed py-3 text-sm font-semibold transition-colors"
+              onClick={() => router.push('/add-ons')}
+            >
+              Tambah Add-Ons
+            </Button>
+
+            <div className="border-muted rounded-2xl border bg-white p-5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {selectedPaymentMethod ? (
+                    resolveMediaUrl(selectedPaymentMethod.logo) ? (
+                      <Image
+                        src={resolveMediaUrl(selectedPaymentMethod.logo)!}
+                        alt={selectedPaymentMethod.name}
+                        width={48}
+                        height={48}
+                        className="h-12 w-12 rounded-md object-contain"
+                        unoptimized
+                      />
+                    ) : (
+                      <div className="bg-muted text-muted-foreground flex h-12 w-12 items-center justify-center rounded-md text-sm font-semibold">
+                        {selectedPaymentMethod.name.slice(0, 2).toUpperCase()}
+                      </div>
+                    )
+                  ) : null}
+                  <div>
+                    <p className="text-sm font-medium">
+                      {selectedPaymentMethod
+                        ? selectedPaymentMethod.name
+                        : 'Pilih Metode Pembayaran'}
+                    </p>
+                    <p className="text-muted-foreground text-xs">
+                      {selectedPaymentMethod
+                        ? selectedPaymentMethod.channel
+                        : 'Klik untuk memilih metode pembayaran'}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="link"
+                  className="text-primary px-0"
+                  onClick={handlePaymentMethodClick}
+                >
+                  Ganti Metode
+                </Button>
+              </div>
+            </div>
+
+            <div className="border-muted rounded-2xl border bg-white p-5 shadow-sm">
+              <h3 className="mb-3 text-base font-semibold">Ringkasan Pembayaran</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Booking Court</span>
+                  <span className="text-foreground font-medium">{formatCurrency(courtTotal)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Biaya Add Ons</span>
+                  <span className="text-foreground font-medium">{formatCurrency(addOnsTotal)}</span>
+                </div>
+                {selectedPaymentMethod ? (
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Biaya Proses (Tetap)</span>
+                      <span className="text-foreground font-medium">
+                        {formatCurrency(paymentFeeBreakdown.fixedFee)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">
+                        Biaya Proses (
+                        {paymentFeeBreakdown.percentageRate.toFixed(2).replace(/\.00$/, '')}%)
+                      </span>
+                      <span className="text-foreground font-medium">
+                        {formatCurrency(paymentFeeBreakdown.percentageFee)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Total Biaya Aplikasi</span>
+                      <span className="text-foreground font-semibold">
+                        {formatCurrency(paymentFeeBreakdown.totalFee)}
+                      </span>
+                    </div>
+                  </div>
+                ) : null}
+                <div className="border-muted flex items-center justify-between border-t border-dashed pt-2 text-base font-semibold">
+                  <span>Total</span>
+                  <span className="text-primary">{formatCurrency(totalWithPaymentFee)}</span>
+                </div>
+              </div>
+            </div>
+          </section>
+        </main>
+
+        <footer className="border-muted fixed inset-x-0 bottom-0 border-t bg-white shadow-lg">
+          <div className="mx-auto w-11/12 max-w-4xl py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-muted-foreground text-xs">Sub total</p>
+                <p className="text-primary text-lg font-semibold">
+                  {formatCurrency(totalWithPaymentFee)}
+                </p>
+              </div>
+              <Button
+                size="lg"
+                className="min-w-[160px]"
+                onClick={handleCheckout}
+                disabled={(!selectedPaymentMethod || checkoutMutation.isPending) && isAuthenticated}
+              >
+                {isUserPending
+                  ? 'Memuat...'
+                  : !isAuthenticated
+                    ? 'Login untuk Checkout'
+                    : checkoutMutation.isPending
+                      ? 'Memproses...'
+                      : selectedPaymentMethod
+                        ? 'Lanjutkan Pembayaran'
+                        : 'Pilih Metode'}
               </Button>
             </div>
           </div>
+        </footer>
 
-          <div className="rounded-2xl border border-muted bg-white p-5 shadow-sm">
-            <h3 className="text-base font-semibold mb-3">Ringkasan Pembayaran</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Booking Court</span>
-                <span className="font-medium text-foreground">{formatCurrency(courtTotal)}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Biaya Add Ons</span>
-                <span className="font-medium text-foreground">{formatCurrency(addOnsTotal)}</span>
-              </div>
-              {selectedPaymentMethod ? (
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Biaya Proses (Tetap)</span>
-                    <span className="font-medium text-foreground">{formatCurrency(paymentFeeBreakdown.fixedFee)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">
-                      Biaya Proses ({paymentFeeBreakdown.percentageRate.toFixed(2).replace(/\.00$/, '')}%)
-                    </span>
-                    <span className="font-medium text-foreground">{formatCurrency(paymentFeeBreakdown.percentageFee)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Total Biaya Aplikasi</span>
-                    <span className="font-semibold text-foreground">{formatCurrency(paymentFeeBreakdown.totalFee)}</span>
-                  </div>
+        <Dialog open={isPaymentModalOpen} onOpenChange={setPaymentModalOpen}>
+          <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Pilih Metode Pembayaran</DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-3">
+              {isLoadingPaymentMethods ? (
+                <div className="text-muted-foreground py-6 text-center text-sm">
+                  Memuat metode pembayaran...
                 </div>
-              ) : null}
-              <div className="flex items-center justify-between border-t border-dashed border-muted pt-2 text-base font-semibold">
-                <span>Total</span>
-                <span className="text-primary">{formatCurrency(totalWithPaymentFee)}</span>
-              </div>
-            </div>
-          </div>
-        </section>
-      </main>
+              ) : paymentMethods.length === 0 ? (
+                <div className="text-muted-foreground py-6 text-center text-sm">
+                  Tidak ada metode pembayaran tersedia
+                </div>
+              ) : (
+                paymentMethods.map((method) => {
+                  const percentage = Number(method.percentage ?? 0);
+                  const baseFee = Number.isFinite(method.fees) ? method.fees : 0;
+                  const feesValue = Math.round(baseFee + (grandTotal * percentage) / 100);
+                  const totalWithFees = grandTotal + feesValue;
+                  const isSelected = selectedPaymentMethod?.id === method.id;
 
-      <footer className="fixed inset-x-0 bottom-0 border-t border-muted bg-white shadow-lg">
-        <div className="mx-auto w-11/12 max-w-4xl py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground">Sub total</p>
-              <p className="text-lg font-semibold text-primary">{formatCurrency(totalWithPaymentFee)}</p>
-            </div>
-            <Button
-              size="lg"
-              className="min-w-[160px]"
-              onClick={handleCheckout}
-              disabled={(!selectedPaymentMethod || checkoutMutation.isPending) && isAuthenticated}
-            >
-              {isUserPending 
-                ? 'Memuat...' 
-                : !isAuthenticated 
-                  ? 'Login untuk Checkout' 
-                  : checkoutMutation.isPending 
-                    ? 'Memproses...' 
-                    : selectedPaymentMethod 
-                      ? 'Lanjutkan Pembayaran' 
-                      : 'Pilih Metode'}
-            </Button>
-          </div>
-        </div>
-      </footer>
-
-      <Dialog open={isPaymentModalOpen} onOpenChange={setPaymentModalOpen}>
-        <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Pilih Metode Pembayaran</DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-3">
-            {isLoadingPaymentMethods ? (
-              <div className="py-6 text-center text-sm text-muted-foreground">Memuat metode pembayaran...</div>
-            ) : paymentMethods.length === 0 ? (
-              <div className="py-6 text-center text-sm text-muted-foreground">
-                Tidak ada metode pembayaran tersedia
-              </div>
-            ) : (
-              paymentMethods.map((method) => {
-                const percentage = Number(method.percentage ?? 0);
-                const baseFee = Number.isFinite(method.fees) ? method.fees : 0;
-                const feesValue = Math.round(baseFee + (grandTotal * percentage) / 100);
-                const totalWithFees = grandTotal + feesValue;
-                const isSelected = selectedPaymentMethod?.id === method.id;
-
-                return (
-                  <button
-                    key={method.id}
-                    className={cn(
-                      'flex w-full items-center justify-between gap-4 rounded-xl border px-4 py-3 text-left transition-colors',
-                      isSelected ? 'border-primary bg-primary/5' : 'border-muted hover:border-primary/60'
-                    )}
-                    onClick={() => handleSelectPaymentMethod(method)}
-                  >
-                    <div className="flex items-center gap-3">
-                      {resolveMediaUrl(method.logo) ? (
-                        <Image
-                          src={resolveMediaUrl(method.logo)!}
-                          alt={method.name}
-                          width={48}
-                          height={48}
-                          className="h-12 w-12 rounded-md object-contain"
-                          unoptimized
-                        />
-                      ) : (
-                        <div className="flex h-12 w-12 items-center justify-center rounded-md bg-muted text-sm font-semibold text-muted-foreground">
-                          {method.name.slice(0, 2).toUpperCase()}
-                        </div>
-                      )}
-                      <div>
-                        <p className="text-sm font-semibold text-foreground">{method.name}</p>
-                        <p className="text-xs text-muted-foreground uppercase">{method.channel}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Biaya proses {formatCurrency(feesValue)} • Total {formatCurrency(totalWithFees)}
-                        </p>
-                      </div>
-                    </div>
-                    <div
+                  return (
+                    <button
+                      key={method.id}
                       className={cn(
-                        'flex h-5 w-5 items-center justify-center rounded-full border',
-                        isSelected ? 'border-primary bg-primary' : 'border-muted'
+                        'flex w-full items-center justify-between gap-4 rounded-xl border px-4 py-3 text-left transition-colors',
+                        isSelected
+                          ? 'border-primary bg-primary/5'
+                          : 'border-muted hover:border-primary/60'
                       )}
+                      onClick={() => handleSelectPaymentMethod(method)}
                     >
-                      {isSelected ? <span className="h-2.5 w-2.5 rounded-full bg-white" /> : null}
-                    </div>
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+                      <div className="flex items-center gap-3">
+                        {resolveMediaUrl(method.logo) ? (
+                          <Image
+                            src={resolveMediaUrl(method.logo)!}
+                            alt={method.name}
+                            width={48}
+                            height={48}
+                            className="h-12 w-12 rounded-md object-contain"
+                            unoptimized
+                          />
+                        ) : (
+                          <div className="bg-muted text-muted-foreground flex h-12 w-12 items-center justify-center rounded-md text-sm font-semibold">
+                            {method.name.slice(0, 2).toUpperCase()}
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-foreground text-sm font-semibold">{method.name}</p>
+                          <p className="text-muted-foreground text-xs uppercase">
+                            {method.channel}
+                          </p>
+                          <p className="text-muted-foreground mt-1 text-xs">
+                            Biaya proses {formatCurrency(feesValue)} • Total{' '}
+                            {formatCurrency(totalWithFees)}
+                          </p>
+                        </div>
+                      </div>
+                      <div
+                        className={cn(
+                          'flex h-5 w-5 items-center justify-center rounded-full border',
+                          isSelected ? 'border-primary bg-primary' : 'border-muted'
+                        )}
+                      >
+                        {isSelected ? <span className="h-2.5 w-2.5 rounded-full bg-white" /> : null}
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
     </>
   );
 };
