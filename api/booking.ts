@@ -18,3 +18,8 @@ export async function getBookingsApi(queryParams: Record<string, any> = {}) {
   return data;
 }
 
+export async function checkoutApi(payload: any) {
+  const { data } = await api.post('/checkout', payload);
+  return data;
+}
+

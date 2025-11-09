@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
 export interface BookingItem {
+  slotId: string;
   courtId: string;
   courtName: string;
   timeSlot: string;

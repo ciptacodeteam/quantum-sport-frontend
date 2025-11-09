@@ -17,9 +17,12 @@ import { cn } from '@/lib/utils';
 import { resolveMediaUrl } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { paymentMethodsQueryOptions } from '@/queries/paymentMethod';
 import type { PaymentMethod } from '@/types/model';
+import { checkoutMutationOptions } from '@/mutations/booking';
+import AuthModal from '@/components/modals/AuthModal';
+import { profileQueryOptions } from '@/queries/profile';
 
 const currencyFormatter = new Intl.NumberFormat('id-ID', {
   style: 'currency',
@@ -69,6 +72,11 @@ const CheckoutPage = () => {
   const addOnsTotal = coachTotal + inventoryTotal;
   const grandTotal = courtTotal + addOnsTotal;
 
+  // Authentication check
+  const { data: user, isPending: isUserPending } = useQuery(profileQueryOptions);
+  const [openAuthModal, setOpenAuthModal] = useState(false);
+  const isAuthenticated = !!user?.id;
+
   const {
     data: paymentMethods = [],
     isPending: isLoadingPaymentMethods,
@@ -76,6 +84,51 @@ const CheckoutPage = () => {
 
   const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
+
+  const checkoutMutation = useMutation(checkoutMutationOptions({
+    onSuccess: (data) => {
+      // Enhance checkout data with payment method info and court details for display
+      const enhancedData = {
+        ...data,
+        paymentMethod: selectedPaymentMethod ? {
+          id: selectedPaymentMethod.id,
+          name: selectedPaymentMethod.name,
+          channel: selectedPaymentMethod.channel,
+          logo: selectedPaymentMethod.logo,
+        } : undefined,
+        // Store full court slot details for the payment detail page display
+        courtSlots: bookingItems.map(item => ({
+          courtId: item.courtId,
+          courtName: item.courtName,
+          timeSlot: item.timeSlot,
+          date: item.date,
+          price: item.price,
+        })),
+        breakdown: data.breakdown || {
+          courtTotal,
+          addOnsTotal,
+          processingFee: paymentFeeBreakdown.totalFee,
+          total: totalWithPaymentFee,
+        },
+      };
+      
+      // Store enhanced checkout data
+      sessionStorage.setItem('checkoutData', JSON.stringify(enhancedData));
+      
+      // Clear booking store after successful checkout
+      // useBookingStore.getState().clearAll();
+      
+      // Redirect to payment detail page
+      router.push('/checkout/payment');
+    }
+  }));
+
+  // Show login modal if user is not authenticated and has items in cart
+  useEffect(() => {
+    if (!isUserPending && !isAuthenticated && bookingItems.length > 0) {
+      setOpenAuthModal(true);
+    }
+  }, [isUserPending, isAuthenticated, bookingItems.length]);
 
   useEffect(() => {
     if (paymentMethods.length === 0) return;
@@ -150,16 +203,20 @@ const CheckoutPage = () => {
 
   if (bookingItems.length === 0) {
     return (
-      <div className="min-h-screen bg-background">
-        <MainHeader title="Detail Pembayaran" backHref="/booking" withCartBadge withLogo={false} />
-        <main className="flex min-h-[calc(100vh-96px)] flex-col items-center justify-center gap-4 px-6 text-center">
-          <h1 className="text-xl font-semibold">Tidak ada pesanan</h1>
-          <p className="text-sm text-muted-foreground">
-            Tambahkan slot booking terlebih dahulu untuk melihat ringkasan pembayaran.
-          </p>
-          <Button onClick={() => router.push('/booking')}>Kembali ke Booking</Button>
-        </main>
-      </div>
+      <>
+        <AuthModal open={openAuthModal} onOpenChange={setOpenAuthModal} />
+        
+        <div className="min-h-screen bg-background">
+          <MainHeader title="Detail Pembayaran" backHref="/booking" withCartBadge withLogo={false} />
+          <main className="flex min-h-[calc(100vh-96px)] flex-col items-center justify-center gap-4 px-6 text-center">
+            <h1 className="text-xl font-semibold">Tidak ada pesanan</h1>
+            <p className="text-sm text-muted-foreground">
+              Tambahkan slot booking terlebih dahulu untuk melihat ringkasan pembayaran.
+            </p>
+            <Button onClick={() => router.push('/booking')}>Kembali ke Booking</Button>
+          </main>
+        </div>
+      </>
     );
   }
 
@@ -172,9 +229,49 @@ const CheckoutPage = () => {
     setPaymentModalOpen(false);
   };
 
+  const handleCheckout = () => {
+    // Check authentication first
+    if (!isAuthenticated) {
+      setOpenAuthModal(true);
+      return;
+    }
+
+    if (!selectedPaymentMethod) {
+      return;
+    }
+
+    // Get add-ons from store
+    const selectedCoaches = useBookingStore.getState().selectedCoaches;
+    const selectedInventories = useBookingStore.getState().selectedInventories;
+
+    // Prepare court slots data - send only slot IDs as per API requirement
+    const courtSlots = bookingItems.map(item => item.slotId);
+
+    // Prepare payload with additional information for the backend
+    const payload: any = {
+      paymentMethodId: selectedPaymentMethod.id,
+      courtSlots,
+    };
+
+    // Add coaches if any
+    if (selectedCoaches.length > 0) {
+      payload.coaches = selectedCoaches;
+    }
+
+    // Add inventories if any
+    if (selectedInventories.length > 0) {
+      payload.inventories = selectedInventories;
+    }
+
+    checkoutMutation.mutate(payload);
+  };
+
   return (
-    <div className="min-h-screen bg-muted/20 pb-28">
-      <MainHeader title="Detail Pembayaran" backHref="/booking" withCartBadge withLogo={false} />
+    <>
+      <AuthModal open={openAuthModal} onOpenChange={setOpenAuthModal} />
+      
+      <div className="min-h-screen bg-muted/20 pb-28">
+        <MainHeader title="Detail Pembayaran" backHref="/booking" withCartBadge withLogo={false} />
 
       <main className="mx-auto flex w-11/12 max-w-4xl flex-col gap-6 pt-24 pb-28">
         <section className="space-y-4 rounded-2xl border border-muted bg-white p-5 shadow-sm">
@@ -304,10 +401,18 @@ const CheckoutPage = () => {
             <Button
               size="lg"
               className="min-w-[160px]"
-              onClick={() => router.push('/checkout/confirm')}
-              disabled={!selectedPaymentMethod}
+              onClick={handleCheckout}
+              disabled={(!selectedPaymentMethod || checkoutMutation.isPending) && isAuthenticated}
             >
-              {selectedPaymentMethod ? 'Selanjutnya' : 'Pilih Metode'}
+              {isUserPending 
+                ? 'Memuat...' 
+                : !isAuthenticated 
+                  ? 'Login untuk Checkout' 
+                  : checkoutMutation.isPending 
+                    ? 'Memproses...' 
+                    : selectedPaymentMethod 
+                      ? 'Lanjutkan Pembayaran' 
+                      : 'Pilih Metode'}
             </Button>
           </div>
         </div>
@@ -382,6 +487,7 @@ const CheckoutPage = () => {
         </DialogContent>
       </Dialog>
     </div>
+    </>
   );
 };
 

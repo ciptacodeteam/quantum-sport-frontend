@@ -32,15 +32,17 @@ const MainHeader = ({
   withCartBadge
 }: Props) => {
   const [openAuthModal, setOpenAuthModal] = useState(false);
-  const { isPending: isUserPending } = useQuery(profileQueryOptions);
+  const { data: user, isPending: isUserPending } = useQuery(profileQueryOptions);
   const pathname = usePathname();
 
   const isBeranda = pathname === '/';
+  const isAuthenticated = !!user?.id;
+
   const navItems = [
     { title: 'Beranda', path: '/' },
     { title: 'Pemesanan', path: '/activities' },
     { title: 'Riwayat', path: '/sports' },
-    { title: 'Profil', path: '/profile' },
+    { title: 'Profil', path: '/profile', requiresAuth: true },
   ];
 
   return (
@@ -91,18 +93,37 @@ const MainHeader = ({
             <div className="flex items-center justify-end gap-6 ml-auto">
               {/* Menu navigasi (desktop only) */}
               <div className="hidden lg:flex items-center gap-8">
-                {navItems.map((item) => (
-                  <Link
-                    key={item.path}
-                    href={item.path}
-                    className={cn(
-                      'text-gray-600 hover:text-primary transition-colors',
-                      pathname === item.path && 'text-primary font-medium'
-                    )}
-                  >
-                    {item.title}
-                  </Link>
-                ))}
+                {navItems.map((item) => {
+                  const requiresAuth = item.requiresAuth ?? false;
+                  
+                  if (requiresAuth && !isAuthenticated) {
+                    return (
+                      <button
+                        key={item.path}
+                        onClick={() => setOpenAuthModal(true)}
+                        className={cn(
+                          'text-gray-600 hover:text-primary transition-colors',
+                          pathname === item.path && 'text-primary font-medium'
+                        )}
+                      >
+                        {item.title}
+                      </button>
+                    );
+                  }
+                  
+                  return (
+                    <Link
+                      key={item.path}
+                      href={item.path}
+                      className={cn(
+                        'text-gray-600 hover:text-primary transition-colors',
+                        pathname === item.path && 'text-primary font-medium'
+                      )}
+                    >
+                      {item.title}
+                    </Link>
+                  );
+                })}
               </div>
 
               {/* Icon notifikasi & cart */}
