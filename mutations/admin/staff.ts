@@ -1,4 +1,5 @@
 import {
+  createCoachCostApi,
   createStaffApi,
   resetStaffPasswordApi,
   revokeStaffSessionApi,
@@ -66,6 +67,23 @@ export const adminRevokeStaffSessionMutationOptions = ({
     onError: (error) => {
       console.error('Error:', error);
       toast.error(error.msg || 'Gagal mencabut session. Silakan coba lagi.');
+      onError?.(error);
+    }
+  });
+
+export const adminCreateCoachCostMutationOptions = ({
+  onSuccess,
+  onError
+}: MutationFuncProps = {}) =>
+  mutationOptions({
+    mutationFn: createCoachCostApi,
+    onSuccess: (data) => {
+      toast.success('Data berhasil disimpan!');
+      onSuccess?.(data);
+    },
+    onError: (error) => {
+      console.error('Error:', error);
+      toast.error(error.msg || 'Gagal menyimpan data. Silakan coba lagi.');
       onError?.(error);
     }
   });

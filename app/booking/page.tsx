@@ -40,6 +40,26 @@ type SelectedCell = {
   courtName: string;
   time: string;
   price: number;
+  dateKey: string;
+};
+
+const normalizeDateKey = (value: string) => {
+  const iso = dayjs(value, 'YYYY-MM-DD', true);
+  if (iso.isValid()) {
+    return iso.format('YYYY-MM-DD');
+  }
+
+  const display = dayjs(value, 'DD MMM', true);
+  if (display.isValid()) {
+    return display.year(dayjs().year()).format('YYYY-MM-DD');
+  }
+
+  const parsed = dayjs(value);
+  if (parsed.isValid()) {
+    return parsed.format('YYYY-MM-DD');
+  }
+
+  return dayjs().format('YYYY-MM-DD');
 };
 
 const BookingPage = () => {
@@ -51,18 +71,19 @@ const BookingPage = () => {
     setCartOpen,
   } = useBookingStore();
 
-  const [selectedDate, setSelectedDate] = useState(dayjs().format('DD MMM'));
-  const [selectedCell, setSelectedCell] = useState<SelectedCell[]>([]);
+  const [selectedDate, setSelectedDate] = useState(dayjs().format('YYYY-MM-DD'));
   const [dateList, setDateList] = useState<
     { label: string; date: string; fullDate: string; active?: boolean }[]
   >([]);
   // Store selections per date to preserve them when switching dates
   const [selectionsByDate, setSelectionsByDate] = useState<Record<string, SelectedCell[]>>({});
-  const previousDateRef = useRef<string>(selectedDate);
-  const selectedCellRef = useRef<SelectedCell[]>(selectedCell);
   const previousBookingItemsCountRef = useRef(bookingItems.length);
   const hasHydratedFromStoreRef = useRef(false);
   const skipStoreSyncRef = useRef(true);
+  const selectedCells = useMemo(
+    () => selectionsByDate[selectedDate] ?? [],
+    [selectionsByDate, selectedDate]
+  );
   const [selectedCourt, setSelectedCourt] = useState<null | {
     id: string;
     name: string;
@@ -72,10 +93,10 @@ const BookingPage = () => {
   const { mutate: createBooking, isPending } = useMutation(createBookingMutationOptions());
 
   const activeDate = useMemo(
-    () => dateList.find((item) => item.date === selectedDate),
+    () => dateList.find((item) => item.fullDate === selectedDate),
     [dateList, selectedDate]
   );
-  const selectedFullDate = activeDate?.fullDate ?? dayjs().format('YYYY-MM-DD');
+  const selectedFullDate = activeDate?.fullDate ?? selectedDate;
 
   const slotQueryParams = useMemo(
     () => ({
@@ -131,6 +152,8 @@ const BookingPage = () => {
 
   // Hydrate local selections from persisted booking items on initial load
   useEffect(() => {
+    if (hasHydratedFromStoreRef.current) return;
+
     const hydrateFromState = () => {
       const state = useBookingStore.getState();
       const items = state.bookingItems;
@@ -139,43 +162,36 @@ const BookingPage = () => {
         hasHydratedFromStoreRef.current = true;
         skipStoreSyncRef.current = false;
         previousBookingItemsCountRef.current = 0;
-        selectedCellRef.current = [];
         setSelectionsByDate({});
-        setSelectedCell([]);
         return;
       }
 
       const hydratedSelections: Record<string, SelectedCell[]> = {};
       items.forEach((item) => {
-        if (!hydratedSelections[item.date]) {
-          hydratedSelections[item.date] = [];
+        const dateKey = normalizeDateKey(item.date);
+        if (!hydratedSelections[dateKey]) {
+          hydratedSelections[dateKey] = [];
         }
-        hydratedSelections[item.date].push({
+        hydratedSelections[dateKey].push({
           slotId: `${item.courtId}-${item.timeSlot}`,
           courtId: item.courtId,
           courtName: item.courtName,
           time: item.timeSlot,
           price: item.price,
+          dateKey,
         });
       });
 
       setSelectionsByDate(hydratedSelections);
 
-      let targetDate = selectedDate;
-      if (!hydratedSelections[targetDate]?.length) {
-        const availableDates = Object.keys(hydratedSelections);
+      if (!hydratedSelections[selectedDate]?.length) {
+        const availableDates = Object.keys(hydratedSelections).sort();
         if (availableDates.length > 0) {
-          targetDate = availableDates[0];
-          setSelectedDate(targetDate);
+          setSelectedDate(availableDates[0]);
         }
       }
 
-      const targetCells = hydratedSelections[targetDate] ?? [];
-      setSelectedCell(targetCells);
-      selectedCellRef.current = targetCells;
-      previousDateRef.current = targetDate;
       previousBookingItemsCountRef.current = items.length;
-
       hasHydratedFromStoreRef.current = true;
       skipStoreSyncRef.current = false;
     };
@@ -192,92 +208,65 @@ const BookingPage = () => {
       finishHydrationHandler?.();
     };
   }, [selectedDate, setSelectedDate]);
-
-  // Keep ref updated with latest selectedCell and date
-  useEffect(() => {
-    selectedCellRef.current = selectedCell;
-  }, [selectedCell]);
   
-  // Save selections for the current date whenever they change (but not when date changes)
   useEffect(() => {
-    const currentDateRef = previousDateRef.current;
-    if (currentDateRef === selectedDate) {
-      setSelectionsByDate((prev) => ({
-        ...prev,
-        [selectedDate]: selectedCell,
-      }));
-    }
-  }, [selectedCell, selectedDate]);
-  
-  // When date changes, save old selections and restore new selections
-  useEffect(() => {
-    const previousDate = previousDateRef.current;
-    
-    if (previousDate !== selectedDate) {
-      // Save selections for the previous date
-      setSelectionsByDate((prev) => ({
-        ...prev,
-        [previousDate]: selectedCellRef.current,
-      }));
-      
-      // Restore selections for the new date
-      const savedSelections = selectionsByDate[selectedDate] || [];
-      setSelectedCell(savedSelections);
-      
-      // Update ref to current date
-      previousDateRef.current = selectedDate;
-    }
-  }, [selectedDate, selectionsByDate]);
+    setSelectionsByDate((prev) => {
+      const currentSelections = prev[selectedDate];
+      if (!currentSelections) return prev;
 
-  useEffect(() => {
-    setSelectedCell((prev) =>
-      prev.filter((cell) => {
+      const filtered = currentSelections.filter((cell) => {
         const slot = slotMap.get(`${cell.courtId}-${cell.time}`);
         return !!slot && slot.isAvailable;
-      })
-    );
-  }, [slotMap]);
+      });
+
+      if (filtered.length === currentSelections.length) {
+        return prev;
+      }
+
+      const next = { ...prev };
+      if (filtered.length > 0) {
+        next[selectedDate] = filtered;
+      } else {
+        delete next[selectedDate];
+      }
+      return next;
+    });
+  }, [slotMap, selectedDate]);
   
   // Sync deletions from CartSheet back to local selections
   useEffect(() => {
     const previousCount = previousBookingItemsCountRef.current;
     const currentCount = bookingItems.length;
-    
-    // Only sync when items are deleted (count decreased) and we have previous selections
-    if (currentCount < previousCount && Object.keys(selectionsByDate).length > 0) {
-      // Create a map of existing booking items for quick lookup
-      const bookingItemsMap = new Map(
-        bookingItems.map(item => [`${item.courtId}-${item.timeSlot}-${item.date}`, true])
+
+    if (currentCount < previousCount) {
+      const existingKeys = new Set(
+        bookingItems.map((item) => `${item.courtId}-${item.timeSlot}-${normalizeDateKey(item.date)}`)
       );
-      
-      // Update selectionsByDate to remove deleted items
-      const updatedSelectionsByDate: Record<string, SelectedCell[]> = {};
-      let hasChanges = false;
-      
-      Object.entries(selectionsByDate).forEach(([date, cells]) => {
-        const filteredCells = cells.filter(cell => 
-          bookingItemsMap.has(`${cell.courtId}-${cell.time}-${date}`)
-        );
-        if (filteredCells.length !== cells.length) {
-          hasChanges = true;
-        }
-        if (filteredCells.length > 0) {
-          updatedSelectionsByDate[date] = filteredCells;
-        }
+
+      setSelectionsByDate((prev) => {
+        let hasChanges = false;
+        const next: Record<string, SelectedCell[]> = {};
+
+        Object.entries(prev).forEach(([date, cells]) => {
+          const filtered = cells.filter((cell) =>
+            existingKeys.has(`${cell.courtId}-${cell.time}-${date}`)
+          );
+
+          if (filtered.length > 0) {
+            next[date] = filtered;
+          }
+
+          if (filtered.length !== cells.length) {
+            hasChanges = true;
+          }
+        });
+
+        return hasChanges ? next : prev;
       });
-      
-      // Only update if there are actual changes
-      if (hasChanges) {
-        setSelectionsByDate(updatedSelectionsByDate);
-        
-        // Update selectedCell for current date
-        const currentDateCells = updatedSelectionsByDate[selectedDate] || [];
-        setSelectedCell(currentDateCells);
-      }
     }
-    
+
     previousBookingItemsCountRef.current = currentCount;
-  }, [bookingItems.length, bookingItems, selectionsByDate, selectedDate]);
+  }, [bookingItems]);
 
   // Update booking items from all dates (not just current date)
   useEffect(() => {
@@ -285,40 +274,28 @@ const BookingPage = () => {
       return;
     }
 
-    // Combine selections from all dates
     const allSelections: BookingItem[] = [];
-    
-    // Add current date selections
-    selectedCell.forEach((cell) => {
-      allSelections.push({
-        courtId: cell.courtId,
-        courtName: cell.courtName,
-        timeSlot: cell.time,
-        price: cell.price,
-        date: selectedDate,
-        endTime: dayjs(cell.time, 'HH:mm').add(1, 'hour').format('HH:mm'),
+
+    Object.entries(selectionsByDate).forEach(([date, cells]) => {
+      cells.forEach((cell) => {
+        allSelections.push({
+          courtId: cell.courtId,
+          courtName: cell.courtName,
+          timeSlot: cell.time,
+          price: cell.price,
+          date,
+          endTime: dayjs(cell.time, 'HH:mm').add(1, 'hour').format('HH:mm'),
+        });
       });
     });
-    
-    // Add selections from other dates
-    Object.entries(selectionsByDate).forEach(([date, cells]) => {
-      if (date !== selectedDate) {
-        cells.forEach((cell) => {
-          allSelections.push({
-            courtId: cell.courtId,
-            courtName: cell.courtName,
-            timeSlot: cell.time,
-            price: cell.price,
-            date: date,
-            endTime: dayjs(cell.time, 'HH:mm').add(1, 'hour').format('HH:mm'),
-          });
-        });
-      }
-    });
+
+    if (allSelections.length === 0 && bookingItems.length > 0) {
+      return;
+    }
 
     setBookingItems(allSelections);
     setBookingDate(dayjs(selectedFullDate).toDate());
-  }, [selectedCell, selectedDate, selectedFullDate, setBookingItems, setBookingDate, selectionsByDate]);
+  }, [selectionsByDate, selectedFullDate, setBookingItems, setBookingDate, bookingItems.length]);
 
   useEffect(() => {
     const today = dayjs();
@@ -346,10 +323,10 @@ const BookingPage = () => {
 
   const handleSelectDate = (date: Date | null) => {
     if (!date) return;
-    const formattedDate = dayjs(date).format('DD MMM');
+    const formattedDate = dayjs(date).format('YYYY-MM-DD');
     setSelectedDate(formattedDate);
 
-    const el = document.getElementById(`date-${dayjs(date).format('YYYY-MM-DD')}`);
+    const el = document.getElementById(`date-${formattedDate}`);
     if (el) el.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
   };
 
@@ -388,11 +365,11 @@ const BookingPage = () => {
                   key={d.fullDate}
                   className={cn(
                     'flex flex-col items-center justify-center min-w-14 h-14 rounded px-2 py-1 font-semibold transition-colors',
-                    selectedDate === d.date
+                    selectedDate === d.fullDate
                       ? 'bg-primary text-white'
                       : 'hover:bg-muted text-black'
                   )}
-                  onClick={() => setSelectedDate(d.date)}
+                  onClick={() => setSelectedDate(d.fullDate)}
                 >
                   <span className="text-xs font-normal">{d.label}</span>
                   <div className="flex mt-0.5">
@@ -449,7 +426,7 @@ const BookingPage = () => {
                       const hasSlot = !!slot;
                       const isAvailable = !!slot?.isAvailable;
                       const selected = slot
-                        ? selectedCell.some((cell) => cell.slotId === slot.id)
+                        ? selectedCells.some((cell) => cell.slotId === slot.id)
                         : false;
                       return (
                         <td key={court.name} className="border border-gray-200 p-1">
@@ -467,22 +444,37 @@ const BookingPage = () => {
                             )}
                             onClick={() => {
                               if (!slot || !isAvailable) return;
-                              if (selected) {
-                                setSelectedCell(
-                                  selectedCell.filter((cell) => cell.slotId !== slot.id)
-                                );
-                              } else {
-                                setSelectedCell([
-                                  ...selectedCell,
-                                  {
-                                    slotId: slot.id,
-                                    courtId: court.id,
-                                    courtName: court.name,
-                                    time,
-                                    price: slot.price ?? 0,
-                                  },
-                                ]);
-                              }
+                              setSelectionsByDate((prev) => {
+                                const dateKey = selectedDate;
+                                const currentSelections = prev[dateKey] ?? [];
+                                const exists = currentSelections.some((cell) => cell.slotId === slot.id);
+
+                                let updatedSelections: SelectedCell[];
+                                if (exists) {
+                                  updatedSelections = currentSelections.filter((cell) => cell.slotId !== slot.id);
+                                } else {
+                                  updatedSelections = [
+                                    ...currentSelections,
+                                    {
+                                      slotId: slot.id,
+                                      courtId: court.id,
+                                      courtName: court.name,
+                                      time,
+                                      price: slot.price ?? 0,
+                                      dateKey,
+                                    },
+                                  ];
+                                }
+
+                                const next = { ...prev };
+                                if (updatedSelections.length > 0) {
+                                  next[dateKey] = updatedSelections;
+                                } else {
+                                  delete next[dateKey];
+                                }
+
+                                return next;
+                              });
                             }}
                           >
                             {hasSlot ? (

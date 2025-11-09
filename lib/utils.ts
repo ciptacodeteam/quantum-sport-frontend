@@ -140,3 +140,18 @@ export function truncateText(text: string, maxLength: number): string {
 export function capitalizeWords(str: string): string {
   return str.replace(/\b\w/g, (char) => char.toUpperCase());
 }
+
+export function resolveMediaUrl(path: string | null | undefined): string | null {
+  if (!path) return null;
+
+  if (/^https?:\/\//i.test(path)) {
+    return path;
+  }
+
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? '';
+  if (!baseUrl) return path;
+
+  const normalizedBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+  const normalizedPath = path.startsWith('/') ? path.slice(1) : path;
+  return `${normalizedBase}/${normalizedPath}`;
+}

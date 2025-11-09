@@ -14,6 +14,13 @@ export async function getStaffApi(id: string) {
   return data;
 }
 
+export async function getCoachCostingApi(id: string, queryParams?: SearchParamsData) {
+  const url = `/staffs/${id}/costing`;
+  const mergedUrl = mergedQueryParamUrl(url, queryParams);
+  const { data } = await adminApi.get(mergedUrl);
+  return data;
+}
+
 export async function updateStaffApi(payload: UpdateMutationPayload) {
   const { data } = await adminApi.put(`/staffs/${payload.id}`, payload.data, {
     headers: { 'Content-Type': 'multipart/form-data' }
@@ -35,5 +42,10 @@ export async function resetStaffPasswordApi(id: string) {
 
 export async function revokeStaffSessionApi(id: string) {
   const { data } = await adminApi.post(`/staffs/${id}/revoke-sessions`);
+  return data;
+}
+
+export async function createCoachCostApi(payload: CreateMutationPayload) {
+  const { data } = await adminApi.post('/coach-costs', payload);
   return data;
 }
