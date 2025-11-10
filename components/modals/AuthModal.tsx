@@ -1,25 +1,23 @@
 import { profileQueryOptions } from '@/queries/profile';
 import { usePhoneStore } from '@/stores/usePhoneStore';
 import { useRegisterStore } from '@/stores/useRegisterStore';
+import useAuthModalStore from '@/stores/useAuthModalStore';
 import { useQuery } from '@tanstack/react-query';
-import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
 import LoginForm from '../forms/auth/LoginForm';
 import RegisterForm from '../forms/auth/RegisterForm';
 import ResetPasswordForm from '../forms/auth/ResetPasswordForm';
 import VerifyPhoneOtpForm from '../forms/auth/VerifyPhoneOtpForm';
 import { Dialog, DialogContent } from '../ui/dialog';
 
-type Props = {
-  open?: boolean;
-  onOpenChange: (open: boolean) => void;
-};
-
-const AuthModal = ({ open = false, onOpenChange }: Props) => {
+const AuthModal = () => {
   const { data: user, isPending: isUserPending } = useQuery(profileQueryOptions);
 
   const searchParams = useSearchParams();
   const requireLogin = searchParams.get('requireLogin');
+  const router = useRouter();
+  const pathname = usePathname();
 
   const [otpOpen, setOtpOpen] = useState(false);
   const [registerOpen, setRegisterOpen] = useState(false);
@@ -30,24 +28,47 @@ const AuthModal = ({ open = false, onOpenChange }: Props) => {
   const setPhone = usePhoneStore((state) => state.setPhone);
   const setRequestId = usePhoneStore((state) => state.setRequestId);
   const clearRegisterData = useRegisterStore((state) => state.clear);
+  const isOpen = useAuthModalStore((state) => state.isOpen);
+  const setOpen = useAuthModalStore((state) => state.setOpen);
+  const openModal = useAuthModalStore((state) => state.open);
 
   // Open login modal if requireLogin param is true
   // e.g. /?requireLogin=true
   useEffect(() => {
     if (requireLogin === 'true') {
-      onOpenChange(true);
+      openModal();
+
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        params.delete('requireLogin');
+        const query = params.toString();
+
+        router.replace(`${pathname}${query ? `?${query}` : ''}`, { scroll: false });
+      }
     }
-  }, [requireLogin]);
+  }, [requireLogin, openModal, router, pathname]);
+
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      setOpen(open);
+      if (!open) {
+        setPhone(null);
+        setRequestId(null);
+        clearRegisterData();
+      }
+    },
+    [setOpen, setPhone, setRequestId, clearRegisterData]
+  );
 
   const handleRegisterFromLogin = () => {
     setVerifyType('register');
-    onOpenChange(false);
+    handleOpenChange(false);
     setRegisterOpen(true);
   };
 
   const handleLoginFromRegister = () => {
     setRegisterOpen(false);
-    onOpenChange(true);
+    handleOpenChange(true);
   };
 
   const handleAfterRegister = () => {
@@ -56,7 +77,7 @@ const AuthModal = ({ open = false, onOpenChange }: Props) => {
   };
 
   const handleLoginToVerifyPhone = () => {
-    onOpenChange(false);
+    handleOpenChange(false);
     setOtpOpen(true);
   };
 
@@ -65,15 +86,8 @@ const AuthModal = ({ open = false, onOpenChange }: Props) => {
   return (
     <>
       <Dialog
-        open={open}
-        onOpenChange={(value) => {
-          onOpenChange(value);
-          if (!value) {
-            setPhone(null);
-            setRequestId(null);
-            clearRegisterData();
-          }
-        }}
+        open={isOpen}
+        onOpenChange={handleOpenChange}
       >
         <DialogContent>
           <main>
@@ -81,7 +95,7 @@ const AuthModal = ({ open = false, onOpenChange }: Props) => {
               openVerifyPhoneOtpModal={handleLoginToVerifyPhone}
               onRegisterClick={handleRegisterFromLogin}
               onLoginSuccess={() => {
-                onOpenChange(false);
+                handleOpenChange(false);
                 setPhone(null);
                 setRequestId(null);
                 clearRegisterData();
@@ -160,7 +174,7 @@ const AuthModal = ({ open = false, onOpenChange }: Props) => {
                 setPhone(null);
                 setRequestId(null);
                 clearRegisterData();
-                onOpenChange(true);
+                handleOpenChange(true);
               }}
             />
           </main>

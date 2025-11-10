@@ -1,14 +1,14 @@
 'use client';
 
-import { IconBallTennis, IconCalculatorFilled, IconCalendarCheck, IconCalendarFilled, IconHome, IconUser } from '@tabler/icons-react';
+import { IconBallTennis, IconUser } from '@tabler/icons-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import BottomNavigationWrapper from '../ui/BottomNavigationWrapper';
-import { CalendarCheck, CalendarCheckIcon, HomeIcon } from 'lucide-react';
-import AuthModal from '../modals/AuthModal';
+import { CalendarCheckIcon, HomeIcon } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { profileQueryOptions } from '@/queries/profile';
+import useAuthModalStore from '@/stores/useAuthModalStore';
 
 const navigationItems = [
   { title: 'Beranda', icon: <HomeIcon size={28} />, path: '/' },
@@ -19,18 +19,15 @@ const navigationItems = [
 
 const MainBottomNavigation = () => {
   const pathname = usePathname();
-  const [openAuthModal, setOpenAuthModal] = useState(false);
   const { data: user } = useQuery(profileQueryOptions);
   const isAuthenticated = !!user?.id;
+  const openAuthModal = useAuthModalStore((state) => state.open);
 
   const isActive = useCallback((path: string) => pathname === path, [pathname]);
 
   return (
-    <>
-      <AuthModal open={openAuthModal} onOpenChange={setOpenAuthModal} />
-      
-      <BottomNavigationWrapper>
-        <ul className="w-11/12 flex-between mx-auto">
+    <BottomNavigationWrapper>
+      <ul className="w-11/12 flex-between mx-auto">
           {navigationItems.map((item) => {
             const requiresAuth = item.requiresAuth ?? false;
             
@@ -38,7 +35,7 @@ const MainBottomNavigation = () => {
               return (
                 <li key={item.title}>
                   <button
-                    onClick={() => setOpenAuthModal(true)}
+                    onClick={openAuthModal}
                     className={`flex-center flex-col py-2 ${
                       isActive(item.path) ? 'text-primary' : 'text-gray-400'
                     }`}
@@ -66,7 +63,6 @@ const MainBottomNavigation = () => {
           })}
         </ul>
       </BottomNavigationWrapper>
-    </>
   );
 };
 export default MainBottomNavigation;

@@ -77,6 +77,22 @@ export function formatNumber(value: number, locale = 'id-ID'): string {
   return new Intl.NumberFormat(locale).format(value);
 }
 
+export function formatCurrency(
+  value: number,
+  locale = 'id-ID',
+  currency: string | null = 'IDR'
+): string {
+  if (!Number.isFinite(value)) return '-';
+  if (!currency) {
+    return new Intl.NumberFormat(locale, { minimumFractionDigits: 0 }).format(value);
+  }
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 0
+  }).format(value);
+}
+
 export function formatPhone(phone: string | null): string {
   if (!phone) return '';
 

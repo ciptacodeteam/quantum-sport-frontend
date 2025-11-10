@@ -1,7 +1,6 @@
 'use client';
 
 import MainHeader from '@/components/headers/MainHeader';
-import AuthModal from '@/components/modals/AuthModal';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn, resolveMediaUrl } from '@/lib/utils';
@@ -9,6 +8,7 @@ import { checkoutMutationOptions } from '@/mutations/booking';
 import { paymentMethodsQueryOptions } from '@/queries/paymentMethod';
 import { profileQueryOptions } from '@/queries/profile';
 import { useBookingStore } from '@/stores/useBookingStore';
+import useAuthModalStore from '@/stores/useAuthModalStore';
 import type { PaymentMethod } from '@/types/model';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -68,8 +68,8 @@ const CheckoutContent = () => {
 
   // Authentication check
   const { data: user, isPending: isUserPending } = useQuery(profileQueryOptions);
-  const [openAuthModal, setOpenAuthModal] = useState(false);
   const isAuthenticated = !!user?.id;
+  const openAuthModal = useAuthModalStore((state) => state.open);
 
   const { data: paymentMethods = [], isPending: isLoadingPaymentMethods } = useQuery(
     paymentMethodsQueryOptions()
@@ -123,9 +123,9 @@ const CheckoutContent = () => {
   // Show login modal if user is not authenticated and has items in cart
   useEffect(() => {
     if (!isUserPending && !isAuthenticated && bookingItems.length > 0) {
-      setOpenAuthModal(true);
+      openAuthModal();
     }
-  }, [isUserPending, isAuthenticated, bookingItems.length]);
+  }, [isUserPending, isAuthenticated, bookingItems.length, openAuthModal]);
 
   useEffect(() => {
     if (paymentMethods.length === 0) return;
@@ -202,25 +202,21 @@ const CheckoutContent = () => {
 
   if (bookingItems.length === 0) {
     return (
-      <>
-        <AuthModal open={openAuthModal} onOpenChange={setOpenAuthModal} />
-
-        <div className="bg-background min-h-screen">
-          <MainHeader
-            title="Detail Pembayaran"
-            backHref="/booking"
-            withCartBadge
-            withLogo={false}
-          />
-          <main className="flex min-h-[calc(100vh-96px)] flex-col items-center justify-center gap-4 px-6 text-center">
-            <h1 className="text-xl font-semibold">Tidak ada pesanan</h1>
-            <p className="text-muted-foreground text-sm">
-              Tambahkan slot booking terlebih dahulu untuk melihat ringkasan pembayaran.
-            </p>
-            <Button onClick={() => router.push('/booking')}>Kembali ke Booking</Button>
-          </main>
-        </div>
-      </>
+      <div className="bg-background min-h-screen">
+        <MainHeader
+          title="Detail Pembayaran"
+          backHref="/booking"
+          withCartBadge
+          withLogo={false}
+        />
+        <main className="flex min-h-[calc(100vh-96px)] flex-col items-center justify-center gap-4 px-6 text-center">
+          <h1 className="text-xl font-semibold">Tidak ada pesanan</h1>
+          <p className="text-muted-foreground text-sm">
+            Tambahkan slot booking terlebih dahulu untuk melihat ringkasan pembayaran.
+          </p>
+          <Button onClick={() => router.push('/booking')}>Kembali ke Booking</Button>
+        </main>
+      </div>
     );
   }
 
@@ -236,7 +232,7 @@ const CheckoutContent = () => {
   const handleCheckout = () => {
     // Check authentication first
     if (!isAuthenticated) {
-      setOpenAuthModal(true);
+      openAuthModal();
       return;
     }
 
@@ -271,14 +267,11 @@ const CheckoutContent = () => {
   };
 
   return (
-    <>
-      <AuthModal open={openAuthModal} onOpenChange={setOpenAuthModal} />
+    <div className="bg-muted/20 min-h-screen pb-28">
+      <MainHeader title="Detail Pembayaran" backHref="/booking" withCartBadge withLogo={false} />
 
-      <div className="bg-muted/20 min-h-screen pb-28">
-        <MainHeader title="Detail Pembayaran" backHref="/booking" withCartBadge withLogo={false} />
-
-        <main className="mx-auto flex w-11/12 max-w-4xl flex-col gap-6 pt-24 pb-28">
-          <section className="border-muted space-y-4 rounded-2xl border bg-white p-5 shadow-sm">
+      <main className="mx-auto flex w-11/12 max-w-4xl flex-col gap-6 pt-24 pb-28">
+        <section className="border-muted space-y-4 rounded-2xl border bg-white p-5 shadow-sm">
             {groupedCourts.map((group, index) => (
               <div
                 key={`${group.courtName}-${group.date}`}
@@ -415,115 +408,111 @@ const CheckoutContent = () => {
                 </div>
               </div>
             </div>
-          </section>
-        </main>
+        </section>
+      </main>
 
-        <footer className="border-muted fixed inset-x-0 bottom-0 border-t bg-white shadow-lg">
-          <div className="mx-auto w-11/12 max-w-4xl py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-muted-foreground text-xs">Sub total</p>
-                <p className="text-primary text-lg font-semibold">
-                  {formatCurrency(totalWithPaymentFee)}
-                </p>
-              </div>
-              <Button
-                size="lg"
-                className="min-w-[160px]"
-                onClick={handleCheckout}
-                disabled={(!selectedPaymentMethod || checkoutMutation.isPending) && isAuthenticated}
-              >
-                {isUserPending
-                  ? 'Memuat...'
-                  : !isAuthenticated
-                    ? 'Login untuk Checkout'
-                    : checkoutMutation.isPending
-                      ? 'Memproses...'
-                      : selectedPaymentMethod
-                        ? 'Lanjutkan Pembayaran'
-                        : 'Pilih Metode'}
-              </Button>
+      <footer className="border-muted fixed inset-x-0 bottom-0 border-t bg-white shadow-lg">
+        <div className="mx-auto w-11/12 max-w-4xl py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-muted-foreground text-xs">Sub total</p>
+              <p className="text-primary text-lg font-semibold">
+                {formatCurrency(totalWithPaymentFee)}
+              </p>
             </div>
+            <Button
+              size="lg"
+              className="min-w-[160px]"
+              onClick={handleCheckout}
+              disabled={(!selectedPaymentMethod || checkoutMutation.isPending) && isAuthenticated}
+            >
+              {isUserPending
+                ? 'Memuat...'
+                : !isAuthenticated
+                  ? 'Login untuk Checkout'
+                  : checkoutMutation.isPending
+                    ? 'Memproses...'
+                    : selectedPaymentMethod
+                      ? 'Lanjutkan Pembayaran'
+                      : 'Pilih Metode'}
+            </Button>
           </div>
-        </footer>
+        </div>
+      </footer>
 
-        <Dialog open={isPaymentModalOpen} onOpenChange={setPaymentModalOpen}>
-          <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Pilih Metode Pembayaran</DialogTitle>
-            </DialogHeader>
+      <Dialog open={isPaymentModalOpen} onOpenChange={setPaymentModalOpen}>
+        <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Pilih Metode Pembayaran</DialogTitle>
+          </DialogHeader>
 
-            <div className="space-y-3">
-              {isLoadingPaymentMethods ? (
-                <div className="text-muted-foreground py-6 text-center text-sm">
-                  Memuat metode pembayaran...
-                </div>
-              ) : paymentMethods.length === 0 ? (
-                <div className="text-muted-foreground py-6 text-center text-sm">
-                  Tidak ada metode pembayaran tersedia
-                </div>
-              ) : (
-                paymentMethods.map((method) => {
-                  const percentage = Number(method.percentage ?? 0);
-                  const baseFee = Number.isFinite(method.fees) ? method.fees : 0;
-                  const feesValue = Math.round(baseFee + (grandTotal * percentage) / 100);
-                  const totalWithFees = grandTotal + feesValue;
-                  const isSelected = selectedPaymentMethod?.id === method.id;
+          <div className="space-y-3">
+            {isLoadingPaymentMethods ? (
+              <div className="text-muted-foreground py-6 text-center text-sm">
+                Memuat metode pembayaran...
+              </div>
+            ) : paymentMethods.length === 0 ? (
+              <div className="text-muted-foreground py-6 text-center text-sm">
+                Tidak ada metode pembayaran tersedia
+              </div>
+            ) : (
+              paymentMethods.map((method) => {
+                const percentage = Number(method.percentage ?? 0);
+                const baseFee = Number.isFinite(method.fees) ? method.fees : 0;
+                const feesValue = Math.round(baseFee + (grandTotal * percentage) / 100);
+                const totalWithFees = grandTotal + feesValue;
+                const isSelected = selectedPaymentMethod?.id === method.id;
 
-                  return (
-                    <button
-                      key={method.id}
-                      className={cn(
-                        'flex w-full items-center justify-between gap-4 rounded-xl border px-4 py-3 text-left transition-colors',
-                        isSelected
-                          ? 'border-primary bg-primary/5'
-                          : 'border-muted hover:border-primary/60'
-                      )}
-                      onClick={() => handleSelectPaymentMethod(method)}
-                    >
-                      <div className="flex items-center gap-3">
-                        {resolveMediaUrl(method.logo) ? (
-                          <Image
-                            src={resolveMediaUrl(method.logo)!}
-                            alt={method.name}
-                            width={48}
-                            height={48}
-                            className="h-12 w-12 rounded-md object-contain"
-                            unoptimized
-                          />
-                        ) : (
-                          <div className="bg-muted text-muted-foreground flex h-12 w-12 items-center justify-center rounded-md text-sm font-semibold">
-                            {method.name.slice(0, 2).toUpperCase()}
-                          </div>
-                        )}
-                        <div>
-                          <p className="text-foreground text-sm font-semibold">{method.name}</p>
-                          <p className="text-muted-foreground text-xs uppercase">
-                            {method.channel}
-                          </p>
-                          <p className="text-muted-foreground mt-1 text-xs">
-                            Biaya proses {formatCurrency(feesValue)} • Total{' '}
-                            {formatCurrency(totalWithFees)}
-                          </p>
+                return (
+                  <button
+                    key={method.id}
+                    className={cn(
+                      'flex w-full items-center justify-between gap-4 rounded-xl border px-4 py-3 text-left transition-colors',
+                      isSelected
+                        ? 'border-primary bg-primary/5'
+                        : 'border-muted hover:border-primary/60'
+                    )}
+                    onClick={() => handleSelectPaymentMethod(method)}
+                  >
+                    <div className="flex items-center gap-3">
+                      {resolveMediaUrl(method.logo) ? (
+                        <Image
+                          src={resolveMediaUrl(method.logo)!}
+                          alt={method.name}
+                          width={48}
+                          height={48}
+                          className="h-12 w-12 rounded-md object-contain"
+                          unoptimized
+                        />
+                      ) : (
+                        <div className="bg-muted text-muted-foreground flex h-12 w-12 items-center justify-center rounded-md text-sm font-semibold">
+                          {method.name.slice(0, 2).toUpperCase()}
                         </div>
+                      )}
+                      <div>
+                        <p className="text-foreground text-sm font-semibold">{method.name}</p>
+                        <p className="text-muted-foreground text-xs uppercase">{method.channel}</p>
+                        <p className="text-muted-foreground mt-1 text-xs">
+                          Biaya proses {formatCurrency(feesValue)} • Total {formatCurrency(totalWithFees)}
+                        </p>
                       </div>
-                      <div
-                        className={cn(
-                          'flex h-5 w-5 items-center justify-center rounded-full border',
-                          isSelected ? 'border-primary bg-primary' : 'border-muted'
-                        )}
-                      >
-                        {isSelected ? <span className="h-2.5 w-2.5 rounded-full bg-white" /> : null}
-                      </div>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-    </>
+                    </div>
+                    <div
+                      className={cn(
+                        'flex h-5 w-5 items-center justify-center rounded-full border',
+                        isSelected ? 'border-primary bg-primary' : 'border-muted'
+                      )}
+                    >
+                      {isSelected ? <span className="h-2.5 w-2.5 rounded-full bg-white" /> : null}
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };
 

@@ -10,6 +10,7 @@ import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
 import { Toaster } from 'sonner';
 import { ConfirmDialogProvider } from '@/components/ui/confirm-dialog';
+import AuthModal from '@/components/modals/AuthModal';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -23,6 +24,7 @@ const AppProvider = ({ children }: Readonly<PropsWithChildren>) => {
         <DialogProvider>
           <ConfirmDialogProvider>
             {children}
+            <AuthModal />
             <Toaster position="top-center" richColors />
           </ConfirmDialogProvider>
         </DialogProvider>
