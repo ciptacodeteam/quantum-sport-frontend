@@ -1,6 +1,6 @@
 'use client';
 
-import type { PropsWithChildren } from 'react';
+import { Suspense, type PropsWithChildren } from 'react';
 import ReactQueryProvider from './ReactQueryProvider';
 
 import { DialogProvider } from '@/components/ui/dialog-context';
@@ -24,7 +24,9 @@ const AppProvider = ({ children }: Readonly<PropsWithChildren>) => {
         <DialogProvider>
           <ConfirmDialogProvider>
             {children}
-            <AuthModal />
+            <Suspense>
+              <AuthModal />
+            </Suspense>
             <Toaster position="top-center" richColors />
           </ConfirmDialogProvider>
         </DialogProvider>

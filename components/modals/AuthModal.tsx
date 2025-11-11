@@ -1,3 +1,5 @@
+'use client';
+
 import { profileQueryOptions } from '@/queries/profile';
 import { usePhoneStore } from '@/stores/usePhoneStore';
 import { useRegisterStore } from '@/stores/useRegisterStore';
@@ -85,10 +87,7 @@ const AuthModal = () => {
 
   return (
     <>
-      <Dialog
-        open={isOpen}
-        onOpenChange={handleOpenChange}
-      >
+      <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent>
           <main>
             <LoginForm
