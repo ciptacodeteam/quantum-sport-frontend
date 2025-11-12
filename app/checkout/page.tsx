@@ -18,16 +18,17 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
+dayjs.locale('id');
+dayjs.extend(customParseFormat);
+
 const currencyFormatter = new Intl.NumberFormat('id-ID', {
   style: 'currency',
   currency: 'IDR',
   minimumFractionDigits: 0
 });
 
-dayjs.locale('id');
-dayjs.extend(customParseFormat);
-
-const formatCurrency = (value: number) => currencyFormatter.format(value);
+// Override default format supaya tidak ada spasi
+const formatCurrency = (value: number) => currencyFormatter.format(value).replace(/\s/g, '');
 
 const normalizeSlotTime = (time: string) => time?.trim().replace(/ /g, '').replace(/\t/g, '') ?? '';
 
@@ -262,11 +263,11 @@ export default function CheckoutPage() {
   };
 
   return (
-    <div className="bg-muted/20 min-h-screen pb-28">
+    <div className="bg-muted/20 min-h-screen pb-24">
       <MainHeader title="Detail Pembayaran" backHref="/booking" withCartBadge withLogo={false} />
 
-      <main className="mx-auto flex w-11/12 max-w-4xl flex-col gap-6 pt-24 pb-28">
-        <section className="border-muted space-y-4 rounded-2xl border bg-white p-5 shadow-sm">
+      <main className="mx-auto flex w-11/12 max-w-4xl flex-col gap-6 pt-28">
+        <section className="border-muted space-y-4 rounded-lg border bg-white p-4">
           {groupedCourts.map((group, index) => (
             <div
               key={`${group.courtName}-${group.date}`}
@@ -288,7 +289,7 @@ export default function CheckoutPage() {
                   .map((slot, slotIndex) => (
                     <div
                       key={`${slot.courtId}-${slot.timeSlot}-${slotIndex}`}
-                      className="border-muted/60 bg-muted/15 flex items-center justify-between rounded-xl border px-4 py-3"
+                      className="border-muted/60 bg-muted/50 flex items-center justify-between rounded-md border px-4 py-3"
                     >
                       <div className="flex flex-col">
                         {(() => {
@@ -319,7 +320,7 @@ export default function CheckoutPage() {
             Tambah Add-Ons
           </Button>
 
-          <div className="border-muted rounded-2xl border bg-white p-5 shadow-sm">
+          <div className="border-muted rounded-lg border bg-white p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {selectedPaymentMethod ? (
@@ -359,7 +360,7 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          <div className="border-muted rounded-2xl border bg-white p-5 shadow-sm">
+          <div className="border-muted rounded-lg border bg-white p-4">
             <h3 className="mb-3 text-base font-semibold">Ringkasan Pembayaran</h3>
             <div className="space-y-2 text-sm">
               <div className="flex items-center justify-between">
@@ -415,7 +416,7 @@ export default function CheckoutPage() {
             </div>
             <Button
               size="lg"
-              className="min-w-[160px]"
+              className="min-w-40"
               onClick={handleCheckout}
               disabled={(!selectedPaymentMethod || checkoutMutation.isPending) && isAuthenticated}
             >
@@ -436,7 +437,9 @@ export default function CheckoutPage() {
       <Dialog open={isPaymentModalOpen} onOpenChange={setPaymentModalOpen}>
         <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Pilih Metode Pembayaran</DialogTitle>
+            <DialogTitle className="text-center text-lg font-semibold">
+              Pilih Metode Pembayaran
+            </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-3">
@@ -459,22 +462,23 @@ export default function CheckoutPage() {
                 return (
                   <button
                     key={method.id}
-                    className={cn(
-                      'flex w-full items-center justify-between gap-4 rounded-xl border px-4 py-3 text-left transition-colors',
-                      isSelected
-                        ? 'border-primary bg-primary/5'
-                        : 'border-muted hover:border-primary/60'
-                    )}
                     onClick={() => handleSelectPaymentMethod(method)}
+                    className={cn(
+                      'flex w-full items-center justify-between rounded-md border p-4 transition-colors',
+                      isSelected
+                        ? 'border-primary bg-primary/5 shadow-sm'
+                        : 'border-muted hover:border-primary/60 hover:bg-muted/10'
+                    )}
                   >
-                    <div className="flex items-center gap-3">
+                    {/* Kiri: Logo + Nama */}
+                    <div className="flex items-center gap-4">
                       {resolveMediaUrl(method.logo) ? (
                         <Image
                           src={resolveMediaUrl(method.logo)!}
                           alt={method.name}
                           width={48}
                           height={48}
-                          className="h-12 w-12 rounded-md object-contain"
+                          className="h-12 w-12 rounded-md bg-white object-contain p-1"
                           unoptimized
                         />
                       ) : (
@@ -482,22 +486,27 @@ export default function CheckoutPage() {
                           {method.name.slice(0, 2).toUpperCase()}
                         </div>
                       )}
-                      <div>
-                        <p className="text-foreground text-sm font-semibold">{method.name}</p>
-                        <p className="text-muted-foreground text-xs uppercase">{method.channel}</p>
-                        <p className="text-muted-foreground mt-1 text-xs">
-                          Biaya proses {formatCurrency(feesValue)} • Total{' '}
-                          {formatCurrency(totalWithFees)}
+
+                      <div className="flex items-start flex-col">
+                        <p className="text-foreground text-sm leading-tight font-semibold">
+                          {method.name}
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          Biaya {formatCurrency(feesValue)}
                         </p>
                       </div>
                     </div>
-                    <div
-                      className={cn(
-                        'flex h-5 w-5 items-center justify-center rounded-full border',
-                        isSelected ? 'border-primary bg-primary' : 'border-muted'
-                      )}
-                    >
-                      {isSelected ? <span className="h-2.5 w-2.5 rounded-full bg-white" /> : null}
+
+                    {/* Kanan: Biaya dan Radio */}
+                    <div>
+                      <div
+                        className={cn(
+                          'mt-1 flex h-5 w-5 items-center justify-center rounded-full border transition-all',
+                          isSelected ? 'border-primary bg-primary' : 'border-muted bg-background'
+                        )}
+                      >
+                        {isSelected && <span className="h-2.5 w-2.5 rounded-full bg-white" />}
+                      </div>
                     </div>
                   </button>
                 );

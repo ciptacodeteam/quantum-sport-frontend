@@ -11,14 +11,14 @@ import { useEffect, useState } from 'react';
 
 dayjs.locale('id');
 
-const currencyFormatter = new Intl.NumberFormat('id-ID', {
-  style: 'currency',
-  currency: 'IDR',
-  minimumFractionDigits: 0
-});
+const formatCurrency = (value: number) => {
+  const formatted = new Intl.NumberFormat('id-ID', {
+    minimumFractionDigits: 0,
+  }).format(value);
 
-const formatCurrency = (value: number) => currencyFormatter.format(value);
-
+  // hapus semua tipe whitespace, termasuk non-breaking space
+  return 'Rp' + formatted.replace(/[\u00A0\u202F\s]/g, '');
+};
 const normalizeSlotTime = (time: string) => time?.trim().replace(/ /g, '').replace(/\t/g, '') ?? '';
 
 const parseSlotTime = (time: string): dayjs.Dayjs | null => {
@@ -300,7 +300,7 @@ export default function PaymentPage() {
             </div>
             <Button
               size="lg"
-              className="min-w-[160px] bg-green-700 hover:bg-green-800"
+              className="min-w-40 bg-green-700 hover:bg-green-800"
               onClick={handleContinue}
             >
               Selanjutnya

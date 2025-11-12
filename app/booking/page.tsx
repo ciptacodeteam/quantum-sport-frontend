@@ -566,7 +566,7 @@ export default function BookingPage() {
         <header className="flex-between my-2 items-end">
           <div>
             <span className="text-muted-foreground text-xs">Subtotal</span>
-            <h2 className="text-lg font-semibold">Rp {courtTotal.toLocaleString('id-ID')}</h2>
+            <h2 className="text-lg font-semibold">Rp{courtTotal.toLocaleString('id-ID')}</h2>
           </div>
           <div>
             <span className="text-muted-foreground text-xs">

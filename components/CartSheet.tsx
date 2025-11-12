@@ -8,22 +8,23 @@ import { Badge } from '@/components/ui/badge';
 import { useMemo } from 'react';
 import dayjs from 'dayjs';
 import { useRouter } from 'next/navigation';
+import { IconX } from '@tabler/icons-react';
 
 export default function CartSheet() {
   const router = useRouter();
 
-  const bookingItems = useBookingStore(state => state.bookingItems)
-  const selectedCoaches = useBookingStore(state => state.selectedCoaches)
-  const selectedInventories = useBookingStore(state => state.selectedInventories)
-  const courtTotal = useBookingStore(state => state.courtTotal)
-  const coachTotal = useBookingStore(state => state.coachTotal)
-  const inventoryTotal = useBookingStore(state => state.inventoryTotal)
-  const getTotalAmount = useBookingStore(state => state.getTotalAmount)
-  const clearAll = useBookingStore(state => state.clearAll)
-  const isCartOpen = useBookingStore(state => state.isCartOpen)
-  const setCartOpen = useBookingStore(state => state.setCartOpen)
-  const removeBookingItem = useBookingStore(state => state.removeBookingItem)
-  
+  const bookingItems = useBookingStore((state) => state.bookingItems);
+  const selectedCoaches = useBookingStore((state) => state.selectedCoaches);
+  const selectedInventories = useBookingStore((state) => state.selectedInventories);
+  const courtTotal = useBookingStore((state) => state.courtTotal);
+  const coachTotal = useBookingStore((state) => state.coachTotal);
+  const inventoryTotal = useBookingStore((state) => state.inventoryTotal);
+  const getTotalAmount = useBookingStore((state) => state.getTotalAmount);
+  const clearAll = useBookingStore((state) => state.clearAll);
+  const isCartOpen = useBookingStore((state) => state.isCartOpen);
+  const setCartOpen = useBookingStore((state) => state.setCartOpen);
+  const removeBookingItem = useBookingStore((state) => state.removeBookingItem);
+
   // Group booking items by date
   const groupedBookings = useMemo(() => {
     const map = new Map<string, typeof bookingItems>();
@@ -63,8 +64,8 @@ export default function CartSheet() {
   const handleCheckout = () => {
     router.push('/checkout');
     setCartOpen(false);
-  }
-  
+  };
+
   return (
     <Sheet open={isCartOpen} onOpenChange={setCartOpen}>
       <SheetTrigger asChild>
@@ -79,26 +80,37 @@ export default function CartSheet() {
           </div>
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="flex h-full w-full flex-col overflow-hidden bg-white p-0 sm:w-[420px]">
+      <SheetContent
+        side="right"
+        className="flex h-full w-full flex-col overflow-hidden bg-white sm:w-[420px] [&>button]:hidden"
+      >
         <div className="flex h-full flex-col">
-          <SheetHeader className="px-4 pt-5 pb-3">
-            <SheetTitle className="text-lg font-semibold">Keranjang Booking</SheetTitle>
+          <SheetHeader className="flex flex-row items-center justify-between px-5 border border-b py-7 mb-4">
+            <SheetTitle className="text-xl text-primary font-semibold">Keranjang Booking</SheetTitle>
+            <button
+              onClick={() => setCartOpen(false)}
+              className="text-muted-foreground hover:text-foreground transition"
+            >
+              ✕
+            </button>
           </SheetHeader>
-
-          <div className="flex-1 overflow-y-auto px-4 pb-6">
-            <div className="space-y-6">
+          <div className="mx-auto w-11/12 flex-1 overflow-y-auto">
+            <div className="space-y-4">
               {/* COURT BOOKINGS - GROUPED BY DATE */}
               {groupedBookings.length > 0 ? (
                 <section className="space-y-4">
-                  <h3 className="font-semibold text-base">Booking Lapangan</h3>
+                  {/* <h3 className="font-semibold text-base">Booking Lapangan</h3> */}
                   <div className="space-y-4">
                     {groupedBookings.map(([date, items]) => (
-                      <div key={date} className="space-y-3 rounded-xl border border-muted/60 bg-white px-3 py-3 shadow-sm">
+                      <div
+                        key={date}
+                        className="border-muted space-y-3 rounded-lg border bg-white px-3 py-3"
+                      >
                         <div className="flex items-center justify-between gap-3">
-                          <p className="text-sm font-medium text-primary">
+                          <p className="text-primary text-sm font-semibold">
                             {dayjs(date).format('dddd, DD MMMM YYYY')}
                           </p>
-                          <span className="text-xs font-medium text-muted-foreground">
+                          <span className="text-muted-foreground text-xs font-medium">
                             {items.length} Slot
                           </span>
                         </div>
@@ -107,68 +119,71 @@ export default function CartSheet() {
                           {[...items]
                             .sort((a, b) => a.timeSlot.localeCompare(b.timeSlot))
                             .map((item, idx) => (
-                            <div
-                              key={`${item.courtId}-${item.timeSlot}-${idx}`}
-                              className="flex items-start justify-between gap-3 rounded-lg border border-muted/70 bg-white px-3 py-2"
-                            >
-                              <div>
-                                <p className="font-medium text-sm">{item.courtName}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {item.timeSlot} - {getEndTime(item.timeSlot)}
-                                </p>
+                              <div
+                                key={`${item.courtId}-${item.timeSlot}-${idx}`}
+                                className="border-muted/70 flex items-start justify-between gap-3 rounded-lg border bg-white px-3 py-2"
+                              >
+                                <div>
+                                  <p className="text-sm font-medium">{item.courtName}</p>
+                                  <p className="text-muted-foreground text-xs">
+                                    {item.timeSlot} - {getEndTime(item.timeSlot)}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <span className="text-sm font-semibold whitespace-nowrap">
+                                    Rp{item.price.toLocaleString('id-ID')}
+                                  </span>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8"
+                                    onClick={() =>
+                                      removeBookingItem(item.courtId, item.timeSlot, date)
+                                    }
+                                  >
+                                    <IconTrash className="h-4 w-4" />
+                                  </Button>
+                                </div>
                               </div>
-                              <div className="flex items-center gap-3">
-                                <span className="whitespace-nowrap font-semibold text-sm">
-                                  Rp {item.price.toLocaleString('id-ID')}
-                                </span>
-                                <Button
-                                  variant="ghost"
-                                  size="icon-sm"
-                                  className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                  onClick={() => removeBookingItem(item.courtId, item.timeSlot, date)}
-                                >
-                                  <IconTrash className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
+                            ))}
                         </div>
                       </div>
                     ))}
                   </div>
-                  <div className="flex items-center justify-between border-t border-dashed border-muted pt-3 text-sm">
-                    <span className="font-medium text-muted-foreground">Subtotal Lapangan</span>
+                  {/* <div className="border-muted flex items-center justify-between border-t border-dashed text-sm">
+                    <span className="text-muted-foreground font-medium">Subtotal Lapangan</span>
                     <span className="font-semibold">Rp {courtTotal.toLocaleString('id-ID')}</span>
-                  </div>
+                  </div> */}
                 </section>
               ) : (
-                <section className="rounded-xl border border-dashed border-muted/60 bg-muted/30 px-4 py-6 text-center text-sm text-muted-foreground">
-                  Belum ada booking lapangan
+                <section className="border-muted/60 bg-muted/30 text-muted-foreground flex h-64 flex-col items-center justify-center rounded-xl border border-dashed text-center">
+                  <IconShoppingCartFilled className="text-muted-foreground/70 mb-3 size-12" />
+                  <p className="text-sm font-medium">Belum ada booking lapangan</p>
                 </section>
               )}
 
               {/* COACH */}
               {selectedCoaches.length > 0 && (
                 <section className="space-y-3">
-                  <h3 className="font-semibold text-base">Coach</h3>
+                  <h3 className="text-base font-semibold">Coach</h3>
                   <div className="space-y-3">
                     {selectedCoaches.map((coach, idx) => (
                       <div
                         key={idx}
-                        className="flex items-start justify-between gap-3 rounded-lg border border-muted/70 bg-white px-3 py-2"
+                        className="border-muted/70 flex items-start justify-between gap-3 rounded-lg border bg-white px-3 py-2"
                       >
                         <div>
-                          <p className="font-medium text-sm">{coach.coachName}</p>
-                          <p className="text-xs text-muted-foreground">{coach.timeSlot}</p>
+                          <p className="text-sm font-medium">{coach.coachName}</p>
+                          <p className="text-muted-foreground text-xs">{coach.timeSlot}</p>
                         </div>
-                        <span className="whitespace-nowrap font-semibold text-sm">
+                        <span className="text-sm font-semibold whitespace-nowrap">
                           Rp {coach.price.toLocaleString('id-ID')}
                         </span>
                       </div>
                     ))}
                   </div>
-                  <div className="flex items-center justify-between border-t border-dashed border-muted pt-3 text-sm">
-                    <span className="font-medium text-muted-foreground">Subtotal Coach</span>
+                  <div className="border-muted flex items-center justify-between border-t border-dashed pt-3 text-sm">
+                    <span className="text-muted-foreground font-medium">Subtotal Coach</span>
                     <span className="font-semibold">Rp {coachTotal.toLocaleString('id-ID')}</span>
                   </div>
                 </section>
@@ -177,42 +192,51 @@ export default function CartSheet() {
               {/* INVENTORY */}
               {selectedInventories.length > 0 && (
                 <section className="space-y-3">
-                  <h3 className="font-semibold text-base">Peralatan</h3>
+                  <h3 className="text-base font-semibold">Peralatan</h3>
                   <div className="space-y-3">
                     {selectedInventories.map((inv, idx) => (
                       <div
                         key={idx}
-                        className="flex items-start justify-between gap-3 rounded-lg border border-muted/70 bg-white px-3 py-2"
+                        className="border-muted/70 flex items-start justify-between gap-3 rounded-lg border bg-white px-3 py-2"
                       >
                         <div>
-                          <p className="font-medium text-sm">{inv.inventoryName}</p>
-                          <p className="text-xs text-muted-foreground">Quantity: {inv.quantity}</p>
+                          <p className="text-sm font-medium">{inv.inventoryName}</p>
+                          <p className="text-muted-foreground text-xs">Quantity: {inv.quantity}</p>
                         </div>
-                        <span className="whitespace-nowrap font-semibold text-sm">
+                        <span className="text-sm font-semibold whitespace-nowrap">
                           Rp {inv.price.toLocaleString('id-ID')}
                         </span>
                       </div>
                     ))}
                   </div>
-                  <div className="flex items-center justify-between border-t border-dashed border-muted pt-3 text-sm">
-                    <span className="font-medium text-muted-foreground">Subtotal Peralatan</span>
-                    <span className="font-semibold">Rp {inventoryTotal.toLocaleString('id-ID')}</span>
+                  <div className="border-muted flex items-center justify-between border-t border-dashed pt-3 text-sm">
+                    <span className="text-muted-foreground font-medium">Subtotal Peralatan</span>
+                    <span className="font-semibold">
+                      Rp {inventoryTotal.toLocaleString('id-ID')}
+                    </span>
                   </div>
                 </section>
               )}
 
               {/* TOTAL */}
-              <section className="space-y-2 rounded-xl border border-muted/70 bg-muted/20 px-4 py-4">
-                <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>Total</span>
-                  <span className="text-base font-semibold text-foreground">Rp {getTotalAmount().toLocaleString('id-ID')}</span>
+              <section className="border-muted/70 bg-muted/20 space-y-2 rounded-lg border px-4 py-4 mb-4">
+                <div className="text-muted-foreground flex justify-between text-sm">
+                  <span>Sub total</span>
+                  <span className="text-foreground text-base font-semibold">
+                    Rp{getTotalAmount().toLocaleString('id-ID')}
+                  </span>
                 </div>
               </section>
             </div>
           </div>
 
-          <div className="border-t border-gray-200 bg-white px-4 py-4 space-y-3">
-            <Button className="w-full" size="lg" disabled={bookingItems.length === 0} onClick={handleCheckout}>
+          <div className="space-y-3 border-t border-gray-200 bg-white px-4 py-4">
+            <Button
+              className="w-full"
+              size="lg"
+              disabled={bookingItems.length === 0}
+              onClick={handleCheckout}
+            >
               Lanjut ke Checkout
             </Button>
             {(bookingItems.length > 0 ||
