@@ -9,19 +9,33 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { getPlaceholderImageUrl } from '@/lib/utils';
 import { logoutMutationOptions } from '@/mutations/auth';
 import { profileQueryOptions } from '@/queries/profile';
+import { userClubsQueryOptions } from '@/queries/club';
+import { leaveClubMutationOptions } from '@/mutations/club';
 import useAuthStore from '@/stores/useAuthStore';
-import { IconCalendar, IconLogout, IconMail, IconPhone } from '@tabler/icons-react';
+import { IconCalendar, IconLogout, IconMail, IconPhone, IconUsers, IconDoorExit } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 export default function ProfilePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: user, isPending, isError } = useQuery(profileQueryOptions);
+  const { data: userClubs, isLoading: isLoadingClubs } = useQuery(userClubsQueryOptions());
   const logout = useAuthStore((state) => state.logout);
+  const [clubToLeave, setClubToLeave] = useState<{ id: string; name: string } | null>(null);
 
   const { mutate: logoutMutation, isPending: isLoggingOut } = useMutation(
     logoutMutationOptions({
@@ -29,6 +43,16 @@ export default function ProfilePage() {
         queryClient.clear();
         logout();
         router.push('/');
+      }
+    })
+  );
+
+  const { mutate: leaveClub, isPending: isLeavingClub } = useMutation(
+    leaveClubMutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['clubs', 'my-clubs'] });
+        queryClient.invalidateQueries({ queryKey: ['clubs'] });
+        setClubToLeave(null);
       }
     })
   );
@@ -42,6 +66,16 @@ export default function ProfilePage() {
 
   const handleLogout = () => {
     logoutMutation();
+  };
+
+  const handleLeaveClubClick = (clubId: string, clubName: string) => {
+    setClubToLeave({ id: clubId, name: clubName });
+  };
+
+  const confirmLeaveClub = () => {
+    if (clubToLeave) {
+      leaveClub(clubToLeave.id);
+    }
   };
 
   if (isPending) {
@@ -164,6 +198,68 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
 
+          {/* My Clubs Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>My Clubs</CardTitle>
+              <CardDescription>Clubs you are currently a member of</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingClubs ? (
+                <div className="text-center py-8 text-sm text-muted-foreground">
+                  Loading clubs...
+                </div>
+              ) : !userClubs || userClubs.length === 0 ? (
+                <div className="text-center py-8">
+                  <IconUsers className="size-12 mx-auto mb-2 text-muted-foreground opacity-50" />
+                  <p className="text-sm text-muted-foreground">You haven't joined any clubs yet</p>
+                  <Button
+                    variant="link"
+                    className="mt-2"
+                    onClick={() => router.push('/clubs')}
+                  >
+                    Browse Clubs
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {userClubs.map((club) => (
+                    <div
+                      key={club.id}
+                      className="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent transition-colors"
+                    >
+                      <Avatar className="size-12 rounded-lg cursor-pointer" onClick={() => router.push(`/clubs/${club.id}`)}>
+                        <AvatarImage src={club.logo || undefined} alt={club.name} />
+                        <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-semibold">
+                          {club.name.substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0 cursor-pointer" onClick={() => router.push(`/clubs/${club.id}`)}>
+                        <p className="font-semibold text-sm truncate">{club.name}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="secondary" className="text-xs">
+                            {club.visibility}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {club._count.clubMember} members
+                          </span>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleLeaveClubClick(club.id, club.name)}
+                        disabled={isLeavingClub}
+                      >
+                        <IconDoorExit className="size-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Logout Button */}
           <Card>
             <CardContent className="pt-6">
@@ -182,6 +278,36 @@ export default function ProfilePage() {
           </Card>
         </div>
       </main>
+
+      {/* Leave Club Confirmation Dialog */}
+      <Dialog open={!!clubToLeave} onOpenChange={(open) => !open && setClubToLeave(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Leave Club</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to leave <strong>{clubToLeave?.name}</strong>? 
+              You will need to request to join again if it's a private club.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setClubToLeave(null)}
+              disabled={isLeavingClub}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmLeaveClub}
+              disabled={isLeavingClub}
+              loading={isLeavingClub}
+            >
+              Leave Club
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <MainBottomNavigation />
     </>

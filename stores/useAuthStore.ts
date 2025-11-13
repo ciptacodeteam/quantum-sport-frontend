@@ -24,6 +24,11 @@ const useAuthStore = create<Auth>()(
       loading: false,
       setLoading: (loading) => set({ loading }),
       setToken: (token) => {
+        if (token) {
+          localStorage.setItem('token', token);
+        } else {
+          localStorage.removeItem('token');
+        }
         set({ token, isAuth: !!token });
       },
       setUser: (user) => set({ user }),
