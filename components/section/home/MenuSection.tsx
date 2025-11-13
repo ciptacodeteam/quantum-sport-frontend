@@ -13,7 +13,7 @@ const MenuSection = () => {
     },
     {
       title: 'Club',
-      url: '#',
+      url: '/clubs',
       icon: <ClubMenuIcon className="size-9" />
     },
     {

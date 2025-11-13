@@ -26,6 +26,15 @@ const nextConfig: NextConfig = {
       }
     ];
   },
+  // Add proxy to avoid CORS issues
+  async rewrites() {
+    return [
+      {
+        source: '/api-proxy/:path*',
+        destination: 'https://api.quantumsocialclub.id/:path*'
+      }
+    ];
+  },
   images: {
     // Allow loading images from the local backend server
     remotePatterns: [
@@ -37,13 +46,17 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'quantum-sport-backend.vercel.app',
-        port: '8000',
-        pathname: '/api/storage/**'
+        hostname: 'api.quantumsocialclub.id',
+        pathname: '/storage/**'
       },
       {
         protocol: 'https',
         hostname: 'placehold.co',
+        pathname: '/**'
+      },
+      {
+        protocol: 'https',
+        hostname: '*.public.blob.vercel-storage.com',
         pathname: '/**'
       }
     ]

@@ -98,6 +98,39 @@ export type Tournament = {
   updatedAt: Date;
 };
 
+export type Club = {
+  id: string;
+  name: string;
+  description: string | null;
+  logo: string | null;
+  rules: string | null;
+  leaderId: string;
+  visibility: 'PUBLIC' | 'PRIVATE';
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  _count: {
+    clubMember: number;
+  };
+  
+  leader?: {
+    id: string;
+    name: string;
+    email: string;
+    phone?: string;
+    image?: string | null;
+  };
+  clubMember?: Array<{
+    user: {
+      id: string;
+      name: string;
+      image?: string | null;
+    };
+  }>;
+  isMember?: boolean;
+  hasRequestedToJoin?: boolean;
+};
+
 export type Staff = {
   id: string;
   name: string;
