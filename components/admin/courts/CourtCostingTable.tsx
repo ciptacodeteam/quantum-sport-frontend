@@ -56,25 +56,26 @@ const CourtCostingTable = ({ courtId }: Props) => {
 
   const { data, isPending } = useQuery(adminCourtCostingQueryOptions(courtId));
 
-  const normalizedData = useMemo(() => {
-    if (!data) {
-      return [];
-    }
+  console.log(data);
+  // const normalizedData = useMemo(() => {
+  //   if (!data) {
+  //     return [];
+  //   }
 
-    return data.map((entry) => ({
-      ...entry,
-      slots: [...(entry.slots || [])].sort((a, b) =>
-        dayjs
-          .utc(a.startAt)
-          .diff(dayjs.utc(b.startAt))
-      )
-    }));
-  }, [data]);
+  //   return data.map((entry) => ({
+  //     ...entry,
+  //     slots: [...(entry.slots || [])].sort((a, b) =>
+  //       dayjs
+  //         .utc(a.startAt)
+  //         .diff(dayjs.utc(b.startAt))
+  //     )
+  //   }));
+  // }, [data]);
 
   return (
     <DataTable
       loading={isPending}
-      data={normalizedData}
+      data={data || []}
       columns={columns}
       enableRowSelection={false}
       enableColumnVisibility={false}
