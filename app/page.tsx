@@ -9,11 +9,11 @@ export default function HomePage() {
   return (
     <>
       <MainHeader withNotificationBadge />
-      <main className="mt-28 lg:mt-24">
+      <main className="mt-28 lg:mt-28">
         <BannerSection />
         <MenuSection />
         {/* <ActiveCourtSection /> */}
-        <SponsorshipMarqueSection />
+        {/* <SponsorshipMarqueSection /> */}
         <MembershipCtaSection />
       </main>
       <MainBottomNavigation />

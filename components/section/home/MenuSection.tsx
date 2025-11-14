@@ -4,33 +4,38 @@ import ClubMenuIcon from '@/assets/icons/menus/club.svg';
 import MembershipMenuIcon from '@/assets/icons/menus/membership.svg';
 import TournamentMenuIcon from '@/assets/icons/menus/tournament.svg';
 
+
 const MenuSection = () => {
   const menuList = [
     {
       title: 'Booking',
+      subtitle: 'Pesan lapangan dengan mudah dan bermain tanpa ribet.',
       url: '/booking',
-      icon: <BookingMenuIcon className="size-13" />
+      icon: <BookingMenuIcon className="size-13 lg:size-12" />
     },
     {
-      title: 'Club',
+      title: 'Social Club',
+      subtitle: 'Temukan informasi lengkap tentang klub yang tersedia.',
       url: '/clubs',
-      icon: <ClubMenuIcon className="size-9" />
+      icon: <ClubMenuIcon className="size-9 lg:size-10" />
     },
     {
       title: 'Value Pack',
+      subtitle: 'Dapatkan paket hemat dengan berbagai keuntungan eksklusif.',
       url: '/valuepack',
-      icon: <MembershipMenuIcon className="size-9" />
+      icon: <MembershipMenuIcon className="size-9 lg:size-10" />
     },
     {
       title: 'Turnamen',
+      subtitle: 'Ikuti berbagai event dan kompetisi padel seru yang diadakan rutin.',
       url: '#',
-      icon: <TournamentMenuIcon className="size-9" />
+      icon: <TournamentMenuIcon className="size-9 lg:size-9" />
     }
   ];
 
   return (
-    <section className="mx-auto max-w-7xl w-11/12 my-8">
-      <div className="mx-auto grid w-full grid-cols-4 gap-6">
+    <section className="mx-auto my-8 w-11/12 max-w-7xl">
+      <div className="mx-auto grid w-full grid-cols-4 gap-6 lg:gap-4">
         {menuList.map((item) => (
           <div key={item.title} className="flex-center flex-1">
             <MenuItem item={item} />

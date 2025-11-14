@@ -217,7 +217,7 @@ function CarouselDots({ className, ...props }: React.ComponentProps<'div'>) {
         <button
           key={index}
           className={cn(
-            'bg-gray-500 size-2 rounded-full transition-colors sm:size-3',
+            'bg-gray-500 size-2 rounded-full transition-colors lg:size-2.5',
             index === selectedIndex ? 'bg-white' : 'hover:bg-muted'
           )}
           onClick={() => api?.scrollTo(index)}

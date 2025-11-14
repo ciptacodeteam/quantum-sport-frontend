@@ -382,7 +382,7 @@ export default function BookingPage() {
     <>
       <MainHeader backHref="/" title="Booking Court" withLogo={false} withCartBadge />
 
-      <main className="mt-24 flex h-[calc(100dvh-180px)] w-full flex-col md:mt-14">
+      <main className="mt-24 flex h-[calc(100dvh-180px)] lg:h-[calc(100dvh-100px)] w-full flex-col md:mt-24">
         <div className="sticky top-24 z-30 border-b bg-white pb-2 md:top-14">
           <div className="flex items-center gap-2">
             <div className="flex items-center px-2 pl-4">
@@ -403,7 +403,7 @@ export default function BookingPage() {
                   id={`date-${d.fullDate}`}
                   key={d.fullDate}
                   className={cn(
-                    'flex h-14 min-w-14 flex-col items-center justify-center rounded px-2 py-1 font-semibold transition-colors',
+                    'flex h-14 min-w-14 flex-col items-center justify-center rounded px-2 py-1 font-semibold transition-all md:h-16 md:min-w-16 md:px-3 md:hover:scale-[1.03]',
                     selectedDate === d.fullDate
                       ? 'bg-primary text-white'
                       : 'hover:bg-muted text-black'
@@ -423,13 +423,13 @@ export default function BookingPage() {
           </div>
         </div>
 
-        <div className="scrollbar-hide flex-1 overflow-auto pb-10">
+        <div className="scrollbar-hide flex-1 overflow-auto pb-10 lg:pb-0">
           {isSlotsLoading && (
             <div className="text-muted-foreground p-4 text-center text-sm">Memuat slot...</div>
           )}
           <div className="h-full overflow-x-auto">
             <table className="min-w-full border-separate border-spacing-0 border border-gray-200 text-center">
-              <thead className="sticky top-0 z-20 bg-gray-50 shadow-sm">
+              <thead className="sticky top-0 z-20 bg-gray-50/90 backdrop-blur shadow-sm md:text-sm md:tracking-tight">
                 <tr>
                   <th className="sticky left-0 z-30 w-20 border-r border-b bg-gray-50 px-2 py-2 text-left font-semibold"></th>
                   {courts.map((court) => (

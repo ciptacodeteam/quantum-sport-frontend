@@ -28,6 +28,7 @@ export type AppSidebarItem = {
 };
 
 export type MenuItem = {
+  subtitle: string;
   title: string;
   url: string;
   icon: React.ReactNode;

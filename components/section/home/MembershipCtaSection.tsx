@@ -4,7 +4,7 @@ import Link from 'next/link';
 
 const MembershipCtaSection = () => {
   return (
-    <section className="mx-auto w-11/12 my-6 mb-30 mt-12 lg:max-w-7xl">
+    <section className="mx-auto w-11/12 my-6 mb-30 mt-12 lg:max-w-7xl lg:hidden">
       <div className="bg-primary relative rounded-lg pb-4 text-center">
         <div className="grid grid-cols-2 place-content-center items-center gap-4">
           <div className="relative z-10 flex h-full flex-col items-start p-6 pt-10 md:p-10">
