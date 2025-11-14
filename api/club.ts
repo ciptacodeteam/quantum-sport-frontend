@@ -13,8 +13,8 @@ export async function getClubsApi(queryParams: SearchParamsData = {}) {
 }
 
 export async function getClubApi(id: string) {
-  // Include leader and clubMember in the request
-  const { data } = await api.get(`/clubs/${id}?include=leader,clubMember`);
+  // Include leader, clubMember, and user's membership status
+  const { data } = await api.get(`/clubs/${id}?include=leader,clubMember,userStatus`);
   return data;
 }
 
@@ -24,7 +24,7 @@ export async function joinClubApi(clubId: string) {
 }
 
 export async function requestJoinClubApi(clubId: string) {
-  const { data } = await api.post(`/clubs/${clubId}/request`);
+  const { data } = await api.post(`/clubs/${clubId}/request-join`);
   return data;
 }
 
@@ -34,7 +34,14 @@ export async function leaveClubApi(clubId: string) {
 }
 
 export async function getUserClubsApi() {
-  const { data } = await api.get('/clubs/my-clubs');
+  // Get clubs the user leads
+  const { data } = await api.get('/clubs/my?include=leader');
+  return data;
+}
+
+export async function getClubMembershipsApi() {
+  // Get clubs the user is a member of
+  const { data } = await api.get('/clubs/membership?include=leader');
   return data;
 }
 
@@ -44,5 +51,25 @@ export async function createClubApi(payload: FormData) {
       'Content-Type': 'multipart/form-data'
     }
   });
+  return data;
+}
+
+export async function getClubRequestsApi(clubId: string) {
+  const { data } = await api.get(`/clubs/${clubId}/requests`);
+  return data;
+}
+
+export async function approveClubRequestApi(clubId: string, userId: string) {
+  const { data } = await api.post(`/clubs/${clubId}/requests/${userId}/approve`);
+  return data;
+}
+
+export async function rejectClubRequestApi(clubId: string, userId: string) {
+  const { data } = await api.delete(`/clubs/${clubId}/requests/${userId}/reject`);
+  return data;
+}
+
+export async function deleteClubApi(clubId: string) {
+  const { data } = await api.delete(`/clubs/${clubId}`);
   return data;
 }

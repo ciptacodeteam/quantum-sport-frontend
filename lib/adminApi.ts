@@ -1,8 +1,6 @@
-import { refreshTokenApi } from '@/api/admin/auth';
 import { env } from '@/env';
 import useAuthStore from '@/stores/useAuthStore';
 import axios, { type AxiosError, HttpStatusCode, type InternalAxiosRequestConfig } from 'axios';
-import { isJwtAndDecode } from './utils';
 
 export const adminApi = axios.create({
   baseURL: `${env.NEXT_PUBLIC_API_URL}/admin`,
@@ -12,55 +10,22 @@ export const adminApi = axios.create({
 
 type RetryableConfig = InternalAxiosRequestConfig & { _retry?: boolean };
 
-// ---------- Runtime guards ----------
-const isBrowser = typeof window !== 'undefined';
-
-// ---------- Local storage helpers (SSR-safe) ----------
-const storage = {
-  get(key: string) {
-    if (!isBrowser) return null;
-    try {
-      return window.localStorage.getItem(key);
-    } catch {
-      return null;
-    }
-  },
-  set(key: string, val: string) {
-    if (!isBrowser) return;
-    try {
-      window.localStorage.setItem(key, val);
-    } catch {
-      // Ignore errors
-    }
-  },
-  remove(key: string) {
-    if (!isBrowser) return;
-    try {
-      window.localStorage.removeItem(key);
-    } catch {
-      // Ignore errors
-    }
-  }
-};
+// Create a base axios instance for shared endpoints like refresh token
+const baseApi = axios.create({
+  baseURL: env.NEXT_PUBLIC_API_URL,
+  withCredentials: true,
+  headers: { 'Content-Type': 'application/json' }
+});
 
 adminApi.interceptors.request.use(
-  async (config: RetryableConfig) => {
+  (config: RetryableConfig) => {
     config.headers = config.headers ?? {};
 
-    // Auth header
-    const token = storage.get('token') || useAuthStore.getState().token;
+    // Get token directly from Zustand store
+    const token = useAuthStore.getState().token;
 
     if (token) {
       const bearerToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
-
-      const { isJwt } = await isJwtAndDecode(token);
-
-      if (!isJwt) {
-        // If token is not a valid JWT, remove it from storage and state
-        storage.remove('token');
-        useAuthStore.getState().logout();
-        return config;
-      }
       (config.headers as Record<string, string>).Authorization = bearerToken;
     }
 
@@ -69,7 +34,7 @@ adminApi.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ---------- Single-flight refresh (Zustand-aware) ----------
+// ---------- Single-flight refresh ----------
 let refreshPromise: Promise<string | null> | null = null;
 
 async function refreshAccessToken(): Promise<string | null> {
@@ -77,21 +42,22 @@ async function refreshAccessToken(): Promise<string | null> {
 
   refreshPromise = (async () => {
     try {
-      const res = await refreshTokenApi();
-      const newToken = res?.data?.token ?? null;
+      // Use baseApi to call /auth/refresh-token (not /admin/auth/refresh-token)
+      const { data } = await baseApi.post('/auth/refresh-token');
+      const newToken = data?.data?.token ?? null;
 
       if (newToken) {
-        storage.set('token', newToken);
         useAuthStore.getState().setToken(newToken);
         return newToken;
       }
 
       // Bad payload -> clear
-      storage.remove('token');
+      useAuthStore.getState().logout();
       return null;
-    } catch {
+    } catch (err) {
       // Refresh failed -> clear
-      storage.remove('token');
+      console.error('Token refresh failed:', err);
+      useAuthStore.getState().logout();
       return null;
     } finally {
       // allow next attempts
@@ -124,26 +90,24 @@ adminApi.interceptors.response.use(
       };
     }
 
-    const token = storage.get('token') || useAuthStore.getState().token;
+    const token = useAuthStore.getState().token;
 
+    // Try to refresh token on 401 errors (except for refresh endpoint itself)
     if (isAuthError && !isRefreshEndpoint && !originalRequest?._retry && !!token) {
       const newToken = await refreshAccessToken();
 
       if (newToken) {
+        // Retry the original request with new token
         originalRequest._retry = true;
         originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
         return adminApi(originalRequest);
       }
 
-      // Refresh unavailable/failed -> sign out & redirect
-      storage.remove('token');
+      // Refresh failed -> logout
       useAuthStore.getState().logout();
-      useAuthStore.getState().setLoading(false);
     } else if (isAuthError) {
-      // Explicit 401 with no refresh path
-      storage.remove('token');
+      // Explicit 401 with no refresh path (e.g., refresh endpoint failed)
       useAuthStore.getState().logout();
-      useAuthStore.getState().setLoading(false);
     }
 
     if (error.response?.status == HttpStatusCode.Forbidden) {

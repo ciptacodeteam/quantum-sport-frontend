@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { getPlaceholderImageUrl } from '@/lib/utils';
 import { logoutMutationOptions } from '@/mutations/auth';
 import { profileQueryOptions } from '@/queries/profile';
-import { userClubsQueryOptions } from '@/queries/club';
+import { userClubsQueryOptions, clubMembershipsQueryOptions } from '@/queries/club';
 import { leaveClubMutationOptions } from '@/mutations/club';
 import useAuthStore from '@/stores/useAuthStore';
 import { IconCalendar, IconLogout, IconMail, IconPhone, IconUsers, IconDoorExit } from '@tabler/icons-react';
@@ -33,9 +33,29 @@ export default function ProfilePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: user, isPending, isError } = useQuery(profileQueryOptions);
-  const { data: userClubs, isLoading: isLoadingClubs } = useQuery(userClubsQueryOptions());
+  const { data: memberClubs, isLoading: isLoadingMemberClubs, error: memberClubsError } = useQuery(clubMembershipsQueryOptions());
   const logout = useAuthStore((state) => state.logout);
   const [clubToLeave, setClubToLeave] = useState<{ id: string; name: string } | null>(null);
+
+  // Debug: Log clubs data
+  useEffect(() => {
+    console.log('🔍 Profile Debug - isLoadingMemberClubs:', isLoadingMemberClubs);
+    console.log('🔍 Profile Debug - memberClubsError:', memberClubsError);
+    console.log('🔍 Profile Debug - memberClubs raw:', memberClubs);
+    console.log('🔍 Profile Debug - memberClubs is array?', Array.isArray(memberClubs));
+    
+    if (memberClubs) {
+      console.log('👥 Clubs I\'m Member Of:', memberClubs);
+      console.log('📊 Total member clubs:', Array.isArray(memberClubs) ? memberClubs.length : 'NOT AN ARRAY');
+      if (Array.isArray(memberClubs)) {
+        console.log('🔓 Public clubs:', memberClubs.filter((c: any) => c.visibility === 'PUBLIC').length);
+        console.log('🔒 Private clubs:', memberClubs.filter((c: any) => c.visibility === 'PRIVATE').length);
+      }
+    }
+    if (memberClubsError) {
+      console.error('❌ Member Clubs Error:', memberClubsError);
+    }
+  }, [memberClubs, memberClubsError, isLoadingMemberClubs]);
 
   const { mutate: logoutMutation, isPending: isLoggingOut } = useMutation(
     logoutMutationOptions({
@@ -50,7 +70,7 @@ export default function ProfilePage() {
   const { mutate: leaveClub, isPending: isLeavingClub } = useMutation(
     leaveClubMutationOptions({
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['clubs', 'my-clubs'] });
+        queryClient.invalidateQueries({ queryKey: ['clubs', 'my'] });
         queryClient.invalidateQueries({ queryKey: ['clubs'] });
         setClubToLeave(null);
       }
@@ -198,18 +218,31 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
 
-          {/* My Clubs Card */}
+          {/* Clubs I'm Member Of Card */}
           <Card>
             <CardHeader>
-              <CardTitle>My Clubs</CardTitle>
-              <CardDescription>Clubs you are currently a member of</CardDescription>
+              <CardTitle>My Memberships</CardTitle>
+              <CardDescription>Clubs you are a member of</CardDescription>
             </CardHeader>
             <CardContent>
-              {isLoadingClubs ? (
+              {isLoadingMemberClubs ? (
                 <div className="text-center py-8 text-sm text-muted-foreground">
                   Loading clubs...
                 </div>
-              ) : !userClubs || userClubs.length === 0 ? (
+              ) : memberClubsError ? (
+                <div className="text-center py-8">
+                  <p className="text-sm text-destructive mb-2">Failed to load clubs</p>
+                  <p className="text-xs text-muted-foreground">{(memberClubsError as any)?.message || 'Unknown error'}</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-3"
+                    onClick={() => queryClient.invalidateQueries({ queryKey: ['clubs', 'membership'] })}
+                  >
+                    Retry
+                  </Button>
+                </div>
+              ) : !memberClubs || memberClubs.length === 0 ? (
                 <div className="text-center py-8">
                   <IconUsers className="size-12 mx-auto mb-2 text-muted-foreground opacity-50" />
                   <p className="text-sm text-muted-foreground">You haven't joined any clubs yet</p>
@@ -223,36 +256,37 @@ export default function ProfilePage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {userClubs.map((club) => (
+                  {Array.isArray(memberClubs) && memberClubs.map((club) => (
                     <div
                       key={club.id}
-                      className="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent transition-colors"
+                      className="flex items-start gap-3 p-4 rounded-lg border hover:bg-accent transition-colors"
                     >
-                      <Avatar className="size-12 rounded-lg cursor-pointer" onClick={() => router.push(`/clubs/${club.id}`)}>
+                      <Avatar className="size-14 rounded-lg cursor-pointer" onClick={() => router.push(`/clubs/${club.id}`)}>
                         <AvatarImage src={club.logo || undefined} alt={club.name} />
                         <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-semibold">
                           {club.name.substring(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0 cursor-pointer" onClick={() => router.push(`/clubs/${club.id}`)}>
-                        <p className="font-semibold text-sm truncate">{club.name}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge variant="secondary" className="text-xs">
-                            {club.visibility}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            {club._count.clubMember} members
-                          </span>
+                        <p className="font-semibold text-base mb-2">{club.name}</p>
+                        <div className="space-y-1.5 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <Badge variant={club.visibility === 'PUBLIC' ? 'default' : 'secondary'} className="text-xs">
+                              {club.visibility === 'PUBLIC' ? 'Public' : 'Private'}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <IconUsers className="size-4" />
+                            <span>{club._count.clubMember} {club._count.clubMember === 1 ? 'member' : 'members'}</span>
+                          </div>
+                          {club.leader && (
+                            <div className="flex items-center gap-1">
+                              <span className="font-medium">Leader:</span>
+                              <span>{club.leader.name}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleLeaveClubClick(club.id, club.name)}
-                        disabled={isLeavingClub}
-                      >
-                        <IconDoorExit className="size-4 text-destructive" />
-                      </Button>
                     </div>
                   ))}
                 </div>
