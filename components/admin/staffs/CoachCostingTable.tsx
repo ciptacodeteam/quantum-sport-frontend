@@ -11,6 +11,7 @@ import { IconPlus } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
+import { formatSlotTime, formatSlotTimeRange } from '@/lib/time-utils';
 import { useMemo } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import CreateCoachCostForm from './CreateCoachCostForm';
@@ -56,7 +57,7 @@ const CoachCostingTable = ({ coachId }: Props) => {
                 )}
               </Button>
             ) : null}
-            {dayjs(getValue()).format('DD/MM/YYYY')}
+            {formatSlotTime(getValue(), 'DD/MM/YYYY')}
           </div>
         )
       })
@@ -65,6 +66,26 @@ const CoachCostingTable = ({ coachId }: Props) => {
   );
 
   const { data, isPending } = useQuery(adminCoachCostingQueryOptions(coachId));
+
+  const normalizedData = useMemo(() => {
+    if (!data) {
+      return [];
+    }
+
+    return data.map((entry) => ({
+      ...entry,
+      slots: [...(entry.slots || [])].sort((a, b) => {
+        // Handle local time format "YYYY-MM-DD HH:mm:ss"
+        const aTime = typeof a.startAt === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(a.startAt)
+          ? dayjs(a.startAt)
+          : dayjs.utc(a.startAt);
+        const bTime = typeof b.startAt === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(b.startAt)
+          ? dayjs(b.startAt)
+          : dayjs.utc(b.startAt);
+        return aTime.diff(bTime);
+      })
+    }));
+  }, [data]);
 
   if (!isStaffPending && staff && String(staff?.role) !== String(Role.COACH)) {
     return null;
@@ -82,7 +103,7 @@ const CoachCostingTable = ({ coachId }: Props) => {
         <SectionContent>
           <DataTable
             loading={isPending || isStaffPending}
-            data={data || []}
+            data={normalizedData}
             columns={columns}
             enableRowSelection={false}
             enableColumnVisibility={false}
@@ -108,10 +129,10 @@ const CoachCostingTable = ({ coachId }: Props) => {
                     {
                       accessorKey: 'startAt',
                       header: 'Waktu Mulai',
-                      cell: ({ row, getValue }) =>
-                        `${dayjs(getValue()).format('HH:mm')} - ${dayjs(
-                          (row.original as Slot).endAt
-                        ).format('HH:mm')}`
+                      cell: ({ row, getValue }) => {
+                        const slot = row.original as Slot;
+                        return formatSlotTimeRange(getValue(), slot.endAt);
+                      }
                     },
                     {
                       accessorKey: 'isAvailable',

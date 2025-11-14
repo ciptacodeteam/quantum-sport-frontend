@@ -6,76 +6,19 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
-import { cn } from '@/lib/utils';
+import { cn, getPlaceholderImageUrl } from '@/lib/utils';
+import { formatSlotTimeRange, getSlotTimeKey } from '@/lib/time-utils';
+import { courtsSlotsQueryOptions } from '@/queries/court';
 import { useBookingStore } from '@/stores/useBookingStore';
+import type { Court, Slot } from '@/types/model';
 import { IconCalendar, IconCheck, IconClock, IconMapPin, IconX } from '@tabler/icons-react';
+import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
-// Mock data for courts
-const mockCourts = [
-  {
-    id: '1',
-    name: 'Court A - Premium',
-    image: '/assets/img/court-1.jpg',
-    pricePerHour: 150000,
-    description: 'Premium indoor court with professional lighting'
-  },
-  {
-    id: '2',
-    name: 'Court B - Standard',
-    image: '/assets/img/court-2.jpg',
-    pricePerHour: 120000,
-    description: 'Standard outdoor court with natural lighting'
-  },
-  {
-    id: '3',
-    name: 'Court C - VIP',
-    image: '/assets/img/court-3.jpg',
-    pricePerHour: 200000,
-    description: 'VIP court with air conditioning and premium facilities'
-  },
-  {
-    id: '4',
-    name: 'Court D - Economy',
-    image: '/assets/img/court-4.jpg',
-    pricePerHour: 100000,
-    description: 'Economy court perfect for casual games'
-  }
-];
-
-// Time slots available for booking
-const timeSlots = [
-  '06:00',
-  '07:00',
-  '08:00',
-  '09:00',
-  '10:00',
-  '11:00',
-  '12:00',
-  '13:00',
-  '14:00',
-  '15:00',
-  '16:00',
-  '17:00',
-  '18:00',
-  '19:00',
-  '20:00',
-  '21:00',
-  '22:00',
-  '23:00',
-  '00:00'
-];
-
-// Mock booked slots (simulating real-world scenario)
-const bookedSlots = [
-  { courtId: '1', timeSlot: '10:00', customerName: 'John Doe' },
-  { courtId: '2', timeSlot: '14:00', customerName: 'Jane Smith' },
-  { courtId: '1', timeSlot: '16:00', customerName: 'Mike Johnson' },
-  { courtId: '3', timeSlot: '18:00', customerName: 'Sarah Wilson' }
-];
+// Time slots will be generated from actual API data
 
 type SelectedBooking = {
   courtId: string;
@@ -147,6 +90,98 @@ export default function BookingLapangan() {
   );
   const [calendarOpen, setCalendarOpen] = useState(false);
 
+  // Fetch slots for the selected date
+  // Include next day's 00:00 slot (which is actually the end of the current day in Jakarta time)
+  const selectedDateString = dayjs(localSelectedDate).format('YYYY-MM-DD');
+  const slotQueryParams = useMemo(
+    () => ({
+      startAt: dayjs(selectedDateString).startOf('day').toISOString(),
+      endAt: dayjs(selectedDateString).add(1, 'day').startOf('day').toISOString()
+    }),
+    [selectedDateString]
+  );
+
+  const { data: slotsData, isLoading: isSlotsLoading } = useQuery(
+    courtsSlotsQueryOptions(slotQueryParams)
+  );
+
+  const slots = useMemo(() => slotsData ?? [], [slotsData]);
+
+  // Extract courts from slots
+  const courts = useMemo(() => {
+    const map = new Map<
+      string,
+      { id: string; name: string; image?: string | null; pricePerHour: number; description?: string }
+    >();
+    slots.forEach((slot) => {
+      const courtId = slot.courtId || slot.court?.id;
+      if (!courtId) return;
+      if (!map.has(courtId)) {
+        const court = slot.court as Court | undefined;
+        map.set(courtId, {
+          id: courtId,
+          name: court?.name || `Court ${map.size + 1}`,
+          image: court?.image || getPlaceholderImageUrl({ width: 160, height: 90, text: 'No Image' }),
+          pricePerHour: slot.price || 0,
+          description: court?.description || undefined
+        });
+      } else {
+        // Update price if this slot has a higher price (for peak hours)
+        const existing = map.get(courtId)!;
+        if (slot.price && slot.price > existing.pricePerHour) {
+          existing.pricePerHour = slot.price;
+        }
+      }
+    });
+
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [slots]);
+
+  // Get available slots for the selected date, grouped by court and time
+  const slotsByCourtAndTime = useMemo(() => {
+    const map = new Map<string, Map<string, Slot & { court?: Court }>>();
+    slots.forEach((slot) => {
+      const courtId = slot.courtId || slot.court?.id;
+      if (!courtId) return;
+      
+      // Check if this slot belongs to the selected date
+      // Convert slot date to Jakarta timezone for comparison
+      const slotDateInJakarta = dayjs.utc(slot.startAt).tz('Asia/Jakarta').format('YYYY-MM-DD');
+      
+      // Only include slots that belong to the selected date
+      if (slotDateInJakarta === selectedDateString) {
+        if (!map.has(courtId)) {
+          map.set(courtId, new Map());
+        }
+        
+        // Format time as "07.00" instead of "07:00"
+        const slotTime = getSlotTimeKey(slot.startAt).replace(':', '.');
+        map.get(courtId)!.set(slotTime, slot);
+      }
+    });
+    
+    return map;
+  }, [slots, selectedDateString]);
+
+  // Get all unique time slots from available slots (sorted)
+  const availableTimeSlots = useMemo(() => {
+    const timeSet = new Set<string>();
+    slots.forEach((slot) => {
+      const slotDateInJakarta = dayjs.utc(slot.startAt).tz('Asia/Jakarta').format('YYYY-MM-DD');
+      if (slotDateInJakarta === selectedDateString) {
+        const slotTime = getSlotTimeKey(slot.startAt).replace(':', '.');
+        timeSet.add(slotTime);
+      }
+    });
+    
+    // Sort times
+    return Array.from(timeSet).sort((a, b) => {
+      const timeA = parseInt(a.replace('.', ''));
+      const timeB = parseInt(b.replace('.', ''));
+      return timeA - timeB;
+    });
+  }, [slots, selectedDateString]);
+
   // Sync with store when component mounts
   useEffect(() => {
     setLocalSelectedDate(selectedDate);
@@ -172,23 +207,8 @@ export default function BookingLapangan() {
 
   // Handle time slot selection
   const handleTimeSlotSelect = (timeSlot: string) => {
-    const currentDate = dayjs(localSelectedDate).format('YYYY-MM-DD');
-
-    // Don't allow selection if no courts are available for this time slot
-    if (
-      !selectedCourt &&
-      !mockCourts.some((court) => isTimeSlotAvailableForCourt(timeSlot, court.id, currentDate))
-    ) {
-      return;
-    }
-
-    // If a court is selected, check if this time slot is available for that court
-    if (selectedCourt && !isTimeSlotAvailableForCourt(timeSlot, selectedCourt, currentDate)) {
-      return;
-    }
-
     if (selectedTimeSlots.includes(timeSlot)) {
-      setSelectedTimeSlots((prev) => prev.filter((slot) => slot !== timeSlot));
+      setSelectedTimeSlots((prev) => prev.filter((time) => time !== timeSlot));
     } else {
       setSelectedTimeSlots((prev) => [...prev, timeSlot]);
     }
@@ -206,29 +226,35 @@ export default function BookingLapangan() {
       return;
     }
 
-    const court = mockCourts.find((c) => c.id === selectedCourt);
+    const court = courts.find((c) => c.id === selectedCourt);
     if (!court) return;
 
-    // Check if any selected slots are not available for the selected court
-    const currentDate = dayjs(localSelectedDate).format('YYYY-MM-DD');
-    const unavailableSlots = selectedTimeSlots.filter(
-      (slot) => !isTimeSlotAvailableForCourt(slot, selectedCourt, currentDate)
-    );
+    // Get the selected slots
+    const selectedSlots = selectedTimeSlots
+      .map((timeSlot) => {
+        const slot = slotsByCourtAndTime.get(selectedCourt)?.get(timeSlot);
+        return slot ? { timeSlot, slot } : null;
+      })
+      .filter((item): item is { timeSlot: string; slot: Slot & { court?: Court } } => item !== null);
 
-    if (unavailableSlots.length > 0) {
-      toast.error(`Time slots ${unavailableSlots.join(', ')} are not available for ${court.name}`);
+    if (selectedSlots.length === 0) {
+      toast.error('Selected slots are not available');
       return;
     }
 
     // Create new bookings with the current selected date
     const currentDateFormatted = dayjs(localSelectedDate).format('YYYY-MM-DD');
-    const newBookings = selectedTimeSlots.map((timeSlot) => ({
-      courtId: selectedCourt,
-      courtName: court.name,
-      timeSlot,
-      price: court.pricePerHour,
-      date: currentDateFormatted // Store the date for each booking
-    }));
+    const newBookings = selectedSlots.map(({ slot }) => {
+      const timeSlot = formatSlotTimeRange(slot.startAt, slot.endAt);
+      
+      return {
+        courtId: selectedCourt,
+        courtName: court.name,
+        timeSlot,
+        price: slot.price || 0,
+        date: currentDateFormatted
+      };
+    });
 
     const updatedBookings = [...bookings, ...newBookings];
     setBookings(updatedBookings);
@@ -245,8 +271,7 @@ export default function BookingLapangan() {
       courtName: booking.courtName,
       timeSlot: booking.timeSlot,
       price: booking.price,
-      date: booking.date,
-      endTime: dayjs(`2000-01-01 ${booking.timeSlot}`).add(1, 'hour').format('HH:mm')
+      date: booking.date
     }));
 
     const allBookingItems: any = [...existingBookingItems, ...newBookingItems];
@@ -314,22 +339,29 @@ export default function BookingLapangan() {
   //   });
   // };
 
-  // Check if a time slot is available for the selected court
-  const isTimeSlotAvailableForCourt = (timeSlot: string, courtId: string, checkDate?: string) => {
-    const dateToCheck = checkDate || dayjs(localSelectedDate).format('YYYY-MM-DD');
-
-    // Check system bookings (mock data - assuming they're for current date)
-    const systemBooked = bookedSlots.some(
-      (slot) => slot.timeSlot === timeSlot && slot.courtId === courtId
-    );
-
+  // Check if a time slot is available for a court
+  const isTimeSlotAvailableForCourt = (timeSlot: string, courtId: string) => {
+    const slot = slotsByCourtAndTime.get(courtId)?.get(timeSlot);
+    
+    // If slot doesn't exist, it's booked
+    if (!slot) return false;
+    
+    // If slot exists but isAvailable is false, it's booked
+    if (!slot.isAvailable) return false;
+    
+    const dateToCheck = dayjs(localSelectedDate).format('YYYY-MM-DD');
+    const timeSlotWithColon = timeSlot.replace('.', ':');
+    const slotTimeRange = formatSlotTimeRange(slot.startAt, slot.endAt);
+    
     // Check user bookings for the specific date
     const userBooked = bookings.some(
       (booking) =>
-        booking.timeSlot === timeSlot && booking.courtId === courtId && booking.date === dateToCheck
+        booking.timeSlot === slotTimeRange && 
+        booking.courtId === courtId && 
+        booking.date === dateToCheck
     );
 
-    return !systemBooked && !userBooked;
+    return !userBooked;
   };
 
   return (
@@ -449,47 +481,50 @@ export default function BookingLapangan() {
                 </p>
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:flex lg:flex-wrap">
-                  {timeSlots.map((timeSlot) => {
-                    const currentDate = dayjs(localSelectedDate).format('YYYY-MM-DD');
-                    const isSelected = selectedTimeSlots.includes(timeSlot);
-                    const isBooked = selectedCourt
-                      ? !isTimeSlotAvailableForCourt(timeSlot, selectedCourt, currentDate)
-                      : !mockCourts.some((court) =>
-                          isTimeSlotAvailableForCourt(timeSlot, court.id, currentDate)
-                        );
-                    const availableCourts = mockCourts.filter((court) =>
-                      isTimeSlotAvailableForCourt(timeSlot, court.id, currentDate)
-                    );
+                {isSlotsLoading ? (
+                  <div className="py-8 text-center">
+                    <p className="text-muted-foreground text-sm">Loading time slots...</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:flex lg:flex-wrap">
+                    {availableTimeSlots.map((timeSlot) => {
+                      const isSelected = selectedTimeSlots.includes(timeSlot);
+                      const isBooked = selectedCourt
+                        ? !isTimeSlotAvailableForCourt(timeSlot, selectedCourt)
+                        : !courts.some((court) => isTimeSlotAvailableForCourt(timeSlot, court.id));
+                      const availableCourts = courts.filter((court) =>
+                        isTimeSlotAvailableForCourt(timeSlot, court.id)
+                      );
 
-                    return (
-                      <div key={timeSlot} className="relative">
-                        <Badge
-                          variant={isSelected ? 'default' : isBooked ? 'secondary' : 'outline'}
-                          className={cn(
-                            'w-full justify-center px-2 py-1 text-xs font-medium transition-all lg:w-auto lg:px-4 lg:py-2 lg:text-sm',
-                            isSelected && 'bg-primary text-primary-foreground shadow-lg',
-                            isBooked && 'cursor-not-allowed bg-gray-100 text-gray-500 opacity-50',
-                            !isBooked &&
-                              !isSelected &&
-                              'hover:bg-primary/10 hover:border-primary cursor-pointer hover:scale-105'
+                      return (
+                        <div key={timeSlot} className="relative">
+                          <Badge
+                            variant={isSelected ? 'default' : isBooked ? 'secondary' : 'outline'}
+                            className={cn(
+                              'w-full justify-center px-2 py-1 text-xs font-medium transition-all lg:w-auto lg:px-4 lg:py-2 lg:text-sm',
+                              isSelected && 'bg-primary text-primary-foreground shadow-lg',
+                              isBooked && 'cursor-not-allowed bg-gray-100 text-gray-500 opacity-50',
+                              !isBooked &&
+                                !isSelected &&
+                                'hover:bg-primary/10 hover:border-primary cursor-pointer hover:scale-105'
+                            )}
+                            onClick={() => !isBooked && handleTimeSlotSelect(timeSlot)}
+                          >
+                            <span className="truncate">{timeSlot}</span>
+                            {!selectedCourt && availableCourts.length > 0 && (
+                              <span className="ml-1 hidden text-xs opacity-75 sm:inline">
+                                ({availableCourts.length})
+                              </span>
+                            )}
+                          </Badge>
+                          {isBooked && (
+                            <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full border-2 border-white bg-red-500"></div>
                           )}
-                          onClick={() => !isBooked && handleTimeSlotSelect(timeSlot)}
-                        >
-                          <span className="truncate">{timeSlot}</span>
-                          {!selectedCourt && availableCourts.length > 0 && (
-                            <span className="ml-1 hidden text-xs opacity-75 sm:inline">
-                              ({availableCourts.length})
-                            </span>
-                          )}
-                        </Badge>
-                        {isBooked && (
-                          <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full border-2 border-white bg-red-500"></div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
 
                 {selectedTimeSlots.length > 0 && (
                   <div className="bg-primary/5 mt-4 rounded-lg p-3">
@@ -534,16 +569,21 @@ export default function BookingLapangan() {
                 </p>
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:gap-4">
-                  {mockCourts.map((court) => {
-                    const currentDate = dayjs(localSelectedDate).format('YYYY-MM-DD');
-                    const availableSlots = selectedTimeSlots.filter((slot) =>
-                      isTimeSlotAvailableForCourt(slot, court.id, currentDate)
+                {isSlotsLoading ? (
+                  <div className="py-8 text-center">
+                    <p className="text-muted-foreground text-sm">Loading courts...</p>
+                  </div>
+                ) : courts.length === 0 ? (
+                  <div className="py-8 text-center">
+                    <p className="text-muted-foreground text-sm">No courts available for this date</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:gap-4">
+                    {courts.map((court) => {
+                    const availableSlotsCount = availableTimeSlots.filter((timeSlot) =>
+                      isTimeSlotAvailableForCourt(timeSlot, court.id)
                     ).length;
-                    const bookedForSelectedSlots = selectedTimeSlots.filter(
-                      (slot) => !isTimeSlotAvailableForCourt(slot, court.id, currentDate)
-                    ).length;
-                    const isDisabled = selectedTimeSlots.length > 0 && availableSlots === 0;
+                    const isDisabled = false;
 
                     return (
                       <div
@@ -561,9 +601,17 @@ export default function BookingLapangan() {
                       >
                         {/* Court Image */}
                         <div className="relative h-24 bg-linear-to-br from-green-100 to-green-200 sm:h-28 lg:h-32">
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <IconMapPin className="h-8 w-8 text-green-600 sm:h-10 sm:w-10 lg:h-12 lg:w-12" />
-                          </div>
+                          {court.image ? (
+                            <img
+                              src={court.image}
+                              alt={court.name}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <IconMapPin className="h-8 w-8 text-green-600 sm:h-10 sm:w-10 lg:h-12 lg:w-12" />
+                            </div>
+                          )}
 
                           {/* Selected Indicator */}
                           {selectedCourt === court.id && (
@@ -584,26 +632,14 @@ export default function BookingLapangan() {
                                 {court.description}
                               </p>
                             </div>
-                            {selectedTimeSlots.length > 0 && (
-                              <div className="ml-2 shrink-0 text-right">
-                                {availableSlots > 0 && (
-                                  <Badge
-                                    variant="outline"
-                                    className="mb-1 border-green-200 bg-green-50 text-xs text-green-700"
-                                  >
-                                    {availableSlots} ok
-                                  </Badge>
-                                )}
-                                {bookedForSelectedSlots > 0 && (
-                                  <Badge
-                                    variant="outline"
-                                    className="border-red-200 bg-red-50 text-xs text-red-700"
-                                  >
-                                    {bookedForSelectedSlots} busy
-                                  </Badge>
-                                )}
-                              </div>
-                            )}
+                            <div className="ml-2 shrink-0 text-right">
+                              <Badge
+                                variant="outline"
+                                className="border-green-200 bg-green-50 text-xs text-green-700"
+                              >
+                                {availableSlotsCount} available
+                              </Badge>
+                            </div>
                           </div>
 
                           <div className="flex items-center justify-between">
@@ -620,7 +656,8 @@ export default function BookingLapangan() {
                       </div>
                     );
                   })}
-                </div>
+                  </div>
+                )}
 
                 {/* Add to Booking Button */}
                 {selectedCourt && selectedTimeSlots.length > 0 && (
@@ -690,10 +727,7 @@ export default function BookingLapangan() {
                                 <div className="mb-1 flex items-center gap-1 lg:gap-2">
                                   <IconClock className="text-muted-foreground h-3 w-3 shrink-0" />
                                   <p className="text-muted-foreground truncate text-xs">
-                                    {booking.timeSlot} -{' '}
-                                    {dayjs(`2000-01-01 ${booking.timeSlot}`)
-                                      .add(1, 'hour')
-                                      .format('HH:mm')}
+                                    {booking.timeSlot}
                                   </p>
                                 </div>
                                 <p className="text-primary text-xs font-semibold">
@@ -757,10 +791,7 @@ export default function BookingLapangan() {
                             courtName: booking.courtName,
                             timeSlot: booking.timeSlot,
                             price: booking.price,
-                            date: booking.date,
-                            endTime: dayjs(`2000-01-01 ${booking.timeSlot}`)
-                              .add(1, 'hour')
-                              .format('HH:mm')
+                            date: booking.date
                           }));
                           setBookingItems(bookingItemsForStore);
 

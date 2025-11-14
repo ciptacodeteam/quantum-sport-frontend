@@ -11,6 +11,7 @@ import { IconPlus } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
+import { formatSlotTime, formatSlotTimeRange } from '@/lib/time-utils';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { useMemo } from 'react';
 import CreateCourtCostForm from './CreateCourtCostForm';
@@ -55,10 +56,25 @@ const CourtCostingTable = ({ courtId }: Props) => {
 
   const { data, isPending } = useQuery(adminCourtCostingQueryOptions(courtId));
 
+  const normalizedData = useMemo(() => {
+    if (!data) {
+      return [];
+    }
+
+    return data.map((entry) => ({
+      ...entry,
+      slots: [...(entry.slots || [])].sort((a, b) =>
+        dayjs
+          .utc(a.startAt)
+          .diff(dayjs.utc(b.startAt))
+      )
+    }));
+  }, [data]);
+
   return (
     <DataTable
       loading={isPending}
-      data={data || []}
+      data={normalizedData}
       columns={columns}
       enableRowSelection={false}
       enableColumnVisibility={false}
@@ -82,12 +98,14 @@ const CourtCostingTable = ({ courtId }: Props) => {
             enablePagination={false}
             enablePageSize={false}
             columns={[
-              {
-                accessorKey: 'startAt',
-                header: 'Waktu Mulai',
-                cell: ({ row, getValue }) =>
-                  `${dayjs(getValue()).format('HH:mm')} - ${dayjs((row.original as Slot).endAt).format('HH:mm')}`
-              },
+                    {
+                      accessorKey: 'startAt',
+                      header: 'Waktu Mulai',
+                      cell: ({ row, getValue }) => {
+                        const slot = row.original as Slot;
+                        return formatSlotTimeRange(getValue(), slot.endAt);
+                      }
+                    },
               {
                 accessorKey: 'isAvailable',
                 header: 'Status',
