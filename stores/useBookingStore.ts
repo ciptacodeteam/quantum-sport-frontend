@@ -91,12 +91,8 @@ interface BookingState {
   // Court bookings
   bookingItems: BookingItem[];
   selectedDate: Date;
-<<<<<<< HEAD
-
-=======
   selectedCustomerId: string;
-  
->>>>>>> fix/admin-crud
+
   // Add-ons
   selectedCoaches: SelectedCoach[];
   selectedBallboys: SelectedBallboy[];
@@ -283,17 +279,6 @@ export const useBookingStore = create<BookingState>()(
         set({ selectedInventories: newInventories, inventoryTotal });
       },
 
-<<<<<<< HEAD
-      clearAll: () =>
-        set({
-          bookingItems: [],
-          selectedCoaches: [],
-          selectedInventories: [],
-          courtTotal: 0,
-          coachTotal: 0,
-          inventoryTotal: 0
-        }),
-=======
       clearAll: () => set({
         bookingItems: [],
         selectedCoaches: [],
@@ -303,7 +288,6 @@ export const useBookingStore = create<BookingState>()(
         coachTotal: 0,
         inventoryTotal: 0,
       }),
->>>>>>> fix/admin-crud
 
       getTotalAmount: () => {
         const state = get();

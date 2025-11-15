@@ -20,6 +20,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 const timeSlots = [
+  '00:00',
+  '01:00',
+  '02:00',
+  '03:00',
+  '04:00',
+  '05:00',
   '06:00',
   '07:00',
   '08:00',
@@ -37,7 +43,7 @@ const timeSlots = [
   '20:00',
   '21:00',
   '22:00',
-  '23:00'
+  '23:00',
 ];
 
 type SelectedCell = {
@@ -96,8 +102,6 @@ export default function BookingPage() {
     image?: string | null;
   }>(null);
 
-  const { mutate: createBooking, isPending } = useMutation(createBookingMutationOptions());
-
   const activeDate = useMemo(
     () => dateList.find((item) => item.fullDate === selectedDate),
     [dateList, selectedDate]
@@ -152,8 +156,8 @@ export default function BookingPage() {
     slots.forEach((slot) => {
       const courtId = slot.courtId || slot.court?.id;
       if (!courtId || !slot.startAt) return;
-      const time = dayjs(slot.startAt).format('HH:mm');
-      map.set(`${courtId}-${time}`, slot);
+      const time = dayjs.tz(slot.startAt, 'Asia/Jakarta').format('HH:mm');
+      map.set(`${slot.courtId}-${time}`, slot);
     });
     return map;
   }, [slots]);
@@ -579,8 +583,7 @@ export default function BookingPage() {
             className="w-full"
             size={'xl'}
             onClick={handleBooking}
-            disabled={bookingItems.length === 0 || isPending}
-            loading={isPending}
+            disabled={bookingItems.length === 0}
           >
             Pilih Jadwal
           </Button>

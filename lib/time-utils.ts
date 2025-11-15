@@ -21,7 +21,7 @@ export function formatSlotTime(
   }
 
   try {
-    const parsedUtc = dayjs.utc(value);
+    const parsedUtc = dayjs.tz(value, 'Asia/Jakarta');
 
     if (!parsedUtc.isValid()) {
       return '-';
