@@ -256,32 +256,15 @@ export default function MembershipCheckoutPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Harga Membership</span>
+              <span className="text-muted-foreground">Subtotal</span>
               <span className="font-medium">{formatCurrency(membership.price)}</span>
             </div>
 
-            {selectedPaymentMethod && (
-              <>
-                {paymentFeeBreakdown.percentageFee > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      Biaya Admin ({paymentFeeBreakdown.percentageRate}%)
-                    </span>
-                    <span className="font-medium">
-                      {formatCurrency(paymentFeeBreakdown.percentageFee)}
-                    </span>
-                  </div>
-                )}
-
-                {paymentFeeBreakdown.fixedFee > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Biaya Tetap</span>
-                    <span className="font-medium">
-                      {formatCurrency(paymentFeeBreakdown.fixedFee)}
-                    </span>
-                  </div>
-                )}
-              </>
+            {selectedPaymentMethod && paymentFeeBreakdown.totalFee > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Biaya Layanan</span>
+                <span className="font-medium">{formatCurrency(paymentFeeBreakdown.totalFee)}</span>
+              </div>
             )}
 
             <Separator />

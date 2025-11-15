@@ -434,40 +434,25 @@ export default function CheckoutPage() {
             <h3 className="mb-3 text-base font-semibold">Ringkasan Pembayaran</h3>
             <div className="space-y-2 text-sm">
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Booking Court</span>
+                <span className="text-muted-foreground">Subtotal</span>
                 <span className="text-foreground font-medium">{formatCurrency(courtTotal)}</span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Biaya Add Ons</span>
-                <span className="text-foreground font-medium">{formatCurrency(addOnsTotal)}</span>
-              </div>
-              {selectedPaymentMethod ? (
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Biaya Proses (Tetap)</span>
-                    <span className="text-foreground font-medium">
-                      {formatCurrency(paymentFeeBreakdown.fixedFee)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">
-                      Biaya Proses (
-                      {paymentFeeBreakdown.percentageRate.toFixed(2).replace(/\.00$/, '')}%)
-                    </span>
-                    <span className="text-foreground font-medium">
-                      {formatCurrency(paymentFeeBreakdown.percentageFee)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Total Biaya Aplikasi</span>
-                    <span className="text-foreground font-semibold">
-                      {formatCurrency(paymentFeeBreakdown.totalFee)}
-                    </span>
-                  </div>
+              {addOnsTotal > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Add-ons Subtotal</span>
+                  <span className="text-foreground font-medium">{formatCurrency(addOnsTotal)}</span>
                 </div>
-              ) : null}
+              )}
+              {selectedPaymentMethod && paymentFeeBreakdown.totalFee > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Biaya Layanan</span>
+                  <span className="text-foreground font-medium">
+                    {formatCurrency(paymentFeeBreakdown.totalFee)}
+                  </span>
+                </div>
+              )}
               <div className="border-muted flex items-center justify-between border-t border-dashed pt-2 text-base font-semibold">
-                <span>Total</span>
+                <span>Total Pembayaran</span>
                 <span className="text-primary">{formatCurrency(totalWithPaymentFee)}</span>
               </div>
             </div>
@@ -479,7 +464,7 @@ export default function CheckoutPage() {
         <div className="mx-auto w-11/12 max-w-4xl py-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-muted-foreground text-xs">Sub total</p>
+              <p className="text-muted-foreground text-xs">Total Pembayaran</p>
               <p className="text-primary text-lg font-semibold">
                 {formatCurrency(totalWithPaymentFee)}
               </p>

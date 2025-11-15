@@ -2,75 +2,32 @@
 
 import MainHeader from '@/components/headers/MainHeader';
 import MainBottomNavigation from '@/components/footers/MainBottomNavigation';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { BookingStatus } from '@/lib/constants';
-import { resolveMediaUrl } from '@/lib/utils';
+import { Card, CardContent } from '@/components/ui/card';
 import { invoiceQueryOptions } from '@/queries/invoice';
 import type { Booking, Invoice } from '@/types/model';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import 'dayjs/locale/id';
-import {
-  ArrowLeft,
-  Calendar,
-  Clock,
-  Copy,
-  CreditCard,
-  FileText,
-  MapPin,
-  Users,
-  CheckCircle
-} from 'lucide-react';
+import { ArrowLeft, FileText } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
-import Image from 'next/image';
-import { useState } from 'react';
+
 import { toast } from 'sonner';
+import InvoiceHeader from '@/components/invoice/InvoiceHeader';
+import InvoiceInfoCard from '@/components/invoice/InvoiceInfoCard';
+import CustomerInfoCard from '@/components/invoice/CustomerInfoCard';
+import BookingDetailsCard from '@/components/invoice/BookingDetailsCard';
+import AddOnsCard from '@/components/invoice/AddOnsCard';
+import PaymentSummaryCard from '@/components/invoice/PaymentSummaryCard';
+import PaymentActionCard from '@/components/invoice/PaymentActionCard';
+import SuccessMessageCard from '@/components/invoice/SuccessMessageCard';
 
 dayjs.locale('id');
-
-const currencyFormatter = new Intl.NumberFormat('id-ID', {
-  style: 'currency',
-  currency: 'IDR',
-  minimumFractionDigits: 0
-});
-
-const formatCurrency = (value: number) => currencyFormatter.format(value).replace(/\s/g, '');
-
-const getStatusColor = (status: string) => {
-  const statusMap: Record<string, string> = {
-    HOLD: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    PENDING: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    PAID: 'bg-green-100 text-green-800 border-green-200',
-    CONFIRMED: 'bg-green-100 text-green-800 border-green-200',
-    FAILED: 'bg-red-100 text-red-800 border-red-200',
-    CANCELLED: 'bg-gray-100 text-gray-800 border-gray-200',
-    EXPIRED: 'bg-gray-100 text-gray-800 border-gray-200'
-  };
-  return statusMap[status] || 'bg-gray-100 text-gray-800 border-gray-200';
-};
-
-const getStatusLabel = (status: string) => {
-  const labels: Record<string, string> = {
-    HOLD: 'Menunggu Pembayaran',
-    PENDING: 'Menunggu Pembayaran',
-    PAID: 'Lunas',
-    CONFIRMED: 'Terkonfirmasi',
-
-    FAILED: 'Gagal',
-    CANCELLED: 'Dibatalkan',
-    EXPIRED: 'Kadaluarsa'
-  };
-  return labels[status] || status;
-};
 
 export default function InvoiceDetailPage() {
   const params = useParams();
   const router = useRouter();
   const invoiceNumber = params.invoiceNumber as string;
-  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const { data: response, isPending, isError } = useQuery(invoiceQueryOptions(invoiceNumber));
 
@@ -123,457 +80,66 @@ export default function InvoiceDetailPage() {
   const bookingInventories = booking?.inventories || [];
   const bookingCoaches = booking?.coaches || [];
   const bookingBallboys = booking?.ballboys || [];
-
-  // Group booking details by date and court
-  const groupedBookings = bookingDetails.reduce((acc: any, detail: any) => {
-    const date = dayjs(detail.slot?.startAt).format('YYYY-MM-DD');
-    const courtName = detail.court?.name || detail.slot?.court?.name || 'Unknown Court';
-
-    if (!acc[date]) {
-      acc[date] = {};
-    }
-    if (!acc[date][courtName]) {
-      acc[date][courtName] = [];
-    }
-    acc[date][courtName].push(detail);
-    return acc;
-  }, {});
-
-  const canPay = invoice.status === 'PENDING' || (booking && booking.status === BookingStatus.HOLD);
+  const canPay =
+    ['PENDING', 'HOLD'].includes(invoice.status) &&
+    (!invoice.dueDate || dayjs().isBefore(dayjs(invoice.dueDate)));
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       <MainHeader />
 
       <div className="container mx-auto mt-28 px-4 pb-24 lg:mt-28">
         <div className="mx-auto max-w-4xl">
           {/* Header */}
           {/* Header */}
-          <div className="mb-6">
-            <Button variant="ghost" onClick={() => router.back()} className="mb-4">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Kembali
-            </Button>
-
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="mb-2 text-3xl font-bold">Invoice Detail</h1>
-                <p className="text-gray-600">
-                  Nomor Invoice: <span className="font-semibold">{invoice.number}</span>
-                </p>
-              </div>
-              <Badge className={getStatusColor(invoice.status)} variant="outline">
-                {getStatusLabel(invoice.status)}
-              </Badge>
-            </div>
-          </div>
+          <InvoiceHeader
+            number={invoice.number}
+            status={invoice.status}
+            onBack={() => router.back()}
+            onCopy={() => {
+              navigator.clipboard.writeText(invoice.number);
+              toast.success('Nomor invoice disalin');
+            }}
+          />
 
           {/* Invoice Information */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Informasi Invoice
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div>
-                  <p className="text-sm text-gray-600">Tanggal Pembuatan</p>
-                  <p className="font-semibold">
-                    {dayjs(invoice.issuedAt).format('DD MMMM YYYY, HH:mm')}
-                  </p>
-                </div>
-                {invoice.dueDate && (
-                  <div>
-                    <p className="text-sm text-gray-600">Jatuh Tempo</p>
-                    <p className="font-semibold">
-                      {dayjs(invoice.dueDate).format('DD MMMM YYYY, HH:mm')}
-                    </p>
-                  </div>
-                )}
-                {invoice.paidAt && (
-                  <div>
-                    <p className="text-sm text-gray-600">Tanggal Pembayaran</p>
-                    <p className="font-semibold text-green-600">
-                      {dayjs(invoice.paidAt).format('DD MMMM YYYY, HH:mm')}
-                    </p>
-                  </div>
-                )}
-                <div>
-                  <p className="text-sm text-gray-600">Status Booking</p>
-                  <Badge className={getStatusColor(booking?.status || '')} variant="outline">
-                    {getStatusLabel(booking?.status || '')}
-                  </Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <InvoiceInfoCard
+            issuedAt={invoice.issuedAt}
+            dueDate={invoice.dueDate}
+            paidAt={invoice.paidAt}
+            bookingStatus={booking?.status}
+          />
+
+          {/* Customer Information */}
+          <CustomerInfoCard user={(invoice as any).user} />
 
           {/* Booking Details */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Detail Pemesanan Lapangan
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {Object.entries(groupedBookings).map(([date, courts]: [string, any]) => (
-                <div key={date} className="space-y-4">
-                  <div className="flex items-center gap-2 text-lg font-semibold">
-                    <Calendar className="text-primary h-5 w-5" />
-                    {dayjs(date).format('dddd, DD MMMM YYYY')}
-                  </div>
-
-                  {Object.entries(courts).map(([courtName, details]: [string, any]) => (
-                    <div key={courtName} className="ml-4 space-y-2">
-                      <div className="flex items-center gap-2 font-medium">
-                        <MapPin className="h-4 w-4 text-gray-600" />
-                        {courtName}
-                      </div>
-
-                      <div className="ml-6 space-y-2">
-                        {details.map((detail: any, idx: number) => (
-                          <div
-                            key={detail.id || idx}
-                            className="flex items-center justify-between border-b py-2 last:border-0"
-                          >
-                            <div className="flex items-center gap-2">
-                              <Clock className="h-4 w-4 text-gray-500" />
-                              <span>
-                                {dayjs(detail.slot?.startAt).format('HH:mm')} -{' '}
-                                {dayjs(detail.slot?.endAt).format('HH:mm')}
-                              </span>
-                            </div>
-                            <span className="font-semibold">{formatCurrency(detail.price)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+          <BookingDetailsCard details={bookingDetails as any} />
 
           {/* Add-ons Section */}
-          {(bookingCoaches.length > 0 ||
-            bookingBallboys.length > 0 ||
-            bookingInventories.length > 0) && (
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Layanan Tambahan
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Coaches */}
-                {bookingCoaches.length > 0 && (
-                  <div>
-                    <h4 className="mb-2 font-semibold">Pelatih</h4>
-                    {bookingCoaches.map((coach: any, idx: number) => (
-                      <div
-                        key={coach.id || idx}
-                        className="flex items-center justify-between border-b py-2 last:border-0"
-                      >
-                        <div>
-                          <p className="font-medium">{coach.slot?.staff?.name || 'Pelatih'}</p>
-                          <p className="text-sm text-gray-600">
-                            {coach.bookingCoachType?.name} -{' '}
-                            {dayjs(coach.slot?.startAt).format('DD MMM YYYY, HH:mm')}
-                          </p>
-                        </div>
-                        <span className="font-semibold">{formatCurrency(coach.price)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Ballboys */}
-                {bookingBallboys.length > 0 && (
-                  <div>
-                    <h4 className="mb-2 font-semibold">Ballboy</h4>
-                    {bookingBallboys.map((ballboy: any, idx: number) => (
-                      <div
-                        key={ballboy.id || idx}
-                        className="flex items-center justify-between border-b py-2 last:border-0"
-                      >
-                        <div>
-                          <p className="font-medium">{ballboy.slot?.staff?.name || 'Ballboy'}</p>
-                          <p className="text-sm text-gray-600">
-                            {dayjs(ballboy.slot?.startAt).format('DD MMM YYYY, HH:mm')}
-                          </p>
-                        </div>
-                        <span className="font-semibold">{formatCurrency(ballboy.price)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Inventories */}
-                {bookingInventories.length > 0 && (
-                  <div>
-                    <h4 className="mb-2 font-semibold">Perlengkapan</h4>
-                    {bookingInventories.map((item: any, idx: number) => (
-                      <div
-                        key={item.id || idx}
-                        className="flex items-center justify-between border-b py-2 last:border-0"
-                      >
-                        <div>
-                          <p className="font-medium">{item.inventory?.name || 'Item'}</p>
-                          <p className="text-sm text-gray-600">Jumlah: {item.quantity}</p>
-                        </div>
-                        <span className="font-semibold">
-                          {formatCurrency(item.price * item.quantity)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+          <AddOnsCard
+            coaches={bookingCoaches as any}
+            ballboys={bookingBallboys as any}
+            inventories={bookingInventories as any}
+          />
 
           {/* Payment Summary */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5" />
-                Ringkasan Pembayaran
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Subtotal</span>
-                <span className="font-semibold">{formatCurrency(invoice.subtotal)}</span>
-              </div>
-
-              <div className="flex justify-between">
-                <span className="text-gray-600">Biaya Layanan</span>
-                <span className="font-semibold">{formatCurrency(invoice.processingFee)}</span>
-              </div>
-
-              <Separator />
-
-              <div className="flex justify-between text-lg">
-                <span className="font-bold">Total Pembayaran</span>
-                <span className="text-primary font-bold">{formatCurrency(invoice.total)}</span>
-              </div>
-
-              {invoice.payment && (invoice.payment as any).method && (
-                <div className="mt-4 rounded-lg bg-gray-50 p-4">
-                  <h4 className="mb-2 font-semibold">Metode Pembayaran</h4>
-                  <div className="flex items-center gap-3">
-                    {(invoice.payment as any).method.logo && (
-                      <Image
-                        src={resolveMediaUrl((invoice.payment as any).method.logo) || ''}
-                        unoptimized
-                        alt={(invoice.payment as any).method.name}
-                        width={64}
-                        height={32}
-                        className="h-8 w-auto object-contain"
-                      />
-                    )}
-                    <p className="font-medium text-gray-700">
-                      {(invoice.payment as any).method.name || 'Transfer Bank'}
-                    </p>
-                  </div>
-                  {(invoice.payment as any).method.channel && (
-                    <p className="mt-2 text-sm text-gray-600">
-                      Channel: {(invoice.payment as any).method.channel}
-                    </p>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <PaymentSummaryCard
+            subtotal={invoice.subtotal}
+            processingFee={invoice.processingFee}
+            total={invoice.total}
+            method={(invoice.payment as any)?.method}
+          />
 
           {/* Payment Action */}
-          {canPay &&
-            (() => {
-              const paymentMeta = (invoice as any).paymentMeta;
-              const payment = invoice.payment as any;
-              const paymentMethod = payment?.method;
-              const channelCode = paymentMethod?.channel || paymentMeta?.channel_code;
-
-              // Check for QRIS payment
-              const isQRIS = channelCode === 'QRIS';
-              const qrString = paymentMeta?.actions?.find(
-                (action: any) => action.descriptor === 'QR_STRING'
-              )?.value;
-
-              // Check for Virtual Account
-              const isVA = channelCode?.includes('VIRTUAL_ACCOUNT') || channelCode?.includes('_VA');
-              // Try extracting VA number from actions first (for BRI_VIRTUAL_ACCOUNT and similar)
-              const vaAction = paymentMeta?.actions?.find(
-                (action: any) => action.descriptor === 'VIRTUAL_ACCOUNT_NUMBER'
-              );
-              const vaNumber = vaAction?.value || paymentMeta?.channel_properties?.account_number;
-              const vaDisplayName = vaAction?.display_name || paymentMethod?.name;
-              const vaExpiry = vaAction?.expiry || paymentMeta?.channel_properties?.expires_at;
-
-              // Check for other payment types
-              const isEWallet = ['OVO', 'DANA', 'LINKAJA', 'SHOPEEPAY'].includes(channelCode);
-              const paymentUrl =
-                paymentMeta?.actions?.find(
-                  (action: any) =>
-                    action.descriptor === 'DEEPLINK_CHECKOUT' || action.type === 'REDIRECT'
-                )?.url || (invoice as any).paymentUrl;
-
-              const copyToClipboard = (text: string, field: string) => {
-                navigator.clipboard.writeText(text);
-                setCopiedField(field);
-                toast.success('Berhasil disalin!');
-                setTimeout(() => setCopiedField(null), 2000);
-              };
-
-              return (
-                <Card className="bg-primary/5 border-primary/20">
-                  <CardContent className="pt-6">
-                    <div className="text-center">
-                      <h3 className="mb-2 text-xl font-bold">Menunggu Pembayaran</h3>
-                      <p className="mb-6 text-gray-600">
-                        Silakan lakukan pembayaran sebelum{' '}
-                        {dayjs(invoice.dueDate).format('DD MMMM YYYY, HH:mm')}
-                      </p>
-
-                      {/* QRIS Payment */}
-                      {isQRIS && qrString && (
-                        <div className="space-y-4">
-                          <div className="flex justify-center">
-                            <div className="rounded-lg bg-white p-4 shadow-md">
-                              <div className="bg-white p-2">
-                                <Image
-                                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrString)}`}
-                                  alt="QR Code"
-                                  width={200}
-                                  unoptimized
-                                  height={200}
-                                  className="h-48 w-48"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                          <p className="text-sm text-gray-600">
-                            Scan QR code di atas menggunakan aplikasi pembayaran QRIS Anda
-                          </p>
-                          {paymentMeta?.channel_properties?.expires_at && (
-                            <p className="text-xs text-orange-600">
-                              QR Code berlaku hingga:{' '}
-                              {dayjs(paymentMeta.channel_properties.expires_at).format(
-                                'DD MMM YYYY, HH:mm'
-                              )}
-                            </p>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Virtual Account Payment */}
-                      {isVA && vaNumber && (
-                        <div className="space-y-4">
-                          <div className="rounded-lg border bg-white p-4">
-                            <p className="mb-2 text-sm text-gray-600">Nomor Virtual Account</p>
-                            <div className="flex items-center justify-center gap-2">
-                              <code className="text-2xl font-bold tracking-wider">{vaNumber}</code>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => copyToClipboard(vaNumber, 'va')}
-                              >
-                                {copiedField === 'va' ? (
-                                  <CheckCircle className="h-4 w-4 text-green-600" />
-                                ) : (
-                                  <Copy className="h-4 w-4" />
-                                )}
-                              </Button>
-                            </div>
-                            <div className="mt-2 text-xs text-gray-500">
-                              Bank: <span className="font-semibold">{vaDisplayName}</span>
-                              {vaExpiry && (
-                                <span className="ml-4 text-orange-600">
-                                  Berlaku hingga: {dayjs(vaExpiry).format('DD MMM YYYY, HH:mm')}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="space-y-2 text-left text-sm text-gray-700">
-                            <p className="font-semibold">Cara Pembayaran:</p>
-                            <ol className="ml-2 list-inside list-decimal space-y-1">
-                              <li>Buka aplikasi mobile banking atau ATM</li>
-                              <li>Pilih menu Transfer / Bayar</li>
-                              <li>Pilih Virtual Account {vaDisplayName}</li>
-                              <li>Masukkan nomor VA di atas</li>
-                              <li>Masukkan nominal {formatCurrency(invoice.total)}</li>
-                              <li>Konfirmasi dan selesaikan pembayaran</li>
-                            </ol>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* E-Wallet / Redirect Payment */}
-                      {(isEWallet || paymentUrl) && !isQRIS && !isVA && (
-                        <div className="space-y-4">
-                          <Button
-                            size="lg"
-                            className="w-full md:w-auto"
-                            onClick={() => window.open(paymentUrl, '_blank')}
-                          >
-                            <CreditCard className="mr-2 h-5 w-5" />
-                            Bayar dengan {paymentMethod?.name}
-                          </Button>
-                          <p className="text-sm text-gray-600">
-                            Anda akan diarahkan ke halaman pembayaran {paymentMethod?.name}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Fallback - No payment method selected yet */}
-                      {!isQRIS && !isVA && !paymentUrl && (
-                        <Button
-                          size="lg"
-                          className="w-full md:w-auto"
-                          onClick={() => router.push(`/payment/${invoice.id}`)}
-                        >
-                          <CreditCard className="mr-2 h-5 w-5" />
-                          Pilih Metode Pembayaran
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })()}
+          <PaymentActionCard
+            invoice={invoice}
+            canPay={canPay}
+            onChooseMethod={() => router.push(`/payment/${invoice.id}`)}
+          />
 
           {/* Success Message */}
-          {invoice.status === 'PAID' && (
-            <Card className="border-green-200 bg-green-50">
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-                    <svg
-                      className="h-8 w-8 text-green-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                  </div>
-                  <h3 className="mb-2 text-xl font-bold text-green-800">Pembayaran Berhasil!</h3>
-                  <p className="text-green-700">
-                    Terima kasih telah melakukan pembayaran. Booking Anda telah dikonfirmasi.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {invoice.status === 'PAID' && <SuccessMessageCard />}
         </div>
       </div>
       <MainBottomNavigation />
