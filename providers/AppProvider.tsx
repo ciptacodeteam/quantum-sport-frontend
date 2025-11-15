@@ -11,6 +11,7 @@ import utc from 'dayjs/plugin/utc';
 import { Toaster } from 'sonner';
 import { ConfirmDialogProvider } from '@/components/ui/confirm-dialog';
 import AuthModal from '@/components/modals/AuthModal';
+import { usePathname } from 'next/navigation';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -18,15 +19,20 @@ dayjs.locale(localeId);
 dayjs.tz.setDefault('Asia/Jakarta');
 
 const AppProvider = ({ children }: Readonly<PropsWithChildren>) => {
+  const pathname = usePathname();
+  const isAdminRoute = pathname?.startsWith('/admin');
+
   return (
     <>
       <ReactQueryProvider>
         <DialogProvider>
           <ConfirmDialogProvider>
             {children}
-            <Suspense>
-              <AuthModal />
-            </Suspense>
+            {!isAdminRoute && (
+              <Suspense>
+                <AuthModal />
+              </Suspense>
+            )}
             <Toaster position="top-center" richColors />
           </ConfirmDialogProvider>
         </DialogProvider>

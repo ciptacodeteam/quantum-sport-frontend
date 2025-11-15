@@ -621,7 +621,10 @@ export default function BookingLapangan() {
                           <div className="relative h-24 bg-linear-to-br from-green-100 to-green-200 sm:h-28 lg:h-32">
                             {court.image ? (
                               <Image
-                                src={court.image}
+                                src={
+                                  court.image || getPlaceholderImageUrl({ width: 160, height: 90 })
+                                }
+                                unoptimized
                                 alt={court.name}
                                 className="h-full w-full object-cover"
                                 layout="fill"

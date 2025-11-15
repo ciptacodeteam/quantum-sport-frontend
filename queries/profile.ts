@@ -1,9 +1,9 @@
-import { getProfileApi } from '@/api/auth';
-import type { UserProfile } from '@/types/model';
+import { getProfileApi, getProfileApiSmart } from '@/api/auth';
+import type { UserProfile, AdminProfile } from '@/types/model';
 import { queryOptions } from '@tanstack/react-query';
 
 export const profileQueryOptions = queryOptions({
   queryKey: ['profile'],
-  queryFn: getProfileApi,
-  select: (res) => res.data as UserProfile
+  queryFn: getProfileApiSmart,
+  select: (res) => res.data as UserProfile | AdminProfile
 });

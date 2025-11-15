@@ -132,6 +132,17 @@ export async function isJwtAndDecode(token: string): Promise<{ isJwt: boolean; d
   }
 }
 
+export function isAdminToken(token: string | null): boolean {
+  if (!token) return false;
+  try {
+    const decoded: any = jwtDecode(token);
+    // Check if token has admin role
+    return decoded?.role === 'ADMIN' || decoded?.role === 'COACH' || decoded?.role === 'BALLBOY';
+  } catch {
+    return false;
+  }
+}
+
 export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }

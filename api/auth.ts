@@ -45,6 +45,37 @@ export async function getProfileApi() {
   return data;
 }
 
+export async function getProfileApiSmart() {
+  // Import dynamically to avoid circular dependency
+  const { isAdminToken } = await import('@/lib/utils');
+  const { adminApi } = await import('@/lib/adminApi');
+
+  // Check if current token is admin token
+  let token = null;
+  if (typeof window !== 'undefined') {
+    token = localStorage.getItem('token');
+    // If not in localStorage, try auth store
+    if (!token) {
+      const { default: useAuthStore } = await import('@/stores/useAuthStore');
+      token = useAuthStore.getState().token;
+    }
+    // Remove 'Bearer ' prefix if present
+    if (token && token.startsWith('Bearer ')) {
+      token = token.substring(7);
+    }
+  }
+
+  if (token && isAdminToken(token)) {
+    // Use admin API endpoint
+    const { data } = await adminApi.get('/auth/profile');
+    return data;
+  }
+
+  // Use regular user API endpoint
+  const { data } = await api.get('/auth/profile');
+  return data;
+}
+
 export async function updateProfileApi(payload) {
   const { data } = await api.post('/auth/profile', payload, {
     headers: {
