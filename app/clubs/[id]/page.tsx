@@ -7,26 +7,46 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { clubQueryOptions } from '@/queries/club';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { clubQueryOptions, clubMembershipsQueryOptions } from '@/queries/club';
 import { profileQueryOptions } from '@/queries/profile';
-import { joinClubMutationOptions, requestJoinClubMutationOptions, leaveClubMutationOptions } from '@/mutations/club';
+import { requestJoinClubMutationOptions, leaveClubMutationOptions, deleteClubMutationOptions } from '@/mutations/club';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { IconUsers, IconLock, IconWorld, IconUserCircle, IconCrown, IconLogout } from '@tabler/icons-react';
-import { useParams } from 'next/navigation';
+import { IconUsers, IconLock, IconWorld, IconUserCircle, IconCrown, IconLogout, IconTrash } from '@tabler/icons-react';
+import { useParams, useRouter } from 'next/navigation';
 import useAuthStore from '@/stores/useAuthStore';
-import { useEffect, useState } from 'react';
+import useAuthModalStore from '@/stores/useAuthModalStore';
+import { useEffect, useState, useMemo } from 'react';
+import ClubJoinRequests from '@/components/clubs/ClubJoinRequests';
 
 const ClubDetailPage = () => {
   const params = useParams();
   const clubId = params.id as string;
   const queryClient = useQueryClient();
+  const router = useRouter();
   const { isAuth, logout } = useAuthStore();
+  const { open: openAuthModal } = useAuthModalStore();
   const [isHydrated, setIsHydrated] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   // Wait for Zustand to hydrate from localStorage
   useEffect(() => {
     setIsHydrated(true);
   }, []);
+
+  // Show auth modal for unauthenticated users after hydration
+  useEffect(() => {
+    if (isHydrated && !isAuth) {
+      openAuthModal();
+    }
+  }, [isHydrated, isAuth, openAuthModal]);
 
   // Check if token exists in localStorage - if not, force logout
   useEffect(() => {
@@ -66,18 +86,34 @@ const ClubDetailPage = () => {
 
   const { data: club, isLoading, isError } = useQuery(clubQueryOptions(clubId));
   
-  const { mutate: joinClub, isPending: isJoining } = useMutation(
-    joinClubMutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['clubs', clubId] });
-      }
-    })
-  );
+  // Fetch user's club memberships to check if they're a member
+  const { data: memberClubs } = useQuery({
+    ...clubMembershipsQueryOptions(),
+    enabled: isAuthenticated, // Only fetch if authenticated
+  });
+
+  // Check if user is a member of this club by checking the memberships list
+  const isMember = useMemo(() => {
+    if (!isAuthenticated || !memberClubs || !Array.isArray(memberClubs)) return false;
+    return memberClubs.some((memberClub: any) => memberClub.id === clubId);
+  }, [isAuthenticated, memberClubs, clubId]);
+
+  // Debug logging for membership status
+  useEffect(() => {
+    console.log('👥 Membership Debug:', { 
+      clubId,
+      isMember,
+      memberClubsCount: memberClubs?.length,
+      memberClubIds: memberClubs?.map((c: any) => c.id)
+    });
+  }, [clubId, isMember, memberClubs]);
   
   const { mutate: requestJoinClub, isPending: isRequesting } = useMutation(
     requestJoinClubMutationOptions({
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['clubs', clubId] });
+        queryClient.invalidateQueries({ queryKey: ['clubs', 'membership'] });
+        router.push('/profile');
       }
     })
   );
@@ -86,19 +122,28 @@ const ClubDetailPage = () => {
     leaveClubMutationOptions({
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['clubs', clubId] });
+        queryClient.invalidateQueries({ queryKey: ['clubs', 'membership'] });
+        router.push('/profile');
       }
     })
   );
 
-  const handleAction = () => {
-    if (club?.isMember) {
-      leaveClub(clubId);
-    } else if (club?.visibility === 'PUBLIC') {
-      joinClub(clubId);
-    } else {
-      requestJoinClub(clubId);
-    }
+  const { mutate: deleteClub, isPending: isDeleting } = useMutation(
+    deleteClubMutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['clubs'] });
+        router.push('/clubs');
+      }
+    })
+  );
+
+  const handleDeleteClub = () => {
+    setShowDeleteDialog(false);
+    deleteClub(clubId);
   };
+
+  // Check if current user is the club leader
+  const isLeader = isAuthenticated && user?.id === club?.leaderId;
 
   if (isLoading) {
     return (
@@ -172,11 +217,23 @@ const ClubDetailPage = () => {
                 {/* Only show action buttons if user is authenticated AND user data exists */}
                 {isAuthenticated ? (
                   <>
-                    {club.isMember ? (
+                    {isLeader ? (
+                      /* Delete button for club leader */
                       <Button
                         variant="destructive"
                         className="w-full"
-                        onClick={handleAction}
+                        onClick={() => setShowDeleteDialog(true)}
+                        disabled={isDeleting}
+                      >
+                        <IconTrash className="size-4 mr-2" />
+                        Delete Club
+                      </Button>
+                    ) : isMember ? (
+                      /* Leave button for members */
+                      <Button
+                        variant="outline"
+                        className="w-full border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                        onClick={() => leaveClub(clubId)}
                         disabled={isLeaving}
                         loading={isLeaving}
                       >
@@ -184,16 +241,18 @@ const ClubDetailPage = () => {
                         Leave Club
                       </Button>
                     ) : club.hasRequestedToJoin ? (
+                      /* Pending request status */
                       <Button variant="outline" className="w-full" disabled>
                         Request Pending
                       </Button>
                     ) : (
+                      /* Request to Join for both public and private clubs */
                       <Button
                         variant={club.visibility === 'PUBLIC' ? 'default' : 'outline'}
                         className="w-full"
-                        onClick={handleAction}
-                        disabled={isJoining || isRequesting}
-                        loading={isJoining || isRequesting}
+                        onClick={() => requestJoinClub(clubId)}
+                        disabled={isRequesting}
+                        loading={isRequesting}
                       >
                         {club.visibility === 'PUBLIC' ? 'Join Club' : 'Request to Join'}
                       </Button>
@@ -264,6 +323,14 @@ const ClubDetailPage = () => {
             </Card>
           )}
 
+          {/* Join Requests - Only visible to club leader for private clubs */}
+          {isAuthenticated && club.visibility === 'PRIVATE' && (
+            <ClubJoinRequests 
+              clubId={clubId} 
+              isLeader={isLeader} 
+            />
+          )}
+
           {/* Members List */}
           <Card>
             <CardHeader>
@@ -303,10 +370,44 @@ const ClubDetailPage = () => {
       <BottomNavigationWrapper>
         <div className="flex-center py-2">
           <p className="text-xs text-muted-foreground">
-            {club.isMember ? 'You are a member of this club' : 'Join this club to participate'}
+            {isMember ? 'You are a member of this club' : 'Join this club to participate'}
           </p>
         </div>
       </BottomNavigationWrapper>
+
+      {/* Delete Club Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Club</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <span className="font-semibold">{club.name}</span>?
+              <br />
+              <span className="text-destructive font-medium">
+                This action cannot be undone. All members will be removed and all club data will be permanently deleted.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteClub}
+              disabled={isDeleting}
+              loading={isDeleting}
+            >
+              <IconTrash className="size-4 mr-2" />
+              Delete Club
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

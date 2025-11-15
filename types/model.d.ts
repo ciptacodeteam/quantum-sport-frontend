@@ -123,6 +123,21 @@ export type Tournament = {
   updatedAt: Date;
 };
 
+export type ClubJoinRequest = {
+  id: string;
+  clubId: string;
+  userId: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  createdAt: string;
+  updatedAt: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    image?: string | null;
+  };
+};
+
 export type Club = {
   id: string;
   name: string;
@@ -152,6 +167,7 @@ export type Club = {
       image?: string | null;
     };
   }>;
+  joinRequests?: ClubJoinRequest[];
   isMember?: boolean;
   hasRequestedToJoin?: boolean;
 };

@@ -49,7 +49,13 @@ const CreateClubPage = () => {
     createClubMutationOptions({
       onSuccess: (data) => {
         queryClient.invalidateQueries({ queryKey: ['clubs'] });
-        router.push(`/clubs/${data.id}`);
+        // Handle various response structures: data.data.id, data.id, or fallback to /clubs
+        const clubId = data?.data?.id || data?.id;
+        if (clubId) {
+          router.push(`/clubs/${clubId}`);
+        } else {
+          router.push('/clubs');
+        }
       }
     })
   );
