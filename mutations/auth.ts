@@ -3,6 +3,7 @@ import {
   forgotPasswordApi,
   loginApi,
   logoutApi,
+  passwordResetWithTokenApi,
   registerApi,
   resetPasswordApi,
   sendLoginOtpApi
@@ -100,6 +101,20 @@ export const forgotPasswordMutationOptions = ({ onSuccess, onError }: MutationFu
 export const resetPasswordMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
   mutationOptions({
     mutationFn: resetPasswordApi,
+    onSuccess: (data) => {
+      toast.success('Password reset successfully!');
+      onSuccess?.(data);
+    },
+    onError: (error) => {
+      console.error('Error:', error);
+      toast.error(error.msg || 'Failed to reset password. Please try again.');
+      onError?.(error);
+    }
+  });
+
+export const resetPasswordWithTokenMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
+  mutationOptions({
+    mutationFn: passwordResetWithTokenApi,
     onSuccess: (data) => {
       toast.success('Password reset successfully!');
       onSuccess?.(data);
