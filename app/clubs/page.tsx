@@ -75,7 +75,7 @@ const ClubsPage = () => {
       <main className="w-full md:mt-14 flex flex-col pb-20">
         <div className="w-full bg-white border-b sticky top-24 md:top-14 z-10">
           {/* Search Bar */}
-          <div className="w-11/12 mx-auto pt-4 pb-3">
+          <div className="w-11/12 mx-auto pt-1 pb-3">
             <div className="relative">
               <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-muted-foreground" />
               <Input
