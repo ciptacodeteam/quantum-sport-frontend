@@ -5,8 +5,10 @@ import BottomNavigationWrapper from '@/components/ui/BottomNavigationWrapper';
 import { Button } from '@/components/ui/button';
 import { DatePickerModal, DatePickerModalTrigger } from '@/components/ui/date-picker-modal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { cn, getPlaceholderImageUrl } from '@/lib/utils';
+import { coachAvailabilityQueryOptions } from '@/queries/coach';
 import { courtsSlotsQueryOptions } from '@/queries/court';
 import type { BookingItem } from '@/stores/useBookingStore';
 import { useBookingStore } from '@/stores/useBookingStore';
@@ -381,6 +383,158 @@ export default function BookingPage() {
     setCartOpen(true);
   };
 
+  const addCoachToStore = useBookingStore((s) => s.addCoach);
+  const selectedCoaches = useBookingStore((s) => s.selectedCoaches);
+
+  // Add-ons modal state
+  const [addonsOpen, setAddonsOpen] = useState(false);
+  const [coachStep, setCoachStep] = useState<'select-coach' | 'select-slot'>('select-coach');
+  const [chosenCoach, setChosenCoach] = useState<null | {
+    id: string;
+    name: string;
+    image?: string | null;
+  }>(null);
+  const [selectedCoachSlotIds, setSelectedCoachSlotIds] = useState<string[]>([]);
+  const [coachSearch, setCoachSearch] = useState('');
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+
+  // Compute time window from selected booking items
+  const bookingTimeRange = (() => {
+    if (bookingItems.length === 0) {
+      return { startAt: undefined as string | undefined, endAt: undefined as string | undefined };
+    }
+
+    const parseBookingTime = (date: string, time: string) => {
+      const candidates = [`${date} ${time}`, `${date}T${time}`, date];
+      for (const candidate of candidates) {
+        const parsed = dayjs(candidate);
+        if (parsed.isValid()) return parsed.utc(true);
+      }
+      return null;
+    };
+
+    let earliest: number | null = null;
+    let latest: number | null = null;
+    let startIso: string | undefined;
+    let endIso: string | undefined;
+
+    bookingItems.forEach((item) => {
+      const start = parseBookingTime(item.date, item.timeSlot);
+      const end = parseBookingTime(item.date, item.endTime ?? item.timeSlot);
+      if (start) {
+        const v = start.valueOf();
+        if (earliest === null || v < earliest) {
+          earliest = v;
+          startIso = start.toISOString();
+        }
+      }
+      if (end) {
+        const v = end.valueOf();
+        if (latest === null || v > latest) {
+          latest = v;
+          endIso = end.toISOString();
+        }
+      }
+    });
+
+    return { startAt: startIso, endAt: endIso };
+  })();
+
+  const { data: coachAvailability = [], isLoading: isCoachLoading } = useQuery(
+    coachAvailabilityQueryOptions(bookingTimeRange.startAt, bookingTimeRange.endAt)
+  );
+
+  const uniqueCoaches = useMemo(() => {
+    const map = new Map<
+      string,
+      { id: string; name: string; image?: string | null; minPrice: number }
+    >();
+    coachAvailability.forEach((slot: any) => {
+      const id = slot.coach?.id;
+      if (!id) return;
+      const name = slot.coach?.name ?? 'Coach';
+      const image = slot.coach?.image ?? null;
+      const price = typeof slot.price === 'number' ? slot.price : 0;
+      if (!map.has(id)) {
+        map.set(id, { id, name, image, minPrice: price });
+      } else {
+        const cur = map.get(id)!;
+        cur.minPrice = Math.min(cur.minPrice, price);
+      }
+    });
+    let coaches = Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+    if (coachSearch.trim()) {
+      const searchLower = coachSearch.trim().toLowerCase();
+      coaches = coaches.filter((c) => c.name.toLowerCase().includes(searchLower));
+    }
+    return coaches;
+  }, [coachAvailability, coachSearch]);
+
+  const matchingSlotsForChosenCoach = useMemo(() => {
+    if (!chosenCoach) return [] as any[];
+    // Build a Set of keys for selected court slots: date + start-end
+    const courtKeys = new Set(
+      bookingItems.map((bi) => `${bi.date}|${bi.timeSlot}|${bi.endTime ?? bi.timeSlot}`)
+    );
+    return (coachAvailability as any[]).filter((item) => {
+      if (item.coach?.id !== chosenCoach.id) return false;
+      const start = item.startAt ? dayjs(item.startAt) : null;
+      const end = item.endAt ? dayjs(item.endAt) : null;
+      if (!start || !end) return false;
+      const key = `${start.format('YYYY-MM-DD')}|${start.format('HH:mm')}|${end.format('HH:mm')}`;
+      return courtKeys.has(key);
+    });
+  }, [chosenCoach, bookingItems, coachAvailability]);
+
+  const openAddons = () => {
+    if (bookingItems.length === 0) {
+      toast.error('Tambahkan minimal satu slot lapangan dulu.');
+      return;
+    }
+    setCoachStep('select-coach');
+    setChosenCoach(null);
+    setSelectedCoachSlotIds([]);
+    setAddonsOpen(true);
+  };
+
+  const toggleCoachSlot = (slotId: string) => {
+    setSelectedCoachSlotIds((prev) =>
+      prev.includes(slotId) ? prev.filter((id) => id !== slotId) : [...prev, slotId]
+    );
+  };
+
+  const confirmAddCoach = () => {
+    if (!chosenCoach) return;
+    const selectedSlots = (coachAvailability as any[]).filter((s) =>
+      selectedCoachSlotIds.includes(s.slotId)
+    );
+    if (selectedSlots.length === 0) {
+      toast.error('Pilih minimal satu jadwal coach.');
+      return;
+    }
+    selectedSlots.forEach((item) => {
+      const start = item.startAt ? dayjs(item.startAt) : null;
+      const end = item.endAt ? dayjs(item.endAt) : null;
+      const timeSlot = start && end ? `${start.format('HH:mm')} - ${end.format('HH:mm')}` : '';
+      addCoachToStore({
+        coachId: chosenCoach.id,
+        coachName: chosenCoach.name,
+        timeSlot,
+        price: typeof item.price === 'number' ? item.price : 0,
+        date: start
+          ? start.format('YYYY-MM-DD')
+          : (bookingItems[0]?.date ?? dayjs().format('YYYY-MM-DD')),
+        slotId: item.slotId,
+        coachTypeId: item.coachTypeId ?? null,
+        startAt: item.startAt,
+        endAt: item.endAt
+      });
+    });
+    toast.success('Coach ditambahkan ke keranjang.');
+    setAddonsOpen(false);
+  };
+
+  // ...existing code...
   return (
     <>
       <MainHeader backHref="/" title="Booking Court" withLogo={false} withCartBadge />
@@ -540,6 +694,7 @@ export default function BookingPage() {
         </div>
       </main>
 
+      {/* Court detail dialog */}
       <Dialog open={!!selectedCourt} onOpenChange={() => setSelectedCourt(null)}>
         <DialogContent className="w-11/12">
           {selectedCourt && (
@@ -565,6 +720,158 @@ export default function BookingPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Add-ons (Coach) modal */}
+      <Dialog open={addonsOpen} onOpenChange={(o) => setAddonsOpen(o)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {coachStep === 'select-coach' ? 'Pilih Coach' : `Pilih Jadwal (${chosenCoach?.name})`}
+            </DialogTitle>
+          </DialogHeader>
+
+          {coachStep === 'select-coach' ? (
+            <div className="space-y-3">
+              <Input
+                type="text"
+                className="mb-2 w-full rounded border px-3 py-2"
+                placeholder="Cari coach..."
+                value={coachSearch}
+                onChange={(e) => setCoachSearch(e.target.value)}
+              />
+              {isCoachLoading && <p className="text-muted-foreground text-sm">Memuat coach...</p>}
+              {!isCoachLoading && uniqueCoaches.length === 0 && (
+                <p className="text-muted-foreground text-sm">Coach tidak tersedia.</p>
+              )}
+              {!isCoachLoading &&
+                uniqueCoaches.map((c) => (
+                  <button
+                    key={c.id}
+                    className={cn(
+                      'hover:bg-accent flex w-full items-center gap-3 rounded-md border p-3 text-left transition',
+                      chosenCoach?.id === c.id && 'border-primary bg-primary/5'
+                    )}
+                    onClick={() => {
+                      setChosenCoach(c);
+                      setCoachStep('select-slot');
+                      setSelectedCoachSlotIds([]);
+                    }}
+                  >
+                    <div className="h-10 w-10 overflow-hidden rounded-full bg-gray-200">
+                      <Image
+                        src={c.image || '/assets/img/avatar.webp'}
+                        alt={c.name}
+                        width={40}
+                        height={40}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold">{c.name}</p>
+                      <p className="text-muted-foreground text-xs">
+                        Mulai Rp{c.minPrice.toLocaleString('id-ID')}/sesi
+                      </p>
+                    </div>
+                  </button>
+                ))}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {matchingSlotsForChosenCoach.length === 0 && (
+                <p className="text-muted-foreground text-sm">
+                  Tidak ada jadwal coach yang cocok dengan slot lapangan terpilih.
+                </p>
+              )}
+              {matchingSlotsForChosenCoach.map((item: any) => {
+                const start = dayjs(item.startAt);
+                const end = dayjs(item.endAt);
+                const time = `${start.format('DD MMM YYYY, HH:mm')} - ${end.format('HH:mm')}`;
+                const checked = selectedCoachSlotIds.includes(item.slotId);
+                const alreadyAdded = selectedCoaches.some((sc) => sc.slotId === item.slotId);
+                return (
+                  <label
+                    key={item.slotId}
+                    className={cn(
+                      'hover:bg-accent flex items-center justify-between gap-3 rounded-md border p-3 transition',
+                      checked && 'border-primary bg-primary/5'
+                    )}
+                  >
+                    <div className="min-w-0">
+                      <p className="font-medium">{time}</p>
+                      <p className="text-muted-foreground text-xs">
+                        Rp{Number(item.price || 0).toLocaleString('id-ID')} / sesi
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {alreadyAdded && (
+                        <span className="text-primary text-xs">Sudah ditambahkan</span>
+                      )}
+                      <input
+                        type="checkbox"
+                        className="h-5 w-5"
+                        checked={checked}
+                        disabled={alreadyAdded}
+                        onChange={() => toggleCoachSlot(item.slotId)}
+                      />
+                    </div>
+                  </label>
+                );
+              })}
+              <div className="flex justify-between pt-1">
+                <Button variant="outline" onClick={() => setCoachStep('select-coach')}>
+                  Kembali
+                </Button>
+                <Button
+                  onClick={() => setConfirmModalOpen(true)}
+                  disabled={selectedCoachSlotIds.length === 0}
+                >
+                  Tambahkan
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Coach Scheduler Modal */}
+      <Dialog open={confirmModalOpen} onOpenChange={setConfirmModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Konfirmasi Jadwal Coach</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <p>Anda akan menambahkan jadwal coach berikut:</p>
+            {matchingSlotsForChosenCoach
+              .filter((item: any) => selectedCoachSlotIds.includes(item.slotId))
+              .map((item: any) => {
+                const start = dayjs(item.startAt);
+                const end = dayjs(item.endAt);
+                const time = `${start.format('DD MMM YYYY, HH:mm')} - ${end.format('HH:mm')}`;
+                return (
+                  <div key={item.slotId} className="rounded border p-2">
+                    <div className="font-medium">{time}</div>
+                    <div className="text-muted-foreground text-xs">
+                      Rp{Number(item.price || 0).toLocaleString('id-ID')} / sesi
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+          <div className="flex justify-between pt-3">
+            <Button variant="outline" onClick={() => setConfirmModalOpen(false)}>
+              Batal
+            </Button>
+            <Button
+              onClick={() => {
+                confirmAddCoach();
+                setConfirmModalOpen(false);
+              }}
+            >
+              Konfirmasi
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <BottomNavigationWrapper className="pb-4">
         <header className="flex-between my-2 items-end">
           <div>
@@ -577,9 +884,18 @@ export default function BookingPage() {
             </span>
           </div>
         </header>
-        <main>
+        <main className="flex gap-2">
           <Button
-            className="w-full"
+            variant="outline"
+            className="w-1/2"
+            size={'xl'}
+            onClick={openAddons}
+            disabled={bookingItems.length === 0}
+          >
+            Tambah Addons
+          </Button>
+          <Button
+            className="w-1/2"
             size={'xl'}
             onClick={handleBooking}
             disabled={bookingItems.length === 0}
