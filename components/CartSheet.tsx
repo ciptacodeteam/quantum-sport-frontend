@@ -1,14 +1,13 @@
 'use client';
 
-import { useBookingStore } from '@/stores/useBookingStore';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
-import { IconShoppingCartFilled, IconTrash } from '@tabler/icons-react';
 import { Badge } from '@/components/ui/badge';
-import { useMemo } from 'react';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { useBookingStore } from '@/stores/useBookingStore';
+import { IconShoppingCartFilled, IconTrash } from '@tabler/icons-react';
 import dayjs from 'dayjs';
 import { useRouter } from 'next/navigation';
-import { IconX } from '@tabler/icons-react';
+import { useMemo } from 'react';
 
 export default function CartSheet() {
   const router = useRouter();
@@ -16,7 +15,7 @@ export default function CartSheet() {
   const bookingItems = useBookingStore((state) => state.bookingItems);
   const selectedCoaches = useBookingStore((state) => state.selectedCoaches);
   const selectedInventories = useBookingStore((state) => state.selectedInventories);
-  const courtTotal = useBookingStore((state) => state.courtTotal);
+  // const courtTotal = useBookingStore((state) => state.courtTotal);
   const coachTotal = useBookingStore((state) => state.coachTotal);
   const inventoryTotal = useBookingStore((state) => state.inventoryTotal);
   const getTotalAmount = useBookingStore((state) => state.getTotalAmount);
@@ -85,8 +84,10 @@ export default function CartSheet() {
         className="flex h-full w-full flex-col overflow-hidden bg-white sm:w-[420px] [&>button]:hidden"
       >
         <div className="flex h-full flex-col">
-          <SheetHeader className="flex flex-row items-center justify-between px-5 border border-b py-7 mb-4">
-            <SheetTitle className="text-xl text-primary font-semibold">Keranjang Booking</SheetTitle>
+          <SheetHeader className="mb-4 flex flex-row items-center justify-between border border-b px-5 py-7">
+            <SheetTitle className="text-primary text-xl font-semibold">
+              Keranjang Booking
+            </SheetTitle>
             <button
               onClick={() => setCartOpen(false)}
               className="text-muted-foreground hover:text-foreground transition"
@@ -219,7 +220,7 @@ export default function CartSheet() {
               )}
 
               {/* TOTAL */}
-              <section className="border-muted/70 bg-muted/20 space-y-2 rounded-lg border px-4 py-4 mb-4">
+              <section className="border-muted/70 bg-muted/20 mb-4 space-y-2 rounded-lg border px-4 py-4">
                 <div className="text-muted-foreground flex justify-between text-sm">
                   <span>Sub total</span>
                   <span className="text-foreground text-base font-semibold">
