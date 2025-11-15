@@ -6,14 +6,15 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
-import { cn, getPlaceholderImageUrl } from '@/lib/utils';
 import { formatSlotTimeRange, getSlotTimeKey } from '@/lib/time-utils';
+import { cn, getPlaceholderImageUrl } from '@/lib/utils';
 import { courtsSlotsQueryOptions } from '@/queries/court';
 import { useBookingStore } from '@/stores/useBookingStore';
 import type { Court, Slot } from '@/types/model';
 import { IconCalendar, IconCheck, IconClock, IconMapPin, IconX } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -111,7 +112,13 @@ export default function BookingLapangan() {
   const courts = useMemo(() => {
     const map = new Map<
       string,
-      { id: string; name: string; image?: string | null; pricePerHour: number; description?: string }
+      {
+        id: string;
+        name: string;
+        image?: string | null;
+        pricePerHour: number;
+        description?: string;
+      }
     >();
     slots.forEach((slot) => {
       const courtId = slot.courtId || slot.court?.id;
@@ -121,7 +128,8 @@ export default function BookingLapangan() {
         map.set(courtId, {
           id: courtId,
           name: court?.name || `Court ${map.size + 1}`,
-          image: court?.image || getPlaceholderImageUrl({ width: 160, height: 90, text: 'No Image' }),
+          image:
+            court?.image || getPlaceholderImageUrl({ width: 160, height: 90, text: 'No Image' }),
           pricePerHour: slot.price || 0,
           description: court?.description || undefined
         });
@@ -143,23 +151,23 @@ export default function BookingLapangan() {
     slots.forEach((slot) => {
       const courtId = slot.courtId || slot.court?.id;
       if (!courtId) return;
-      
+
       // Check if this slot belongs to the selected date
       // Convert slot date to Jakarta timezone for comparison
       const slotDateInJakarta = dayjs.utc(slot.startAt).tz('Asia/Jakarta').format('YYYY-MM-DD');
-      
+
       // Only include slots that belong to the selected date
       if (slotDateInJakarta === selectedDateString) {
         if (!map.has(courtId)) {
           map.set(courtId, new Map());
         }
-        
+
         // Format time as "07.00" instead of "07:00"
         const slotTime = getSlotTimeKey(slot.startAt).replace(':', '.');
         map.get(courtId)!.set(slotTime, slot);
       }
     });
-    
+
     return map;
   }, [slots, selectedDateString]);
 
@@ -173,7 +181,7 @@ export default function BookingLapangan() {
         timeSet.add(slotTime);
       }
     });
-    
+
     // Sort times
     return Array.from(timeSet).sort((a, b) => {
       const timeA = parseInt(a.replace('.', ''));
@@ -235,7 +243,9 @@ export default function BookingLapangan() {
         const slot = slotsByCourtAndTime.get(selectedCourt)?.get(timeSlot);
         return slot ? { timeSlot, slot } : null;
       })
-      .filter((item): item is { timeSlot: string; slot: Slot & { court?: Court } } => item !== null);
+      .filter(
+        (item): item is { timeSlot: string; slot: Slot & { court?: Court } } => item !== null
+      );
 
     if (selectedSlots.length === 0) {
       toast.error('Selected slots are not available');
@@ -246,7 +256,7 @@ export default function BookingLapangan() {
     const currentDateFormatted = dayjs(localSelectedDate).format('YYYY-MM-DD');
     const newBookings = selectedSlots.map(({ slot }) => {
       const timeSlot = formatSlotTimeRange(slot.startAt, slot.endAt);
-      
+
       return {
         courtId: selectedCourt,
         courtName: court.name,
@@ -342,27 +352,33 @@ export default function BookingLapangan() {
   // Check if a time slot is available for a court
   const isTimeSlotAvailableForCourt = (timeSlot: string, courtId: string) => {
     const slot = slotsByCourtAndTime.get(courtId)?.get(timeSlot);
-    
+
     // If slot doesn't exist, it's booked
     if (!slot) return false;
-    
+
     // If slot exists but isAvailable is false, it's booked
     if (!slot.isAvailable) return false;
-    
+
     const dateToCheck = dayjs(localSelectedDate).format('YYYY-MM-DD');
-    const timeSlotWithColon = timeSlot.replace('.', ':');
+    // const timeSlotWithColon = timeSlot.replace('.', ':');
     const slotTimeRange = formatSlotTimeRange(slot.startAt, slot.endAt);
-    
+
     // Check user bookings for the specific date
     const userBooked = bookings.some(
       (booking) =>
-        booking.timeSlot === slotTimeRange && 
-        booking.courtId === courtId && 
+        booking.timeSlot === slotTimeRange &&
+        booking.courtId === courtId &&
         booking.date === dateToCheck
     );
 
     return !userBooked;
   };
+
+  // const handleClearBookings = () => {
+  //   setBookings([]);
+  //   setBookingItems([]);
+  //   toast.success('Cleared all bookings');
+  // };
 
   return (
     <div className="w-full space-y-4 lg:space-y-6">
@@ -404,10 +420,10 @@ export default function BookingLapangan() {
 
         {/* Date Navigation */}
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="px-4">
             {/* Scrollable Date Selection */}
             <div
-              className="flex gap-3 overflow-x-auto px-1 pb-2"
+              className="flex gap-3 overflow-x-auto px-1"
               style={{
                 scrollbarWidth: 'none',
                 msOverflowStyle: 'none'
@@ -422,7 +438,7 @@ export default function BookingLapangan() {
                       : 'outline'
                   }
                   className={cn(
-                    'h-16 min-w-16 flex-shrink-0 shrink-0 flex-col p-3',
+                    'min-h-20 min-w-16 shrink-0 flex-col p-2 text-center',
                     dateInfo.isToday && 'border-primary border-2',
                     !dateInfo.isCurrentMonth && 'opacity-50'
                   )}
@@ -430,7 +446,7 @@ export default function BookingLapangan() {
                   disabled={dayjs(dateInfo.date).isBefore(dayjs(), 'day')}
                 >
                   <span className="text-xs leading-tight font-medium">{dateInfo.day}</span>
-                  <span className="my-1 text-lg leading-none font-bold">{dateInfo.dayNumber}</span>
+                  <span className="text-lg leading-none font-bold">{dateInfo.dayNumber}</span>
                   <span className="text-xs leading-tight">{dateInfo.month}</span>
                 </Button>
               ))}
@@ -471,7 +487,7 @@ export default function BookingLapangan() {
           <div className="flex-1 space-y-6">
             {/* Time Slot Selection (Red Section) */}
             <Card>
-              <CardHeader className="pb-3 lg:pb-6">
+              <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg lg:text-xl">
                   <IconClock className="h-4 w-4 lg:h-5 lg:w-5" />
                   Select Time Slots
@@ -527,7 +543,7 @@ export default function BookingLapangan() {
                 )}
 
                 {selectedTimeSlots.length > 0 && (
-                  <div className="bg-primary/5 mt-4 rounded-lg p-3">
+                  <div className="bg-primary/5 flex-between mt-4 rounded-lg p-3">
                     <p className="text-primary text-sm font-medium">
                       Selected: {selectedTimeSlots.join(', ')}
                     </p>
@@ -575,87 +591,91 @@ export default function BookingLapangan() {
                   </div>
                 ) : courts.length === 0 ? (
                   <div className="py-8 text-center">
-                    <p className="text-muted-foreground text-sm">No courts available for this date</p>
+                    <p className="text-muted-foreground text-sm">
+                      No courts available for this date
+                    </p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:gap-4">
                     {courts.map((court) => {
-                    const availableSlotsCount = availableTimeSlots.filter((timeSlot) =>
-                      isTimeSlotAvailableForCourt(timeSlot, court.id)
-                    ).length;
-                    const isDisabled = false;
+                      const availableSlotsCount = availableTimeSlots.filter((timeSlot) =>
+                        isTimeSlotAvailableForCourt(timeSlot, court.id)
+                      ).length;
+                      const isDisabled = false;
 
-                    return (
-                      <div
-                        key={court.id}
-                        className={cn(
-                          'relative overflow-hidden rounded-lg border transition-all',
-                          selectedCourt === court.id
-                            ? 'border-primary bg-primary/5 border-2 shadow-lg'
-                            : 'border-gray-200',
-                          isDisabled
-                            ? 'cursor-not-allowed opacity-50'
-                            : 'hover:border-primary/50 cursor-pointer hover:shadow-lg'
-                        )}
-                        onClick={() => !isDisabled && handleCourtSelect(court.id)}
-                      >
-                        {/* Court Image */}
-                        <div className="relative h-24 bg-linear-to-br from-green-100 to-green-200 sm:h-28 lg:h-32">
-                          {court.image ? (
-                            <img
-                              src={court.image}
-                              alt={court.name}
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <IconMapPin className="h-8 w-8 text-green-600 sm:h-10 sm:w-10 lg:h-12 lg:w-12" />
-                            </div>
+                      return (
+                        <div
+                          key={court.id}
+                          className={cn(
+                            'relative overflow-hidden rounded-lg border transition-all',
+                            selectedCourt === court.id
+                              ? 'border-primary bg-primary/5 border-2 shadow-lg'
+                              : 'border-gray-200',
+                            isDisabled
+                              ? 'cursor-not-allowed opacity-50'
+                              : 'hover:border-primary/50 cursor-pointer hover:shadow-lg'
                           )}
+                          onClick={() => !isDisabled && handleCourtSelect(court.id)}
+                        >
+                          {/* Court Image */}
+                          <div className="relative h-24 bg-linear-to-br from-green-100 to-green-200 sm:h-28 lg:h-32">
+                            {court.image ? (
+                              <Image
+                                src={court.image}
+                                alt={court.name}
+                                className="h-full w-full object-cover"
+                                layout="fill"
+                                objectFit="cover"
+                              />
+                            ) : (
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <IconMapPin className="h-8 w-8 text-green-600 sm:h-10 sm:w-10 lg:h-12 lg:w-12" />
+                              </div>
+                            )}
 
-                          {/* Selected Indicator */}
-                          {selectedCourt === court.id && (
-                            <div className="bg-primary text-primary-foreground absolute top-1 right-1 rounded-full p-1 lg:top-2 lg:right-2">
-                              <IconCheck className="h-3 w-3 lg:h-4 lg:w-4" />
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Court Info */}
-                        <div className="p-3 lg:p-4">
-                          <div className="mb-2 flex items-start justify-between">
-                            <div className="min-w-0 flex-1">
-                              <h3 className="mb-1 truncate text-xs font-semibold sm:text-sm">
-                                {court.name}
-                              </h3>
-                              <p className="text-muted-foreground line-clamp-2 text-xs lg:line-clamp-none">
-                                {court.description}
-                              </p>
-                            </div>
-                            <div className="ml-2 shrink-0 text-right">
-                              <Badge
-                                variant="outline"
-                                className="border-green-200 bg-green-50 text-xs text-green-700"
-                              >
-                                {availableSlotsCount} available
-                              </Badge>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center justify-between">
-                            <span className="text-primary truncate text-xs font-bold sm:text-sm">
-                              Rp {court.pricePerHour.toLocaleString('id-ID')}/hr
-                            </span>
+                            {/* Selected Indicator */}
                             {selectedCourt === court.id && (
-                              <Badge variant="default" className="shrink-0 text-xs">
-                                Selected
-                              </Badge>
+                              <div className="bg-primary text-primary-foreground absolute top-1 right-1 rounded-full p-1 lg:top-2 lg:right-2">
+                                <IconCheck className="h-3 w-3 lg:h-4 lg:w-4" />
+                              </div>
                             )}
                           </div>
+
+                          {/* Court Info */}
+                          <div className="p-3 lg:p-4">
+                            <div className="mb-2 flex items-start justify-between">
+                              <div className="min-w-0 flex-1">
+                                <h3 className="mb-1 truncate text-xs font-semibold sm:text-sm">
+                                  {court.name}
+                                </h3>
+                                <p className="text-muted-foreground line-clamp-2 text-xs lg:line-clamp-none">
+                                  {court.description}
+                                </p>
+                              </div>
+                              <div className="ml-2 shrink-0 text-right">
+                                <Badge
+                                  variant="outline"
+                                  className="border-green-200 bg-green-50 text-xs text-green-700"
+                                >
+                                  {availableSlotsCount} available
+                                </Badge>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                              <span className="text-primary truncate text-xs font-bold sm:text-sm">
+                                Rp {court.pricePerHour.toLocaleString('id-ID')}/hr
+                              </span>
+                              {selectedCourt === court.id && (
+                                <Badge variant="default" className="shrink-0 text-xs">
+                                  Selected
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
                   </div>
                 )}
 
