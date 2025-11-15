@@ -7,13 +7,12 @@ import { DatePickerModal, DatePickerModalTrigger } from '@/components/ui/date-pi
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { cn, getPlaceholderImageUrl } from '@/lib/utils';
-import { createBookingMutationOptions } from '@/mutations/booking';
 import { courtsSlotsQueryOptions } from '@/queries/court';
 import type { BookingItem } from '@/stores/useBookingStore';
 import { useBookingStore } from '@/stores/useBookingStore';
 import type { Court, Slot } from '@/types/model';
 import { IconCalendarFilled, IconInfoCircle } from '@tabler/icons-react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import Image from 'next/image';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -43,7 +42,7 @@ const timeSlots = [
   '20:00',
   '21:00',
   '22:00',
-  '23:00',
+  '23:00'
 ];
 
 type SelectedCell = {
@@ -110,8 +109,8 @@ export default function BookingPage() {
 
   const slotQueryParams = useMemo(
     () => ({
-      startAt: dayjs(selectedFullDate).startOf('day').toISOString(),
-      endAt: dayjs(selectedFullDate).endOf('day').toISOString()
+      startAt: dayjs(selectedFullDate).startOf('day').format('YYYY-MM-DD HH:mm:ss'),
+      endAt: dayjs(selectedFullDate).endOf('day').format('YYYY-MM-DD HH:mm:ss')
     }),
     [selectedFullDate]
   );
@@ -386,7 +385,7 @@ export default function BookingPage() {
     <>
       <MainHeader backHref="/" title="Booking Court" withLogo={false} withCartBadge />
 
-      <main className="mt-24 flex h-[calc(100dvh-180px)] lg:h-[calc(100dvh-100px)] w-full flex-col md:mt-24">
+      <main className="mt-24 flex h-[calc(100dvh-180px)] w-full flex-col md:mt-24 lg:h-[calc(100dvh-100px)]">
         <div className="sticky top-24 z-30 border-b bg-white pb-2 md:top-14">
           <div className="flex items-center gap-2">
             <div className="flex items-center px-2 pl-4">
@@ -433,7 +432,7 @@ export default function BookingPage() {
           )}
           <div className="h-full overflow-x-auto">
             <table className="min-w-full border-separate border-spacing-0 border border-gray-200 text-center">
-              <thead className="sticky top-0 z-20 bg-gray-50/90 backdrop-blur shadow-sm md:text-sm md:tracking-tight">
+              <thead className="sticky top-0 z-20 bg-gray-50/90 shadow-sm backdrop-blur md:text-sm md:tracking-tight">
                 <tr>
                   <th className="sticky left-0 z-30 w-20 border-r border-b bg-gray-50 px-2 py-2 text-left font-semibold"></th>
                   {courts.map((court) => (

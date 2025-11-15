@@ -9,15 +9,12 @@ import { inventoryAvailabilityQueryOptions } from '@/queries/inventory';
 import { useBookingStore, type BookingItem } from '@/stores/useBookingStore';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
 import { ChevronRight, Minus, Plus, Check } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-
-dayjs.extend(utc);
 
 export default function AddOnsPage() {
   const router = useRouter();
@@ -109,7 +106,8 @@ export default function AddOnsPage() {
     }
 
     return selectedInventories.find(
-      (item) => item.inventoryId === racketInventory.id && (item.timeSlot ?? 'default') === 'default'
+      (item) =>
+        item.inventoryId === racketInventory.id && (item.timeSlot ?? 'default') === 'default'
     );
   }, [racketInventory, selectedInventories]);
 
@@ -240,16 +238,13 @@ export default function AddOnsPage() {
               </Card>
             )}
 
-            {hasBookingSelection &&
-              !isCoachPending &&
-              !isCoachError &&
-              coachList.length === 0 && (
-                <Card>
-                  <div className="px-4 py-3">
-                    <p className="text-muted-foreground text-sm">Coach tidak tersedia.</p>
-                  </div>
-                </Card>
-              )}
+            {hasBookingSelection && !isCoachPending && !isCoachError && coachList.length === 0 && (
+              <Card>
+                <div className="px-4 py-3">
+                  <p className="text-muted-foreground text-sm">Coach tidak tersedia.</p>
+                </div>
+              </Card>
+            )}
 
             {hasBookingSelection &&
               coachList.map((item) => {
@@ -274,7 +269,7 @@ export default function AddOnsPage() {
                       isSelected && 'border-primary bg-primary/5'
                     )}
                   >
-                    <div className="px-4 py-3 space-y-3">
+                    <div className="space-y-3 px-4 py-3">
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex gap-4">
                           <div className="shrink-0 overflow-hidden rounded-full bg-gray-200">
@@ -294,7 +289,10 @@ export default function AddOnsPage() {
                           </div>
                         </div>
                         {isSelected ? (
-                          <Badge variant="secondary" className="bg-primary/10 text-primary flex items-center gap-1">
+                          <Badge
+                            variant="secondary"
+                            className="bg-primary/10 text-primary flex items-center gap-1"
+                          >
                             <Check className="h-3 w-3" />
                             Dipilih
                           </Badge>
