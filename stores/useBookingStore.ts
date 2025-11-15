@@ -91,7 +91,12 @@ interface BookingState {
   // Court bookings
   bookingItems: BookingItem[];
   selectedDate: Date;
+<<<<<<< HEAD
 
+=======
+  selectedCustomerId: string;
+  
+>>>>>>> fix/admin-crud
   // Add-ons
   selectedCoaches: SelectedCoach[];
   selectedBallboys: SelectedBallboy[];
@@ -109,6 +114,7 @@ interface BookingState {
   setBookingItems: (items: BookingItem[]) => void;
   removeBookingItem: (courtId: string, timeSlot: string, date: string) => void;
   setSelectedDate: (date: Date) => void;
+  setSelectedCustomerId: (customerId: string) => void;
   addCoach: (coach: SelectedCoach) => void;
   removeCoach: (coachId: string, timeSlot: string, slotId?: string) => void;
   addBallboy: (ballboy: SelectedBallboy) => void;
@@ -128,6 +134,7 @@ export const useBookingStore = create<BookingState>()(
     (set, get) => ({
       bookingItems: [],
       selectedDate: new Date(),
+      selectedCustomerId: '',
       selectedCoaches: [],
       selectedBallboys: [],
       selectedInventories: [],
@@ -152,6 +159,8 @@ export const useBookingStore = create<BookingState>()(
       },
 
       setSelectedDate: (date) => set({ selectedDate: date }),
+
+      setSelectedCustomerId: (customerId) => set({ selectedCustomerId: customerId }),
 
       addCoach: (coach) => {
         const state = get();
@@ -274,6 +283,7 @@ export const useBookingStore = create<BookingState>()(
         set({ selectedInventories: newInventories, inventoryTotal });
       },
 
+<<<<<<< HEAD
       clearAll: () =>
         set({
           bookingItems: [],
@@ -283,6 +293,17 @@ export const useBookingStore = create<BookingState>()(
           coachTotal: 0,
           inventoryTotal: 0
         }),
+=======
+      clearAll: () => set({
+        bookingItems: [],
+        selectedCoaches: [],
+        selectedInventories: [],
+        selectedCustomerId: '',
+        courtTotal: 0,
+        coachTotal: 0,
+        inventoryTotal: 0,
+      }),
+>>>>>>> fix/admin-crud
 
       getTotalAmount: () => {
         const state = get();
@@ -309,6 +330,7 @@ export const useBookingStore = create<BookingState>()(
       partialize: (state) => ({
         bookingItems: state.bookingItems,
         selectedDate: state.selectedDate,
+        selectedCustomerId: state.selectedCustomerId,
         selectedCoaches: state.selectedCoaches,
         selectedInventories: state.selectedInventories,
         courtTotal: state.courtTotal,

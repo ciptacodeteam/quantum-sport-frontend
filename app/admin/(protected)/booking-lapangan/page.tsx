@@ -12,7 +12,10 @@ import { courtsSlotsQueryOptions } from '@/queries/court';
 import { useBookingStore } from '@/stores/useBookingStore';
 import type { Court, Slot } from '@/types/model';
 import { IconCalendar, IconCheck, IconClock, IconMapPin, IconX } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { adminCreateBookingMutationOptions } from '@/mutations/admin/booking';
+import { adminCustomersQueryOptions } from '@/queries/admin/customer';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import dayjs from 'dayjs';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -27,6 +30,7 @@ type SelectedBooking = {
   timeSlot: string;
   price: number;
   date: string;
+  slotId: string;
 };
 
 // Indonesian day and month mappings
@@ -68,11 +72,14 @@ type SelectedBooking = {
 
 export default function BookingLapangan() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const {
     bookingItems,
     selectedDate,
+    selectedCustomerId,
     setBookingItems,
-    setSelectedDate: setStoreDate
+    setSelectedDate: setStoreDate,
+    setSelectedCustomerId
     // getTotalAmount,
     // getTotalWithTax
   } = useBookingStore();
@@ -80,13 +87,15 @@ export default function BookingLapangan() {
   const [localSelectedDate, setLocalSelectedDate] = useState<Date>(selectedDate);
   const [selectedTimeSlots, setSelectedTimeSlots] = useState<string[]>([]);
   const [selectedCourt, setSelectedCourt] = useState<string | null>(null);
+  const [localCustomerId, setLocalCustomerId] = useState<string>(selectedCustomerId);
   const [bookings, setBookings] = useState<SelectedBooking[]>(
     bookingItems.map((item) => ({
       courtId: item.courtId,
       courtName: item.courtName,
       timeSlot: item.timeSlot,
       price: item.price,
-      date: item.date
+      date: item.date,
+      slotId: item.slotId || ''
     }))
   );
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -105,6 +114,8 @@ export default function BookingLapangan() {
   const { data: slotsData, isLoading: isSlotsLoading } = useQuery(
     courtsSlotsQueryOptions(slotQueryParams)
   );
+
+  const { data: customers } = useQuery(adminCustomersQueryOptions);
 
   const slots = useMemo(() => slotsData ?? [], [slotsData]);
 
@@ -153,18 +164,17 @@ export default function BookingLapangan() {
       if (!courtId) return;
 
       // Check if this slot belongs to the selected date
-      // Convert slot date to Jakarta timezone for comparison
-      const slotDateInJakarta = dayjs.utc(slot.startAt).tz('Asia/Jakarta').format('YYYY-MM-DD');
+      const slotDate = dayjs(slot.startAt).format('YYYY-MM-DD');
 
       // Only include slots that belong to the selected date
-      if (slotDateInJakarta === selectedDateString) {
+      if (slotDate === selectedDateString) {
         if (!map.has(courtId)) {
           map.set(courtId, new Map());
         }
 
-        // Format time as "07.00" instead of "07:00"
-        const slotTime = getSlotTimeKey(slot.startAt).replace(':', '.');
-        map.get(courtId)!.set(slotTime, slot);
+        // Use start time (HH:mm) as key to match availableTimeSlots
+        const startTime = dayjs(slot.startAt).format('HH:mm');
+        map.get(courtId)!.set(startTime, slot);
       }
     });
 
@@ -173,22 +183,51 @@ export default function BookingLapangan() {
 
   // Get all unique time slots from available slots (sorted)
   const availableTimeSlots = useMemo(() => {
-    const timeSet = new Set<string>();
+    const timeMap = new Map<string, { startAt: Date; endAt: Date; fullRange: string }>();
     slots.forEach((slot) => {
-      const slotDateInJakarta = dayjs.utc(slot.startAt).tz('Asia/Jakarta').format('YYYY-MM-DD');
-      if (slotDateInJakarta === selectedDateString) {
-        const slotTime = getSlotTimeKey(slot.startAt).replace(':', '.');
-        timeSet.add(slotTime);
+      const slotDate = dayjs(slot.startAt).format('YYYY-MM-DD');
+      if (slotDate === selectedDateString) {
+        // Format start time as HH:mm
+        const startTime = dayjs(slot.startAt).format('HH:mm');
+        const fullRange = formatSlotTimeRange(slot.startAt, slot.endAt);
+        
+        if (!timeMap.has(startTime)) {
+          timeMap.set(startTime, { startAt: slot.startAt, endAt: slot.endAt, fullRange });
+        }
       }
     });
 
-    // Sort times
-    return Array.from(timeSet).sort((a, b) => {
-      const timeA = parseInt(a.replace('.', ''));
-      const timeB = parseInt(b.replace('.', ''));
-      return timeA - timeB;
-    });
+    // Sort by start time
+    return Array.from(timeMap.entries())
+      .sort((a, b) => {
+        return new Date(a[1].startAt).getTime() - new Date(b[1].startAt).getTime();
+      })
+      .map(([startTime]) => startTime);
   }, [slots, selectedDateString]);
+
+  // Debug: Log fetched data
+  useEffect(() => {
+    console.log('=== Booking Lapangan Data ===');
+    console.log('Query Params:', slotQueryParams);
+    console.log('Selected Date String:', selectedDateString);
+    console.log('Slots Data:', slotsData);
+    console.log('Formatted Slots:', slots);
+    
+    // Debug each slot's date
+    slots.forEach((slot, index) => {
+      const slotDate = dayjs(slot.startAt).format('YYYY-MM-DD');
+      const startTime = dayjs(slot.startAt).format('HH:mm');
+      console.log(`Slot ${index}:`, {
+        startAt: slot.startAt,
+        slotDate: slotDate,
+        startTime: startTime,
+        matchesSelectedDate: slotDate === selectedDateString
+      });
+    });
+    
+    console.log('Courts:', courts);
+    console.log('Available Time Slots:', availableTimeSlots);
+  }, [slotsData, slots, courts, slotQueryParams, selectedDateString, availableTimeSlots]);
 
   // Sync with store when component mounts
   useEffect(() => {
@@ -254,15 +293,19 @@ export default function BookingLapangan() {
 
     // Create new bookings with the current selected date
     const currentDateFormatted = dayjs(localSelectedDate).format('YYYY-MM-DD');
-    const newBookings = selectedSlots.map(({ slot }) => {
-      const timeSlot = formatSlotTimeRange(slot.startAt, slot.endAt);
+    const newBookings = selectedSlots.map(({ slot, timeSlot }) => {
+      // Use simple time format without timezone conversion
+      const startTime = dayjs(slot.startAt).format('HH:mm');
+      const endTime = dayjs(slot.endAt).format('HH:mm');
+      const timeRange = `${startTime} - ${endTime}`;
 
       return {
         courtId: selectedCourt,
         courtName: court.name,
-        timeSlot,
+        timeSlot: timeRange,
         price: slot.price || 0,
-        date: currentDateFormatted
+        date: currentDateFormatted,
+        slotId: slot.id
       };
     });
 
@@ -317,6 +360,44 @@ export default function BookingLapangan() {
   // Calculate total price
   const totalPrice = bookings.reduce((sum, booking) => sum + booking.price, 0);
 
+  // Handle proceed to add-ons
+  const handleProceedToAddOns = () => {
+    if (!localCustomerId) {
+      toast.error('Silakan pilih pelanggan terlebih dahulu');
+      return;
+    }
+
+    if (bookings.length === 0) {
+      toast.error('Silakan tambahkan minimal satu booking');
+      return;
+    }
+
+    // Save customer ID to store
+    setSelectedCustomerId(localCustomerId);
+
+    // Save current bookings to store with their individual dates
+    const bookingItemsForStore: any = bookings.map((booking) => ({
+      courtId: booking.courtId,
+      courtName: booking.courtName,
+      timeSlot: booking.timeSlot,
+      price: booking.price,
+      date: booking.date,
+      slotId: booking.slotId
+    }));
+    setBookingItems(bookingItemsForStore);
+
+    // Set the selected date to the most recent booking date
+    const latestDate = bookings.reduce((latest, booking) => {
+      return dayjs(booking.date).isAfter(dayjs(latest))
+        ? booking.date
+        : latest;
+    }, bookings[0].date);
+    setStoreDate(new Date(latestDate));
+
+    toast.success('Proceeding to add-ons...');
+    router.push('/admin/booking-add-ons');
+  };
+
   // Check if time slot is already booked (system bookings + user selections)
   // const isTimeSlotBooked = (timeSlot: string, courtId?: string, checkDate?: string) => {
   //   const dateToCheck = checkDate || dayjs(localSelectedDate).format('YYYY-MM-DD');
@@ -360,8 +441,9 @@ export default function BookingLapangan() {
     if (!slot.isAvailable) return false;
 
     const dateToCheck = dayjs(localSelectedDate).format('YYYY-MM-DD');
-    // const timeSlotWithColon = timeSlot.replace('.', ':');
-    const slotTimeRange = formatSlotTimeRange(slot.startAt, slot.endAt);
+    const startTime = dayjs(slot.startAt).format('HH:mm');
+    const endTime = dayjs(slot.endAt).format('HH:mm');
+    const slotTimeRange = `${startTime} - ${endTime}`;
 
     // Check user bookings for the specific date
     const userBooked = bookings.some(
@@ -706,6 +788,27 @@ export default function BookingLapangan() {
                 <CardTitle className="text-lg lg:text-xl">Booking Summary</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 pt-0 lg:space-y-4">
+                {/* Customer Selection */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Pilih Pelanggan</label>
+                  <Select value={localCustomerId} onValueChange={setLocalCustomerId}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Pilih pelanggan..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {customers?.map((customer) => (
+                          <SelectItem key={customer.id} value={customer.id}>
+                            {customer.name} {customer.phone && `(${customer.phone})`}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Separator />
+
                 {bookings.length === 0 ? (
                   <div className="py-6 text-center lg:py-8">
                     <IconCalendar className="text-muted-foreground/50 mx-auto mb-3 h-10 w-10 lg:mb-4 lg:h-12 lg:w-12" />
@@ -803,32 +906,8 @@ export default function BookingLapangan() {
                       <Button
                         className="w-full"
                         size="default"
-                        onClick={() => {
-                          if (bookings.length === 0) {
-                            toast.error('Please add at least one booking before proceeding');
-                            return;
-                          }
-                          // Save current bookings to store with their individual dates
-                          const bookingItemsForStore: any = bookings.map((booking) => ({
-                            courtId: booking.courtId,
-                            courtName: booking.courtName,
-                            timeSlot: booking.timeSlot,
-                            price: booking.price,
-                            date: booking.date
-                          }));
-                          setBookingItems(bookingItemsForStore);
-
-                          // Set the selected date to the most recent booking date
-                          const latestDate = bookings.reduce((latest, booking) => {
-                            return dayjs(booking.date).isAfter(dayjs(latest))
-                              ? booking.date
-                              : latest;
-                          }, bookings[0].date);
-                          setStoreDate(new Date(latestDate));
-
-                          toast.success('Proceeding to add-ons...');
-                          router.push('/admin/booking-add-ons');
-                        }}
+                        onClick={handleProceedToAddOns}
+                        disabled={!localCustomerId || bookings.length === 0}
                       >
                         Proceed to Add-Ons
                       </Button>
@@ -839,6 +918,8 @@ export default function BookingLapangan() {
                         onClick={() => {
                           setBookings([]);
                           setBookingItems([]);
+                          setLocalCustomerId('');
+                          setSelectedCustomerId('');
                           toast.info('All bookings cleared');
                         }}
                       >
