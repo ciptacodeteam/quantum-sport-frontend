@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useBookingStore } from '@/stores/useBookingStore';
 import type { Coach, InventoryItem } from '@/stores/useBookingStore';
@@ -14,6 +14,10 @@ import AppSectionHeader from '@/components/ui/app-section-header';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import dayjs from 'dayjs';
+import { useQuery } from '@tanstack/react-query';
+import { adminCustomersQueryOptions } from '@/queries/admin/customer';
+import { coachAvailabilityQueryOptions } from '@/queries/coach';
+import { inventoryAvailabilityQueryOptions } from '@/queries/inventory';
 import { 
   IconChevronLeft,
   IconStar, 
@@ -29,117 +33,12 @@ import {
 } from '@tabler/icons-react';
 import Image from 'next/image';
 
-// Mock data for coaches - Realistic availability with some unavailable slots
-const mockCoaches: Coach[] = [
-  {
-    id: '1',
-    name: 'Carlos Rodriguez',
-    image: '/assets/img/coach-1.jpg',
-    experience: '8 years',
-    specialization: ['Technique', 'Strategy', 'Fitness'],
-    pricePerHour: 200000,
-    rating: 4.9,
-    availability: [
-      {
-        date: '2025-11-05',
-        timeSlots: ['06:00', '07:00', '08:00', '10:00', '11:00', '14:00', '15:00', '18:00', '19:00']
-      },
-      {
-        date: '2025-11-06',
-        timeSlots: ['06:00', '07:00', '09:00', '10:00', '13:00', '14:00', '17:00', '18:00', '20:00', '21:00']
-      },
-      {
-        date: '2025-11-07',
-        timeSlots: ['07:00', '08:00', '10:00', '11:00', '13:00', '14:00', '16:00', '17:00', '19:00', '20:00']
-      }
-    ]
-  },
-  {
-    id: '2',
-    name: 'Maria Santos',
-    image: '/assets/img/coach-2.jpg',
-    experience: '5 years',
-    specialization: ['Beginners', 'Technique'],
-    pricePerHour: 150000,
-    rating: 4.7,
-    availability: [
-      {
-        date: '2025-11-05',
-        timeSlots: ['06:00', '07:00', '09:00', '10:00', '11:00', '12:00', '16:00', '17:00', '18:00']
-      },
-      {
-        date: '2025-11-06',
-        timeSlots: ['08:00', '09:00', '11:00', '12:00', '15:00', '16:00', '19:00', '20:00', '21:00']
-      },
-      {
-        date: '2025-11-07',
-        timeSlots: ['06:00', '09:00', '12:00', '15:00', '18:00', '21:00', '22:00']
-      }
-    ]
-  }
-];
-
-// Mock data for inventory
-const mockInventory: InventoryItem[] = [
-  {
-    id: '1',
-    name: 'Professional Padel Racket',
-    image: '/assets/img/racket-1.jpg',
-    description: 'High-quality carbon fiber padel racket for advanced players',
-    pricePerHour: 25000,
-    category: 'racket',
-    quantity: 10,
-    availability: [
-      {
-        date: '2025-11-05',
-        timeSlots: ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'],
-        availableQuantity: 6
-      },
-      {
-        date: '2025-11-06',
-        timeSlots: ['06:00', '08:00', '09:00', '11:00', '12:00', '13:00', '15:00', '16:00', '17:00', '19:00', '20:00', '22:00'],
-        availableQuantity: 8
-      },
-      {
-        date: '2025-11-07',
-        timeSlots: ['07:00', '08:00', '10:00', '11:00', '13:00', '14:00', '16:00', '17:00', '18:00', '20:00', '21:00', '22:00'],
-        availableQuantity: 12
-      }
-    ]
-  },
-  {
-    id: '2',
-    name: 'Court Shoes',
-    image: '/assets/img/shoes-1.jpg',
-    description: 'Non-slip court shoes for optimal grip and comfort',
-    pricePerHour: 15000,
-    category: 'shoes',
-    quantity: 15,
-    availability: [
-      {
-        date: '2025-11-05',
-        timeSlots: ['07:00', '09:00', '10:00', '12:00', '13:00', '14:00', '16:00', '17:00', '19:00', '21:00'],
-        availableQuantity: 8
-      },
-      {
-        date: '2025-11-06',
-        timeSlots: ['06:00', '08:00', '09:00', '11:00', '12:00', '13:00', '15:00', '16:00', '17:00', '19:00', '20:00', '22:00'],
-        availableQuantity: 8
-      },
-      {
-        date: '2025-11-07',
-        timeSlots: ['07:00', '08:00', '10:00', '11:00', '13:00', '14:00', '16:00', '17:00', '18:00', '20:00', '21:00', '22:00'],
-        availableQuantity: 12
-      }
-    ]
-  }
-];
-
 export default function BookingAddOns() {
   const router = useRouter();
   const {
     bookingItems,
     selectedDate,
+    selectedCustomerId,
     selectedCoaches,
     selectedInventories,
     addCoach,
@@ -157,6 +56,74 @@ export default function BookingAddOns() {
 
   const [activeTab, setActiveTab] = useState<'coaches' | 'inventory'>('coaches');
   const [inventoryQuantities, setInventoryQuantities] = useState<Record<string, number>>({});
+
+  // Fetch customers to get customer name
+  const { data: customers } = useQuery(adminCustomersQueryOptions);
+  const selectedCustomer = customers?.find(c => c.id === selectedCustomerId);
+
+  // Get date range from bookings
+  const dateRange = useMemo(() => {
+    if (bookingItems.length === 0) return null;
+    
+    const dates = bookingItems.map(item => item.date);
+    const sortedDates = dates.sort();
+    const startDate = sortedDates[0];
+    const endDate = sortedDates[sortedDates.length - 1];
+    
+    return {
+      startAt: dayjs(startDate).startOf('day').toISOString(),
+      endAt: dayjs(endDate).endOf('day').toISOString()
+    };
+  }, [bookingItems]);
+
+  // Fetch coach availability
+  const { data: coachAvailabilityData } = useQuery(
+    coachAvailabilityQueryOptions(dateRange?.startAt, dateRange?.endAt)
+  );
+
+  // Fetch inventory availability
+  const { data: inventoryAvailabilityData } = useQuery(inventoryAvailabilityQueryOptions);
+
+  // Transform coach availability data to match component format
+  const coaches = useMemo(() => {
+    if (!coachAvailabilityData) return [];
+
+    // Group by coach
+    const coachMap = new Map<string, {
+      id: string;
+      name: string;
+      image: string | null;
+      slots: typeof coachAvailabilityData;
+    }>();
+
+    coachAvailabilityData.forEach((slot) => {
+      if (!coachMap.has(slot.coach.id)) {
+        coachMap.set(slot.coach.id, {
+          id: slot.coach.id,
+          name: slot.coach.name,
+          image: slot.coach.image || null,
+          slots: []
+        });
+      }
+      coachMap.get(slot.coach.id)!.slots.push(slot);
+    });
+
+    return Array.from(coachMap.values());
+  }, [coachAvailabilityData]);
+
+  // Transform inventory availability data
+  const inventoryItems = useMemo(() => {
+    if (!inventoryAvailabilityData) return [];
+    
+    return inventoryAvailabilityData.map((item) => ({
+      id: item.id,
+      name: item.name,
+      description: item.description || '',
+      price: item.price,
+      availableQuantity: item.availableQuantity,
+      totalQuantity: item.totalQuantity
+    }));
+  }, [inventoryAvailabilityData]);
 
   // If no bookings, redirect back
   useEffect(() => {
@@ -199,95 +166,74 @@ export default function BookingAddOns() {
   // Get all unique dates
   const bookedDates = Object.keys(bookingsByDate).sort();
 
-  // Dynamic availability generation
-  const generateRealisticAvailability = (baseAvailability: any[], selectedDate: Date) => {
-    const dateStr = dayjs(selectedDate).format('YYYY-MM-DD');
-    const dayOfWeek = dayjs(selectedDate).day();
-    const baseEntry = baseAvailability.find(a => a.date === dateStr);
-    
-    if (!baseEntry) {
-      // Generate dynamic availability based on day of week
-      const allTimeSlots = ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', 
-                           '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', 
-                           '20:00', '21:00', '22:00', '23:00', '00:00'];
-      
-      // Weekend has different patterns
-      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-      const availabilityRate = isWeekend ? 0.7 : 0.8;
-      
-      const availableSlots = allTimeSlots.filter(() => Math.random() < availabilityRate);
-      
-      return {
-        date: dateStr,
-        timeSlots: availableSlots,
-        availableQuantity: Math.floor(Math.random() * 10) + 5
-      };
-    }
-    
-    return baseEntry;
-  };
-
-  // Helper functions for coach availability - now works with multiple dates
-  const isCoachAvailable = (coach: Coach, timeSlot: string, date: string): boolean => {
-    const dateObj = new Date(date);
-    const availability = generateRealisticAvailability(coach.availability, dateObj);
-    return availability ? availability.timeSlots.includes(timeSlot) : false;
+  // Helper functions for coach availability - now uses real API data
+  const isCoachAvailable = (coachId: string, timeSlot: string, date: string): boolean => {
+    if (!coachAvailabilityData) return false;
+    const slotDate = dayjs(date).format('YYYY-MM-DD');
+    return coachAvailabilityData.some((slot) => {
+      const slotStartTime = dayjs(slot.startAt).format('HH:mm');
+      const slotDateStr = dayjs(slot.startAt).format('YYYY-MM-DD');
+      return slot.coach.id === coachId && slotDateStr === slotDate && slotStartTime === timeSlot;
+    });
   };
 
   // Check if inventory is available for specific time slot and date
-  const isInventoryAvailable = (inventory: InventoryItem, timeSlot: string, date: string): { available: boolean; quantity: number } => {
-    const dateObj = new Date(date);
-    const availability = generateRealisticAvailability(inventory.availability, dateObj);
-    if (!availability || !availability.timeSlots.includes(timeSlot)) {
+  const isInventoryAvailable = (inventoryId: string, timeSlot: string, date: string): { available: boolean; quantity: number } => {
+    if (!inventoryAvailabilityData) return { available: false, quantity: 0 };
+    
+    // Find inventory by ID - inventory availability is not time-slot specific
+    const item = inventoryAvailabilityData.find((inv) => inv.id === inventoryId);
+    
+    if (!item) {
       return { available: false, quantity: 0 };
     }
-    return { available: true, quantity: availability.availableQuantity || 0 };
+    return { available: item.availableQuantity > 0, quantity: item.availableQuantity };
   };
 
   // Helper function to check if coach is available for any of the booked dates/slots
-  const isCoachAvailableForBookings = (coach: Coach) => {
+  const isCoachAvailableForBookings = (coach: { id: string }) => {
     return bookedDates.some(date => 
       bookingsByDate[date].timeSlots.some(timeSlot => 
-        isCoachAvailable(coach, timeSlot, date)
+        isCoachAvailable(coach.id, timeSlot, date)
       )
     );
   };
 
-  // Handle coach selection
-  const handleCoachSelect = (coach: Coach, timeSlot: string, date: string) => {
-    const isSelected = selectedCoaches.some(c => c.coachId === coach.id && c.timeSlot === timeSlot && c.date === date);
+  // Handle coach selection - now uses real API data
+  const handleCoachSelect = (coachId: string, coachName: string, timeSlot: string, date: string, price: number) => {
+    const isSelected = selectedCoaches.some(c => c.coachId === coachId && c.timeSlot === timeSlot && c.date === date);
     
     if (isSelected) {
-      removeCoach(coach.id, timeSlot);
-      toast.success(`Removed ${coach.name} from ${timeSlot} on ${dayjs(date).format('DD MMM')}`);
+      removeCoach(coachId, timeSlot);
+      toast.success(`Removed ${coachName} from ${timeSlot} on ${dayjs(date).format('DD MMM')}`);
     } else {
       addCoach({
-        coachId: coach.id,
-        coachName: coach.name,
+        coachId,
+        coachName,
         timeSlot,
-        price: coach.pricePerHour,
+        price,
         date: date
       });
-      toast.success(`Added ${coach.name} for ${timeSlot} on ${dayjs(date).format('DD MMM')}`);
+      toast.success(`Added ${coachName} for ${timeSlot} on ${dayjs(date).format('DD MMM')}`);
     }
   };
 
-  // Handle inventory quantity change
-  const handleInventoryQuantityChange = (inventory: InventoryItem, timeSlot: string, date: string, quantity: number) => {
-    const key = `${inventory.id}-${timeSlot}-${date}`;
+  // Handle inventory quantity change - now uses real API data
+  const handleInventoryQuantityChange = (inventoryId: string, inventoryName: string, timeSlot: string, date: string, quantity: number, pricePerHour: number) => {
+    const key = `${inventoryId}-${timeSlot}-${date}`;
     setInventoryQuantities(prev => ({ ...prev, [key]: quantity }));
 
     if (quantity > 0) {
       addInventory({
-        inventoryId: inventory.id,
-        inventoryName: inventory.name,
+        inventoryId,
+        inventoryName,
         timeSlot,
-        price: inventory.pricePerHour * quantity,
+        price: pricePerHour * quantity,
         quantity,
         date: date
       });
     } else {
-      removeInventory(inventory.id, timeSlot);
+      removeInventory(inventoryId, timeSlot);
     }
   };
 
@@ -312,7 +258,7 @@ export default function BookingAddOns() {
       <div className="flex flex-col xl:flex-row gap-6">
         {/* Mobile Summary */}
         <div className="xl:hidden">
-          <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+          <Card className="bg-linear-to-r from-primary/5 to-primary/10 border-primary/20">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-primary">Booking Summary</CardTitle>
@@ -324,6 +270,15 @@ export default function BookingAddOns() {
               </div>
             </CardHeader>
             <CardContent className="pt-0">
+              {selectedCustomer && (
+                <div className="mb-3 rounded-lg bg-white/50 p-2">
+                  <p className="text-xs text-muted-foreground">Customer</p>
+                  <p className="text-sm font-semibold">{selectedCustomer.name}</p>
+                  {selectedCustomer.phone && (
+                    <p className="text-xs text-muted-foreground">{selectedCustomer.phone}</p>
+                  )}
+                </div>
+              )}
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium">Total:</span>
                 <span className="font-bold text-primary">
@@ -434,13 +389,13 @@ export default function BookingAddOns() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {mockCoaches
+                {coaches
                   .filter(coach => isCoachAvailableForBookings(coach))
                   .map((coach) => {
                     // Get all available times for this coach across all booked dates
                     const availableSlots = Object.entries(bookingsByDate).reduce((acc, [date, dateInfo]) => {
                       const availableForDate = dateInfo.timeSlots.filter(timeSlot => 
-                        isCoachAvailable(coach, timeSlot, date)
+                        isCoachAvailable(coach.id, timeSlot, date)
                       );
                       if (availableForDate.length > 0) {
                         acc.push({
@@ -452,12 +407,16 @@ export default function BookingAddOns() {
                       return acc;
                     }, [] as Array<{date: string; shortDate: string; timeSlots: string[]}>);
 
+                    // Get coach details from first slot
+                    const firstSlot = coach.slots[0];
+                    if (!firstSlot) return null;
+
                     return (
                   <Card key={coach.id} className="overflow-hidden">
                     <div className="relative h-48">
                       <Image
-                        src={coach.image}
-                        alt={coach.name}
+                        src={firstSlot.coach.image || '/assets/img/placeholder-coach.jpg'}
+                        alt={firstSlot.coach.name}
                         fill
                         className="object-cover"
                         onError={(e) => {
@@ -467,28 +426,26 @@ export default function BookingAddOns() {
                       />
                       <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full px-2 py-1 flex items-center gap-1">
                         <IconStar className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                        <span className="text-xs font-medium">{coach.rating}</span>
+                        <span className="text-xs font-medium">5.0</span>
                       </div>
                     </div>
                     
                     <CardContent className="p-4">
                       <div className="space-y-3">
                         <div>
-                          <h3 className="font-semibold text-lg">{coach.name}</h3>
-                          <p className="text-sm text-muted-foreground">{coach.experience} experience</p>
+                          <h3 className="font-semibold text-lg">{firstSlot.coach.name}</h3>
+                          <p className="text-sm text-muted-foreground">{firstSlot.coach.role || 'Professional Coach'}</p>
                         </div>
 
                         <div className="flex flex-wrap gap-1">
-                          {coach.specialization.map((spec, index) => (
-                            <Badge key={index} variant="outline" className="text-xs">
-                              {spec}
-                            </Badge>
-                          ))}
+                          <Badge variant="outline" className="text-xs">
+                            Certified Coach
+                          </Badge>
                         </div>
 
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-primary">
-                            Rp {coach.pricePerHour.toLocaleString('id-ID')}/hr
+                            Rp {firstSlot.price.toLocaleString('id-ID')}/hr
                           </span>
                         </div>
 
@@ -509,6 +466,13 @@ export default function BookingAddOns() {
                                     c.coachId === coach.id && c.timeSlot === timeSlot && c.date === date
                                   );
 
+                                  // Find the matching slot to get the price
+                                  const matchingSlot = coach.slots.find(slot => {
+                                    const slotTime = dayjs(slot.startAt).format('HH:mm');
+                                    const slotDate = dayjs(slot.startAt).format('YYYY-MM-DD');
+                                    return slotTime === timeSlot && slotDate === date;
+                                  });
+
                                   return (
                                     <Button
                                       key={`${date}-${timeSlot}`}
@@ -519,7 +483,13 @@ export default function BookingAddOns() {
                                         isSelected && "bg-primary text-primary-foreground shadow-md",
                                         !isSelected && "hover:bg-primary/10 hover:border-primary"
                                       )}
-                                      onClick={() => handleCoachSelect(coach, timeSlot, date)}
+                                      onClick={() => handleCoachSelect(
+                                        coach.id, 
+                                        firstSlot.coach.name, 
+                                        timeSlot, 
+                                        date,
+                                        matchingSlot?.price || firstSlot.price
+                                      )}
                                     >
                                       {timeSlot}
                                       {isSelected && <IconCheck className="h-3 w-3 ml-1" />}
@@ -570,12 +540,12 @@ export default function BookingAddOns() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {mockInventory
+                {inventoryItems
                   .filter(item => {
                     // Check if item is available for at least one booked time slot
                     return Object.entries(bookingsByDate).some(([date, dateInfo]) => 
                       dateInfo.timeSlots.some(timeSlot => 
-                        isInventoryAvailable(item, timeSlot, date).available
+                        isInventoryAvailable(item.id, timeSlot, date).available
                       )
                     );
                   })
@@ -583,10 +553,10 @@ export default function BookingAddOns() {
                     // Get all available times for this item across all booked dates
                     const availableSlots = Object.entries(bookingsByDate).reduce((acc, [date, dateInfo]) => {
                       const availableForDate = dateInfo.timeSlots.filter(timeSlot => 
-                        isInventoryAvailable(item, timeSlot, date).available
+                        isInventoryAvailable(item.id, timeSlot, date).available
                       ).map(timeSlot => ({
                         timeSlot,
-                        availability: isInventoryAvailable(item, timeSlot, date)
+                        availability: isInventoryAvailable(item.id, timeSlot, date)
                       }));
                       
                       if (availableForDate.length > 0) {
@@ -603,7 +573,7 @@ export default function BookingAddOns() {
                   <Card key={item.id} className="overflow-hidden">
                     <div className="relative h-32">
                       <Image
-                        src={item.image}
+                        src={'/assets/img/placeholder-equipment.jpg'}
                         alt={item.name}
                         fill
                         className="object-cover"
@@ -614,7 +584,7 @@ export default function BookingAddOns() {
                       />
                       <div className="absolute top-2 right-2">
                         <Badge className="capitalize bg-white/90 text-slate-700 backdrop-blur-sm">
-                          {item.category}
+                          Equipment
                         </Badge>
                       </div>
                     </div>
@@ -623,12 +593,12 @@ export default function BookingAddOns() {
                       <div className="space-y-3">
                         <div>
                           <h3 className="font-semibold">{item.name}</h3>
-                          <p className="text-xs text-muted-foreground line-clamp-2">{item.description}</p>
+                          <p className="text-xs text-muted-foreground line-clamp-2">{item.description || 'Available for rent'}</p>
                         </div>
 
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-primary">
-                            Rp {item.pricePerHour.toLocaleString('id-ID')}/hr
+                            Rp {item.price.toLocaleString('id-ID')}/hr
                           </span>
                         </div>
 
@@ -678,10 +648,12 @@ export default function BookingAddOns() {
                                             disabled={currentQuantity <= 0}
                                             onClick={() =>
                                               handleInventoryQuantityChange(
-                                                item,
+                                                item.id,
+                                                item.name,
                                                 timeSlot,
                                                 date,
-                                                Math.max(0, currentQuantity - 1)
+                                                Math.max(0, currentQuantity - 1),
+                                                item.price
                                               )
                                             }
                                           >
@@ -695,10 +667,12 @@ export default function BookingAddOns() {
                                             value={currentQuantity}
                                             onChange={(e) =>
                                               handleInventoryQuantityChange(
-                                                item,
+                                                item.id,
+                                                item.name,
                                                 timeSlot,
                                                 date,
-                                                Math.min(availability.quantity, Math.max(0, parseInt(e.target.value) || 0))
+                                                Math.min(availability.quantity, Math.max(0, parseInt(e.target.value) || 0)),
+                                                item.price
                                               )
                                             }
                                             className="h-8 w-16 text-center"
@@ -711,10 +685,12 @@ export default function BookingAddOns() {
                                             disabled={currentQuantity >= availability.quantity}
                                             onClick={() =>
                                               handleInventoryQuantityChange(
-                                                item,
+                                                item.id,
+                                                item.name,
                                                 timeSlot,
                                                 date,
-                                                Math.min(availability.quantity, currentQuantity + 1)
+                                                Math.min(availability.quantity, currentQuantity + 1),
+                                                item.price
                                               )
                                             }
                                           >
@@ -723,7 +699,7 @@ export default function BookingAddOns() {
                                           
                                           {currentQuantity > 0 && (
                                             <span className="text-xs text-primary font-medium ml-2">
-                                              Rp {(item.pricePerHour * currentQuantity).toLocaleString('id-ID')}
+                                              Rp {(item.price * currentQuantity).toLocaleString('id-ID')}
                                             </span>
                                           )}
                                         </div>
@@ -752,6 +728,20 @@ export default function BookingAddOns() {
               <CardTitle>Booking Summary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Customer Info */}
+              {selectedCustomer && (
+                <>
+                  <div className="rounded-lg bg-primary/5 p-3">
+                    <p className="text-xs text-muted-foreground mb-1">Customer</p>
+                    <p className="font-semibold">{selectedCustomer.name}</p>
+                    {selectedCustomer.phone && (
+                      <p className="text-sm text-muted-foreground">{selectedCustomer.phone}</p>
+                    )}
+                  </div>
+                  <Separator />
+                </>
+              )}
+
               {/* Court Bookings */}
               <div className="space-y-2">
                 <h4 className="font-medium text-sm text-muted-foreground">Court Bookings</h4>

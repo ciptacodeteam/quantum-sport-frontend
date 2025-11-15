@@ -21,26 +21,33 @@ import dayjs from 'dayjs';
 import { Controller, type SubmitHandler, useForm } from 'react-hook-form';
 import z from 'zod';
 
-const formSchema = z
-  .object({
-    name: z.string().min(3, { message: 'Name must be at least 3 characters.' }).max(100, { message: 'Name must not exceed 100 characters.' }),
-    description: z.string().min(3, { message: 'Description must be at least 3 characters.' }).max(500, { message: 'Description must not exceed 500 characters.' }).optional().or(z.literal('')),
-    rules: z.string().min(3, { message: 'Rules must be at least 3 characters.' }).max(2000, { message: 'Rules must not exceed 2000 characters.' }).optional().or(z.literal('')),
-    image: z.instanceof(File).optional(),
-    startDate: z.date(),
-    endDate: z.date(),
-    startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: 'Start time must be in HH:mm format.' }),
-    endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: 'End time must be in HH:mm format.' }),
-    maxTeams: z.number().min(2, { message: 'Minimum 2 teams required.' }),
-    teamSize: z.number().min(1, { message: 'Minimum 1 player per team.' }),
-    entryFee: z.number().min(0, { message: 'Entry fee must be 0 or more.' }),
-    location: z.string().min(3, { message: 'Location must be at least 3 characters.' }).max(200, { message: 'Location must not exceed 200 characters.' }),
-    isActive: z.boolean()
-  })
+// Helper to convert Date to YYYY-MM-DD in local timezone
+const dateToString = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const formSchema = z.object({
+  name: z.string().min(3, { message: 'Name must be at least 3 characters.' }).max(100, { message: 'Name must not exceed 100 characters.' }),
+  description: z.string().min(3).max(500).optional().or(z.literal('')),
+  rules: z.string().min(3).max(2000).optional().or(z.literal('')),
+  image: z.instanceof(File).optional(),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { message: 'Start date must be in YYYY-MM-DD format.' }),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { message: 'End date must be in YYYY-MM-DD format.' }),
+  startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: 'Start time must be in HH:mm format.' }),
+  endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: 'End time must be in HH:mm format.' }),
+  maxTeams: z.number().min(2, { message: 'Minimum 2 teams required.' }),
+  teamSize: z.number().min(1, { message: 'Minimum 1 player per team.' }),
+  entryFee: z.number().min(0, { message: 'Entry fee must be 0 or more.' }),
+  location: z.string().min(3, { message: 'Location must be at least 3 characters.' }).max(200, { message: 'Location must not exceed 200 characters.' }),
+  isActive: z.boolean()
+})
   .refine(
     (data) => {
       if (data.endDate && data.startDate) {
-        return data.endDate >= data.startDate;
+        return new Date(data.endDate) >= new Date(data.startDate);
       }
       return true;
     },
@@ -64,8 +71,8 @@ const EditTournamentForm = ({ data }: Props) => {
       description: data?.description || '',
       rules: data?.rules || '',
       image: undefined,
-      startDate: data?.startDate ? dayjs(data.startDate).toDate() : new Date(),
-      endDate: data?.endDate ? dayjs(data.endDate).toDate() : new Date(),
+      startDate: data?.startDate ? dayjs(data.startDate).format('YYYY-MM-DD') : dateToString(new Date()),
+      endDate: data?.endDate ? dayjs(data.endDate).format('YYYY-MM-DD') : dateToString(new Date()),
       startTime: data?.startTime || '',
       endTime: data?.endTime || '',
       maxTeams: data?.maxTeams || 16,
@@ -112,8 +119,8 @@ const EditTournamentForm = ({ data }: Props) => {
       payload.append('rules', formData.rules);
     }
     if (formData.image) payload.append('image', formData.image);
-    payload.append('startDate', formData.startDate.toISOString().split('T')[0]);
-    payload.append('endDate', formData.endDate.toISOString().split('T')[0]);
+    payload.append('startDate', formData.startDate);
+    payload.append('endDate', formData.endDate);
     payload.append('startTime', formData.startTime);
     payload.append('endTime', formData.endTime);
     payload.append('maxTeams', (formData.maxTeams || 2).toString());
@@ -167,7 +174,10 @@ const EditTournamentForm = ({ data }: Props) => {
               control={form.control}
               name="startDate"
               render={({ field }) => (
-                <DatePickerInput value={field.value} onValueChange={field.onChange} />
+                <DatePickerInput 
+                  value={field.value && field.value !== '' ? new Date(field.value + 'T00:00:00') : new Date()} 
+                  onValueChange={(date) => field.onChange(date ? dateToString(date) : dateToString(new Date()))} 
+                />
               )}
             />
             <FieldError>{form.formState.errors.startDate?.message}</FieldError>
@@ -178,7 +188,10 @@ const EditTournamentForm = ({ data }: Props) => {
               control={form.control}
               name="endDate"
               render={({ field }) => (
-                <DatePickerInput value={field.value} onValueChange={field.onChange} />
+                <DatePickerInput 
+                  value={field.value && field.value !== '' ? new Date(field.value + 'T00:00:00') : new Date()} 
+                  onValueChange={(date) => field.onChange(date ? dateToString(date) : dateToString(new Date()))} 
+                />
               )}
             />
             <FieldError>{form.formState.errors.endDate?.message}</FieldError>

@@ -67,6 +67,7 @@ interface BookingState {
   // Court bookings
   bookingItems: BookingItem[];
   selectedDate: Date;
+  selectedCustomerId: string;
   
   // Add-ons
   selectedCoaches: SelectedCoach[];
@@ -84,6 +85,7 @@ interface BookingState {
   setBookingItems: (items: BookingItem[]) => void;
   removeBookingItem: (courtId: string, timeSlot: string, date: string) => void;
   setSelectedDate: (date: Date) => void;
+  setSelectedCustomerId: (customerId: string) => void;
   addCoach: (coach: SelectedCoach) => void;
   removeCoach: (coachId: string, timeSlot: string, slotId?: string) => void;
   addInventory: (inventory: SelectedInventory) => void;
@@ -101,6 +103,7 @@ export const useBookingStore = create<BookingState>()(
     (set, get) => ({
       bookingItems: [],
       selectedDate: new Date(),
+      selectedCustomerId: '',
       selectedCoaches: [],
       selectedInventories: [],
       courtTotal: 0,
@@ -124,6 +127,8 @@ export const useBookingStore = create<BookingState>()(
       },
 
       setSelectedDate: (date) => set({ selectedDate: date }),
+
+      setSelectedCustomerId: (customerId) => set({ selectedCustomerId: customerId }),
 
       addCoach: (coach) => {
         const state = get();
@@ -213,6 +218,7 @@ export const useBookingStore = create<BookingState>()(
         bookingItems: [],
         selectedCoaches: [],
         selectedInventories: [],
+        selectedCustomerId: '',
         courtTotal: 0,
         coachTotal: 0,
         inventoryTotal: 0,
@@ -243,6 +249,7 @@ export const useBookingStore = create<BookingState>()(
       partialize: (state) => ({
         bookingItems: state.bookingItems,
         selectedDate: state.selectedDate,
+        selectedCustomerId: state.selectedCustomerId,
         selectedCoaches: state.selectedCoaches,
         selectedInventories: state.selectedInventories,
         courtTotal: state.courtTotal,
