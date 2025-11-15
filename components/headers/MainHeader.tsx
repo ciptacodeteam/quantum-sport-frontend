@@ -50,7 +50,7 @@ const MainHeader = ({
         <div className="mx-auto w-11/12 px-2 py-2 lg:max-w-7xl lg:px-4">
           <main
             className={cn(
-              'flex min-h-[72px] items-center gap-4',
+              'flex min-h-16 items-center gap-4 lg:min-h-[72px]',
               isBeranda ? 'justify-between' : 'justify-start'
             )}
           >
@@ -69,7 +69,9 @@ const MainHeader = ({
                     </Button>
                   </Link>
                 )}
-                {title && <h1 className="text-primary text-xl font-semibold">{title}</h1>}
+                {title && (
+                  <h1 className="text-primary text-lg font-semibold lg:text-xl">{title}</h1>
+                )}
               </div>
             )}
 

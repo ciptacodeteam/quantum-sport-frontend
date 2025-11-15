@@ -6,7 +6,8 @@ import {
   passwordResetWithTokenApi,
   registerApi,
   resetPasswordApi,
-  sendLoginOtpApi
+  sendLoginOtpApi,
+  changePasswordApi
 } from '@/api/auth';
 import { verifyPhoneOtpApi } from '@/api/phone';
 import { profileQueryOptions } from '@/queries/profile';
@@ -135,6 +136,20 @@ export const verifyPhoneOtpMutationOptions = ({ onSuccess, onError }: MutationFu
     onError: (error) => {
       console.error('Error:', error);
       toast.error(error.msg || 'Failed to verify OTP. Please try again.');
+      onError?.(error);
+    }
+  });
+
+export const changePasswordMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
+  mutationOptions({
+    mutationFn: changePasswordApi,
+    onSuccess: (data) => {
+      toast.success('Password changed successfully!');
+      onSuccess?.(data);
+    },
+    onError: (error) => {
+      console.error('Error:', error);
+      toast.error(error.msg || 'Failed to change password. Please try again.');
       onError?.(error);
     }
   });

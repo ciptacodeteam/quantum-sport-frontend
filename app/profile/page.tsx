@@ -9,10 +9,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { getPlaceholderImageUrl } from '@/lib/utils';
 import { logoutMutationOptions } from '@/mutations/auth';
 import { profileQueryOptions } from '@/queries/profile';
-import { userClubsQueryOptions, clubMembershipsQueryOptions } from '@/queries/club';
+import { clubMembershipsQueryOptions } from '@/queries/club';
 import { leaveClubMutationOptions } from '@/mutations/club';
 import useAuthStore from '@/stores/useAuthStore';
-import { IconCalendar, IconLogout, IconMail, IconPhone, IconUsers, IconDoorExit } from '@tabler/icons-react';
+import { IconCalendar, IconLogout, IconMail, IconPhone, IconUsers } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import Image from 'next/image';
@@ -26,36 +26,36 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
+  DialogTitle
 } from '@/components/ui/dialog';
+import EmailChangeModal from '@/components/profile/EmailChangeModal';
+import PhoneChangeModal from '@/components/profile/PhoneChangeModal';
+import PasswordChangeModal from '@/components/profile/PasswordChangeModal';
 
 export default function ProfilePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: user, isPending, isError } = useQuery(profileQueryOptions);
-  const { data: memberClubs, isLoading: isLoadingMemberClubs, error: memberClubsError } = useQuery(clubMembershipsQueryOptions());
+  const {
+    data: memberClubs,
+    isLoading: isLoadingMemberClubs,
+    error: memberClubsError
+  } = useQuery(clubMembershipsQueryOptions());
   const logout = useAuthStore((state) => state.logout);
   const [clubToLeave, setClubToLeave] = useState<{ id: string; name: string } | null>(null);
+  // Name (not edited via modal in this iteration)
+  const [editEmail, setEditEmail] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  // Email modal
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
 
-  // Debug: Log clubs data
-  useEffect(() => {
-    console.log('🔍 Profile Debug - isLoadingMemberClubs:', isLoadingMemberClubs);
-    console.log('🔍 Profile Debug - memberClubsError:', memberClubsError);
-    console.log('🔍 Profile Debug - memberClubs raw:', memberClubs);
-    console.log('🔍 Profile Debug - memberClubs is array?', Array.isArray(memberClubs));
-    
-    if (memberClubs) {
-      console.log('👥 Clubs I\'m Member Of:', memberClubs);
-      console.log('📊 Total member clubs:', Array.isArray(memberClubs) ? memberClubs.length : 'NOT AN ARRAY');
-      if (Array.isArray(memberClubs)) {
-        console.log('🔓 Public clubs:', memberClubs.filter((c: any) => c.visibility === 'PUBLIC').length);
-        console.log('🔒 Private clubs:', memberClubs.filter((c: any) => c.visibility === 'PRIVATE').length);
-      }
-    }
-    if (memberClubsError) {
-      console.error('❌ Member Clubs Error:', memberClubsError);
-    }
-  }, [memberClubs, memberClubsError, isLoadingMemberClubs]);
+  // Phone modal
+  const [phoneModalOpen, setPhoneModalOpen] = useState(false);
+
+  // Password modal (two-step)
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+
+  // Debug logging removed
 
   const { mutate: logoutMutation, isPending: isLoggingOut } = useMutation(
     logoutMutationOptions({
@@ -77,6 +77,22 @@ export default function ProfilePage() {
     })
   );
 
+  // Update local form state when user loaded
+  useEffect(() => {
+    if (user) {
+      setEditEmail(user.email || '');
+      setEditPhone(user.phone || '');
+    }
+  }, [user]);
+
+  // Email/Phone updates are handled in modal components
+
+  // Email OTP handled in EmailChangeModal
+
+  // Phone OTP handled in PhoneChangeModal
+
+  // Password change handled in PasswordChangeModal
+
   // Redirect to home if not authenticated
   useEffect(() => {
     if (!isPending && (isError || !user?.id)) {
@@ -88,9 +104,9 @@ export default function ProfilePage() {
     logoutMutation();
   };
 
-  const handleLeaveClubClick = (clubId: string, clubName: string) => {
-    setClubToLeave({ id: clubId, name: clubName });
-  };
+  // const handleLeaveClubClick = (clubId: string, clubName: string) => {
+  //   setClubToLeave({ id: clubId, name: clubName });
+  // };
 
   const confirmLeaveClub = () => {
     if (clubToLeave) {
@@ -118,7 +134,7 @@ export default function ProfilePage() {
 
   return (
     <>
-      <MainHeader backHref="/" title="Profile" withLogo={false} />
+      <MainHeader title="Profile" withLogo={false} withNotificationBadge />
 
       <main className="mt-24 min-h-[calc(100dvh-180px)] w-full p-4 pb-24 md:mt-14 md:pb-4">
         <div className="mx-auto max-w-2xl space-y-6">
@@ -147,7 +163,9 @@ export default function ProfilePage() {
                 {/* Name */}
                 <div className="text-center">
                   <h1 className="text-2xl font-bold">{user.name}</h1>
-                  {user.banned && <p className="text-destructive mt-1 text-sm">Account Banned</p>}
+                  {'banned' in user && (user as any).banned && (
+                    <p className="text-destructive mt-1 text-sm">Account Banned</p>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -165,10 +183,19 @@ export default function ProfilePage() {
                 <IconMail className="text-muted-foreground mt-1 size-5" />
                 <div className="flex-1">
                   <p className="text-sm font-medium">Email</p>
-                  <p className="text-muted-foreground text-sm">{user.email || 'Not provided'}</p>
-                  {user.email && (
+                  <button
+                    type="button"
+                    className="text-muted-foreground text-sm underline-offset-2 hover:underline"
+                    onClick={() => {
+                      setEditEmail(user.email || '');
+                      setEmailModalOpen(true);
+                    }}
+                  >
+                    {user.email || 'Not provided'}
+                  </button>
+                  {user.email && 'emailVerified' in user && (
                     <p className="text-muted-foreground text-xs">
-                      {user.emailVerified ? '✓ Verified' : '✗ Not verified'}
+                      {(user as any).emailVerified ? '✓ Verified' : '✗ Not verified'}
                     </p>
                   )}
                 </div>
@@ -181,10 +208,21 @@ export default function ProfilePage() {
                 <IconPhone className="text-muted-foreground mt-1 size-5" />
                 <div className="flex-1">
                   <p className="text-sm font-medium">Phone Number</p>
-                  <p className="text-muted-foreground text-sm">{user.phone}</p>
-                  <p className="text-muted-foreground text-xs">
-                    {user.phoneVerified ? '✓ Verified' : '✗ Not verified'}
-                  </p>
+                  <button
+                    type="button"
+                    className="text-muted-foreground text-sm underline-offset-2 hover:underline"
+                    onClick={() => {
+                      setEditPhone(user.phone || '');
+                      setPhoneModalOpen(true);
+                    }}
+                  >
+                    {user.phone || 'Not provided'}
+                  </button>
+                  {'phoneVerified' in user && (
+                    <p className="text-muted-foreground text-xs">
+                      {(user as any).phoneVerified ? '✓ Verified' : '✗ Not verified'}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -201,20 +239,33 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {user.banned && user.banReason && (
+              {'banned' in user && (user as any).banned && 'banReason' in user && (
                 <>
                   <Separator />
                   <div className="bg-destructive/10 rounded-lg p-3">
                     <p className="text-destructive text-sm font-medium">Ban Reason</p>
-                    <p className="text-destructive/80 text-sm">{user.banReason}</p>
-                    {user.banExpires && (
+                    <p className="text-destructive/80 text-sm">{(user as any).banReason}</p>
+                    {'banExpires' in user && (user as any).banExpires && (
                       <p className="text-destructive/70 mt-1 text-xs">
-                        Expires: {dayjs(user.banExpires).format('DD MMMM YYYY HH:mm')}
+                        Expires: {dayjs((user as any).banExpires).format('DD MMMM YYYY HH:mm')}
                       </p>
                     )}
                   </div>
                 </>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Change Password (trigger) */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Password</CardTitle>
+              <CardDescription>Manage your password</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="outline" onClick={() => setPasswordModalOpen(true)}>
+                Change Password
+              </Button>
             </CardContent>
           </Card>
 
@@ -226,90 +277,103 @@ export default function ProfilePage() {
             </CardHeader>
             <CardContent>
               {isLoadingMemberClubs ? (
-                <div className="text-center py-8 text-sm text-muted-foreground">
+                <div className="text-muted-foreground py-8 text-center text-sm">
                   Loading clubs...
                 </div>
               ) : memberClubsError ? (
-                <div className="text-center py-8">
-                  <p className="text-sm text-destructive mb-2">Failed to load clubs</p>
-                  <p className="text-xs text-muted-foreground">{(memberClubsError as any)?.message || 'Unknown error'}</p>
+                <div className="py-8 text-center">
+                  <p className="text-destructive mb-2 text-sm">Failed to load clubs</p>
+                  <p className="text-muted-foreground text-xs">
+                    {(memberClubsError as any)?.message || 'Unknown error'}
+                  </p>
                   <Button
                     variant="outline"
                     size="sm"
                     className="mt-3"
-                    onClick={() => queryClient.invalidateQueries({ queryKey: ['clubs', 'membership'] })}
+                    onClick={() =>
+                      queryClient.invalidateQueries({ queryKey: ['clubs', 'membership'] })
+                    }
                   >
                     Retry
                   </Button>
                 </div>
               ) : !memberClubs || memberClubs.length === 0 ? (
-                <div className="text-center py-8">
-                  <IconUsers className="size-12 mx-auto mb-2 text-muted-foreground opacity-50" />
-                  <p className="text-sm text-muted-foreground">You haven't joined any clubs yet</p>
-                  <Button
-                    variant="link"
-                    className="mt-2"
-                    onClick={() => router.push('/clubs')}
-                  >
+                <div className="py-8 text-center">
+                  <IconUsers className="text-muted-foreground mx-auto mb-2 size-12 opacity-50" />
+                  <p className="text-muted-foreground text-sm">
+                    You haven&#39;t joined any clubs yet
+                  </p>
+                  <Button variant="link" className="mt-2" onClick={() => router.push('/clubs')}>
                     Browse Clubs
                   </Button>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {Array.isArray(memberClubs) && memberClubs.map((club) => (
-                    <div
-                      key={club.id}
-                      className="flex items-start gap-3 p-4 rounded-lg border hover:bg-accent transition-colors"
-                    >
-                      <Avatar className="size-14 rounded-lg cursor-pointer" onClick={() => router.push(`/clubs/${club.id}`)}>
-                        <AvatarImage src={club.logo || undefined} alt={club.name} />
-                        <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-semibold">
-                          {club.name.substring(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0 cursor-pointer" onClick={() => router.push(`/clubs/${club.id}`)}>
-                        <p className="font-semibold text-base mb-2">{club.name}</p>
-                        <div className="space-y-1.5 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-2">
-                            <Badge variant={club.visibility === 'PUBLIC' ? 'default' : 'secondary'} className="text-xs">
-                              {club.visibility === 'PUBLIC' ? 'Public' : 'Private'}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <IconUsers className="size-4" />
-                            <span>{club._count.clubMember} {club._count.clubMember === 1 ? 'member' : 'members'}</span>
-                          </div>
-                          {club.leader && (
-                            <div className="flex items-center gap-1">
-                              <span className="font-medium">Leader:</span>
-                              <span>{club.leader.name}</span>
+                  {Array.isArray(memberClubs) &&
+                    memberClubs.map((club) => (
+                      <div
+                        key={club.id}
+                        className="hover:bg-accent flex items-start gap-3 rounded-lg border p-4 transition-colors"
+                      >
+                        <Avatar
+                          className="size-14 cursor-pointer rounded-lg"
+                          onClick={() => router.push(`/clubs/${club.id}`)}
+                        >
+                          <AvatarImage src={club.logo || undefined} alt={club.name} />
+                          <AvatarFallback className="bg-primary/10 text-primary rounded-lg font-semibold">
+                            {club.name.substring(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div
+                          className="min-w-0 flex-1 cursor-pointer"
+                          onClick={() => router.push(`/clubs/${club.id}`)}
+                        >
+                          <p className="mb-2 text-base font-semibold">{club.name}</p>
+                          <div className="text-muted-foreground space-y-1.5 text-sm">
+                            <div className="flex items-center gap-2">
+                              <Badge
+                                variant={club.visibility === 'PUBLIC' ? 'default' : 'secondary'}
+                                className="text-xs"
+                              >
+                                {club.visibility === 'PUBLIC' ? 'Public' : 'Private'}
+                              </Badge>
                             </div>
-                          )}
+                            <div className="flex items-center gap-1">
+                              <IconUsers className="size-4" />
+                              <span>
+                                {club._count.clubMember}{' '}
+                                {club._count.clubMember === 1 ? 'member' : 'members'}
+                              </span>
+                            </div>
+                            {club.leader && (
+                              <div className="flex items-center gap-1">
+                                <span className="font-medium">Leader:</span>
+                                <span>{club.leader.name}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               )}
             </CardContent>
           </Card>
 
           {/* Logout Button */}
-          <Card>
-            <CardContent className="pt-6">
-              <Button
-                variant="destructive"
-                className="w-full"
-                size="lg"
-                onClick={handleLogout}
-                disabled={isLoggingOut}
-                loading={isLoggingOut}
-              >
-                <IconLogout className="mr-2 size-5" />
-                Logout
-              </Button>
-            </CardContent>
-          </Card>
+          <footer className="mb-6">
+            <Button
+              variant="destructive"
+              className="w-full"
+              size="lg"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              loading={isLoggingOut}
+            >
+              <IconLogout className="mr-2 size-5" />
+              Logout
+            </Button>
+          </footer>
         </div>
       </main>
 
@@ -319,16 +383,12 @@ export default function ProfilePage() {
           <DialogHeader>
             <DialogTitle>Leave Club</DialogTitle>
             <DialogDescription>
-              Are you sure you want to leave <strong>{clubToLeave?.name}</strong>? 
-              You will need to request to join again if it's a private club.
+              Are you sure you want to leave <strong>{clubToLeave?.name}</strong>? You will need to
+              request to join again if it&#39;s a private club.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setClubToLeave(null)}
-              disabled={isLeavingClub}
-            >
+            <Button variant="outline" onClick={() => setClubToLeave(null)} disabled={isLeavingClub}>
               Cancel
             </Button>
             <Button
@@ -344,6 +404,29 @@ export default function ProfilePage() {
       </Dialog>
 
       <MainBottomNavigation />
+
+      {/* Email Change Modal */}
+      <EmailChangeModal
+        open={emailModalOpen}
+        email={editEmail}
+        onOpenChange={setEmailModalOpen}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: profileQueryOptions.queryKey })}
+      />
+
+      {/* Phone Change Modal */}
+      <PhoneChangeModal
+        open={phoneModalOpen}
+        phone={editPhone}
+        onOpenChange={setPhoneModalOpen}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: profileQueryOptions.queryKey })}
+      />
+
+      {/* Password Change Modal */}
+      <PasswordChangeModal
+        open={passwordModalOpen}
+        userEmail={user.email}
+        onOpenChange={setPasswordModalOpen}
+      />
     </>
   );
 }

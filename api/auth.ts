@@ -89,3 +89,8 @@ export async function updateProfileApi(payload) {
   });
   return data;
 }
+
+export async function changePasswordApi(payload) {
+  const { data } = await api.post('/auth/change-password', payload);
+  return data;
+}
