@@ -886,16 +886,7 @@ export default function BookingPage() {
         </header>
         <main className="flex gap-2">
           <Button
-            variant="outline"
-            className="w-1/2"
-            size={'xl'}
-            onClick={openAddons}
-            disabled={bookingItems.length === 0}
-          >
-            Tambah Addons
-          </Button>
-          <Button
-            className="w-1/2"
+          className='w-full'
             size={'xl'}
             onClick={handleBooking}
             disabled={bookingItems.length === 0}
