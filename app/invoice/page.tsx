@@ -147,17 +147,11 @@ export default function InvoiceHistoryPage() {
   }
 
   return (
-    <div className="min-h-screen">
-      <MainHeader />
+    <div>
+      <MainHeader title="Riwayat Pemesanan" withLogo={false} backHref="/" />
 
-      <div className="container mx-auto mt-28 px-4 pb-24 lg:mt-28">
-        <div className="mx-auto max-w-2xl">
-          {/* Header */}
-          <div className="mb-6">
-            <h1 className="mb-2 text-lg font-bold lg:text-3xl">Riwayat Invoice</h1>
-            <p className="text-sm text-gray-600">Lihat semua riwayat pembayaran dan invoice Anda</p>
-          </div>
-
+      <div className="mx-auto mt-28 pb-24 lg:mt-28">
+        <div className="mx-auto w-11/12">
           {/* Empty State */}
           {invoices.length === 0 && (
             <Card>
@@ -167,7 +161,7 @@ export default function InvoiceHistoryPage() {
                 <p className="mb-6 text-gray-600">
                   Anda belum memiliki riwayat invoice. Mulai booking lapangan sekarang!
                 </p>
-                <Button onClick={() => router.push('/')}>Mulai Booking</Button>
+                <Button onClick={() => router.push('/booking')}>Mulai Booking</Button>
               </CardContent>
             </Card>
           )}

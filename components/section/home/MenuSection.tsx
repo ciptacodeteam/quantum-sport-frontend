@@ -14,7 +14,7 @@ const MenuSection = () => {
       icon: <BookingMenuIcon className="size-13 lg:size-12" />
     },
     {
-      title: 'Social Club',
+      title: 'Club',
       subtitle: 'Temukan informasi lengkap tentang klub yang tersedia.',
       url: '/clubs',
       icon: <ClubMenuIcon className="size-9 lg:size-10" />
