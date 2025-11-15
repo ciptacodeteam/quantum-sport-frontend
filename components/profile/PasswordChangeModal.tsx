@@ -9,12 +9,32 @@ import {
   DialogTitle
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useMutation } from '@tanstack/react-query';
 import { loginMutationOptions, changePasswordMutationOptions } from '@/mutations/auth';
 import { toast } from 'sonner';
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
+const verifyPasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Current password is required')
+});
+
+const changePasswordSchema = z
+  .object({
+    newPassword: z.string().min(6, 'Password must be at least 6 characters'),
+    confirmPassword: z.string().min(1, 'Please confirm your password')
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword']
+  });
+
+type VerifyPasswordFormData = z.infer<typeof verifyPasswordSchema>;
+type ChangePasswordFormData = z.infer<typeof changePasswordSchema>;
 
 type Props = {
   open: boolean;
@@ -24,9 +44,21 @@ type Props = {
 
 export default function PasswordChangeModal({ open, userEmail, onOpenChange }: Props) {
   const [step, setStep] = useState<'verify' | 'change'>('verify');
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+
+  const verifyForm = useForm<VerifyPasswordFormData>({
+    resolver: zodResolver(verifyPasswordSchema),
+    defaultValues: {
+      currentPassword: ''
+    }
+  });
+
+  const changeForm = useForm<ChangePasswordFormData>({
+    resolver: zodResolver(changePasswordSchema),
+    defaultValues: {
+      newPassword: '',
+      confirmPassword: ''
+    }
+  });
 
   const { mutate: verifyCurrentPassword, isPending: isVerifying } = useMutation(
     loginMutationOptions({
@@ -40,9 +72,8 @@ export default function PasswordChangeModal({ open, userEmail, onOpenChange }: P
   const { mutate: changePassword, isPending: isChanging } = useMutation(
     changePasswordMutationOptions({
       onSuccess: () => {
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
+        verifyForm.reset();
+        changeForm.reset();
         setStep('verify');
         onOpenChange(false);
         toast.success('Password changed');
@@ -50,12 +81,24 @@ export default function PasswordChangeModal({ open, userEmail, onOpenChange }: P
     })
   );
 
+  const handleVerifySubmit = (data: VerifyPasswordFormData) => {
+    if (!userEmail) {
+      toast.error('No email on account');
+      return;
+    }
+    verifyCurrentPassword({ email: userEmail, password: data.currentPassword });
+  };
+
+  const handleChangeSubmit = (data: ChangePasswordFormData) => {
+    const currentPassword = verifyForm.getValues('currentPassword');
+    changePassword({ currentPassword, newPassword: data.newPassword });
+  };
+
   const close = (o: boolean) => {
     if (!o) {
       setStep('verify');
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
+      verifyForm.reset();
+      changeForm.reset();
     }
     onOpenChange(o);
   };
@@ -74,63 +117,55 @@ export default function PasswordChangeModal({ open, userEmail, onOpenChange }: P
           </DialogDescription>
         </DialogHeader>
         {step === 'verify' ? (
-          <div className="space-y-4">
+          <form onSubmit={verifyForm.handleSubmit(handleVerifySubmit)} className="space-y-4">
             {!userEmail && (
               <p className="text-destructive text-sm">Email is required to verify password.</p>
             )}
-            <div>
-              <Label htmlFor="currentPwd">Current Password</Label>
-              <Input
-                id="currentPwd"
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-              />
-            </div>
-            <Button
-              onClick={() => {
-                if (!userEmail) return toast.error('No email on account');
-                if (!currentPassword) return toast.error('Enter current password');
-                verifyCurrentPassword({ email: userEmail, password: currentPassword });
-              }}
-              loading={isVerifying}
-              disabled={isVerifying}
-            >
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="currentPwd">Current Password</FieldLabel>
+                <Input
+                  id="currentPwd"
+                  type="password"
+                  {...verifyForm.register('currentPassword')}
+                />
+                {verifyForm.formState.errors.currentPassword && (
+                  <FieldError>{verifyForm.formState.errors.currentPassword.message}</FieldError>
+                )}
+              </Field>
+            </FieldGroup>
+            <Button type="submit" loading={isVerifying} disabled={isVerifying}>
               Verify Password
             </Button>
-          </div>
+          </form>
         ) : (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="newPwd">New Password</Label>
-              <Input
-                id="newPwd"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="confirmPwd">Confirm New Password</Label>
-              <Input
-                id="confirmPwd"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
-            </div>
-            <Button
-              onClick={() => {
-                if (!newPassword || !confirmPassword) return toast.error('Fill all fields');
-                if (newPassword !== confirmPassword) return toast.error('Passwords do not match');
-                changePassword({ currentPassword, newPassword });
-              }}
-              loading={isChanging}
-              disabled={isChanging}
-            >
+          <form onSubmit={changeForm.handleSubmit(handleChangeSubmit)} className="space-y-4">
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="newPwd">New Password</FieldLabel>
+                <Input id="newPwd" type="password" {...changeForm.register('newPassword')} />
+                {changeForm.formState.errors.newPassword && (
+                  <FieldError>{changeForm.formState.errors.newPassword.message}</FieldError>
+                )}
+              </Field>
+            </FieldGroup>
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="confirmPwd">Confirm New Password</FieldLabel>
+                <Input
+                  id="confirmPwd"
+                  type="password"
+                  {...changeForm.register('confirmPassword')}
+                />
+                {changeForm.formState.errors.confirmPassword && (
+                  <FieldError>{changeForm.formState.errors.confirmPassword.message}</FieldError>
+                )}
+              </Field>
+            </FieldGroup>
+            <Button type="submit" loading={isChanging} disabled={isChanging}>
               Change Password
             </Button>
-          </div>
+          </form>
         )}
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
