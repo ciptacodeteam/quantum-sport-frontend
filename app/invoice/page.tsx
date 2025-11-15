@@ -1,0 +1,302 @@
+'use client';
+
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import MainHeader from '@/components/headers/MainHeader';
+import MainBottomNavigation from '@/components/footers/MainBottomNavigation';
+import { invoicesQueryOptions } from '@/queries/invoice';
+import { profileQueryOptions } from '@/queries/profile';
+import { useQuery } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
+import dayjs from 'dayjs';
+import 'dayjs/locale/id';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import { Calendar, ChevronRight, CreditCard, FileText, Receipt } from 'lucide-react';
+import type { Invoice } from '@/types/model';
+import useAuthModalStore from '@/stores/useAuthModalStore';
+
+dayjs.locale('id');
+dayjs.extend(relativeTime);
+
+const currencyFormatter = new Intl.NumberFormat('id-ID', {
+  style: 'currency',
+  currency: 'IDR',
+  minimumFractionDigits: 0
+});
+
+const formatCurrency = (value: number) => currencyFormatter.format(value).replace(/\s/g, '');
+
+const getStatusColor = (status: string) => {
+  const statusMap: Record<string, string> = {
+    HOLD: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    PENDING: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    PAID: 'bg-green-100 text-green-800 border-green-200',
+    CONFIRMED: 'bg-green-100 text-green-800 border-green-200',
+    FAILED: 'bg-red-100 text-red-800 border-red-200',
+    CANCELLED: 'bg-gray-100 text-gray-800 border-gray-200',
+    EXPIRED: 'bg-gray-100 text-gray-800 border-gray-200'
+  };
+  return statusMap[status] || 'bg-gray-100 text-gray-800 border-gray-200';
+};
+
+const getStatusLabel = (status: string) => {
+  const labels: Record<string, string> = {
+    HOLD: 'Menunggu Pembayaran',
+    PENDING: 'Menunggu Pembayaran',
+    PAID: 'Lunas',
+    CONFIRMED: 'Terkonfirmasi',
+    FAILED: 'Gagal',
+    CANCELLED: 'Dibatalkan',
+    EXPIRED: 'Kadaluarsa'
+  };
+  return labels[status] || status;
+};
+
+export default function InvoiceHistoryPage() {
+  const router = useRouter();
+  const { data: user, isPending: isUserPending } = useQuery(profileQueryOptions);
+  const isAuthenticated = !!user?.id;
+  const openAuthModal = useAuthModalStore((state) => state.open);
+
+  const {
+    data: response,
+    isPending,
+    isError
+  } = useQuery(invoicesQueryOptions({ sort: 'createdAt', order: 'desc' }));
+
+  // Show login if not authenticated
+  if (!isUserPending && !isAuthenticated) {
+    return (
+      <div className="min-h-screen">
+        <MainHeader />
+        <div className="container mx-auto px-4 py-8 pb-24">
+          <div className="mx-auto max-w-2xl text-center">
+            <Card>
+              <CardContent className="pt-6 pb-8">
+                <Receipt className="mx-auto mb-4 h-16 w-16 text-gray-400" />
+                <h2 className="mb-2 text-2xl font-bold">Login Diperlukan</h2>
+                <p className="mb-6 text-gray-600">
+                  Silakan login untuk melihat riwayat invoice Anda
+                </p>
+                <Button onClick={openAuthModal} size="lg">
+                  Login Sekarang
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+        <MainBottomNavigation />
+      </div>
+    );
+  }
+
+  const invoices = (response?.data as Invoice[]) || [];
+
+  if (isPending || isUserPending) {
+    return (
+      <div className="min-h-screen">
+        <MainHeader />
+        <div className="container mx-auto mt-28 px-4 pb-24 lg:mt-28">
+          <div className="mx-auto max-w-2xl">
+            <div className="mb-6">
+              <h1 className="mb-2 text-lg font-bold lg:text-3xl">Riwayat Invoice</h1>
+              <p className="text-sm text-gray-600">
+                Lihat semua riwayat pembayaran dan invoice Anda
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="animate-pulse">
+                  <CardContent className="p-6">
+                    <div className="mb-3 h-6 w-1/3 rounded bg-gray-200"></div>
+                    <div className="mb-2 h-4 w-1/2 rounded bg-gray-200"></div>
+                    <div className="h-4 w-2/3 rounded bg-gray-200"></div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </div>
+        <MainBottomNavigation />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen">
+        <MainHeader />
+        <div className="container mx-auto mt-28 px-4 pb-24 lg:mt-28">
+          <div className="mx-auto max-w-2xl text-center">
+            <Card>
+              <CardContent className="pt-6">
+                <FileText className="mx-auto mb-4 h-16 w-16 text-gray-400" />
+                <h2 className="mb-2 text-2xl font-bold">Gagal Memuat Data</h2>
+                <p className="mb-6 text-gray-600">Terjadi kesalahan saat memuat riwayat invoice</p>
+                <Button onClick={() => router.push('/')}>Kembali ke Beranda</Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+        <MainBottomNavigation />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen">
+      <MainHeader />
+
+      <div className="container mx-auto mt-28 px-4 pb-24 lg:mt-28">
+        <div className="mx-auto max-w-2xl">
+          {/* Header */}
+          <div className="mb-6">
+            <h1 className="mb-2 text-lg font-bold lg:text-3xl">Riwayat Invoice</h1>
+            <p className="text-sm text-gray-600">Lihat semua riwayat pembayaran dan invoice Anda</p>
+          </div>
+
+          {/* Empty State */}
+          {invoices.length === 0 && (
+            <Card>
+              <CardContent className="pt-12 pb-12 text-center">
+                <Receipt className="mx-auto mb-4 h-16 w-16 text-gray-400" />
+                <h3 className="mb-2 text-xl font-semibold">Belum Ada Invoice</h3>
+                <p className="mb-6 text-gray-600">
+                  Anda belum memiliki riwayat invoice. Mulai booking lapangan sekarang!
+                </p>
+                <Button onClick={() => router.push('/')}>Mulai Booking</Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Invoice List */}
+          {invoices.length > 0 && (
+            <div className="space-y-4">
+              {invoices.map((invoice) => {
+                const booking = invoice.booking;
+                const isPending = invoice.status === 'PENDING' || booking?.status === 'HOLD';
+
+                return (
+                  <Card
+                    key={invoice.id}
+                    className="cursor-pointer"
+                    onClick={() => router.push(`/invoice/${invoice.number}`)}
+                  >
+                    <CardContent className="p-4 py-2">
+                      <header className="mb-4 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="mb-2 flex items-center gap-2">
+                              <FileText className="h-5 w-5 text-gray-500" />
+                              <span className="line-clamp-1 font-semibold text-gray-900">
+                                {invoice.number}
+                              </span>
+                            </div>
+                          </div>
+                          <Badge
+                            className={`rounded-full px-3 py-1 text-xs font-medium ${getStatusColor(
+                              invoice.status
+                            )}`}
+                          >
+                            {getStatusLabel(invoice.status)}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <Calendar className="h-4 w-4" />
+                          <span className="text-xs">
+                            {dayjs(invoice.issuedAt).format('DD MMM YYYY, HH:mm')}
+                          </span>
+                          <span className="text-gray-400">•</span>
+                          <span className="text-xs">{dayjs(invoice.issuedAt).fromNow()}</span>
+                        </div>
+                      </header>
+
+                      <Separator className="my-4" />
+
+                      {/* Booking Details Preview */}
+                      {booking && booking.details && booking.details.length > 0 && (
+                        <div className="mb-4">
+                          <div className="mb-2 text-sm text-gray-600">Pemesanan Lapangan:</div>
+                          <div className="space-y-1">
+                            {booking.details.slice(0, 2).map((detail: any, idx: number) => (
+                              <div
+                                key={detail.id || idx}
+                                className="flex items-center gap-2 text-sm"
+                              >
+                                <div className="bg-primary h-2 w-2 rounded-full"></div>
+                                <span className="font-medium">
+                                  {detail.court?.name || detail.slot?.court?.name || 'Court'}
+                                </span>
+                                <span className="text-gray-600">
+                                  - {dayjs(detail.slot?.startAt).format('DD MMM')}
+                                </span>
+                              </div>
+                            ))}
+                            {booking.details.length > 2 && (
+                              <div className="ml-4 text-sm text-gray-500">
+                                +{booking.details.length - 2} lapangan lainnya
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Price and Action */}
+                      <div className="flex items-center justify-between border-t pt-4">
+                        <div>
+                          <div className="mb-1 text-sm text-gray-600">Total Pembayaran</div>
+                          <div className="text-primary text-2xl font-bold">
+                            {formatCurrency(invoice.total)}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          {isPending && (
+                            <Button
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(`/invoice/${invoice.number}`);
+                              }}
+                            >
+                              <CreditCard className="mr-2 h-4 w-4" />
+                              Bayar
+                            </Button>
+                          )}
+
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/invoice/${invoice.number}`);
+                            }}
+                          >
+                            Lihat Detail
+                            <ChevronRight className="ml-1 h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Info Footer */}
+          {invoices.length > 0 && (
+            <div className="mt-8 text-center text-sm text-gray-600">
+              <p>Menampilkan {invoices.length} invoice</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <MainBottomNavigation />
+    </div>
+  );
+}

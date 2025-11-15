@@ -3,7 +3,7 @@ import MainHeader from '@/components/headers/MainHeader';
 import BannerSection from '@/components/section/home/BannerSection';
 import MembershipCtaSection from '@/components/section/home/MembershipCtaSection';
 import MenuSection from '@/components/section/home/MenuSection';
-import SponsorshipMarqueSection from '@/components/section/home/SponsorshipMarqueSection';
+// import SponsorshipMarqueSection from '@/components/section/home/SponsorshipMarqueSection';
 
 export default function HomePage() {
   return (

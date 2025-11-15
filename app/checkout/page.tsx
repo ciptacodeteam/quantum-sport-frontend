@@ -84,41 +84,42 @@ export default function CheckoutPage() {
   const checkoutMutation = useMutation(
     checkoutMutationOptions({
       onSuccess: (data) => {
-        // Enhance checkout data with payment method info and court details for display
-        const enhancedData = {
-          ...data,
-          paymentMethod: selectedPaymentMethod
-            ? {
-                id: selectedPaymentMethod.id,
-                name: selectedPaymentMethod.name,
-                channel: selectedPaymentMethod.channel,
-                logo: selectedPaymentMethod.logo
-              }
-            : undefined,
-          // Store full court slot details for the payment detail page display
-          courtSlots: bookingItems.map((item) => ({
-            courtId: item.courtId,
-            courtName: item.courtName,
-            timeSlot: item.timeSlot,
-            date: item.date,
-            price: item.price
-          })),
-          breakdown: data.breakdown || {
-            courtTotal,
-            addOnsTotal,
-            processingFee: paymentFeeBreakdown.totalFee,
-            total: totalWithPaymentFee
-          }
-        };
-
-        // Store enhanced checkout data
-        sessionStorage.setItem('checkoutData', JSON.stringify(enhancedData));
-
         // Clear booking store after successful checkout
-        // useBookingStore.getState().clearAll();
+        useBookingStore.getState().clearAll();
 
-        // Redirect to payment detail page
-        router.push('/checkout/payment');
+        // Redirect to invoice page using the invoice number from response
+        const invoiceNumber = data?.data?.invoiceNumber;
+        if (invoiceNumber) {
+          router.push(`/invoice/${invoiceNumber}`);
+        } else {
+          // Fallback to old payment page if invoice number not available
+          const enhancedData = {
+            ...data,
+            paymentMethod: selectedPaymentMethod
+              ? {
+                  id: selectedPaymentMethod.id,
+                  name: selectedPaymentMethod.name,
+                  channel: selectedPaymentMethod.channel,
+                  logo: selectedPaymentMethod.logo
+                }
+              : undefined,
+            courtSlots: bookingItems.map((item) => ({
+              courtId: item.courtId,
+              courtName: item.courtName,
+              timeSlot: item.timeSlot,
+              date: item.date,
+              price: item.price
+            })),
+            breakdown: data.breakdown || {
+              courtTotal,
+              addOnsTotal,
+              processingFee: paymentFeeBreakdown.totalFee,
+              total: totalWithPaymentFee
+            }
+          };
+          sessionStorage.setItem('checkoutData', JSON.stringify(enhancedData));
+          router.push('/checkout/payment');
+        }
       }
     })
   );
@@ -559,7 +560,7 @@ export default function CheckoutPage() {
                         </div>
                       )}
 
-                      <div className="flex items-start flex-col">
+                      <div className="flex flex-col items-start">
                         <p className="text-foreground text-sm leading-tight font-semibold">
                           {method.name}
                         </p>

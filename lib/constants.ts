@@ -102,11 +102,13 @@ export const SLOT_TYPE_BADGE_VARIANT: Record<SlotType, BadgeVariant['variant']> 
   [SlotType.BALLBOY]: 'lightInfo'
 };
 
-export enum BookingStatus {
-  HOLD = 'HOLD', // temporary hold on slots before payment (expiry)
-  CONFIRMED = 'CONFIRMED', // paid; slots locked
-  CANCELLED = 'CANCELLED'
-}
+export const BookingStatus = {
+  HOLD: 'HOLD', // temporary hold on slots before payment (expiry)
+  CONFIRMED: 'CONFIRMED', // paid; slots locked
+  CANCELLED: 'CANCELLED'
+} as const;
+
+export type BookingStatus = keyof typeof BookingStatus;
 
 export const BOOKING_STATUS_MAP: Record<BookingStatus, string> = {
   [BookingStatus.HOLD]: 'Hold',

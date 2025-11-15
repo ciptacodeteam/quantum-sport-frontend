@@ -48,4 +48,14 @@ export type SearchParamsData = {
   [key: string]: TQueryParams;
 };
 
+export type CheckoutResponse = {
+  bookingId: string;
+  invoiceNumber: string;
+  totalPrice: number;
+  processingFee: number;
+  total: number;
+  status: string;
+  paymentUrl: string | null;
+};
+
 export type IdParams<T = string> = { id: T };

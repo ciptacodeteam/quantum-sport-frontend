@@ -152,7 +152,7 @@ export type Club = {
   _count: {
     clubMember: number;
   };
-  
+
   leader?: {
     id: string;
     name: string;
@@ -319,9 +319,17 @@ export type Invoice = {
 };
 
 enum BookingStatus {
-  HOLD, // temporary hold on slots before payment (expiry)
-  CONFIRMED, // paid; slots locked
-  CANCELLED
+  HOLD = 'HOLD', // temporary hold on slots before payment (expiry)
+  CONFIRMED = 'CONFIRMED', // paid; slots locked
+  CANCELLED = 'CANCELLED'
+}
+
+enum PaymentStatus {
+  PENDING = 'PENDING',
+  PAID = 'PAID',
+  FAILED = 'FAILED',
+  EXPIRED = 'EXPIRED',
+  CANCELLED = 'CANCELLED'
 }
 
 enum SlotType {

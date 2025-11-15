@@ -13,7 +13,7 @@ import useAuthModalStore from '@/stores/useAuthModalStore';
 const navigationItems = [
   { title: 'Beranda', icon: <HomeIcon size={28} />, path: '/' },
   { title: 'Pemesanan', icon: <IconBallTennis size={28} />, path: '/activities' },
-  { title: 'History', icon: <CalendarCheckIcon size={28} />, path: '/sports' },
+  { title: 'Invoice', icon: <CalendarCheckIcon size={28} />, path: '/invoice', requiresAuth: true },
   { title: 'Profil', icon: <IconUser size={28} />, path: '/profile', requiresAuth: true }
 ];
 
@@ -27,42 +27,42 @@ const MainBottomNavigation = () => {
 
   return (
     <BottomNavigationWrapper>
-      <ul className="w-11/12 flex-between mx-auto">
-          {navigationItems.map((item) => {
-            const requiresAuth = item.requiresAuth ?? false;
-            
-            if (requiresAuth && !isAuthenticated) {
-              return (
-                <li key={item.title}>
-                  <button
-                    onClick={openAuthModal}
-                    className={`flex-center flex-col py-2 ${
-                      isActive(item.path) ? 'text-primary' : 'text-gray-400'
-                    }`}
-                  >
-                    {item.icon}
-                    <span className="mt-1 text-xs sm:text-sm">{item.title}</span>
-                  </button>
-                </li>
-              );
-            }
-            
+      <ul className="flex-between mx-auto w-11/12">
+        {navigationItems.map((item) => {
+          const requiresAuth = item.requiresAuth ?? false;
+
+          if (requiresAuth && !isAuthenticated) {
             return (
               <li key={item.title}>
-                <Link
-                  href={item.path}
+                <button
+                  onClick={openAuthModal}
                   className={`flex-center flex-col py-2 ${
                     isActive(item.path) ? 'text-primary' : 'text-gray-400'
                   }`}
                 >
                   {item.icon}
                   <span className="mt-1 text-xs sm:text-sm">{item.title}</span>
-                </Link>
+                </button>
               </li>
             );
-          })}
-        </ul>
-      </BottomNavigationWrapper>
+          }
+
+          return (
+            <li key={item.title}>
+              <Link
+                href={item.path}
+                className={`flex-center flex-col py-2 ${
+                  isActive(item.path) ? 'text-primary' : 'text-gray-400'
+                }`}
+              >
+                {item.icon}
+                <span className="mt-1 text-xs sm:text-sm">{item.title}</span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </BottomNavigationWrapper>
   );
 };
 export default MainBottomNavigation;
