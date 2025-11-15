@@ -63,6 +63,8 @@ export default function CheckoutPage() {
   const courtTotal = useBookingStore((state) => state.courtTotal);
   const coachTotal = useBookingStore((state) => state.coachTotal);
   const inventoryTotal = useBookingStore((state) => state.inventoryTotal);
+  const selectedCoaches = useBookingStore((state) => state.selectedCoaches);
+  const selectedInventories = useBookingStore((state) => state.selectedInventories);
 
   const addOnsTotal = coachTotal + inventoryTotal;
   const grandTotal = courtTotal + addOnsTotal;
@@ -236,27 +238,39 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Get add-ons from store
-    const selectedCoaches = useBookingStore.getState().selectedCoaches;
-    const selectedInventories = useBookingStore.getState().selectedInventories;
+    const courtsPayload = bookingItems
+      .filter((item) => item.courtId && item.slotId)
+      .map((item) => ({
+        courtId: item.courtId,
+        slotId: item.slotId
+      }));
 
-    // Prepare court slots data - send only slot IDs as per API requirement
-    const courtSlots = bookingItems.map((item) => item.slotId);
+    const coachesPayload = selectedCoaches
+      .filter((coach) => coach.coachId && coach.slotId)
+      .map((coach) => ({
+        staffId: coach.coachId,
+        slotId: coach.slotId,
+        coachTypeId: coach.coachTypeId ?? null
+      }));
 
-    // Prepare payload with additional information for the backend
+    const inventoriesPayload = selectedInventories
+      .filter((inventory) => inventory.inventoryId && inventory.quantity > 0)
+      .map((inventory) => ({
+        inventoryId: inventory.inventoryId,
+        quantity: inventory.quantity
+      }));
+
     const payload: any = {
       paymentMethodId: selectedPaymentMethod.id,
-      courtSlots
+      courts: courtsPayload
     };
 
-    // Add coaches if any
-    if (selectedCoaches.length > 0) {
-      payload.coaches = selectedCoaches;
+    if (coachesPayload.length > 0) {
+      payload.coaches = coachesPayload;
     }
 
-    // Add inventories if any
-    if (selectedInventories.length > 0) {
-      payload.inventories = selectedInventories;
+    if (inventoriesPayload.length > 0) {
+      payload.inventories = inventoriesPayload;
     }
 
     checkoutMutation.mutate(payload);
@@ -310,6 +324,64 @@ export default function CheckoutPage() {
             </div>
           ))}
         </section>
+
+        {selectedCoaches.length > 0 && (
+          <section className="border-muted space-y-3 rounded-lg border bg-white p-4">
+            <header className="space-y-1">
+              <h3 className="text-base font-semibold">Coach</h3>
+              <p className="text-muted-foreground text-sm">
+                {selectedCoaches.length} sesi dipilih
+              </p>
+            </header>
+            <div className="space-y-2">
+              {selectedCoaches.map((coach, index) => (
+                <div
+                  key={`${coach.coachId}-${coach.slotId ?? coach.timeSlot}-${index}`}
+                  className="border-muted/70 flex items-center justify-between rounded-md border px-4 py-3"
+                >
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium">{coach.coachName}</span>
+                    <span className="text-muted-foreground text-xs">
+                      {dayjs(coach.date).format('DD MMM YYYY')} • {coach.timeSlot}
+                    </span>
+                  </div>
+                  <span className="text-sm font-semibold">
+                    {formatCurrency(coach.price)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {selectedInventories.length > 0 && (
+          <section className="border-muted space-y-3 rounded-lg border bg-white p-4">
+            <header className="space-y-1">
+              <h3 className="text-base font-semibold">Peralatan</h3>
+              <p className="text-muted-foreground text-sm">
+                {selectedInventories.length} jenis dipilih
+              </p>
+            </header>
+            <div className="space-y-2">
+              {selectedInventories.map((inventory, index) => (
+                <div
+                  key={`${inventory.inventoryId}-${inventory.timeSlot ?? 'default'}-${index}`}
+                  className="border-muted/70 flex items-center justify-between rounded-md border px-4 py-3"
+                >
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium">{inventory.inventoryName}</span>
+                    <span className="text-muted-foreground text-xs">
+                      Qty: {inventory.quantity}
+                    </span>
+                  </div>
+                  <span className="text-sm font-semibold">
+                    {formatCurrency(inventory.price)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         <section className="grid gap-4">
           <Button

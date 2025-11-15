@@ -1,67 +1,205 @@
 'use client';
 
 import MainHeader from '@/components/headers/MainHeader';
-import OpenScheduleModal from '@/components/modals/OpenScheduleModal';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ChevronRight, Minus, Plus } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { coachAvailabilityQueryOptions } from '@/queries/coach';
+import { inventoryAvailabilityQueryOptions } from '@/queries/inventory';
+import { useBookingStore, type BookingItem } from '@/stores/useBookingStore';
+import { useQuery } from '@tanstack/react-query';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import { ChevronRight, Minus, Plus, Check } from 'lucide-react';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+
+dayjs.extend(utc);
 
 export default function AddOnsPage() {
-  const [activeTab, setActiveTab] = useState<'coach' | 'raket' | 'ballboy'>('coach');
-  const [activeSubTab, setActiveSubTab] = useState<'guided' | 'coaching'>('guided');
-  const [showModal, setShowModal] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const router = useRouter();
+  const bookingItems = useBookingStore((state) => state.bookingItems) as BookingItem[];
+  const selectedCoaches = useBookingStore((state) => state.selectedCoaches);
+  const addCoachToStore = useBookingStore((state) => state.addCoach);
+  const removeCoachFromStore = useBookingStore((state) => state.removeCoach);
+  const selectedInventories = useBookingStore((state) => state.selectedInventories);
+  const addInventoryToStore = useBookingStore((state) => state.addInventory);
+  const removeInventoryFromStore = useBookingStore((state) => state.removeInventory);
+  const [activeTab, setActiveTab] = useState<'coach' | 'raket'>('coach');
+  const {
+    data: inventoryAvailability,
+    isPending: isInventoryPending,
+    isError: isInventoryError
+  } = useQuery(inventoryAvailabilityQueryOptions);
 
-  // 🏟 contoh data lapangan
-  const selectedCourts = [
-    { id: 1, name: 'Court 1', date: '2025-11-07' },
-    { id: 2, name: 'Court 2', date: '2025-11-09' }
-  ];
+  const bookingTimeRange = useMemo(() => {
+    if (bookingItems.length === 0) {
+      return { startAt: undefined as string | undefined, endAt: undefined as string | undefined };
+    }
 
-  // 🕓 contoh jadwal
-  const mockSchedules = [
-    { time: '08:00', available: true },
-    { time: '09:00', available: false },
-    { time: '10:00', available: true },
-    { time: '11:00', available: true }
-  ];
+    const parseBookingTime = (date: string, time: string) => {
+      const candidates = [`${date} ${time}`, `${date}T${time}`, date];
 
-  // 👨‍🏫 Data Coach
-  const coaches = [
-    { id: 1, name: 'Coach Zeky', price: 250000, image: '', type: 'guided' },
-    { id: 2, name: 'Coach Andi', price: 250000, image: '', type: 'guided' },
-    { id: 3, name: 'Coach Fajar', price: 250000, image: '', type: 'guided' },
-    { id: 4, name: 'Coach Riko', price: 250000, image: '', type: 'coaching' }
-  ];
+      for (const candidate of candidates) {
+        const parsed = dayjs(candidate);
+        if (parsed.isValid()) {
+          return parsed.utc(true);
+        }
+      }
+
+      return null;
+    };
+
+    let earliestTimestamp: number | null = null;
+    let earliestIso: string | undefined;
+    let latestTimestamp: number | null = null;
+    let latestIso: string | undefined;
+
+    bookingItems.forEach((item) => {
+      const start = parseBookingTime(item.date, item.timeSlot);
+      const end = parseBookingTime(item.date, item.endTime ?? item.timeSlot);
+
+      if (start) {
+        const value = start.valueOf();
+        if (earliestTimestamp === null || value < earliestTimestamp) {
+          earliestTimestamp = value;
+          earliestIso = start.toISOString();
+        }
+      }
+
+      if (end) {
+        const value = end.valueOf();
+        if (latestTimestamp === null || value > latestTimestamp) {
+          latestTimestamp = value;
+          latestIso = end.toISOString();
+        }
+      }
+    });
+
+    const startAt = earliestIso;
+    const endAt = latestIso;
+
+    return {
+      startAt,
+      endAt
+    };
+  }, [bookingItems]);
+
+  const {
+    data: coachAvailability,
+    isPending: isCoachPending,
+    isError: isCoachError
+  } = useQuery(coachAvailabilityQueryOptions(bookingTimeRange.startAt, bookingTimeRange.endAt));
+
+  const hasBookingSelection = bookingItems.length > 0;
+  const coachList = coachAvailability ?? [];
 
   // 🏸 Data Raket
   const [racketQty, setRacketQty] = useState(0);
-  const totalRacket = 10;
-  const usedRacket = 4;
-  const availableRacket = totalRacket - usedRacket;
-  const racketPrice = 50000;
+  const racketInventory = inventoryAvailability?.[0];
+  const availableRacket = racketInventory?.availableQuantity ?? 0;
+  const racketPrice = racketInventory?.price ?? 0;
+  const racketName = racketInventory?.name ?? 'Sewa Raket';
+  const inventorySelection = useMemo(() => {
+    if (!racketInventory) {
+      return undefined;
+    }
 
-  // 🧤 Data Ballboy
-  const ballboys = [
-    { id: 1, name: 'Ball Boy A', price: 100000, image: '' },
-    { id: 2, name: 'Ball Boy B', price: 100000, image: '' }
-  ];
+    return selectedInventories.find(
+      (item) => item.inventoryId === racketInventory.id && (item.timeSlot ?? 'default') === 'default'
+    );
+  }, [racketInventory, selectedInventories]);
 
-  const handleSelectItem = (item: any) => {
-    setSelectedItem(item);
-    setShowModal(true);
+  useEffect(() => {
+    const qty = inventorySelection?.quantity ?? 0;
+    setRacketQty((prev) => (prev === qty ? prev : qty));
+  }, [inventorySelection?.quantity]);
+
+  const primaryBookingDate = useMemo(() => {
+    if (bookingTimeRange.startAt) {
+      return dayjs(bookingTimeRange.startAt).format('YYYY-MM-DD');
+    }
+
+    return bookingItems[0]?.date ?? dayjs().format('YYYY-MM-DD');
+  }, [bookingItems, bookingTimeRange.startAt]);
+
+  const handleCoachToggle = (item: any) => {
+    if (!hasBookingSelection) {
+      toast.error('Tambahkan booking lapangan terlebih dahulu sebelum memilih coach.');
+      return;
+    }
+
+    if (!item?.slotId || !item?.coach?.id) {
+      toast.error('Data coach tidak valid.');
+      return;
+    }
+
+    const isSelected = selectedCoaches.some((coach) => coach.slotId === item.slotId);
+
+    if (isSelected) {
+      removeCoachFromStore(item.coach.id, item.startAt ?? '', item.slotId);
+      toast.success(`${item.coach.name ?? 'Coach'} dihapus dari add-ons.`);
+      return;
+    }
+
+    const start = item.startAt ? dayjs(item.startAt) : null;
+    const end = item.endAt ? dayjs(item.endAt) : null;
+    const timeSlot =
+      start && end ? `${start.format('HH:mm')} - ${end.format('HH:mm')}` : 'Pilih jadwal coach';
+
+    addCoachToStore({
+      coachId: item.coach.id,
+      coachName: item.coach.name ?? 'Coach',
+      timeSlot,
+      price: item.price ?? 0,
+      date: start ? start.format('YYYY-MM-DD') : primaryBookingDate,
+      slotId: item.slotId,
+      coachTypeId: item.coachTypeId ?? null,
+      startAt: item.startAt,
+      endAt: item.endAt
+    });
+
+    toast.success(`${item.coach.name ?? 'Coach'} ditambahkan ke add-ons.`);
+  };
+
+  const handleInventoryQtyChange = (nextQty: number) => {
+    if (!hasBookingSelection) {
+      toast.error('Tambahkan booking lapangan terlebih dahulu sebelum memilih peralatan.');
+      return;
+    }
+
+    const safeQty = Math.max(0, Math.min(nextQty, availableRacket));
+    setRacketQty(safeQty);
+
+    if (!racketInventory || racketPrice <= 0) {
+      return;
+    }
+
+    if (safeQty > 0) {
+      addInventoryToStore({
+        inventoryId: racketInventory.id,
+        inventoryName: racketInventory.name,
+        timeSlot: 'default',
+        price: safeQty * racketPrice,
+        quantity: safeQty,
+        date: primaryBookingDate
+      });
+    } else {
+      removeInventoryFromStore(racketInventory.id, 'default');
+    }
   };
 
   return (
     <>
-      <MainHeader backHref="/" title="Produk Tambahan" withLogo={false} />
+      <MainHeader onBack={() => router.back()} title="Produk Tambahan" withLogo={false} />
 
       <div className="mx-auto w-11/12 pt-28">
         {/* Tabs utama */}
         <div className="mb-4 flex gap-2">
-          {['Coach', 'Raket', 'Ball boy'].map((item) => (
+          {['Coach', 'Raket'].map((item) => (
             <Button
               key={item}
               variant={activeTab === item.toLowerCase().replace(' ', '') ? 'default' : 'outline'}
@@ -73,72 +211,120 @@ export default function AddOnsPage() {
           ))}
         </div>
 
-        {/* Subtab Coach */}
-        {activeTab === 'coach' && (
-          <div className="mb-4 flex gap-2">
-            <Button
-              variant={activeSubTab === 'guided' ? 'default' : 'outline'}
-              onClick={() => setActiveSubTab('guided')}
-              className="flex-1"
-            >
-              Guided Match
-            </Button>
-            <Button
-              variant={activeSubTab === 'coaching' ? 'default' : 'outline'}
-              onClick={() => setActiveSubTab('coaching')}
-              className="flex-1"
-            >
-              Coaching
-            </Button>
-          </div>
-        )}
-
         {/* === COACH LIST === */}
         {activeTab === 'coach' && (
           <div className="mb-4 flex flex-col gap-3">
-            {coaches
-              .filter((coach) => coach.type === activeSubTab)
-              .map((coach) => (
-                <Card
-                  key={coach.id}
-                  onClick={() => handleSelectItem(coach)}
-                  className="hover:border-primary cursor-pointer transition"
-                >
-                  <div className="px-4 py-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex gap-4">
-                        <div className="shrink-0 overflow-hidden rounded-full bg-gray-200">
-                          <Image
-                            src={
-                              coach.image && coach.image.trim() !== ''
-                                ? coach.image
-                                : '/assets/img/avatar.webp'
-                            }
-                            alt={coach.name}
-                            width={48}
-                            height={48}
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                        <div className="flex flex-col gap-0.5">
-                          <p className="font-semibold">{coach.name}</p>
-                          <p className="text-muted-foreground text-xs">Pilih jadwal coach</p>
-                        </div>
-                      </div>
-                      <ChevronRight className="text-primary" />
-                    </div>
+            {!hasBookingSelection && (
+              <Card>
+                <div className="px-4 py-3">
+                  <p className="text-muted-foreground text-sm">
+                    Tambahkan pemesanan lapangan terlebih dahulu untuk melihat ketersediaan coach.
+                  </p>
+                </div>
+              </Card>
+            )}
 
-                    <div className="bg-muted mt-4 flex rounded-sm px-4 py-2">
-                      <p className="text-foreground">
-                        <span className="text-primary font-semibold">
-                          Rp{coach.price.toLocaleString('id-ID')}{' '}
-                        </span>
-                        <span className="text-muted-foreground text-sm">/sesi</span>
-                      </p>
-                    </div>
+            {hasBookingSelection && isCoachPending && (
+              <Card>
+                <div className="px-4 py-3">
+                  <p className="text-muted-foreground text-sm">Memuat daftar coach...</p>
+                </div>
+              </Card>
+            )}
+
+            {hasBookingSelection && isCoachError && (
+              <Card>
+                <div className="px-4 py-3">
+                  <p className="text-destructive text-sm">Gagal memuat ketersediaan coach.</p>
+                </div>
+              </Card>
+            )}
+
+            {hasBookingSelection &&
+              !isCoachPending &&
+              !isCoachError &&
+              coachList.length === 0 && (
+                <Card>
+                  <div className="px-4 py-3">
+                    <p className="text-muted-foreground text-sm">Coach tidak tersedia.</p>
                   </div>
                 </Card>
-              ))}
+              )}
+
+            {hasBookingSelection &&
+              coachList.map((item) => {
+                const coachPrice =
+                  typeof item.price === 'number' && Number.isFinite(item.price) ? item.price : 0;
+                const coachName = item.coach?.name ?? 'Coach';
+                const coachImage =
+                  item.coach?.image && item.coach.image.trim() !== ''
+                    ? item.coach.image
+                    : '/assets/img/avatar.webp';
+                const scheduleRange = item.startAt
+                  ? `${dayjs(item.startAt).format('DD MMM YYYY HH:mm')} - ${dayjs(item.endAt).format('HH:mm')}`
+                  : '';
+                const isSelected = selectedCoaches.some((coach) => coach.slotId === item.slotId);
+
+                return (
+                  <Card
+                    key={item.slotId}
+                    onClick={() => handleCoachToggle(item)}
+                    className={cn(
+                      'hover:border-primary cursor-pointer transition',
+                      isSelected && 'border-primary bg-primary/5'
+                    )}
+                  >
+                    <div className="px-4 py-3 space-y-3">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex gap-4">
+                          <div className="shrink-0 overflow-hidden rounded-full bg-gray-200">
+                            <Image
+                              src={coachImage}
+                              alt={coachName}
+                              width={48}
+                              height={48}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                          <div className="flex flex-col gap-0.5">
+                            <p className="font-semibold">{coachName}</p>
+                            <p className="text-muted-foreground text-xs">
+                              {scheduleRange || 'Pilih jadwal coach'}
+                            </p>
+                          </div>
+                        </div>
+                        {isSelected ? (
+                          <Badge variant="secondary" className="bg-primary/10 text-primary flex items-center gap-1">
+                            <Check className="h-3 w-3" />
+                            Dipilih
+                          </Badge>
+                        ) : (
+                          <ChevronRight className="text-primary" />
+                        )}
+                      </div>
+
+                      <div className="bg-muted flex items-center justify-between rounded-sm px-4 py-2">
+                        <p className="text-foreground">
+                          <span className="text-primary font-semibold">
+                            Rp{coachPrice.toLocaleString('id-ID')}{' '}
+                          </span>
+                          <span className="text-muted-foreground text-sm">/sesi</span>
+                        </p>
+                        <Button
+                          size="sm"
+                          variant={isSelected ? 'outline' : 'secondary'}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleCoachToggle(item);
+                          }}
+                        >
+                          {isSelected ? 'Batalkan' : 'Tambah'}
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
           </div>
         )}
 
@@ -149,9 +335,18 @@ export default function AddOnsPage() {
               <div className="px-4 py-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-semibold">Sewa Raket</p>
+                    <p className="font-semibold">{racketName}</p>
                     <p className="text-muted-foreground text-xs">
-                      Tersedia {availableRacket} raket
+                      {isInventoryPending && 'Memuat ketersediaan...'}
+                      {isInventoryError && 'Gagal memuat ketersediaan'}
+                      {!isInventoryPending &&
+                        !isInventoryError &&
+                        !racketInventory &&
+                        'Inventori tidak tersedia'}
+                      {!isInventoryPending &&
+                        !isInventoryError &&
+                        racketInventory &&
+                        `Tersedia ${availableRacket} raket`}
                     </p>
                   </div>
 
@@ -159,7 +354,7 @@ export default function AddOnsPage() {
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => setRacketQty((prev) => Math.max(prev - 1, 0))}
+                      onClick={() => handleInventoryQtyChange(racketQty - 1)}
                       disabled={racketQty <= 0}
                     >
                       <Minus size={16} />
@@ -168,8 +363,13 @@ export default function AddOnsPage() {
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => setRacketQty((prev) => Math.min(prev + 1, availableRacket))}
-                      disabled={racketQty >= availableRacket}
+                      onClick={() => handleInventoryQtyChange(racketQty + 1)}
+                      disabled={
+                        racketQty >= availableRacket ||
+                        availableRacket === 0 ||
+                        isInventoryPending ||
+                        isInventoryError
+                      }
                     >
                       <Plus size={16} />
                     </Button>
@@ -195,64 +395,9 @@ export default function AddOnsPage() {
             </Card>
           </div>
         )}
-
-        {/* === BALLBOY === */}
-        {activeTab === 'ballboy' && (
-          <div className="mb-4 flex flex-col gap-3">
-            {ballboys.map((b) => (
-              <Card
-                key={b.id}
-                onClick={() => handleSelectItem(b)}
-                className="hover:border-primary cursor-pointer transition"
-              >
-                <div className="px-4 py-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex gap-4">
-                      <div className="shrink-0 overflow-hidden rounded-full bg-gray-200">
-                        <Image
-                          src={
-                            b.image && b.image.trim() !== '' ? b.image : '/assets/img/avatar.webp'
-                          }
-                          alt={b.name}
-                          width={48}
-                          height={48}
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-0.5">
-                        <p className="font-semibold">{b.name}</p>
-                        <p className="text-muted-foreground text-xs">Pilih jadwal ball boy</p>
-                      </div>
-                    </div>
-                    <ChevronRight className="text-primary" />
-                  </div>
-
-                  <div className="bg-muted mt-4 flex rounded-sm px-4 py-2">
-                    <p className="text-foreground">
-                      <span className="text-primary font-semibold">
-                        Rp{b.price.toLocaleString('id-ID')}{' '}
-                      </span>
-                      <span className="text-muted-foreground text-sm">/sesi</span>
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        )}
       </div>
 
-      {/* === MODAL JADWAL === */}
-      <OpenScheduleModal
-        open={showModal}
-        onOpenChange={setShowModal}
-        title={`Pilih Jadwal - ${selectedItem?.name ?? ''}`}
-        selectedCourts={selectedCourts}
-        schedules={mockSchedules}
-        onSelectSchedule={function (): void {
-          throw new Error('Function not implemented.');
-        }}
-      />
+      {/* Seleksi coach & inventori langsung melalui kartu */}
     </>
   );
 }

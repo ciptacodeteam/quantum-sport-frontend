@@ -48,15 +48,19 @@ export interface SelectedCoach {
   timeSlot: string;
   price: number;
   date: string;
+  slotId?: string;
+  coachTypeId?: string | null;
+  startAt?: string;
+  endAt?: string;
 }
 
 export interface SelectedInventory {
   inventoryId: string;
   inventoryName: string;
-  timeSlot: string;
+  timeSlot?: string;
   price: number;
   quantity: number;
-  date: string;
+  date?: string;
 }
 
 interface BookingState {
@@ -81,9 +85,9 @@ interface BookingState {
   removeBookingItem: (courtId: string, timeSlot: string, date: string) => void;
   setSelectedDate: (date: Date) => void;
   addCoach: (coach: SelectedCoach) => void;
-  removeCoach: (coachId: string, timeSlot: string) => void;
+  removeCoach: (coachId: string, timeSlot: string, slotId?: string) => void;
   addInventory: (inventory: SelectedInventory) => void;
-  removeInventory: (inventoryId: string, timeSlot: string) => void;
+  removeInventory: (inventoryId: string, timeSlot?: string) => void;
   updateInventoryQuantity: (inventoryId: string, timeSlot: string, quantity: number) => void;
   clearAll: () => void;
   getTotalAmount: () => number;
@@ -123,10 +127,14 @@ export const useBookingStore = create<BookingState>()(
 
       addCoach: (coach) => {
         const state = get();
-        const exists = state.selectedCoaches.find(
-          c => c.coachId === coach.coachId && c.timeSlot === coach.timeSlot
-        );
-        
+        const exists = state.selectedCoaches.find((c) => {
+          if (coach.slotId) {
+            return c.slotId === coach.slotId;
+          }
+
+          return c.coachId === coach.coachId && c.timeSlot === coach.timeSlot && c.date === coach.date;
+        });
+
         if (!exists) {
           const newCoaches = [...state.selectedCoaches, coach];
           const coachTotal = newCoaches.reduce((sum, c) => sum + c.price, 0);
@@ -134,53 +142,66 @@ export const useBookingStore = create<BookingState>()(
         }
       },
 
-      removeCoach: (coachId, timeSlot) => {
+      removeCoach: (coachId, timeSlot, slotId) => {
         const state = get();
-        const newCoaches = state.selectedCoaches.filter(
-          c => !(c.coachId === coachId && c.timeSlot === timeSlot)
-        );
+        const newCoaches = state.selectedCoaches.filter((c) => {
+          if (slotId) {
+            return c.slotId !== slotId;
+          }
+
+          return !(c.coachId === coachId && c.timeSlot === timeSlot);
+        });
         const coachTotal = newCoaches.reduce((sum, c) => sum + c.price, 0);
         set({ selectedCoaches: newCoaches, coachTotal });
       },
 
       addInventory: (inventory) => {
         const state = get();
+        const keyTimeSlot = inventory.timeSlot ?? 'default';
         const existingIndex = state.selectedInventories.findIndex(
-          i => i.inventoryId === inventory.inventoryId && i.timeSlot === inventory.timeSlot
+          (i) => i.inventoryId === inventory.inventoryId && (i.timeSlot ?? 'default') === keyTimeSlot
         );
-        
+
         let newInventories;
         if (existingIndex >= 0) {
-          // Update existing inventory
           newInventories = [...state.selectedInventories];
           newInventories[existingIndex] = {
             ...newInventories[existingIndex],
-            quantity: inventory.quantity,
-            price: inventory.price
+            ...inventory,
+            timeSlot: keyTimeSlot
           };
         } else {
-          // Add new inventory
-          newInventories = [...state.selectedInventories, inventory];
+          newInventories = [
+            ...state.selectedInventories,
+            {
+              ...inventory,
+              timeSlot: keyTimeSlot
+            }
+          ];
         }
-        
+
         const inventoryTotal = newInventories.reduce((sum, i) => sum + i.price, 0);
         set({ selectedInventories: newInventories, inventoryTotal });
       },
 
-      removeInventory: (inventoryId, timeSlot) => {
+      removeInventory: (inventoryId, timeSlot = 'default') => {
         const state = get();
         const newInventories = state.selectedInventories.filter(
-          i => !(i.inventoryId === inventoryId && i.timeSlot === timeSlot)
+          (i) => !(i.inventoryId === inventoryId && (i.timeSlot ?? 'default') === timeSlot)
         );
         const inventoryTotal = newInventories.reduce((sum, i) => sum + i.price, 0);
         set({ selectedInventories: newInventories, inventoryTotal });
       },
 
-      updateInventoryQuantity: (inventoryId, timeSlot, quantity) => {
+      updateInventoryQuantity: (inventoryId, timeSlot = 'default', quantity) => {
         const state = get();
-        const newInventories = state.selectedInventories.map(i => {
-          if (i.inventoryId === inventoryId && i.timeSlot === timeSlot) {
-            return { ...i, quantity, price: (i.price / i.quantity) * quantity };
+        const newInventories = state.selectedInventories.map((i) => {
+          if (
+            i.inventoryId === inventoryId &&
+            (i.timeSlot ?? 'default') === (timeSlot ?? 'default')
+          ) {
+            const unitPrice = i.quantity > 0 ? i.price / i.quantity : 0;
+            return { ...i, quantity, price: unitPrice * quantity };
           }
           return i;
         });

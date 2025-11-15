@@ -45,6 +45,31 @@ export type Inventory = {
   updatedAt: Date;
 };
 
+export type InventoryAvailability = {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  totalQuantity: number;
+  availableQuantity: number;
+  bookedQuantity: number;
+};
+
+export type CoachAvailability = {
+  slotId: string;
+  coach: {
+    id: string;
+    name: string;
+    email?: string | null;
+    phone?: string | null;
+    image?: string | null;
+    role?: string;
+  };
+  price: number;
+  startAt: string;
+  endAt: string;
+};
+
 export type PaymentMethod = {
   id: string;
   name: string;
