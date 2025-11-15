@@ -40,6 +40,11 @@ export async function resetPasswordApi(payload) {
   return data;
 }
 
+export async function passwordResetWithTokenApi(payload) {
+  const { data } = await api.post('/password-reset', payload);
+  return data;
+}
+
 export async function getProfileApi() {
   const { data } = await api.get('/auth/profile');
   return data;
