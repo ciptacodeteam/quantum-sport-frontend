@@ -10,10 +10,11 @@ import { invoicesQueryOptions } from '@/queries/invoice';
 import { profileQueryOptions } from '@/queries/profile';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
+import { useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import 'dayjs/locale/id';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { Calendar, ChevronRight, CreditCard, FileText, Receipt } from 'lucide-react';
+import { Calendar, ChevronRight, CreditCard, FileText, Receipt, Crown, Clock } from 'lucide-react';
 import type { Invoice } from '@/types/model';
 import useAuthModalStore from '@/stores/useAuthModalStore';
 
@@ -66,6 +67,16 @@ export default function InvoiceHistoryPage() {
     isError
   } = useQuery(invoicesQueryOptions({ sort: 'createdAt', order: 'desc' }));
 
+  // Invoices data + filter hooks (placed before any early returns)
+  const invoices = useMemo(() => (response?.data as Invoice[]) ?? [], [response]);
+  const [typeFilter, setTypeFilter] = useState<'ALL' | 'MEMBERSHIP' | 'BOOKING'>('ALL');
+  const filteredInvoices = useMemo(() => {
+    if (!Array.isArray(invoices)) return [] as Invoice[];
+    if (typeFilter === 'MEMBERSHIP') return invoices.filter((inv) => !!inv.membershipUser);
+    if (typeFilter === 'BOOKING') return invoices.filter((inv) => !!inv.booking);
+    return invoices;
+  }, [invoices, typeFilter]);
+
   // Show login if not authenticated
   if (!isUserPending && !isAuthenticated) {
     return (
@@ -92,7 +103,7 @@ export default function InvoiceHistoryPage() {
     );
   }
 
-  const invoices = (response?.data as Invoice[]) || [];
+  // invoices and filters already defined above
 
   if (isPending || isUserPending) {
     return (
@@ -152,6 +163,32 @@ export default function InvoiceHistoryPage() {
 
       <div className="mx-auto mt-28 pb-24 lg:mt-28">
         <div className="mx-auto w-11/12">
+          {/* Filters */}
+          {invoices.length > 0 && (
+            <div className="mb-4 flex items-center gap-2">
+              <Button
+                size="sm"
+                variant={typeFilter === 'ALL' ? 'default' : 'outline'}
+                onClick={() => setTypeFilter('ALL')}
+              >
+                Semua
+              </Button>
+              <Button
+                size="sm"
+                variant={typeFilter === 'MEMBERSHIP' ? 'default' : 'outline'}
+                onClick={() => setTypeFilter('MEMBERSHIP')}
+              >
+                Membership
+              </Button>
+              <Button
+                size="sm"
+                variant={typeFilter === 'BOOKING' ? 'default' : 'outline'}
+                onClick={() => setTypeFilter('BOOKING')}
+              >
+                Booking
+              </Button>
+            </div>
+          )}
           {/* Empty State */}
           {invoices.length === 0 && (
             <Card>
@@ -169,8 +206,17 @@ export default function InvoiceHistoryPage() {
           {/* Invoice List */}
           {invoices.length > 0 && (
             <div className="space-y-4">
-              {invoices.map((invoice) => {
+              {filteredInvoices.length === 0 && (
+                <Card>
+                  <CardContent className="py-6 text-center text-sm text-gray-600">
+                    Tidak ada invoice untuk filter ini.
+                  </CardContent>
+                </Card>
+              )}
+              {filteredInvoices.map((invoice) => {
                 const booking = invoice.booking;
+                const membershipUser = invoice.membershipUser;
+                const membership = membershipUser?.membership;
                 const isPending = invoice.status === 'PENDING' || booking?.status === 'HOLD';
 
                 return (
@@ -198,6 +244,26 @@ export default function InvoiceHistoryPage() {
                             {getStatusLabel(invoice.status)}
                           </Badge>
                         </div>
+                        <div className="flex items-center gap-2 text-xs text-gray-600">
+                          {membership ? (
+                            <>
+                              <Crown className="h-4 w-4 text-amber-500" />
+                              <span className="font-medium text-amber-700">Membership</span>
+                              <span className="text-gray-400">•</span>
+                              <span className="truncate">{membership.name}</span>
+                            </>
+                          ) : booking ? (
+                            <>
+                              <Calendar className="h-4 w-4" />
+                              <span className="font-medium">Booking Lapangan</span>
+                            </>
+                          ) : (
+                            <>
+                              <FileText className="h-4 w-4" />
+                              <span className="font-medium">Invoice</span>
+                            </>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <Calendar className="h-4 w-4" />
                           <span className="text-xs">
@@ -209,6 +275,60 @@ export default function InvoiceHistoryPage() {
                       </header>
 
                       <Separator className="my-4" />
+
+                      {/* Membership Purchase Preview */}
+                      {membership && (
+                        <div className="mb-4">
+                          <div className="mb-2 flex items-center gap-2 text-sm text-gray-600">
+                            <Crown className="h-4 w-4 text-amber-500" />
+                            <span>Detail Membership</span>
+                          </div>
+                          <div className="rounded-md border p-3">
+                            <div className="mb-1 flex items-center justify-between">
+                              <span className="font-semibold">{membership.name}</span>
+                              <Badge className="border-amber-200 bg-amber-50 text-amber-700">
+                                {membership.sessions} sesi
+                              </Badge>
+                            </div>
+                            <div className="mb-2 text-xs text-gray-600">
+                              Durasi {membership.duration} hari
+                            </div>
+                            <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
+                              <div className="flex items-center gap-2">
+                                <Clock className="h-4 w-4" />
+                                <span>
+                                  Berlaku: {dayjs(membershipUser?.startDate).format('DD MMM YYYY')}{' '}
+                                  - {dayjs(membershipUser?.endDate).format('DD MMM YYYY')}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Calendar className="h-4 w-4" />
+                                <span>Sisa sesi: {membershipUser?.remainingSessions}</span>
+                              </div>
+                            </div>
+                            {typeof membership.sessions === 'number' &&
+                              typeof membershipUser?.remainingSessions === 'number' && (
+                                <div className="mt-3">
+                                  <div className="mb-1 flex items-center justify-between text-xs text-gray-600">
+                                    <span>Progress Pemakaian</span>
+                                    <span>
+                                      {membership.sessions - membershipUser.remainingSessions}/
+                                      {membership.sessions}
+                                    </span>
+                                  </div>
+                                  <div className="h-2 w-full rounded-full bg-gray-200">
+                                    <div
+                                      className="h-2 rounded-full bg-amber-500"
+                                      style={{
+                                        width: `${Math.min(100, Math.max(0, ((membership.sessions - membershipUser.remainingSessions) / Math.max(1, membership.sessions)) * 100))}%`
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Booking Details Preview */}
                       {booking && booking.details && booking.details.length > 0 && (
@@ -284,7 +404,7 @@ export default function InvoiceHistoryPage() {
           {/* Info Footer */}
           {invoices.length > 0 && (
             <div className="mt-8 text-center text-sm text-gray-600">
-              <p>Menampilkan {invoices.length} invoice</p>
+              <p>Menampilkan {filteredInvoices.length} invoice</p>
             </div>
           )}
         </div>
