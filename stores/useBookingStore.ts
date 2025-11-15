@@ -91,7 +91,7 @@ interface BookingState {
   // Court bookings
   bookingItems: BookingItem[];
   selectedDate: Date;
-  selectedCustomerId: string;
+  selectedCustomerId: string | null;
 
   // Add-ons
   selectedCoaches: SelectedCoach[];
@@ -110,7 +110,7 @@ interface BookingState {
   setBookingItems: (items: BookingItem[]) => void;
   removeBookingItem: (courtId: string, timeSlot: string, date: string) => void;
   setSelectedDate: (date: Date) => void;
-  setSelectedCustomerId: (customerId: string) => void;
+  setSelectedCustomerId: (customerId: string | null) => void;
   addCoach: (coach: SelectedCoach) => void;
   removeCoach: (coachId: string, timeSlot: string, slotId?: string) => void;
   addBallboy: (ballboy: SelectedBallboy) => void;
@@ -130,7 +130,7 @@ export const useBookingStore = create<BookingState>()(
     (set, get) => ({
       bookingItems: [],
       selectedDate: new Date(),
-      selectedCustomerId: '',
+      selectedCustomerId: null,
       selectedCoaches: [],
       selectedBallboys: [],
       selectedInventories: [],
@@ -279,15 +279,16 @@ export const useBookingStore = create<BookingState>()(
         set({ selectedInventories: newInventories, inventoryTotal });
       },
 
-      clearAll: () => set({
-        bookingItems: [],
-        selectedCoaches: [],
-        selectedInventories: [],
-        selectedCustomerId: '',
-        courtTotal: 0,
-        coachTotal: 0,
-        inventoryTotal: 0,
-      }),
+      clearAll: () =>
+        set({
+          bookingItems: [],
+          selectedCoaches: [],
+          selectedInventories: [],
+          selectedCustomerId: null,
+          courtTotal: 0,
+          coachTotal: 0,
+          inventoryTotal: 0
+        }),
 
       getTotalAmount: () => {
         const state = get();

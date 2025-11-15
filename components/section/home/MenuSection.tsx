@@ -28,7 +28,7 @@ const MenuSection = () => {
     {
       title: 'Turnamen',
       subtitle: 'Ikuti berbagai event dan kompetisi padel seru yang diadakan rutin.',
-      url: '#',
+      url: '/tournaments',
       icon: <TournamentMenuIcon className="size-9 lg:size-9" />
     }
   ];

@@ -16,8 +16,8 @@ import { cn } from '@/lib/utils';
 import dayjs from 'dayjs';
 import { useQuery } from '@tanstack/react-query';
 import { adminCustomersQueryOptions } from '@/queries/admin/customer';
-import { coachAvailabilityQueryOptions } from '@/queries/coach';
-import { inventoryAvailabilityQueryOptions } from '@/queries/inventory';
+import { adminCoachAvailabilityQueryOptions } from '@/queries/admin/coach';
+import { adminInventoryAvailabilityQueryOptions } from '@/queries/admin/inventory';
 import { 
   IconChevronLeft,
   IconStar, 
@@ -47,8 +47,6 @@ export default function BookingAddOns() {
     removeInventory,
     updateInventoryQuantity,
     getTotalAmount,
-    getTotalWithTax,
-    getTax,
     courtTotal,
     coachTotal,
     inventoryTotal
@@ -78,11 +76,13 @@ export default function BookingAddOns() {
 
   // Fetch coach availability
   const { data: coachAvailabilityData } = useQuery(
-    coachAvailabilityQueryOptions(dateRange?.startAt, dateRange?.endAt)
+    adminCoachAvailabilityQueryOptions(dateRange?.startAt, dateRange?.endAt)
   );
 
   // Fetch inventory availability
-  const { data: inventoryAvailabilityData } = useQuery(inventoryAvailabilityQueryOptions);
+  const { data: inventoryAvailabilityData } = useQuery(
+    adminInventoryAvailabilityQueryOptions(dateRange?.startAt, dateRange?.endAt)
+  );
 
   // Transform coach availability data to match component format
   const coaches = useMemo(() => {
@@ -111,6 +111,63 @@ export default function BookingAddOns() {
     return Array.from(coachMap.values());
   }, [coachAvailabilityData]);
 
+  type AdminCoachSlot = {
+    id: string;
+    coachId: string;
+    coachName: string;
+    timeRange: string;
+    price: number;
+    startAt: string;
+    endAt: string;
+  };
+
+  const coachAvailabilityByDate = useMemo(() => {
+    if (!coachAvailabilityData || coachAvailabilityData.length === 0) return [];
+
+    const map = new Map<
+      string,
+      {
+        dateLabel: string;
+        slots: AdminCoachSlot[];
+      }
+    >();
+
+    coachAvailabilityData.forEach((slot) => {
+      const dateKey = dayjs(slot.startAt).format('YYYY-MM-DD');
+      const dateLabel = dayjs(slot.startAt).format('dddd, DD MMM YYYY');
+      const timeRange = `${dayjs(slot.startAt).format('HH:mm')} - ${dayjs(slot.endAt).format('HH:mm')}`;
+
+      if (!map.has(dateKey)) {
+        map.set(dateKey, {
+          dateLabel,
+          slots: []
+        });
+      }
+
+      map.get(dateKey)!.slots.push({
+        id: slot.slotId,
+        coachId: slot.coach.id,
+        timeRange,
+        coachName: slot.coach.name,
+        price: slot.price,
+        startAt: slot.startAt,
+        endAt: slot.endAt
+      });
+    });
+
+    return Array.from(map.entries())
+      .sort(([a], [b]) => dayjs(a).valueOf() - dayjs(b).valueOf())
+      .map(([date, info]) => ({
+        date,
+        dateLabel: info.dateLabel,
+        slots: info.slots.sort(
+          (slotA, slotB) =>
+            dayjs(`${date} ${slotA.timeRange.split(' - ')[0]}`).valueOf() -
+            dayjs(`${date} ${slotB.timeRange.split(' - ')[0]}`).valueOf()
+        )
+      }));
+  }, [coachAvailabilityData]);
+
   // Transform inventory availability data
   const inventoryItems = useMemo(() => {
     if (!inventoryAvailabilityData) return [];
@@ -121,7 +178,7 @@ export default function BookingAddOns() {
       description: item.description || '',
       price: item.price,
       availableQuantity: item.availableQuantity,
-      totalQuantity: item.totalQuantity
+      totalQuantity: item.totalQuantity,
     }));
   }, [inventoryAvailabilityData]);
 
@@ -197,6 +254,43 @@ export default function BookingAddOns() {
         isCoachAvailable(coach.id, timeSlot, date)
       )
     );
+  };
+
+  const handleAddCoachFromAvailability = (slot: AdminCoachSlot) => {
+    const date = dayjs(slot.startAt).format('YYYY-MM-DD');
+    const timeSlot = slot.timeRange;
+    const dateInfo = bookingsByDate[date];
+
+    if (!dateInfo) {
+      toast.error('Tidak ada booking untuk tanggal ini. Tambahkan court terlebih dahulu.');
+      return;
+    }
+
+    if (!dateInfo.timeSlots.includes(timeSlot)) {
+      toast.error('Slot coach tidak cocok dengan jadwal booking yang ada.');
+      return;
+    }
+
+    const alreadySelected = selectedCoaches.some(
+      (coach) => coach.coachId === slot.coachId && coach.timeSlot === timeSlot && coach.date === date
+    );
+    if (alreadySelected) {
+      toast.info('Coach sudah ditambahkan untuk jadwal ini.');
+      return;
+    }
+
+    addCoach({
+      coachId: slot.coachId,
+      coachName: slot.coachName,
+      timeSlot,
+      price: slot.price,
+      date,
+      startAt: slot.startAt,
+      endAt: slot.endAt,
+      slotId: slot.id
+    });
+
+    toast.success(`Coach ${slot.coachName} ditambahkan untuk ${dayjs(date).format('DD MMM')} ${timeSlot}`);
   };
 
   // Handle coach selection - now uses real API data
@@ -281,9 +375,12 @@ export default function BookingAddOns() {
               )}
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium">Total:</span>
-                <span className="font-bold text-primary">
-                  Rp {getTotalWithTax().toLocaleString('id-ID')}
-                </span>
+                <div className="text-right">
+                  <span className="text-[10px] text-muted-foreground block">Total (excl. tax)</span>
+                  <span className="font-bold text-primary">
+                    Rp {getTotalAmount().toLocaleString('id-ID')}
+                  </span>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -387,6 +484,54 @@ export default function BookingAddOns() {
                   </div>
                 </div>
               </div>
+
+              {coachAvailabilityByDate.length > 0 && (
+                <div className="rounded-lg border bg-white p-4 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold">Coach Availability (Admin)</p>
+                      <p className="text-xs text-muted-foreground">
+                        Showing real-time availability from admin API
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="text-xs">
+                      {coachAvailabilityData?.length ?? 0} slots
+                    </Badge>
+                  </div>
+
+                  <div className="mt-4 max-h-64 overflow-y-auto pr-1 space-y-4">
+                    {coachAvailabilityByDate.map(({ date, dateLabel, slots }) => (
+                      <div key={date} className="space-y-2">
+                        <p className="text-xs font-medium text-muted-foreground">{dateLabel}</p>
+                        <div className="flex flex-wrap gap-2">
+                          {slots.map((slot) => (
+                            <div
+                              key={slot.id}
+                              className="border border-primary/20 bg-primary/5 rounded-lg px-3 py-2 text-left text-xs min-w-[200px] space-y-1"
+                            >
+                              <div>
+                                <p className="font-semibold text-primary">{slot.timeRange}</p>
+                                <p className="text-muted-foreground">{slot.coachName}</p>
+                              </div>
+                              <p className="text-primary/80 font-medium">
+                                Rp {slot.price.toLocaleString('id-ID')}
+                              </p>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                className="w-full text-[11px] py-1"
+                                onClick={() => handleAddCoachFromAvailability(slot)}
+                              >
+                                Tambahkan ke booking
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {coaches
@@ -540,55 +685,32 @@ export default function BookingAddOns() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {inventoryItems
-                  .filter(item => {
-                    // Check if item is available for at least one booked time slot
-                    return Object.entries(bookingsByDate).some(([date, dateInfo]) => 
-                      dateInfo.timeSlots.some(timeSlot => 
-                        isInventoryAvailable(item.id, timeSlot, date).available
-                      )
-                    );
-                  })
-                  .map((item) => {
-                    // Get all available times for this item across all booked dates
-                    const availableSlots = Object.entries(bookingsByDate).reduce((acc, [date, dateInfo]) => {
-                      const availableForDate = dateInfo.timeSlots.filter(timeSlot => 
-                        isInventoryAvailable(item.id, timeSlot, date).available
-                      ).map(timeSlot => ({
+                {inventoryItems.map((item) => {
+                  // Get all available times for this item across all booked dates
+                  const availableSlots = Object.entries(bookingsByDate).reduce((acc, [date, dateInfo]) => {
+                    const availableForDate = dateInfo.timeSlots.map(timeSlot => {
+                      const availability = isInventoryAvailable(item.id, timeSlot, date);
+                      return {
                         timeSlot,
-                        availability: isInventoryAvailable(item.id, timeSlot, date)
-                      }));
-                      
-                      if (availableForDate.length > 0) {
-                        acc.push({
-                          date,
-                          shortDate: dateInfo.shortDate,
-                          slots: availableForDate
-                        });
-                      }
-                      return acc;
-                    }, [] as Array<{date: string; shortDate: string; slots: Array<{timeSlot: string; availability: {available: boolean; quantity: number}}>}>);
+                        availability
+                      };
+                    });
+
+                    acc.push({
+                      date,
+                      shortDate: dateInfo.shortDate,
+                      slots: availableForDate
+                    });
+
+                    return acc;
+                  }, [] as Array<{date: string; shortDate: string; slots: Array<{timeSlot: string; availability: {available: boolean; quantity: number}}>}>);
+
+                  const hasAnyAvailability = availableSlots.some(({ slots }) =>
+                    slots.some(({ availability }) => availability.available)
+                  );
 
                     return (
                   <Card key={item.id} className="overflow-hidden">
-                    <div className="relative h-32">
-                      <Image
-                        src={'/assets/img/placeholder-equipment.jpg'}
-                        alt={item.name}
-                        fill
-                        className="object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = '/assets/img/placeholder-equipment.jpg';
-                        }}
-                      />
-                      <div className="absolute top-2 right-2">
-                        <Badge className="capitalize bg-white/90 text-slate-700 backdrop-blur-sm">
-                          Equipment
-                        </Badge>
-                      </div>
-                    </div>
-                    
                     <CardContent className="p-4">
                       <div className="space-y-3">
                         <div>
@@ -819,15 +941,10 @@ export default function BookingAddOns() {
                   <span>Equipment</span>
                   <span>Rp {inventoryTotal.toLocaleString('id-ID')}</span>
                 </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span>Tax (10%)</span>
-                  <span>Rp {getTax().toLocaleString('id-ID')}</span>
-                </div>
-                <Separator />
                 <div className="flex justify-between items-center font-bold text-lg">
                   <span>Total</span>
                   <span className="text-primary">
-                    Rp {getTotalWithTax().toLocaleString('id-ID')}
+                    Rp {getTotalAmount().toLocaleString('id-ID')}
                   </span>
                 </div>
               </div>

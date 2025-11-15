@@ -121,14 +121,12 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
       title: 'Kelola Turnamen',
       url: '/admin/kelola-turnamen',
       icon: IconLaurelWreath1,
-      isUnrealeased: true,
       items: []
     },
     {
       title: 'Kelola Club',
       url: '/admin/kelola-club',
       icon: IconUsersGroup,
-      isUnrealeased: true,
       items: []
     },
     {

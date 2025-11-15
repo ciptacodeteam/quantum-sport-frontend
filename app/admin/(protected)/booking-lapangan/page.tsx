@@ -87,7 +87,7 @@ export default function BookingLapangan() {
   const [localSelectedDate, setLocalSelectedDate] = useState<Date>(selectedDate);
   const [selectedTimeSlots, setSelectedTimeSlots] = useState<string[]>([]);
   const [selectedCourt, setSelectedCourt] = useState<string | null>(null);
-  const [localCustomerId, setLocalCustomerId] = useState<string>(selectedCustomerId);
+  const [localCustomerId, setLocalCustomerId] = useState<string>(selectedCustomerId ?? '');
   const [bookings, setBookings] = useState<SelectedBooking[]>(
     bookingItems.map((item) => ({
       courtId: item.courtId,
@@ -565,99 +565,8 @@ export default function BookingLapangan() {
             </Card>
           </div>
 
-          {/* Main Content - Time Selection & Court Selection */}
+          {/* Main Content - Court Selection & Time Selection */}
           <div className="flex-1 space-y-6">
-            {/* Time Slot Selection (Red Section) */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg lg:text-xl">
-                  <IconClock className="h-4 w-4 lg:h-5 lg:w-5" />
-                  Select Time Slots
-                </CardTitle>
-                <p className="text-muted-foreground text-xs lg:text-sm">
-                  Choose multiple time slots for your booking
-                </p>
-              </CardHeader>
-              <CardContent className="pt-0">
-                {isSlotsLoading ? (
-                  <div className="py-8 text-center">
-                    <p className="text-muted-foreground text-sm">Loading time slots...</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:flex lg:flex-wrap">
-                    {availableTimeSlots.map((timeSlot) => {
-                      const isSelected = selectedTimeSlots.includes(timeSlot);
-                      const isBooked = selectedCourt
-                        ? !isTimeSlotAvailableForCourt(timeSlot, selectedCourt)
-                        : !courts.some((court) => isTimeSlotAvailableForCourt(timeSlot, court.id));
-                      const availableCourts = courts.filter((court) =>
-                        isTimeSlotAvailableForCourt(timeSlot, court.id)
-                      );
-
-                      return (
-                        <div key={timeSlot} className="relative">
-                          <Badge
-                            variant={isSelected ? 'default' : isBooked ? 'secondary' : 'outline'}
-                            className={cn(
-                              'w-full justify-center px-2 py-1 text-xs font-medium transition-all lg:w-auto lg:px-4 lg:py-2 lg:text-sm',
-                              isSelected && 'bg-primary text-primary-foreground shadow-lg',
-                              isBooked && 'cursor-not-allowed bg-gray-100 text-gray-500 opacity-50',
-                              !isBooked &&
-                                !isSelected &&
-                                'hover:bg-primary/10 hover:border-primary cursor-pointer hover:scale-105'
-                            )}
-                            onClick={() => !isBooked && handleTimeSlotSelect(timeSlot)}
-                          >
-                            <span className="truncate">{timeSlot}</span>
-                            {!selectedCourt && availableCourts.length > 0 && (
-                              <span className="ml-1 hidden text-xs opacity-75 sm:inline">
-                                ({availableCourts.length})
-                              </span>
-                            )}
-                          </Badge>
-                          {isBooked && (
-                            <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full border-2 border-white bg-red-500"></div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {selectedTimeSlots.length > 0 && (
-                  <div className="bg-primary/5 flex-between mt-4 rounded-lg p-3">
-                    <p className="text-primary text-sm font-medium">
-                      Selected: {selectedTimeSlots.join(', ')}
-                    </p>
-                  </div>
-                )}
-
-                {/* Legend */}
-                <div className="mt-4 rounded-lg bg-gray-50 p-3">
-                  <p className="mb-2 text-xs font-medium text-gray-700">Legend:</p>
-                  <div className="flex flex-wrap gap-3 text-xs">
-                    <div className="flex items-center gap-1">
-                      <div className="h-3 w-3 rounded border border-gray-300"></div>
-                      <span>Available</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="bg-primary h-3 w-3 rounded"></div>
-                      <span>Selected</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="relative h-3 w-3 rounded bg-gray-300">
-                        <div className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-red-500"></div>
-                      </div>
-                      <span>Booked</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs">(2) = Courts available</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Court Selection (Green Section) */}
             <Card>
               <CardHeader className="pb-3 lg:pb-6">
@@ -779,6 +688,105 @@ export default function BookingLapangan() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Time Slot Selection (Red Section) */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg lg:text-xl">
+                  <IconClock className="h-4 w-4 lg:h-5 lg:w-5" />
+                  Select Time Slots
+                </CardTitle>
+                <p className="text-muted-foreground text-xs lg:text-sm">
+                  {selectedCourt
+                    ? 'Choose multiple time slots for your booking'
+                    : 'Select a court first to see available time slots'}
+                </p>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {isSlotsLoading ? (
+                  <div className="py-8 text-center">
+                    <p className="text-muted-foreground text-sm">Loading time slots...</p>
+                  </div>
+                ) : selectedCourt ? (
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:flex lg:flex-wrap">
+                    {availableTimeSlots.map((timeSlot) => {
+                      const isSelected = selectedTimeSlots.includes(timeSlot);
+                      const isBooked = selectedCourt
+                        ? !isTimeSlotAvailableForCourt(timeSlot, selectedCourt)
+                        : !courts.some((court) => isTimeSlotAvailableForCourt(timeSlot, court.id));
+                      const availableCourts = courts.filter((court) =>
+                        isTimeSlotAvailableForCourt(timeSlot, court.id)
+                      );
+
+                      return (
+                        <div key={timeSlot} className="relative">
+                          <Badge
+                            variant={isSelected ? 'default' : isBooked ? 'secondary' : 'outline'}
+                            className={cn(
+                              'w-full justify-center px-2 py-1 text-xs font-medium transition-all lg:w-auto lg:px-4 lg:py-2 lg:text-sm',
+                              isSelected && 'bg-primary text-primary-foreground shadow-lg',
+                              isBooked && 'cursor-not-allowed bg-gray-100 text-gray-500 opacity-50',
+                              !isBooked &&
+                                !isSelected &&
+                                'hover:bg-primary/10 hover:border-primary cursor-pointer hover:scale-105'
+                            )}
+                            onClick={() => !isBooked && handleTimeSlotSelect(timeSlot)}
+                          >
+                            <span className="truncate">{timeSlot}</span>
+                            {!selectedCourt && availableCourts.length > 0 && (
+                              <span className="ml-1 hidden text-xs opacity-75 sm:inline">
+                                ({availableCourts.length})
+                              </span>
+                            )}
+                          </Badge>
+                          {isBooked && (
+                            <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full border-2 border-white bg-red-500"></div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="py-8 text-center">
+                    <p className="text-muted-foreground text-sm">
+                      Select a court first to view time slots
+                    </p>
+                  </div>
+                )}
+
+                {selectedTimeSlots.length > 0 && (
+                  <div className="bg-primary/5 flex-between mt-4 rounded-lg p-3">
+                    <p className="text-primary text-sm font-medium">
+                      Selected: {selectedTimeSlots.join(', ')}
+                    </p>
+                  </div>
+                )}
+
+                {/* Legend */}
+                <div className="mt-4 rounded-lg bg-gray-50 p-3">
+                  <p className="mb-2 text-xs font-medium text-gray-700">Legend:</p>
+                  <div className="flex flex-wrap gap-3 text-xs">
+                    <div className="flex items-center gap-1">
+                      <div className="h-3 w-3 rounded border border-gray-300"></div>
+                      <span>Available</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="bg-primary h-3 w-3 rounded"></div>
+                      <span>Selected</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="relative h-3 w-3 rounded bg-gray-300">
+                        <div className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-red-500"></div>
+                      </div>
+                      <span>Booked</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs">(2) = Courts available</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Right Sidebar - Booking Summary */}
@@ -886,17 +894,11 @@ export default function BookingLapangan() {
                           Rp {totalPrice.toLocaleString('id-ID')}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs lg:text-sm">Tax (10%)</span>
-                        <span className="text-xs font-medium lg:text-sm">
-                          Rp {(totalPrice * 0.1).toLocaleString('id-ID')}
-                        </span>
-                      </div>
                       <Separator />
                       <div className="flex items-center justify-between text-base font-bold lg:text-lg">
                         <span>Total</span>
                         <span className="text-primary">
-                          Rp {(totalPrice * 1.1).toLocaleString('id-ID')}
+                          Rp {totalPrice.toLocaleString('id-ID')}
                         </span>
                       </div>
                     </div>

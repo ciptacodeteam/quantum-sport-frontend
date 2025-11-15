@@ -14,6 +14,13 @@ export async function getInventoryApi(id: string) {
   return data;
 }
 
+export async function getAdminInventoryAvailabilityApi(queryParams: SearchParamsData = {}) {
+  const url = '/inventory/availability';
+  const mergedUrl = mergedQueryParamUrl(url, queryParams);
+  const res = await adminApi.get(mergedUrl);
+  return res.data;
+}
+
 export async function createInventoryApi(payload: CreateMutationPayload) {
   const { data } = await adminApi.post('/inventory', payload);
   return data;
