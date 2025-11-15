@@ -303,7 +303,7 @@ export default function InvoiceHistoryPage() {
                               </div>
                               <div className="flex items-center gap-2">
                                 <Calendar className="h-4 w-4" />
-                                <span>Sisa sesi: {membershipUser?.remainingSessions}</span>
+                                <span>Sisa sesi: {membershipUser?.remainingSessions || 0}</span>
                               </div>
                             </div>
                             {typeof membership.sessions === 'number' &&
