@@ -5,7 +5,7 @@ import MainBottomNavigation from '@/components/footers/MainBottomNavigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { invoiceQueryOptions } from '@/queries/invoice';
-import type { Booking, Invoice } from '@/types/model';
+import type { Booking, Invoice, MembershipUser } from '@/types/model';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import 'dayjs/locale/id';
@@ -17,6 +17,7 @@ import InvoiceHeader from '@/components/invoice/InvoiceHeader';
 import InvoiceInfoCard from '@/components/invoice/InvoiceInfoCard';
 import CustomerInfoCard from '@/components/invoice/CustomerInfoCard';
 import BookingDetailsCard from '@/components/invoice/BookingDetailsCard';
+import MembershipDetailsCard from '@/components/invoice/MembershipDetailsCard';
 import AddOnsCard from '@/components/invoice/AddOnsCard';
 import PaymentSummaryCard from '@/components/invoice/PaymentSummaryCard';
 import PaymentActionCard from '@/components/invoice/PaymentActionCard';
@@ -33,6 +34,7 @@ export default function InvoiceDetailPage() {
 
   const invoice = response?.data as Invoice | undefined;
   const booking = invoice?.booking as Booking | undefined;
+  const membershipUser = invoice?.membershipUser as MembershipUser | undefined;
 
   if (isPending) {
     return (
@@ -113,15 +115,22 @@ export default function InvoiceDetailPage() {
           {/* Customer Information */}
           <CustomerInfoCard user={(invoice as any).user} />
 
-          {/* Booking Details */}
-          <BookingDetailsCard details={bookingDetails as any} />
+          {/* Membership Details (if membership purchase) */}
+          {membershipUser && <MembershipDetailsCard membershipUser={membershipUser} />}
 
-          {/* Add-ons Section */}
-          <AddOnsCard
-            coaches={bookingCoaches as any}
-            ballboys={bookingBallboys as any}
-            inventories={bookingInventories as any}
-          />
+          {/* Booking Details (if booking invoice) */}
+          {booking && bookingDetails.length > 0 && (
+            <BookingDetailsCard details={bookingDetails as any} />
+          )}
+
+          {/* Add-ons Section (only for bookings) */}
+          {booking && (
+            <AddOnsCard
+              coaches={bookingCoaches as any}
+              ballboys={bookingBallboys as any}
+              inventories={bookingInventories as any}
+            />
+          )}
 
           {/* Payment Summary */}
           <PaymentSummaryCard

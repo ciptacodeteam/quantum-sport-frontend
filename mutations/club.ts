@@ -1,4 +1,4 @@
-import { joinClubApi, requestJoinClubApi, leaveClubApi, createClubApi, approveClubRequestApi, rejectClubRequestApi, deleteClubApi } from '@/api/club';
+import { joinClubApi, requestJoinClubApi, leaveClubApi, createClubApi, approveClubRequestApi, rejectClubRequestApi, deleteClubApi, removeMemberApi } from '@/api/club';
 import type { MutationFuncProps } from '@/types';
 import { mutationOptions } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -131,6 +131,23 @@ export const deleteClubMutationOptions = ({ onSuccess, onError }: MutationFuncPr
     onError: (error: any) => {
       console.error('Error:', error);
       const errorMsg = error?.response?.data?.msg || error?.msg || error?.message || 'Failed to delete club. Please try again.';
+      toast.error(errorMsg);
+      onError?.(error);
+    }
+  });
+
+export const removeMemberMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
+  mutationOptions({
+    mutationFn: ({ clubId, userId }: { clubId: string; userId: string }) => 
+      removeMemberApi(clubId, userId),
+    onSuccess: (data) => {
+      const successMsg = data?.msg || 'Member removed successfully!';
+      toast.success(successMsg);
+      onSuccess?.(data);
+    },
+    onError: (error: any) => {
+      console.error('Error:', error);
+      const errorMsg = error?.response?.data?.msg || error?.msg || error?.message || 'Failed to remove member. Please try again.';
       toast.error(errorMsg);
       onError?.(error);
     }

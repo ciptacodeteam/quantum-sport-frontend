@@ -15,12 +15,20 @@ export async function getTournamentApi(id: string) {
 }
 
 export async function createTournamentApi(payload: CreateMutationPayload) {
-  const { data } = await adminApi.post('/tournaments', payload.data);
+  const { data } = await adminApi.post('/tournaments', payload.data, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
   return data;
 }
 
 export async function updateTournamentApi(payload: UpdateMutationPayload) {
-  const { data } = await adminApi.put(`/tournaments/${payload.id}`, payload.data);
+  const { data } = await adminApi.put(`/tournaments/${payload.id}`, payload.data, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
   return data;
 }
 
@@ -28,4 +36,3 @@ export async function deleteTournamentApi(id: string) {
   const { data } = await adminApi.delete(`/tournaments/${id}`);
   return data;
 }
-

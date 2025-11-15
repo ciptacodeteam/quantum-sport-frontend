@@ -40,7 +40,7 @@ const MainHeader = ({
   const navItems = [
     { title: 'Beranda', path: '/' },
     { title: 'Pemesanan', path: '/booking' },
-    { title: 'Riwayat', path: '/history', requiresAuth: true },
+    { title: 'Riwayat', path: '/invoice', requiresAuth: true },
     { title: 'Profil', path: '/profile', requiresAuth: true }
   ];
 
