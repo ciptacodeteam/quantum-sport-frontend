@@ -73,3 +73,8 @@ export async function deleteClubApi(clubId: string) {
   const { data } = await api.delete(`/clubs/${clubId}`);
   return data;
 }
+
+export async function removeMemberApi(clubId: string, userId: string) {
+  const { data } = await api.delete(`/clubs/${clubId}/members/${userId}`);
+  return data;
+}

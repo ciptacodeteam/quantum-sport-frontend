@@ -19,7 +19,8 @@ import { profileQueryOptions } from '@/queries/profile';
 import {
   requestJoinClubMutationOptions,
   leaveClubMutationOptions,
-  deleteClubMutationOptions
+  deleteClubMutationOptions,
+  removeMemberMutationOptions
 } from '@/mutations/club';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -28,7 +29,8 @@ import {
   IconWorld,
   IconCrown,
   IconLogout,
-  IconTrash
+  IconTrash,
+  IconUserMinus
 } from '@tabler/icons-react';
 import { useParams, useRouter } from 'next/navigation';
 import useAuthStore from '@/stores/useAuthStore';
@@ -41,8 +43,7 @@ const ClubDetailPage = () => {
   const clubId = params.id as string;
   const queryClient = useQueryClient();
   const router = useRouter();
-  const { isAuth, logout } = useAuthStore();
-  const { open: openAuthModal } = useAuthModalStore();
+  const { isAuth, logout, token } = useAuthStore();
   const [isHydrated, setIsHydrated] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -51,24 +52,14 @@ const ClubDetailPage = () => {
     setIsHydrated(true);
   }, []);
 
-  // Show auth modal for unauthenticated users after hydration
+  // Check if token exists - if not, force logout
   useEffect(() => {
-    if (isHydrated && !isAuth) {
-      openAuthModal();
+    if (isHydrated && isAuth && !token) {
+      // Token was cleared manually, force logout
+      logout();
+      queryClient.clear();
     }
-  }, [isHydrated, isAuth, openAuthModal]);
-
-  // Check if token exists in localStorage - if not, force logout
-  useEffect(() => {
-    if (isHydrated && isAuth) {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        // Token was cleared manually, force logout
-        logout();
-        queryClient.clear();
-      }
-    }
-  }, [isAuth, logout, queryClient, isHydrated]);
+  }, [isHydrated, isAuth, token, logout, queryClient]);
 
   // Fetch user profile from backend to validate real user data
   const {
@@ -77,50 +68,24 @@ const ClubDetailPage = () => {
     isError: isUserError
   } = useQuery({
     ...profileQueryOptions,
-    enabled: isAuth, // Only fetch if authenticated
+    enabled: isAuth && isHydrated, // Only fetch if authenticated and hydrated
     staleTime: 0, // Always check if user data is fresh
     gcTime: 0 // Don't keep old data in cache after logout
   });
-
-  // Check if user is actually authenticated with valid backend data
-  const isAuthenticated = isAuth && !!user?.id;
-
-  // Debug logging
-  useEffect(() => {
-    console.log('🔐 Auth Debug:', {
-      isAuth,
-      hasUser: !!user,
-      userId: user?.id,
-      isUserLoading,
-      isUserError,
-      isAuthenticated,
-      token: localStorage.getItem('token')?.substring(0, 20) + '...'
-    });
-  }, [isAuth, user, isUserLoading, isUserError, isAuthenticated]);
 
   const { data: club, isLoading, isError } = useQuery(clubQueryOptions(clubId));
 
   // Fetch user's club memberships to check if they're a member
   const { data: memberClubs } = useQuery({
     ...clubMembershipsQueryOptions(),
-    enabled: isAuthenticated // Only fetch if authenticated
+    enabled: isAuth && isHydrated // Only fetch if authenticated and hydrated
   });
 
   // Check if user is a member of this club by checking the memberships list
   const isMember = useMemo(() => {
-    if (!isAuthenticated || !memberClubs || !Array.isArray(memberClubs)) return false;
+    if (!isAuth || !isHydrated || !memberClubs || !Array.isArray(memberClubs)) return false;
     return memberClubs.some((memberClub: any) => memberClub.id === clubId);
-  }, [isAuthenticated, memberClubs, clubId]);
-
-  // Debug logging for membership status
-  useEffect(() => {
-    console.log('👥 Membership Debug:', {
-      clubId,
-      isMember,
-      memberClubsCount: memberClubs?.length,
-      memberClubIds: memberClubs?.map((c: any) => c.id)
-    });
-  }, [clubId, isMember, memberClubs]);
+  }, [isAuth, isHydrated, memberClubs, clubId]);
 
   const { mutate: requestJoinClub, isPending: isRequesting } = useMutation(
     requestJoinClubMutationOptions({
@@ -151,13 +116,21 @@ const ClubDetailPage = () => {
     })
   );
 
+  const { mutate: removeMember, isPending: isRemovingMember } = useMutation(
+    removeMemberMutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['clubs', clubId] });
+      }
+    })
+  );
+
   const handleDeleteClub = () => {
     setShowDeleteDialog(false);
     deleteClub(clubId);
   };
 
   // Check if current user is the club leader
-  const isLeader = isAuthenticated && user?.id === club?.leaderId;
+  const isLeader = isAuth && isHydrated && user?.id === club?.leaderId;
 
   if (isLoading) {
     return (
@@ -233,7 +206,7 @@ const ClubDetailPage = () => {
 
               {/* Action Button */}
               <div className="mt-4">
-                {isAuthenticated ? (
+                {isAuth && isHydrated ? (
                   <>
                     {isLeader ? (
                       <Button
@@ -338,7 +311,7 @@ const ClubDetailPage = () => {
           )}
 
           {/* Join Requests - Only visible to club leader for private clubs */}
-          {isAuthenticated && club.visibility === 'PRIVATE' && (
+          {isAuth && isHydrated && club.visibility === 'PRIVATE' && (
             <ClubJoinRequests clubId={clubId} isLeader={isLeader} />
           )}
 
@@ -368,6 +341,17 @@ const ClubDetailPage = () => {
                           {member.user?.name || 'Unknown Member'}
                         </p>
                       </div>
+                      {isLeader && member.user?.id !== club.leaderId && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => removeMember({ clubId, userId: member.user.id })}
+                          disabled={isRemovingMember}
+                        >
+                          <IconUserMinus className="size-4" />
+                        </Button>
+                      )}
                     </div>
                   ))}
                 </div>
