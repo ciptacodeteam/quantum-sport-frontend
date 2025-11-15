@@ -1,7 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
 
 export interface BookingItem {
   slotId: string;
@@ -19,6 +19,19 @@ export interface Coach {
   image: string;
   experience: string;
   specialization: string[];
+  pricePerHour: number;
+  rating: number;
+  availability: {
+    date: string;
+    timeSlots: string[];
+  }[];
+}
+
+export interface Ballboy {
+  id: string;
+  name: string;
+  image: string;
+  experience: string;
   pricePerHour: number;
   rating: number;
   availability: {
@@ -54,6 +67,17 @@ export interface SelectedCoach {
   endAt?: string;
 }
 
+export interface SelectedBallboy {
+  ballboyId: string;
+  ballboyName: string;
+  timeSlot: string;
+  price: number;
+  date: string;
+  slotId?: string;
+  startAt?: string;
+  endAt?: string;
+}
+
 export interface SelectedInventory {
   inventoryId: string;
   inventoryName: string;
@@ -67,25 +91,28 @@ interface BookingState {
   // Court bookings
   bookingItems: BookingItem[];
   selectedDate: Date;
-  
+
   // Add-ons
   selectedCoaches: SelectedCoach[];
+  selectedBallboys: SelectedBallboy[];
   selectedInventories: SelectedInventory[];
-  
+
   // Totals
   courtTotal: number;
   coachTotal: number;
   inventoryTotal: number;
-  
+
   // Cart Sheet
   isCartOpen: boolean;
-  
+
   // Actions
   setBookingItems: (items: BookingItem[]) => void;
   removeBookingItem: (courtId: string, timeSlot: string, date: string) => void;
   setSelectedDate: (date: Date) => void;
   addCoach: (coach: SelectedCoach) => void;
   removeCoach: (coachId: string, timeSlot: string, slotId?: string) => void;
+  addBallboy: (ballboy: SelectedBallboy) => void;
+  removeBallboy: (ballboyId: string, timeSlot: string, slotId?: string) => void;
   addInventory: (inventory: SelectedInventory) => void;
   removeInventory: (inventoryId: string, timeSlot?: string) => void;
   updateInventoryQuantity: (inventoryId: string, timeSlot: string, quantity: number) => void;
@@ -102,6 +129,7 @@ export const useBookingStore = create<BookingState>()(
       bookingItems: [],
       selectedDate: new Date(),
       selectedCoaches: [],
+      selectedBallboys: [],
       selectedInventories: [],
       courtTotal: 0,
       coachTotal: 0,
@@ -117,7 +145,7 @@ export const useBookingStore = create<BookingState>()(
       removeBookingItem: (courtId, timeSlot, date) => {
         const state = get();
         const newItems = state.bookingItems.filter(
-          item => !(item.courtId === courtId && item.timeSlot === timeSlot && item.date === date)
+          (item) => !(item.courtId === courtId && item.timeSlot === timeSlot && item.date === date)
         );
         const courtTotal = newItems.reduce((sum, item) => sum + item.price, 0);
         set({ bookingItems: newItems, courtTotal });
@@ -132,7 +160,9 @@ export const useBookingStore = create<BookingState>()(
             return c.slotId === coach.slotId;
           }
 
-          return c.coachId === coach.coachId && c.timeSlot === coach.timeSlot && c.date === coach.date;
+          return (
+            c.coachId === coach.coachId && c.timeSlot === coach.timeSlot && c.date === coach.date
+          );
         });
 
         if (!exists) {
@@ -155,11 +185,46 @@ export const useBookingStore = create<BookingState>()(
         set({ selectedCoaches: newCoaches, coachTotal });
       },
 
+      addBallboy: (ballboy) => {
+        const state = get();
+        const exists = state.selectedBallboys.find((b) => {
+          if (ballboy.slotId) {
+            return b.slotId === ballboy.slotId;
+          }
+
+          return (
+            b.ballboyId === ballboy.ballboyId &&
+            b.timeSlot === ballboy.timeSlot &&
+            b.date === ballboy.date
+          );
+        });
+
+        if (!exists) {
+          const newBallboys = [...state.selectedBallboys, ballboy];
+          const coachTotal = newBallboys.reduce((sum, b) => sum + b.price, 0);
+          set({ selectedBallboys: newBallboys, coachTotal });
+        }
+      },
+
+      removeBallboy: (ballboyId, timeSlot, slotId) => {
+        const state = get();
+        const newBallboys = state.selectedBallboys.filter((b) => {
+          if (slotId) {
+            return b.slotId !== slotId;
+          }
+
+          return !(b.ballboyId === ballboyId && b.timeSlot === timeSlot);
+        });
+        const coachTotal = newBallboys.reduce((sum, b) => sum + b.price, 0);
+        set({ selectedBallboys: newBallboys, coachTotal });
+      },
+
       addInventory: (inventory) => {
         const state = get();
         const keyTimeSlot = inventory.timeSlot ?? 'default';
         const existingIndex = state.selectedInventories.findIndex(
-          (i) => i.inventoryId === inventory.inventoryId && (i.timeSlot ?? 'default') === keyTimeSlot
+          (i) =>
+            i.inventoryId === inventory.inventoryId && (i.timeSlot ?? 'default') === keyTimeSlot
         );
 
         let newInventories;
@@ -209,14 +274,15 @@ export const useBookingStore = create<BookingState>()(
         set({ selectedInventories: newInventories, inventoryTotal });
       },
 
-      clearAll: () => set({
-        bookingItems: [],
-        selectedCoaches: [],
-        selectedInventories: [],
-        courtTotal: 0,
-        coachTotal: 0,
-        inventoryTotal: 0,
-      }),
+      clearAll: () =>
+        set({
+          bookingItems: [],
+          selectedCoaches: [],
+          selectedInventories: [],
+          courtTotal: 0,
+          coachTotal: 0,
+          inventoryTotal: 0
+        }),
 
       getTotalAmount: () => {
         const state = get();
@@ -235,7 +301,7 @@ export const useBookingStore = create<BookingState>()(
         return total * 0.1; // 10% tax
       },
 
-      setCartOpen: (open) => set({ isCartOpen: open }),
+      setCartOpen: (open) => set({ isCartOpen: open })
     }),
     {
       name: 'booking-storage',
@@ -247,8 +313,8 @@ export const useBookingStore = create<BookingState>()(
         selectedInventories: state.selectedInventories,
         courtTotal: state.courtTotal,
         coachTotal: state.coachTotal,
-        inventoryTotal: state.inventoryTotal,
-      }),
+        inventoryTotal: state.inventoryTotal
+      })
     }
   )
 );

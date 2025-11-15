@@ -13,9 +13,21 @@ import type { Booking, Invoice } from '@/types/model';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import 'dayjs/locale/id';
-import { ArrowLeft, Calendar, Clock, CreditCard, FileText, MapPin, Users } from 'lucide-react';
+import {
+  ArrowLeft,
+  Calendar,
+  Clock,
+  Copy,
+  CreditCard,
+  FileText,
+  MapPin,
+  Users,
+  CheckCircle
+} from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { useState } from 'react';
+import { toast } from 'sonner';
 
 dayjs.locale('id');
 
@@ -58,6 +70,7 @@ export default function InvoiceDetailPage() {
   const params = useParams();
   const router = useRouter();
   const invoiceNumber = params.invoiceNumber as string;
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const { data: response, isPending, isError } = useQuery(invoiceQueryOptions(invoiceNumber));
 
@@ -127,7 +140,6 @@ export default function InvoiceDetailPage() {
   }, {});
 
   const canPay = invoice.status === 'PENDING' || (booking && booking.status === BookingStatus.HOLD);
-  const paymentUrl = (invoice as any).paymentUrl || (booking as any).paymentUrl;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -357,6 +369,7 @@ export default function InvoiceDetailPage() {
                     {(invoice.payment as any).method.logo && (
                       <Image
                         src={resolveMediaUrl((invoice.payment as any).method.logo) || ''}
+                        unoptimized
                         alt={(invoice.payment as any).method.name}
                         width={64}
                         height={32}
@@ -378,39 +391,160 @@ export default function InvoiceDetailPage() {
           </Card>
 
           {/* Payment Action */}
-          {canPay && (
-            <Card className="bg-primary/5 border-primary/20">
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <h3 className="mb-2 text-xl font-bold">Menunggu Pembayaran</h3>
-                  <p className="mb-6 text-gray-600">
-                    Silakan lakukan pembayaran sebelum{' '}
-                    {dayjs(invoice.dueDate).format('DD MMMM YYYY, HH:mm')}
-                  </p>
+          {canPay &&
+            (() => {
+              const paymentMeta = (invoice as any).paymentMeta;
+              const payment = invoice.payment as any;
+              const paymentMethod = payment?.method;
+              const channelCode = paymentMethod?.channel || paymentMeta?.channel_code;
 
-                  {paymentUrl ? (
-                    <Button
-                      size="lg"
-                      className="w-full md:w-auto"
-                      onClick={() => window.open(paymentUrl, '_blank')}
-                    >
-                      <CreditCard className="mr-2 h-5 w-5" />
-                      Bayar Sekarang
-                    </Button>
-                  ) : (
-                    <Button
-                      size="lg"
-                      className="w-full md:w-auto"
-                      onClick={() => router.push(`/payment/${invoice.id}`)}
-                    >
-                      <CreditCard className="mr-2 h-5 w-5" />
-                      Pilih Metode Pembayaran
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+              // Check for QRIS payment
+              const isQRIS = channelCode === 'QRIS';
+              const qrString = paymentMeta?.actions?.find(
+                (action: any) => action.descriptor === 'QR_STRING'
+              )?.value;
+
+              // Check for Virtual Account
+              const isVA = channelCode?.includes('VIRTUAL_ACCOUNT') || channelCode?.includes('_VA');
+              // Try extracting VA number from actions first (for BRI_VIRTUAL_ACCOUNT and similar)
+              const vaAction = paymentMeta?.actions?.find(
+                (action: any) => action.descriptor === 'VIRTUAL_ACCOUNT_NUMBER'
+              );
+              const vaNumber = vaAction?.value || paymentMeta?.channel_properties?.account_number;
+              const vaDisplayName = vaAction?.display_name || paymentMethod?.name;
+              const vaExpiry = vaAction?.expiry || paymentMeta?.channel_properties?.expires_at;
+
+              // Check for other payment types
+              const isEWallet = ['OVO', 'DANA', 'LINKAJA', 'SHOPEEPAY'].includes(channelCode);
+              const paymentUrl =
+                paymentMeta?.actions?.find(
+                  (action: any) =>
+                    action.descriptor === 'DEEPLINK_CHECKOUT' || action.type === 'REDIRECT'
+                )?.url || (invoice as any).paymentUrl;
+
+              const copyToClipboard = (text: string, field: string) => {
+                navigator.clipboard.writeText(text);
+                setCopiedField(field);
+                toast.success('Berhasil disalin!');
+                setTimeout(() => setCopiedField(null), 2000);
+              };
+
+              return (
+                <Card className="bg-primary/5 border-primary/20">
+                  <CardContent className="pt-6">
+                    <div className="text-center">
+                      <h3 className="mb-2 text-xl font-bold">Menunggu Pembayaran</h3>
+                      <p className="mb-6 text-gray-600">
+                        Silakan lakukan pembayaran sebelum{' '}
+                        {dayjs(invoice.dueDate).format('DD MMMM YYYY, HH:mm')}
+                      </p>
+
+                      {/* QRIS Payment */}
+                      {isQRIS && qrString && (
+                        <div className="space-y-4">
+                          <div className="flex justify-center">
+                            <div className="rounded-lg bg-white p-4 shadow-md">
+                              <div className="bg-white p-2">
+                                <Image
+                                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrString)}`}
+                                  alt="QR Code"
+                                  width={200}
+                                  unoptimized
+                                  height={200}
+                                  className="h-48 w-48"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                          <p className="text-sm text-gray-600">
+                            Scan QR code di atas menggunakan aplikasi pembayaran QRIS Anda
+                          </p>
+                          {paymentMeta?.channel_properties?.expires_at && (
+                            <p className="text-xs text-orange-600">
+                              QR Code berlaku hingga:{' '}
+                              {dayjs(paymentMeta.channel_properties.expires_at).format(
+                                'DD MMM YYYY, HH:mm'
+                              )}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Virtual Account Payment */}
+                      {isVA && vaNumber && (
+                        <div className="space-y-4">
+                          <div className="rounded-lg border bg-white p-4">
+                            <p className="mb-2 text-sm text-gray-600">Nomor Virtual Account</p>
+                            <div className="flex items-center justify-center gap-2">
+                              <code className="text-2xl font-bold tracking-wider">{vaNumber}</code>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => copyToClipboard(vaNumber, 'va')}
+                              >
+                                {copiedField === 'va' ? (
+                                  <CheckCircle className="h-4 w-4 text-green-600" />
+                                ) : (
+                                  <Copy className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
+                            <div className="mt-2 text-xs text-gray-500">
+                              Bank: <span className="font-semibold">{vaDisplayName}</span>
+                              {vaExpiry && (
+                                <span className="ml-4 text-orange-600">
+                                  Berlaku hingga: {dayjs(vaExpiry).format('DD MMM YYYY, HH:mm')}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="space-y-2 text-left text-sm text-gray-700">
+                            <p className="font-semibold">Cara Pembayaran:</p>
+                            <ol className="ml-2 list-inside list-decimal space-y-1">
+                              <li>Buka aplikasi mobile banking atau ATM</li>
+                              <li>Pilih menu Transfer / Bayar</li>
+                              <li>Pilih Virtual Account {vaDisplayName}</li>
+                              <li>Masukkan nomor VA di atas</li>
+                              <li>Masukkan nominal {formatCurrency(invoice.total)}</li>
+                              <li>Konfirmasi dan selesaikan pembayaran</li>
+                            </ol>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* E-Wallet / Redirect Payment */}
+                      {(isEWallet || paymentUrl) && !isQRIS && !isVA && (
+                        <div className="space-y-4">
+                          <Button
+                            size="lg"
+                            className="w-full md:w-auto"
+                            onClick={() => window.open(paymentUrl, '_blank')}
+                          >
+                            <CreditCard className="mr-2 h-5 w-5" />
+                            Bayar dengan {paymentMethod?.name}
+                          </Button>
+                          <p className="text-sm text-gray-600">
+                            Anda akan diarahkan ke halaman pembayaran {paymentMethod?.name}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Fallback - No payment method selected yet */}
+                      {!isQRIS && !isVA && !paymentUrl && (
+                        <Button
+                          size="lg"
+                          className="w-full md:w-auto"
+                          onClick={() => router.push(`/payment/${invoice.id}`)}
+                        >
+                          <CreditCard className="mr-2 h-5 w-5" />
+                          Pilih Metode Pembayaran
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })()}
 
           {/* Success Message */}
           {invoice.status === 'PAID' && (

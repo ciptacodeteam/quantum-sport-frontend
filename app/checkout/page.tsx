@@ -64,6 +64,7 @@ export default function CheckoutPage() {
   const coachTotal = useBookingStore((state) => state.coachTotal);
   const inventoryTotal = useBookingStore((state) => state.inventoryTotal);
   const selectedCoaches = useBookingStore((state) => state.selectedCoaches);
+  const selectedBallboys = useBookingStore((state) => state.selectedBallboys);
   const selectedInventories = useBookingStore((state) => state.selectedInventories);
 
   const addOnsTotal = coachTotal + inventoryTotal;
@@ -239,22 +240,19 @@ export default function CheckoutPage() {
       return;
     }
 
-    const courtsPayload = bookingItems
-      .filter((item) => item.courtId && item.slotId)
-      .map((item) => ({
-        courtId: item.courtId,
-        slotId: item.slotId
-      }));
+    // Court slots: array of slot IDs only
+    const courtSlots = bookingItems.filter((item) => item.slotId).map((item) => item.slotId);
 
-    const coachesPayload = selectedCoaches
-      .filter((coach) => coach.coachId && coach.slotId)
-      .map((coach) => ({
-        staffId: coach.coachId,
-        slotId: coach.slotId,
-        coachTypeId: coach.coachTypeId ?? null
-      }));
+    // Coach slots: array of slot IDs only
+    const coachSlots = selectedCoaches.filter((coach) => coach.slotId).map((coach) => coach.slotId);
 
-    const inventoriesPayload = selectedInventories
+    // Ballboy slots: array of slot IDs only
+    const ballboySlots = selectedBallboys
+      .filter((ballboy) => ballboy.slotId)
+      .map((ballboy) => ballboy.slotId);
+
+    // Inventories: array of objects with inventoryId and quantity
+    const inventories = selectedInventories
       .filter((inventory) => inventory.inventoryId && inventory.quantity > 0)
       .map((inventory) => ({
         inventoryId: inventory.inventoryId,
@@ -262,16 +260,23 @@ export default function CheckoutPage() {
       }));
 
     const payload: any = {
-      paymentMethodId: selectedPaymentMethod.id,
-      courts: courtsPayload
+      paymentMethodId: selectedPaymentMethod.id
     };
 
-    if (coachesPayload.length > 0) {
-      payload.coaches = coachesPayload;
+    if (courtSlots.length > 0) {
+      payload.courtSlots = courtSlots;
     }
 
-    if (inventoriesPayload.length > 0) {
-      payload.inventories = inventoriesPayload;
+    if (coachSlots.length > 0) {
+      payload.coachSlots = coachSlots;
+    }
+
+    if (ballboySlots.length > 0) {
+      payload.ballboySlots = ballboySlots;
+    }
+
+    if (inventories.length > 0) {
+      payload.inventories = inventories;
     }
 
     checkoutMutation.mutate(payload);
@@ -330,9 +335,7 @@ export default function CheckoutPage() {
           <section className="border-muted space-y-3 rounded-lg border bg-white p-4">
             <header className="space-y-1">
               <h3 className="text-base font-semibold">Coach</h3>
-              <p className="text-muted-foreground text-sm">
-                {selectedCoaches.length} sesi dipilih
-              </p>
+              <p className="text-muted-foreground text-sm">{selectedCoaches.length} sesi dipilih</p>
             </header>
             <div className="space-y-2">
               {selectedCoaches.map((coach, index) => (
@@ -346,9 +349,7 @@ export default function CheckoutPage() {
                       {dayjs(coach.date).format('DD MMM YYYY')} • {coach.timeSlot}
                     </span>
                   </div>
-                  <span className="text-sm font-semibold">
-                    {formatCurrency(coach.price)}
-                  </span>
+                  <span className="text-sm font-semibold">{formatCurrency(coach.price)}</span>
                 </div>
               ))}
             </div>
@@ -371,13 +372,9 @@ export default function CheckoutPage() {
                 >
                   <div className="flex flex-col">
                     <span className="text-sm font-medium">{inventory.inventoryName}</span>
-                    <span className="text-muted-foreground text-xs">
-                      Qty: {inventory.quantity}
-                    </span>
+                    <span className="text-muted-foreground text-xs">Qty: {inventory.quantity}</span>
                   </div>
-                  <span className="text-sm font-semibold">
-                    {formatCurrency(inventory.price)}
-                  </span>
+                  <span className="text-sm font-semibold">{formatCurrency(inventory.price)}</span>
                 </div>
               ))}
             </div>
@@ -529,7 +526,6 @@ export default function CheckoutPage() {
                 const percentage = Number(method.percentage ?? 0);
                 const baseFee = Number.isFinite(method.fees) ? method.fees : 0;
                 const feesValue = Math.round(baseFee + (grandTotal * percentage) / 100);
-                const totalWithFees = grandTotal + feesValue;
                 const isSelected = selectedPaymentMethod?.id === method.id;
 
                 return (
