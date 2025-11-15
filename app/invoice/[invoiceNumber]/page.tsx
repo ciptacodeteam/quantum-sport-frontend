@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { BookingStatus } from '@/lib/constants';
+import { resolveMediaUrl } from '@/lib/utils';
 import { invoiceQueryOptions } from '@/queries/invoice';
 import type { Booking, Invoice } from '@/types/model';
 import { useQuery } from '@tanstack/react-query';
@@ -14,6 +15,7 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/id';
 import { ArrowLeft, Calendar, Clock, CreditCard, FileText, MapPin, Users } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 dayjs.locale('id');
 
@@ -105,9 +107,9 @@ export default function InvoiceDetailPage() {
   }
 
   const bookingDetails = booking?.details || [];
-  const bookingInventories = (booking as any)?.bookingInventories || [];
-  const bookingCoaches = (booking as any)?.bookingCoaches || [];
-  const bookingBallboys = (booking as any)?.bookingBallboys || [];
+  const bookingInventories = booking?.inventories || [];
+  const bookingCoaches = booking?.coaches || [];
+  const bookingBallboys = booking?.ballboys || [];
 
   // Group booking details by date and court
   const groupedBookings = bookingDetails.reduce((acc: any, detail: any) => {
@@ -170,11 +172,11 @@ export default function InvoiceDetailPage() {
                     {dayjs(invoice.issuedAt).format('DD MMMM YYYY, HH:mm')}
                   </p>
                 </div>
-                {invoice.dueAt && (
+                {invoice.dueDate && (
                   <div>
                     <p className="text-sm text-gray-600">Jatuh Tempo</p>
                     <p className="font-semibold">
-                      {dayjs(invoice.dueAt).format('DD MMMM YYYY, HH:mm')}
+                      {dayjs(invoice.dueDate).format('DD MMMM YYYY, HH:mm')}
                     </p>
                   </div>
                 )}
@@ -348,15 +350,26 @@ export default function InvoiceDetailPage() {
                 <span className="text-primary font-bold">{formatCurrency(invoice.total)}</span>
               </div>
 
-              {invoice.payment && (
+              {invoice.payment && (invoice.payment as any).method && (
                 <div className="mt-4 rounded-lg bg-gray-50 p-4">
                   <h4 className="mb-2 font-semibold">Metode Pembayaran</h4>
-                  <p className="text-gray-700">
-                    {(invoice.payment as any).method || 'Transfer Bank'}
-                  </p>
-                  {(invoice.payment as any).accountNumber && (
-                    <p className="mt-1 text-sm text-gray-600">
-                      Rekening: {(invoice.payment as any).accountNumber}
+                  <div className="flex items-center gap-3">
+                    {(invoice.payment as any).method.logo && (
+                      <Image
+                        src={resolveMediaUrl((invoice.payment as any).method.logo) || ''}
+                        alt={(invoice.payment as any).method.name}
+                        width={64}
+                        height={32}
+                        className="h-8 w-auto object-contain"
+                      />
+                    )}
+                    <p className="font-medium text-gray-700">
+                      {(invoice.payment as any).method.name || 'Transfer Bank'}
+                    </p>
+                  </div>
+                  {(invoice.payment as any).method.channel && (
+                    <p className="mt-2 text-sm text-gray-600">
+                      Channel: {(invoice.payment as any).method.channel}
                     </p>
                   )}
                 </div>
@@ -372,7 +385,7 @@ export default function InvoiceDetailPage() {
                   <h3 className="mb-2 text-xl font-bold">Menunggu Pembayaran</h3>
                   <p className="mb-6 text-gray-600">
                     Silakan lakukan pembayaran sebelum{' '}
-                    {dayjs(invoice.dueAt).format('DD MMMM YYYY, HH:mm')}
+                    {dayjs(invoice.dueDate).format('DD MMMM YYYY, HH:mm')}
                   </p>
 
                   {paymentUrl ? (

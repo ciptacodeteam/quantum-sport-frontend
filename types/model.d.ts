@@ -305,7 +305,7 @@ export type Invoice = {
   status: PaymentStatus;
 
   issuedAt: Date;
-  dueAt: Date | null;
+  dueDate: Date | null;
   paidAt: Date | null;
   cancelledAt: Date | null;
   createdAt: Date;
