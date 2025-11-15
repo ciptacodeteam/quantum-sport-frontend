@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { membershipsQueryOptions } from '@/queries/membership';
 import { useQuery } from '@tanstack/react-query';
+import Link from 'next/link';
 
 export default function ValuePackPage() {
   const { data, isLoading, isError } = useQuery(membershipsQueryOptions());
@@ -59,8 +60,8 @@ export default function ValuePackPage() {
                 </CardHeader>
 
                 <CardFooter>
-                  <Button className="w-full p-0" size="lg">
-                    Pesan Sekarang
+                  <Button className="w-full" size="lg" asChild>
+                    <Link href={`/membership/${pack.id}`}>Pesan Sekarang</Link>
                   </Button>
                 </CardFooter>
               </Card>

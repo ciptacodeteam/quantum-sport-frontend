@@ -1,6 +1,6 @@
 import { api } from '@/lib/api';
 import { mergedQueryParamUrl } from '@/lib/utils';
-import type { SearchParamsData } from '@/types';
+import type { CreateMutationPayload, SearchParamsData } from '@/types';
 
 export async function getMembershipsApi(queryParams: SearchParamsData = {}) {
   const url = '/memberships';
@@ -14,3 +14,7 @@ export async function getMembershipApi(id: string) {
   return data;
 }
 
+export async function doMembershipCheckoutApi(payload: CreateMutationPayload) {
+  const { data } = await api.post('/memberships/checkout', payload);
+  return data;
+}
