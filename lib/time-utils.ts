@@ -21,13 +21,13 @@ export function formatSlotTime(
   }
 
   try {
-    const parsedUtc = dayjs.tz(value, 'Asia/Jakarta');
+    const parsedUtc = dayjs(value);
 
     if (!parsedUtc.isValid()) {
       return '-';
     }
 
-    return parsedUtc.tz('Asia/Jakarta').format(format);
+    return parsedUtc.format(format);
   } catch (error) {
     console.error('Error formatting slot time:', error);
     return '-';
@@ -65,4 +65,3 @@ export function formatSlotTimeRange(
 export function getSlotTimeKey(value: Date | string | null | undefined): string {
   return formatSlotTime(value, 'HH:mm');
 }
-

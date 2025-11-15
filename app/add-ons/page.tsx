@@ -43,7 +43,7 @@ export default function AddOnsPage() {
       for (const candidate of candidates) {
         const parsed = dayjs(candidate);
         if (parsed.isValid()) {
-          return parsed.utc(true);
+          return parsed;
         }
       }
 

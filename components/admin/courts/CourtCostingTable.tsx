@@ -5,13 +5,13 @@ import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import { DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ManagedDialog } from '@/components/ui/dialog-context';
+import { formatSlotTimeRange } from '@/lib/time-utils';
 import { adminCourtCostingQueryOptions } from '@/queries/admin/court';
 import type { Slot } from '@/types/model';
 import { IconPlus } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
-import { formatSlotTime, formatSlotTimeRange } from '@/lib/time-utils';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { useMemo } from 'react';
 import CreateCourtCostForm from './CreateCourtCostForm';
@@ -63,11 +63,7 @@ const CourtCostingTable = ({ courtId }: Props) => {
 
     return data.map((entry) => ({
       ...entry,
-      slots: [...(entry.slots || [])].sort((a, b) =>
-        dayjs
-          .utc(a.startAt)
-          .diff(dayjs.utc(b.startAt))
-      )
+      slots: [...(entry.slots || [])].sort((a, b) => dayjs(a.startAt).diff(dayjs(b.startAt)))
     }));
   }, [data]);
 
@@ -98,14 +94,14 @@ const CourtCostingTable = ({ courtId }: Props) => {
             enablePagination={false}
             enablePageSize={false}
             columns={[
-                    {
-                      accessorKey: 'startAt',
-                      header: 'Waktu Mulai',
-                      cell: ({ row, getValue }) => {
-                        const slot = row.original as Slot;
-                        return formatSlotTimeRange(getValue(), slot.endAt);
-                      }
-                    },
+              {
+                accessorKey: 'startAt',
+                header: 'Waktu Mulai',
+                cell: ({ row, getValue }) => {
+                  const slot = row.original as Slot;
+                  return formatSlotTimeRange(getValue(), slot.endAt);
+                }
+              },
               {
                 accessorKey: 'isAvailable',
                 header: 'Status',

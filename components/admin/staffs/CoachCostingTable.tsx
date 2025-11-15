@@ -76,12 +76,14 @@ const CoachCostingTable = ({ coachId }: Props) => {
       ...entry,
       slots: [...(entry.slots || [])].sort((a, b) => {
         // Handle local time format "YYYY-MM-DD HH:mm:ss"
-        const aTime = typeof a.startAt === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(a.startAt)
-          ? dayjs(a.startAt)
-          : dayjs.utc(a.startAt);
-        const bTime = typeof b.startAt === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(b.startAt)
-          ? dayjs(b.startAt)
-          : dayjs.utc(b.startAt);
+        const aTime =
+          typeof a.startAt === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(a.startAt)
+            ? dayjs(a.startAt)
+            : dayjs(a.startAt);
+        const bTime =
+          typeof b.startAt === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(b.startAt)
+            ? dayjs(b.startAt)
+            : dayjs(b.startAt);
         return aTime.diff(bTime);
       })
     }));

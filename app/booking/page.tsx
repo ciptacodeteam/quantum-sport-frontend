@@ -157,7 +157,7 @@ export default function BookingPage() {
     slots.forEach((slot) => {
       const courtId = slot.courtId || slot.court?.id;
       if (!courtId || !slot.startAt) return;
-      const time = dayjs.tz(slot.startAt, 'Asia/Jakarta').format('HH:mm');
+      const time = dayjs(slot.startAt).format('HH:mm');
       map.set(`${slot.courtId}-${time}`, slot);
     });
     return map;
@@ -408,7 +408,7 @@ export default function BookingPage() {
       const candidates = [`${date} ${time}`, `${date}T${time}`, date];
       for (const candidate of candidates) {
         const parsed = dayjs(candidate);
-        if (parsed.isValid()) return parsed.utc(true);
+        if (parsed.isValid()) return parsed;
       }
       return null;
     };
