@@ -28,7 +28,7 @@ const CreateClubPage = () => {
     rules: '',
     visibility: 'PUBLIC' as 'PUBLIC' | 'PRIVATE'
   });
-  
+
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
@@ -62,7 +62,7 @@ const CreateClubPage = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name.trim()) {
       toast.error('Club name is required');
       return;
@@ -73,15 +73,15 @@ const CreateClubPage = () => {
     formDataToSend.append('name', formData.name.trim());
     formDataToSend.append('visibility', formData.visibility);
     formDataToSend.append('isActive', 'true');
-    
+
     if (formData.description.trim()) {
       formDataToSend.append('description', formData.description.trim());
     }
-    
+
     if (formData.rules.trim()) {
       formDataToSend.append('rules', formData.rules.trim());
     }
-    
+
     if (logoFile) {
       formDataToSend.append('logo', logoFile);
     }
@@ -97,15 +97,15 @@ const CreateClubPage = () => {
         toast.error('Please select an image file');
         return;
       }
-      
+
       // Check file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         toast.error('File size must be less than 5MB');
         return;
       }
-      
+
       setLogoFile(file);
-      
+
       // Create preview
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -132,23 +132,23 @@ const CreateClubPage = () => {
 
   return (
     <>
-      <MainHeader backHref="/clubs" title="Create Club" withLogo={false} />
+      <MainHeader backHref="/clubs" title="Buat Club" withLogo={false} />
 
-      <main className="mt-24 w-full md:mt-14 flex flex-col min-h-[calc(100dvh-96px)] pb-20">
-        <div className="w-11/12 mx-auto flex-1 py-6">
+      <main className="pt-28 pb-16">
+        <div className="mx-auto w-11/12 flex-1">
           <form onSubmit={handleSubmit}>
             <Card>
               <CardHeader>
-                <CardTitle>Create a New Club</CardTitle>
-                <CardDescription>
-                  Fill in the details below to create your sports club
+                <CardTitle>Buat Club Baru</CardTitle>
+                <CardDescription className="mb-4">
+                  Isi form dibawah untuk membuat club baru Kamu.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Club Name */}
                 <div className="space-y-2">
-                  <Label htmlFor="name">
-                    Club Name <span className="text-destructive">*</span>
+                  <Label htmlFor="name" aria-required>
+                    Nama Club<span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="name"
@@ -161,69 +161,60 @@ const CreateClubPage = () => {
 
                 {/* Logo Upload */}
                 <div className="space-y-2">
-                  <Label htmlFor="logo">Club Logo</Label>
+                  <Label htmlFor="logo">
+                    Logo Club<span className="text-gray-400">(Optional)</span>
+                  </Label>
                   {logoPreview ? (
                     <div className="flex items-center gap-4">
                       <Avatar className="size-20 rounded-lg">
                         <AvatarImage src={logoPreview} alt="Logo preview" />
                         <AvatarFallback className="rounded-lg">Logo</AvatarFallback>
                       </Avatar>
+
                       <div className="flex-1">
                         <p className="text-sm font-medium">{logoFile?.name}</p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-muted-foreground text-xs">
                           {(logoFile!.size / 1024).toFixed(2)} KB
                         </p>
                       </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={removeLogo}
-                      >
-                        Remove
+                      <Button type="button" variant="outline" size="sm" onClick={removeLogo}>
+                        Hapus
                       </Button>
                     </div>
                   ) : (
-                    <Input
-                      id="logo"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleLogoChange}
-                    />
+                    <Input id="logo" type="file" accept="image/*" onChange={handleLogoChange} />
                   )}
-                  <p className="text-xs text-muted-foreground">
-                    Optional: Upload an image (max 5MB, PNG, JPG, JPEG)
+                  <p className="text-muted-foreground text-xs">
+                    Upload gambar (max 5MB, PNG, JPG, JPEG)
                   </p>
                 </div>
 
                 {/* Description */}
                 <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
+                  <Label htmlFor="description">
+                    Deskripsi <span className="text-gray-400">(Optional)</span>
+                  </Label>
                   <Textarea
                     id="description"
-                    placeholder="Describe your club, activities, and goals..."
+                    placeholder="Deskripsi club Kamu, aktivitas, and tujuan..."
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     rows={4}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Optional: Tell potential members about your club
-                  </p>
                 </div>
 
                 {/* Rules */}
                 <div className="space-y-2">
-                  <Label htmlFor="rules">Club Rules</Label>
+                  <Label htmlFor="rules">
+                    Peraturan Club<span className="text-gray-400">(Optional)</span>
+                  </Label>
                   <Textarea
                     id="rules"
-                    placeholder="List your club rules here..."
+                    placeholder="Ketikan aturan untuk club Kamu..."
                     value={formData.rules}
                     onChange={(e) => setFormData({ ...formData, rules: e.target.value })}
                     rows={4}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Optional: Set expectations for members
-                  </p>
                 </div>
 
                 {/* Visibility */}
@@ -231,38 +222,50 @@ const CreateClubPage = () => {
                   <Label>Club Visibility</Label>
                   <RadioGroup
                     value={formData.visibility}
-                    onValueChange={(value) => setFormData({ ...formData, visibility: value as 'PUBLIC' | 'PRIVATE' })}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, visibility: value as 'PUBLIC' | 'PRIVATE' })
+                    }
                   >
-                    <div className="flex items-start space-x-3 border rounded-lg p-4 hover:bg-accent cursor-pointer">
+                    {/* PUBLIC */}
+                    <label
+                      htmlFor="public"
+                      className="hover:bg-accent flex cursor-pointer items-start space-x-3 rounded-lg border p-4"
+                    >
                       <RadioGroupItem value="PUBLIC" id="public" className="mt-0.5" />
+
                       <div className="flex-1">
-                        <Label htmlFor="public" className="cursor-pointer font-semibold flex items-center gap-2">
+                        <div className="flex cursor-pointer items-center gap-2 font-semibold">
                           <IconWorld className="size-4" />
                           Public Club
-                        </Label>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Anyone can join without approval
+                        </div>
+                        <p className="text-muted-foreground mt-1 text-sm">
+                          Siapa pun dapat bergabung tanpa persetujuan.
                         </p>
                       </div>
-                    </div>
+                    </label>
 
-                    <div className="flex items-start space-x-3 border rounded-lg p-4 hover:bg-accent cursor-pointer">
+                    {/* PRIVATE */}
+                    <label
+                      htmlFor="private"
+                      className="hover:bg-accent flex cursor-pointer items-start space-x-3 rounded-lg border p-4"
+                    >
                       <RadioGroupItem value="PRIVATE" id="private" className="mt-0.5" />
+
                       <div className="flex-1">
-                        <Label htmlFor="private" className="cursor-pointer font-semibold flex items-center gap-2">
+                        <div className="flex cursor-pointer items-center gap-2 font-semibold">
                           <IconLock className="size-4" />
                           Private Club
-                        </Label>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Members must request to join and be approved
+                        </div>
+                        <p className="text-muted-foreground mt-1 text-sm">
+                          Anggota harus mengirim permintaan untuk bergabung dan harus disetujui.
                         </p>
                       </div>
-                    </div>
+                    </label>
                   </RadioGroup>
                 </div>
 
                 {/* Submit Buttons */}
-                <div className="flex gap-3 pt-4">
+                <div className="flex gap-3 pt-2">
                   <Button
                     type="button"
                     variant="outline"
@@ -270,15 +273,10 @@ const CreateClubPage = () => {
                     onClick={() => router.back()}
                     disabled={isPending}
                   >
-                    Cancel
+                    Batal
                   </Button>
-                  <Button
-                    type="submit"
-                    className="flex-1"
-                    disabled={isPending}
-                    loading={isPending}
-                  >
-                    Create Club
+                  <Button type="submit" className="flex-1" disabled={isPending} loading={isPending}>
+                    Buat Club
                   </Button>
                 </div>
               </CardContent>

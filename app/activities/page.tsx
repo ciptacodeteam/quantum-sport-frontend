@@ -2,16 +2,16 @@
 
 import MainBottomNavigation from '@/components/footers/MainBottomNavigation';
 import MainHeader from '@/components/headers/MainHeader';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { profileQueryOptions } from '@/queries/profile';
-import { cn, formatCurrency } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import Link from 'next/link';
+import { ChevronRightIcon } from 'lucide-react';
 
 const mockUpcomingBookings = [
   {
@@ -26,6 +26,16 @@ const mockUpcomingBookings = [
   },
   {
     id: 'booking-002',
+    courtName: 'Lapangan B',
+    sport: 'Futsal',
+    startTime: dayjs().add(3, 'day').hour(19).minute(0).toISOString(),
+    durationHours: 2,
+    status: 'Pending Payment' as const,
+    addons: [],
+    total: 320000
+  },
+  {
+    id: 'booking-003',
     courtName: 'Lapangan B',
     sport: 'Futsal',
     startTime: dayjs().add(3, 'day').hour(19).minute(0).toISOString(),
@@ -73,8 +83,8 @@ export default function ActivitiesPage() {
   return (
     <>
       <MainHeader title="Pemesanan" withLogo={false} backHref="/" />
-      <main className="mt-24 min-h-[calc(100dvh-180px)] w-full p-4 pb-24 md:mt-14 md:pb-4">
-        <div className="mx-auto flex max-w-3xl flex-col gap-6">
+      <main className="mx-auto w-11/12 py-28 md:mt-14 md:pb-4">
+        <div className="mx-auto flex max-w-3xl flex-col gap-4">
           {mockUpcomingBookings.length === 0 ? (
             <Card>
               <CardHeader>
@@ -94,21 +104,12 @@ export default function ActivitiesPage() {
 
               return (
                 <Card key={booking.id}>
-                  <CardHeader className="flex flex-row items-start justify-between space-y-0">
+                  <CardHeader className="flex items-center justify-between">
                     <div>
                       <CardTitle className="text-lg">{booking.courtName}</CardTitle>
-                      <CardDescription>{booking.sport}</CardDescription>
                     </div>
-                    <Badge
-                      className={cn(
-                        'capitalize',
-                        statusVariants[booking.status.toLowerCase()] ??
-                          'bg-slate-200 text-slate-700'
-                      )}
-                    >
-                      {booking.status}
-                    </Badge>
                   </CardHeader>
+
                   <CardContent className="space-y-4">
                     <div className="space-y-1 text-sm">
                       <p className="text-muted-foreground">{start.format('dddd, DD MMMM YYYY')}</p>
@@ -117,28 +118,15 @@ export default function ActivitiesPage() {
                       </p>
                     </div>
 
-                    {booking.addons.length > 0 && (
-                      <div className="space-y-1">
-                        <p className="text-sm font-semibold">Add-ons</p>
-                        <ul className="text-muted-foreground text-sm">
-                          {booking.addons.map((addon) => (
-                            <li key={addon}>• {addon}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-muted-foreground text-xs">Total Pembayaran</p>
-                        <p className="text-lg font-semibold">{formatCurrency(booking.total)}</p>
-                      </div>
-                      <Button
-                        variant="outline"
-                        onClick={() => router.push(`/booking/${booking.id}`)}
+                    <div className="border-muted-foreground/40 border-b border-dashed"></div>
+                    <div className='flex items-center justify-end'>
+                      <Link
+                        href={'/'}
+                        className="text-primary flex cursor-pointer text-sm font-medium me-1"
                       >
-                        Detail
-                      </Button>
+                        Lihat Detail
+                      </Link>
+                      <ChevronRightIcon size={18}/>
                     </div>
                   </CardContent>
                 </Card>
