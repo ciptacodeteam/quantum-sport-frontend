@@ -18,7 +18,7 @@ type SectionHeaderProps = {
 };
 
 const SectionHeader = ({ className, children }: SectionHeaderProps) => {
-  return <CardHeader className={cn('px-2', className)}>{children}</CardHeader>;
+  return <CardHeader className={cn('space-y-2 px-2', className)}>{children}</CardHeader>;
 };
 
 type SectionTitleProps = {

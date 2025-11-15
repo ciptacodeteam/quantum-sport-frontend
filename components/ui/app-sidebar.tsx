@@ -48,11 +48,11 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
       items: [
         {
           title: 'Book Courts',
-          url: '/admin/booking-lapangan',
+          url: '/admin/booking-lapangan'
         },
         {
           title: 'Add-ons & Equipment',
-          url: '/admin/booking-add-ons',
+          url: '/admin/booking-add-ons'
         }
       ]
     },
@@ -62,7 +62,7 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
       items: [
         {
           title: 'Lapangan',
-          url: '/admin/kelola-pemesanan/lapangan',
+          url: '/admin/kelola-pemesanan/lapangan'
         },
         {
           title: 'Inventori',
@@ -121,14 +121,12 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
       title: 'Kelola Turnamen',
       url: '/admin/kelola-turnamen',
       icon: IconLaurelWreath1,
-      isUnrealeased: true,
       items: []
     },
     {
       title: 'Kelola Club',
       url: '/admin/kelola-club',
       icon: IconUsersGroup,
-      isUnrealeased: true,
       items: []
     },
     {
