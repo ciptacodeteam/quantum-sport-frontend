@@ -14,9 +14,9 @@ import { membershipsQueryOptions } from '@/queries/membership';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 
-export default function ValuePackPage() {
+export default function MembershipPage() {
   const { data, isLoading, isError } = useQuery(membershipsQueryOptions());
-  const valuePacks = data ?? [];
+  const memberships = data ?? [];
 
   return (
     <>
@@ -38,16 +38,16 @@ export default function ValuePackPage() {
         )}
 
         {/* Empty state */}
-        {!isLoading && !isError && valuePacks.length === 0 && (
+        {!isLoading && !isError && memberships.length === 0 && (
           <div className="text-muted-foreground py-10 text-center text-sm">
             Membership belum tersedia.
           </div>
         )}
 
         {/* Membership list */}
-        {!isLoading && !isError && valuePacks.length > 0 && (
+        {!isLoading && !isError && memberships.length > 0 && (
           <section className="grid gap-6 pt-28 pb-12 md:grid-cols-2 lg:grid-cols-3">
-            {valuePacks.map((pack) => (
+            {memberships.map((pack) => (
               <Card key={pack.id} className="flex flex-col">
                 <CardHeader>
                   <div className="mb-2 flex items-start justify-between gap-2">

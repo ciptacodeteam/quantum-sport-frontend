@@ -191,6 +191,7 @@ export type Membership = {
   name: string;
   description: string | null;
   content: string | null;
+  contentHtml: string | null;
   price: number;
   sessions: number;
   duration: number; // in days
