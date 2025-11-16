@@ -13,9 +13,9 @@ const CreateTournamentPage = () => {
       <Section>
         <SectionHeader>
           <SectionTitle title="Tambah Turnamen" />
-          <SectionDescription description="Tambahkan turnamen baru ke dalam sistem Anda di sini." />
+          <SectionDescription description="Buat turnamen baru untuk klub Anda." />
         </SectionHeader>
-        <SectionContent className="mt-4">
+        <SectionContent>
           <CreateTournamentForm />
         </SectionContent>
       </Section>

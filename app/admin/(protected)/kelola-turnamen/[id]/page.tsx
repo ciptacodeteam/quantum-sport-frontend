@@ -6,17 +6,19 @@ import {
   SectionHeader,
   SectionTitle
 } from '@/components/ui/section';
-import { createQueryClient } from '@/lib/query-client';
 import { adminTournamentQueryOptions } from '@/queries/admin/tournament';
-import type { IdParams } from '@/types';
-import { dehydrate, HydrationBoundary } from '@tanstack/react-query';
+import { HydrationBoundary, QueryClient, dehydrate } from '@tanstack/react-query';
 
-const EditTournamentPage = async ({ params }: { params: Promise<IdParams> }) => {
-  const param = await params;
+type Props = {
+  params: Promise<{ id: string }>;
+};
 
-  const queryClient = createQueryClient();
+const EditTournamentPage = async ({ params }: Props) => {
+  const { id } = await params;
 
-  await queryClient.prefetchQuery(adminTournamentQueryOptions(param.id));
+  const queryClient = new QueryClient();
+
+  await queryClient.prefetchQuery(adminTournamentQueryOptions(id));
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
@@ -24,10 +26,10 @@ const EditTournamentPage = async ({ params }: { params: Promise<IdParams> }) => 
         <Section>
           <SectionHeader>
             <SectionTitle title="Edit Turnamen" />
-            <SectionDescription description="Perbarui informasi turnamen di sini." />
+            <SectionDescription description="Perbarui informasi turnamen Anda." />
           </SectionHeader>
-          <SectionContent className="mt-4">
-            <EditTournamentForm tournamentId={param.id} />
+          <SectionContent>
+            <EditTournamentForm tournamentId={id} />
           </SectionContent>
         </Section>
       </main>
