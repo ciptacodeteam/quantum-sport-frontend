@@ -67,17 +67,10 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
         {
           title: 'Inventori',
           url: '/admin/kelola-pemesanan/inventori',
-          isUnrealeased: true
-        },
-        {
-          title: 'Ballboy',
-          url: '/admin/kelola-pemesanan/ballboy',
-          isUnrealeased: true
         },
         {
           title: 'Coach',
           url: '/admin/kelola-pemesanan/coach',
-          isUnrealeased: true
         }
       ]
     },
