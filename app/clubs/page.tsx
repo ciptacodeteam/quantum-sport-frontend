@@ -10,7 +10,14 @@ import { clubsQueryOptions } from '@/queries/club';
 import { joinClubMutationOptions, requestJoinClubMutationOptions } from '@/mutations/club';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
-import { IconUsers, IconLock, IconWorld, IconSearch, IconUserCircle, IconPlus } from '@tabler/icons-react';
+import {
+  IconUsers,
+  IconLock,
+  IconWorld,
+  IconSearch,
+  IconUserCircle,
+  IconPlus
+} from '@tabler/icons-react';
 import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
 import useAuthStore from '@/stores/useAuthStore';
@@ -50,21 +57,21 @@ const ClubsPage = () => {
   // Filter clubs based on selected filter and search query
   const filteredClubs = clubs.filter((club) => {
     const matchesFilter = filter === 'ALL' || club.visibility === filter;
-    const matchesSearch = searchQuery === '' || 
+    const matchesSearch =
+      searchQuery === '' ||
       club.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       club.description?.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesFilter && matchesSearch;
   });
 
-
   const handleCreateClub = () => {
     if (!isHydrated) return; // Wait for hydration
-    
+
     if (!isAuth) {
       toast.error('Please login to create a club');
       return;
     }
-    
+
     router.push('/clubs/create');
   };
 
@@ -72,33 +79,37 @@ const ClubsPage = () => {
     <>
       <MainHeader backHref="/" title="Clubs" withLogo={false} />
 
-      <main className="w-full md:mt-14 flex flex-col pb-20">
-        <div className="w-full bg-white border-b sticky top-24 md:top-14 z-10">
+      <main className="flex w-full flex-col pb-20 md:mt-14">
+        <div className="sticky top-24 z-10 w-full border-b bg-white md:top-14">
           {/* Search Bar */}
-          <div className="w-11/12 mx-auto pt-1 pb-3">
+          <div className="mx-auto w-11/12 max-w-7xl pt-1 pb-4">
             <div className="relative">
-              <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-muted-foreground" />
+              <IconSearch className="text-muted-foreground absolute top-1/2 left-3 size-5 -translate-y-1/2" />
               <Input
                 type="text"
                 placeholder="Cari nama club yang kamu inginkan ..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4"
+                className="pr-4 pl-10"
               />
             </div>
           </div>
 
           {/* Filter Tabs */}
-          <div className="w-11/12 mx-auto pb-4">
-            <Tabs value={filter} onValueChange={(value) => setFilter(value as any)} className="w-full">
+          <div className="mx-auto mt-8 w-11/12 max-w-7xl pb-4">
+            <Tabs
+              value={filter}
+              onValueChange={(value) => setFilter(value as any)}
+              className="w-full"
+            >
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="ALL">Semua Club</TabsTrigger>
                 <TabsTrigger value="PUBLIC">
-                  <IconWorld className="size-4 mr-1" />
+                  <IconWorld className="mr-1 size-4" />
                   Public
                 </TabsTrigger>
                 <TabsTrigger value="PRIVATE">
-                  <IconLock className="size-4 mr-1" />
+                  <IconLock className="mr-1 size-4" />
                   Private
                 </TabsTrigger>
               </TabsList>
@@ -107,11 +118,9 @@ const ClubsPage = () => {
         </div>
 
         {/* Clubs List */}
-        <div className="w-11/12 mx-auto flex-1 mt-28">
+        <div className="mx-auto mt-8 w-11/12 max-w-7xl flex-1">
           {isLoading && (
-            <div className="text-muted-foreground py-20 text-center text-sm">
-              Loading clubs...
-            </div>
+            <div className="text-muted-foreground py-20 text-center text-sm">Loading clubs...</div>
           )}
 
           {isError && !isLoading && (
@@ -135,46 +144,52 @@ const ClubsPage = () => {
           {!isLoading && !isError && filteredClubs.length > 0 && (
             <div className="space-y-3">
               {filteredClubs.map((club) => (
-                <Card key={club.id} className="overflow-hidden hover:shadow-md transition-shadow">
+                <Card key={club.id} className="overflow-hidden transition-shadow hover:shadow-md">
                   <CardContent>
                     <div className="flex items-start gap-4">
                       {/* Club Avatar/Logo */}
-                      <Avatar className="size-16 rounded-lg shrink-0">
+                      <Avatar className="size-16 shrink-0 rounded-lg">
                         <AvatarImage src={club.logo || undefined} alt={club.name} />
-                        <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-semibold">
+                        <AvatarFallback className="bg-primary/10 text-primary rounded-lg font-semibold">
                           {club.name.substring(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
 
                       {/* Club Info */}
                       <div className="flex-1">
-                        <div className="flex items-start gap-2 mb-1">
-                          <h3 className="font-semibold text-base leading-tight flex-1 mb-2">
+                        <div className="mb-1 flex items-start gap-2">
+                          <h3 className="mb-2 flex-1 text-base leading-tight font-semibold">
                             {club.name}
                           </h3>
-                          <Badge 
+                          <Badge
                             variant={club.visibility === 'PUBLIC' ? 'default' : 'secondary'}
-                            className="text-xs shrink-0"
+                            className="shrink-0 text-xs"
                           >
                             {club.visibility === 'PUBLIC' ? (
-                              <><IconWorld className="size-3 mr-1" /> Public</>
+                              <>
+                                <IconWorld className="mr-1 size-3" /> Public
+                              </>
                             ) : (
-                              <><IconLock className="size-3 mr-1" /> Private</>
+                              <>
+                                <IconLock className="mr-1 size-3" /> Private
+                              </>
                             )}
                           </Badge>
                         </div>
-                        
+
                         {club.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
+                          <p className="text-muted-foreground mb-4 line-clamp-2 text-sm">
                             {club.description}
                           </p>
                         )}
-                        
+
                         {/* Leader and Members Info */}
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground mb-4">
+                        <div className="text-muted-foreground mb-4 flex items-center gap-4 text-xs">
                           <div className="flex items-center gap-1">
                             <IconUserCircle className="size-4" />
-                            <span className='capitalize'>{club.leader?.name || 'Unknown Leader'}</span>
+                            <span className="capitalize">
+                              {club.leader?.name || 'Unknown Leader'}
+                            </span>
                           </div>
                           <div className="flex items-center gap-1">
                             <IconUsers className="size-4" />
@@ -205,7 +220,7 @@ const ClubsPage = () => {
       {isHydrated && (
         <Button
           size="lg"
-          className="fixed bottom-10 right-6 rounded-full px-6 shadow-lg z-30 gap-2"
+          className="fixed right-6 bottom-10 z-30 gap-2 rounded-full px-6 shadow-lg"
           onClick={handleCreateClub}
         >
           <IconPlus className="size-4" />

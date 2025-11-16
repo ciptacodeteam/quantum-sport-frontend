@@ -41,6 +41,8 @@ export default function BookingAddOns() {
     bookingItems,
     selectedDate,
     selectedCustomerId,
+    walkInName,
+    walkInPhone,
     selectedCoaches,
     selectedBallboys,
     selectedInventories,
@@ -58,7 +60,7 @@ export default function BookingAddOns() {
   const [activeTab, setActiveTab] = useState<'coaches' | 'inventory'>('coaches');
   const [inventoryQuantities, setInventoryQuantities] = useState<Record<string, number>>({});
 
-  // Fetch customers to get customer name
+  // Fetch customers to get customer or show walk-in
   const { data: customers } = useQuery(adminCustomersQueryOptions);
   const selectedCustomer = customers?.find(c => c.id === selectedCustomerId);
 
@@ -343,16 +345,14 @@ export default function BookingAddOns() {
   const { mutate: confirmCheckout, isPending: isConfirming } = useMutation(
     adminCheckoutMutationOptions({
       onSuccess: () => {
+        // Reset booking store after successful admin checkout
+        useBookingStore.getState().clearAll();
         router.push('/admin/kelola-pemesanan/lapangan');
       }
     })
   );
 
   const handleConfirmBooking = () => {
-    if (!selectedCustomerId) {
-      toast.error('Pilih pelanggan terlebih dahulu.');
-      return;
-    }
     if (bookingItems.length === 0) {
       toast.error('Tidak ada booking lapangan.');
       return;
@@ -365,13 +365,35 @@ export default function BookingAddOns() {
       .filter((i) => i.quantity > 0)
       .map((i) => ({ inventoryId: i.inventoryId, quantity: i.quantity }));
 
-    confirmCheckout({
-      userId: selectedCustomerId,
+    // Validate at least one of the items exists
+    if (
+      courtSlots.length === 0 &&
+      coachSlots.length === 0 &&
+      ballboySlots.length === 0 &&
+      inventories.length === 0
+    ) {
+      toast.error('Minimal satu slot atau inventori harus dipilih.');
+      return;
+    }
+
+    const payload: any = {
       courtSlots,
       coachSlots: coachSlots.length ? coachSlots : undefined,
       ballboySlots: ballboySlots.length ? ballboySlots : undefined,
       inventories: inventories.length ? inventories : undefined
-    });
+    };
+
+    if (selectedCustomerId) {
+      payload.userId = selectedCustomerId;
+    } else if (walkInName && walkInPhone) {
+      payload.name = walkInName;
+      payload.phone = walkInPhone;
+    } else {
+      toast.error('Pilih pelanggan atau lengkapi data walk-in.');
+      return;
+    }
+
+    confirmCheckout(payload);
   };
 
   if (bookingItems.length === 0) {
@@ -401,7 +423,7 @@ export default function BookingAddOns() {
               </div>
             </CardHeader>
             <CardContent className="pt-0">
-              {selectedCustomer && (
+              {selectedCustomer ? (
                 <div className="mb-3 rounded-lg bg-white/50 p-2">
                   <p className="text-xs text-muted-foreground">Customer</p>
                   <p className="text-sm font-semibold">{selectedCustomer.name}</p>
@@ -409,7 +431,15 @@ export default function BookingAddOns() {
                     <p className="text-xs text-muted-foreground">{selectedCustomer.phone}</p>
                   )}
                 </div>
-              )}
+              ) : (walkInName || walkInPhone) ? (
+                <div className="mb-3 rounded-lg bg-white/50 p-2">
+                  <p className="text-xs text-muted-foreground">Walk-in Customer</p>
+                  <p className="text-sm font-semibold">{walkInName || '-'}</p>
+                  {walkInPhone && (
+                    <p className="text-xs text-muted-foreground">{walkInPhone}</p>
+                  )}
+                </div>
+              ) : null}
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium">Total:</span>
                 <div className="text-right">
@@ -888,7 +918,7 @@ export default function BookingAddOns() {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Customer Info */}
-              {selectedCustomer && (
+              {selectedCustomer ? (
                 <>
                   <div className="rounded-lg bg-primary/5 p-3">
                     <p className="text-xs text-muted-foreground mb-1">Customer</p>
@@ -899,7 +929,18 @@ export default function BookingAddOns() {
                   </div>
                   <Separator />
                 </>
-              )}
+              ) : (walkInName || walkInPhone) ? (
+                <>
+                  <div className="rounded-lg bg-primary/5 p-3">
+                    <p className="text-xs text-muted-foreground mb-1">Walk-in Customer</p>
+                    <p className="font-semibold">{walkInName || '-'}</p>
+                    {walkInPhone && (
+                      <p className="text-sm text-muted-foreground">{walkInPhone}</p>
+                    )}
+                  </div>
+                  <Separator />
+                </>
+              ) : null}
 
               {/* Court Bookings */}
               <div className="space-y-2">

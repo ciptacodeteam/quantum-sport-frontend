@@ -4,7 +4,6 @@ import ClubMenuIcon from '@/assets/icons/menus/club.svg';
 import MembershipMenuIcon from '@/assets/icons/menus/membership.svg';
 import TournamentMenuIcon from '@/assets/icons/menus/tournament.svg';
 
-
 const MenuSection = () => {
   const menuList = [
     {
@@ -22,7 +21,7 @@ const MenuSection = () => {
     {
       title: 'Value Pack',
       subtitle: 'Dapatkan paket hemat dengan berbagai keuntungan eksklusif.',
-      url: '/valuepack',
+      url: '/membership',
       icon: <MembershipMenuIcon className="size-9 lg:size-10" />
     },
     {

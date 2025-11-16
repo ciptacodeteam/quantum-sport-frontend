@@ -5,6 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { formatSlotTimeRange, getSlotTimeKey } from '@/lib/time-utils';
 import { cn, getPlaceholderImageUrl } from '@/lib/utils';
@@ -16,6 +25,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminCreateBookingMutationOptions } from '@/mutations/admin/booking';
 import { adminCustomersQueryOptions } from '@/queries/admin/customer';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import dayjs from 'dayjs';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -79,7 +89,10 @@ export default function BookingLapangan() {
     selectedCustomerId,
     setBookingItems,
     setSelectedDate: setStoreDate,
-    setSelectedCustomerId
+    setSelectedCustomerId,
+    setWalkInCustomer,
+    walkInName: storeWalkInName,
+    walkInPhone: storeWalkInPhone
     // getTotalAmount,
     // getTotalWithTax
   } = useBookingStore();
@@ -99,6 +112,12 @@ export default function BookingLapangan() {
     }))
   );
   const [calendarOpen, setCalendarOpen] = useState(false);
+  // Removed "Tambah Baru" (create customer) utility
+  const [isWalkInOpen, setIsWalkInOpen] = useState(false);
+  const [walkInName, setWalkInName] = useState('');
+  const [walkInPhone, setWalkInPhone] = useState('');
+  const [isCustomerOpen, setIsCustomerOpen] = useState(false);
+  const [customerSearch, setCustomerSearch] = useState('');
 
   // Fetch slots for the selected date
   // Include next day's 00:00 slot (which is actually the end of the current day in Jakarta time)
@@ -362,8 +381,8 @@ export default function BookingLapangan() {
 
   // Handle proceed to add-ons
   const handleProceedToAddOns = () => {
-    if (!localCustomerId) {
-      toast.error('Silakan pilih pelanggan terlebih dahulu');
+    if (!localCustomerId && !(storeWalkInName && storeWalkInPhone)) {
+      toast.error('Silakan pilih pelanggan atau isi data walk-in terlebih dahulu');
       return;
     }
 
@@ -799,20 +818,151 @@ export default function BookingLapangan() {
                 {/* Customer Selection */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Pilih Pelanggan</label>
-                  <Select value={localCustomerId} onValueChange={setLocalCustomerId}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Pilih pelanggan..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        {customers?.map((customer) => (
-                          <SelectItem key={customer.id} value={customer.id}>
-                            {customer.name} {customer.phone && `(${customer.phone})`}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <Popover
+                        open={isCustomerOpen}
+                        onOpenChange={(o) => {
+                          setIsCustomerOpen(o);
+                          if (!o) setCustomerSearch('');
+                        }}
+                      >
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={isCustomerOpen}
+                            className="w-full justify-between"
+                          >
+                            {(() => {
+                              const current = customers?.find((c) => c.id === localCustomerId);
+                              return current
+                                ? `${current.name}${current.phone ? ` (${current.phone})` : ''}`
+                                : 'Pilih pelanggan...';
+                            })()}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                          <Command>
+                            <CommandInput
+                              placeholder="Cari pelanggan..."
+                              value={customerSearch}
+                              onValueChange={setCustomerSearch}
+                            />
+                            <CommandList>
+                              <CommandEmpty>Tidak ada hasil.</CommandEmpty>
+                              {(customers || [])
+                                .filter((c) => {
+                                  const q = customerSearch.trim().toLowerCase();
+                                  if (!q) return true;
+                                  return (
+                                    c.name.toLowerCase().includes(q) ||
+                                    (c.phone ? c.phone.toLowerCase().includes(q) : false)
+                                  );
+                                })
+                                .map((customer) => (
+                                  <CommandItem
+                                    key={customer.id}
+                                    value={customer.name}
+                                    onSelect={() => {
+                                      setLocalCustomerId(customer.id);
+                                      setSelectedCustomerId(customer.id);
+                                      // Clear any walk-in selection when a customer is picked
+                                      setWalkInCustomer(null, null);
+                                      setIsCustomerOpen(false);
+                                    }}
+                                  >
+                                    <span className="truncate">
+                                      {customer.name} {customer.phone && `(${customer.phone})`}
+                                    </span>
+                                  </CommandItem>
+                                ))}
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    {/* Walk-in customer capture */}
+                    <Dialog open={isWalkInOpen} onOpenChange={setIsWalkInOpen}>
+                      <DialogTrigger asChild>
+                        <Button type="button" variant="outline" size="sm">
+                          Walk-in
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Tambah Walk-in Customer</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="walkInName">Nama</Label>
+                            <Input
+                              id="walkInName"
+                              placeholder="Nama pelanggan"
+                              value={walkInName}
+                              onChange={(e) => setWalkInName(e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="walkInPhone">Nomor Telepon</Label>
+                            <Input
+                              id="walkInPhone"
+                              placeholder="08xxxxxxxxxx"
+                              value={walkInPhone}
+                              onChange={(e) => setWalkInPhone(e.target.value)}
+                            />
+                          </div>
+                          <div className="flex justify-end gap-2 pt-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => setIsWalkInOpen(false)}
+                            >
+                              Batal
+                            </Button>
+                            <Button
+                              type="button"
+                              disabled={!walkInName.trim() || !walkInPhone.trim()}
+                              onClick={() => {
+                                setWalkInCustomer(walkInName.trim(), walkInPhone.trim());
+                                // Ensure we don't send userId if walk-in is set
+                                setLocalCustomerId('');
+                                setSelectedCustomerId(null);
+                                toast.success('Walk-in customer disimpan');
+                                setIsWalkInOpen(false);
+                              }}
+                            >
+                              Simpan
+                            </Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+
+                  {/* Show current walk-in selection if available */}
+                  {(storeWalkInName || storeWalkInPhone) && !localCustomerId && (
+                    <div className="mt-2 rounded-md border bg-muted px-3 py-2 text-xs">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="font-medium">Walk-in:</span>{' '}
+                          <span>{storeWalkInName || '-'}</span>
+                          {storeWalkInPhone && <span className="ml-1 text-muted-foreground">({storeWalkInPhone})</span>}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setWalkInCustomer(null, null);
+                            toast.info('Walk-in customer dibersihkan');
+                          }}
+                        >
+                          Hapus
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <Separator />
@@ -909,7 +1059,10 @@ export default function BookingLapangan() {
                         className="w-full"
                         size="default"
                         onClick={handleProceedToAddOns}
-                        disabled={!localCustomerId || bookings.length === 0}
+                        disabled={
+                          (!localCustomerId && !(storeWalkInName && storeWalkInPhone)) ||
+                          bookings.length === 0
+                        }
                       >
                         Proceed to Add-Ons
                       </Button>

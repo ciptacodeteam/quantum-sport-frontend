@@ -92,6 +92,8 @@ interface BookingState {
   bookingItems: BookingItem[];
   selectedDate: Date;
   selectedCustomerId: string | null;
+  walkInName?: string | null;
+  walkInPhone?: string | null;
 
   // Add-ons
   selectedCoaches: SelectedCoach[];
@@ -111,6 +113,7 @@ interface BookingState {
   removeBookingItem: (courtId: string, timeSlot: string, date: string) => void;
   setSelectedDate: (date: Date) => void;
   setSelectedCustomerId: (customerId: string | null) => void;
+  setWalkInCustomer: (name: string | null, phone: string | null) => void;
   addCoach: (coach: SelectedCoach) => void;
   removeCoach: (coachId: string, timeSlot: string, slotId?: string) => void;
   addBallboy: (ballboy: SelectedBallboy) => void;
@@ -131,6 +134,8 @@ export const useBookingStore = create<BookingState>()(
       bookingItems: [],
       selectedDate: new Date(),
       selectedCustomerId: null,
+      walkInName: null,
+      walkInPhone: null,
       selectedCoaches: [],
       selectedBallboys: [],
       selectedInventories: [],
@@ -157,6 +162,8 @@ export const useBookingStore = create<BookingState>()(
       setSelectedDate: (date) => set({ selectedDate: date }),
 
       setSelectedCustomerId: (customerId) => set({ selectedCustomerId: customerId }),
+
+      setWalkInCustomer: (name, phone) => set({ walkInName: name, walkInPhone: phone }),
 
       addCoach: (coach) => {
         const state = get();
@@ -285,6 +292,8 @@ export const useBookingStore = create<BookingState>()(
           selectedCoaches: [],
           selectedInventories: [],
           selectedCustomerId: null,
+          walkInName: null,
+          walkInPhone: null,
           courtTotal: 0,
           coachTotal: 0,
           inventoryTotal: 0
@@ -316,6 +325,8 @@ export const useBookingStore = create<BookingState>()(
         bookingItems: state.bookingItems,
         selectedDate: state.selectedDate,
         selectedCustomerId: state.selectedCustomerId,
+        walkInName: state.walkInName,
+        walkInPhone: state.walkInPhone,
         selectedCoaches: state.selectedCoaches,
         selectedInventories: state.selectedInventories,
         courtTotal: state.courtTotal,
