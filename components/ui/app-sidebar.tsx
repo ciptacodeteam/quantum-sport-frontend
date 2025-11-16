@@ -131,6 +131,10 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
         {
           title: 'Kelola Banner',
           url: '/admin/kelola-banner'
+        },
+        {
+          title: 'Kelola Partnership',
+          url: '/admin/kelola-partnership'
         }
       ]
     },

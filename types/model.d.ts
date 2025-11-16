@@ -94,6 +94,16 @@ export type Banner = {
   updatedAt: Date;
 };
 
+export type Partnership = {
+  id: string;
+  name: string;
+  description: string | null;
+  logo: string | null; // absolute URL from GET
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type Court = {
   id: string;
   name: string;
