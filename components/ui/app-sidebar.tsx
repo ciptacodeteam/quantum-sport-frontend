@@ -60,7 +60,7 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
     },
     {
       title: 'Kelola Pemesanan',
-      icon: IconScan,
+      icon: IconShoppingCart,
       items: [
         {
           title: 'Lapangan',
@@ -68,24 +68,24 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
         },
         {
           title: 'Inventori',
-          url: '/admin/kelola-pemesanan/inventori',
+          url: '/admin/kelola-pemesanan/inventori'
         },
         {
           title: 'Coach',
-          url: '/admin/kelola-pemesanan/coach',
+          url: '/admin/kelola-pemesanan/coach'
         }
       ]
     },
-    {
-      title: 'Penjualan',
-      icon: IconShoppingCart,
-      items: [
-        {
-          title: 'Kelola Transaksi',
-          url: '/admin/kelola-transaksi'
-        }
-      ]
-    },
+    // {
+    //   title: 'Penjualan',
+    //   icon: IconShoppingCart,
+    //   items: [
+    //     {
+    //       title: 'Kelola Transaksi',
+    //       url: '/admin/kelola-transaksi'
+    //     }
+    //   ]
+    // },
     {
       title: 'Kustomer',
       icon: IconUsers,
