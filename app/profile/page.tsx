@@ -134,7 +134,7 @@ export default function ProfilePage() {
 
   return (
     <>
-      <MainHeader backHref="/" title="Akun Saya" withLogo={false}/>
+      <MainHeader backHref="/" title="Akun Saya" withLogo={false} />
 
       <main className="pt-24 pb-24">
         <div className="mx-auto w-11/12 space-y-4">
@@ -174,13 +174,13 @@ export default function ProfilePage() {
           {/* Profile Details Card */}
           <Card>
             <CardHeader>
-              <CardTitle className='mb-1'>Informasi Akun</CardTitle>
+              <CardTitle className="mb-1">Informasi Akun</CardTitle>
               <CardDescription>Detail akun dan status akun</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Email */}
               <div className="flex items-center gap-3">
-                <IconMail className="text-white p-2 h-10 w-10 bg-primary size-4 rounded-md" />
+                <IconMail className="bg-primary size-4 h-10 w-10 rounded-md p-2 text-white" />
                 <div className="flex-1">
                   <p className="text-sm font-medium">Email</p>
                   <button
@@ -205,24 +205,35 @@ export default function ProfilePage() {
 
               {/* Phone */}
               <div className="flex items-center gap-3">
-                <IconPhone className="text-white p-2 h-10 w-10 bg-primary size-4 rounded-md" />
+                <IconPhone className="bg-primary size-4 h-10 w-10 rounded-md p-2 text-white" />
+
                 <div className="flex-1">
                   <p className="text-sm font-medium">Nomor WhatsApp</p>
-                  <button
-                    type="button"
-                    className="text-muted-foreground text-sm underline-offset-2 hover:underline"
-                    onClick={() => {
-                      setEditPhone(user.phone || '');
-                      setPhoneModalOpen(true);
-                    }}
-                  >
-                    {user.phone || 'Not provided'}
-                  </button>
-                  {'phoneVerified' in user && (
-                    <p className="text-muted-foreground text-xs">
-                      {(user as any).phoneVerified ? 'Verified' : 'Not verified'}
-                    </p>
-                  )}
+
+                  <div className='flex'>
+                    <button
+                      type="button"
+                      className="text-muted-foreground text-sm underline-offset-2 hover:underline me-2"
+                      onClick={() => {
+                        setEditPhone(user.phone || '');
+                        setPhoneModalOpen(true);
+                      }}
+                    >
+                      {user.phone || 'Not provided'}
+                    </button>
+
+                    {'phoneVerified' in user && (
+                      <p
+                        className={`text-xs ${
+                          (user as any).phoneVerified
+                            ? 'bg-green-600 w-fit rounded-full px-2 py-1 text-white'
+                            : 'w-fit rounded-full bg-red-600 px-2 py-1 text-white'
+                        }`}
+                      >
+                        {(user as any).phoneVerified ? 'Verified' : 'Not verified'}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -230,7 +241,7 @@ export default function ProfilePage() {
 
               {/* Member Since */}
               <div className="flex items-center gap-3">
-                <IconCalendar className="text-white p-2 h-10 w-10 bg-primary size-4 rounded-md" />
+                <IconCalendar className="bg-primary size-4 h-10 w-10 rounded-md p-2 text-white" />
                 <div className="flex-1">
                   <p className="text-sm font-medium">Membership sejak</p>
                   <p className="text-muted-foreground text-sm">
@@ -259,7 +270,7 @@ export default function ProfilePage() {
           {/* Change Password (trigger) */}
           <Card>
             <CardHeader>
-              <CardTitle className='mb-1'>Kata Sandi</CardTitle>
+              <CardTitle className="mb-1">Kata Sandi</CardTitle>
               <CardDescription>Mengelola Kata Sandi</CardDescription>
             </CardHeader>
             <CardContent>

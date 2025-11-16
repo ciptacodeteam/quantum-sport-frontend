@@ -26,9 +26,9 @@ const TournamentCard = ({ tournament, onClick }: { tournament: any; onClick: () 
   const imageUrl = resolveMediaUrl(tournament.image ?? undefined);
 
   return (
-    <Card className="overflow-hidden transition-shadow hover:shadow-md">
+    <Card className="overflow-hidden mt-3">
       {imageUrl && (
-        <div className="relative h-48 w-full">
+        <div className="relative aspect-video w-full">
           <Image
             src={imageUrl}
             alt={tournament.name}
@@ -44,44 +44,47 @@ const TournamentCard = ({ tournament, onClick }: { tournament: any; onClick: () 
           </div>
         </div>
       )}
-      <CardContent className="space-y-4 p-4">
+
+      <CardContent className="space-y-4">
         <div className="flex items-start gap-3">
           <div className="flex-1">
-            <h3 className="text-lg font-semibold">{tournament.name}</h3>
+            <h3 className="text-lg font-semibold mb-2">{tournament.name}</h3>
             {tournament.description && (
               <p className="text-muted-foreground line-clamp-2 text-sm">{tournament.description}</p>
             )}
           </div>
         </div>
-        <div className="text-muted-foreground grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-          <div className="flex items-center gap-2">
-            <IconCalendar className="size-4" />
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="flex items-center gap-3">
+            <IconCalendar className="size-5 text-primary" />
             <span>{formatDateRange(tournament.startDate, tournament.endDate)}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <IconClock className="size-4" />
+          <div className="flex items-center gap-3">
+            <IconClock className="size-5 text-primary" />
             <span>
-              {tournament.startTime} - {tournament.endTime}
+              {tournament.startTime} - {tournament.endTime} WIB
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <IconMapPin className="size-4" />
+          <div className="flex items-center gap-3">
+            <IconMapPin className="size-5 text-primary" />
             <span>{tournament.location}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <IconUsers className="size-4" />
+          <div className="flex items-center gap-3">
+            <IconUsers className="size-5 text-primary" />
             <span>
               Max {tournament.maxTeams} teams • {tournament.teamSize} players / team
             </span>
           </div>
         </div>
-        <div className="flex items-center justify-between">
+
+        <div className="mt-8 flex items-center justify-between">
           <div>
-            <p className="text-muted-foreground text-xs uppercase">Entry Fee</p>
-            <p className="text-base font-semibold">Rp {formatNumber(tournament.entryFee)}</p>
+            <p className="text-muted-foreground text-sm">Entry Fee</p>
+            <p className="text-xl font-semibold text-primary">Rp{formatNumber(tournament.entryFee)}</p>
           </div>
           <Button onClick={onClick} variant="outline">
-            View Details
+            Lihat Detail
           </Button>
         </div>
       </CardContent>
@@ -127,10 +130,11 @@ const TournamentsPage = () => {
   return (
     <>
       <MainHeader backHref="/" title="Turnamen" withLogo={false} />
-      <main className="mx-auto w-11/12 max-w-7xl space-y-4 py-5">
-        <header className="z-10">
-          <div className="mt-20 flex w-full flex-col pb-16">
-            <div className="relative mb-3">
+
+      <main>
+        <div className="sticky z-10 w-full border-b bg-white md:top-14">
+          <div className="mx-auto w-11/12 pt-24 pb-3">
+            <div className="relative">
               <IconSearch className="text-muted-foreground absolute top-1/2 left-3 size-5 -translate-y-1/2" />
               <Input
                 value={search}
@@ -139,6 +143,10 @@ const TournamentsPage = () => {
                 className="pl-10"
               />
             </div>
+          </div>
+
+          {/* Filter Tabs */}
+          <div className="mx-auto w-11/12 pb-4">
             <Tabs value={tab} onValueChange={(value) => setTab(value as 'active' | 'all')}>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="active">Sedang Berjalan</TabsTrigger>
@@ -146,9 +154,9 @@ const TournamentsPage = () => {
               </TabsList>
             </Tabs>
           </div>
-        </header>
+        </div>
 
-        <div className="mx-auto w-11/12 lg:max-w-7xl flex-1 py-6">
+        <div className="mx-auto w-11/12 flex-1 py-2">
           {isLoading && (
             <div className="text-muted-foreground py-20 text-center text-sm">
               Memuat turnamen...
@@ -163,9 +171,7 @@ const TournamentsPage = () => {
 
           {!isLoading && !isError && dataset.length === 0 && (
             <div className="text-muted-foreground py-20 text-center text-sm">
-              {search
-                ? `Tidak ada turnamen dengan kata kunci.`
-                : 'Belum ada turnamen tersedia.'}
+              {search ? `Tidak ada turnamen dengan kata kunci.` : 'Belum ada turnamen tersedia.'}
             </div>
           )}
 

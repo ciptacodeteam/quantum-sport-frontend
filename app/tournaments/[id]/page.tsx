@@ -1,7 +1,6 @@
 'use client';
 
 import MainHeader from '@/components/headers/MainHeader';
-import BottomNavigationWrapper from '@/components/ui/BottomNavigationWrapper';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,7 +30,7 @@ const TournamentDetailPage = () => {
   return (
     <>
       <MainHeader backHref="/tournaments" title="Detail Turnamen" withLogo={false} />
-      <main className="mx-auto mt-28 flex min-h-[calc(100dvh-96px)] w-full max-w-7xl flex-col pb-28 lg:px-4">
+      <main className="mx-auto w-11/12 mt-24 flex w-full max-w-7xl flex-col pb-16 lg:px-4">
         {isLoading && (
           <div className="text-muted-foreground py-20 text-center text-sm">
             Memuat detail turnamen...
@@ -60,7 +59,7 @@ const TournamentDetailPage = () => {
               </div>
             )}
 
-            <div className="mx-auto w-11/12 flex-1 space-y-6 py-6">
+            <div className="mx-auto w-11/12 flex-1 space-y-4 py-6">
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <Badge>{status}</Badge>
@@ -72,38 +71,30 @@ const TournamentDetailPage = () => {
               </div>
 
               <Card>
-                <CardContent className="space-y-3 p-4">
-                  <div className="flex items-center gap-2 text-sm">
-                    <IconCalendar className="text-primary size-4" />
+                <CardContent className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <IconCalendar className="text-primary size-5" />
                     <span>
                       {dayjs(data.startDate).format('DD MMM YYYY')} -{' '}
                       {dayjs(data.endDate).format('DD MMM YYYY')}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <IconClock className="text-primary size-4" />
+                  <div className="flex items-center gap-3">
+                    <IconClock className="text-primary size-5" />
                     <span>
                       {data.startTime} - {data.endTime}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <IconMapPin className="text-primary size-4" />
+                  <div className="flex items-center gap-3">
+                    <IconMapPin className="text-primary size-5" />
                     <span>{data.location}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <IconUsers className="text-primary size-4" />
+                  <div className="flex items-center gap-3">
+                    <IconUsers className="text-primary size-5" />
                     <span>
                       Maks {data.maxTeams} tim • {data.teamSize} pemain / tim
                     </span>
                   </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="space-y-2 px-4">
-                  <p className="text-muted-foreground text-xs uppercase">Biaya Pendaftaran</p>
-                  <p className="text-2xl font-bold">Rp {formatNumber(data.entryFee)}</p>
-                  <Button className="mt-4 w-full lg:w-fit">Daftar Sekarang</Button>
                 </CardContent>
               </Card>
 
@@ -118,17 +109,18 @@ const TournamentDetailPage = () => {
                   </CardContent>
                 </Card>
               )}
+
+              <Card>
+                <CardContent className="space-y-1">
+                  <p className="text-muted-foreground text-xs uppercase">Biaya Pendaftaran</p>
+                  <p className="text-2xl font-bold">Rp {formatNumber(data.entryFee)}</p>
+                  <Button className="mt-2 w-full lg:w-fit">Daftar Sekarang</Button>
+                </CardContent>
+              </Card>
             </div>
           </>
         )}
       </main>
-      <BottomNavigationWrapper>
-        <div className="flex-center py-3">
-          <p className="text-muted-foreground text-center text-xs">
-            Hubungi tim Quantum Sport untuk informasi lebih lanjut.
-          </p>
-        </div>
-      </BottomNavigationWrapper>
     </>
   );
 };

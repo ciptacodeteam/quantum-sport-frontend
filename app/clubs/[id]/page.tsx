@@ -374,12 +374,12 @@ const ClubDetailPage = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Hapus Club</DialogTitle>
-            <DialogDescription>
-              Apakah Anda yakin ingin menghapus <span className="font-semibold">{club.name}</span>?
+            <DialogDescription className='mt-4 text-black'>
+              Apakah Anda yakin ingin menghapus <span className="font-medium">{club.name}</span>?
               <br />
-              <span className="text-destructive font-medium">
+              <p className="text-destructive mx-4 mt-3">
                 Tindakan ini tidak dapat dibatalkan. Semua anggota akan dihapus dan semua data klub akan dihapus secara permanen.
-              </span>
+              </p>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -396,7 +396,7 @@ const ClubDetailPage = () => {
               disabled={isDeleting}
               loading={isDeleting}
             >
-              <IconTrash className="mr-2 size-4" />
+              <IconTrash className="size-4" />
               Hapus Club
             </Button>
           </DialogFooter>

@@ -69,19 +69,20 @@ export default function BannerSection() {
             onMouseLeave={plugin.current.reset}
             setApi={setEmblaApi}
           >
-            <CarouselContent>
+            <CarouselContent className="">
               {banners.map((banner, index) => {
                 const image = banner.image || DEFAULT_IMAGE;
 
                 const content = (
-                  <Image
-                    src={image}
-                    alt={banner.id ? `Banner ${banner.id}` : `Banner ${index + 1}`}
-                    width={1280}
-                    height={720}
-                    unoptimized
-                    className="h-full w-full rounded-md bg-no-repeat object-cover md:rounded-lg"
-                  />
+                  <div className="relative aspect-video w-full overflow-hidden rounded-lg">
+                    <Image
+                      src={image}
+                      alt={banner.id ? `Banner ${banner.id}` : `Banner ${index + 1}`}
+                      fill
+                      unoptimized
+                      className="object-cover"
+                    />
+                  </div>
                 );
 
                 return (
@@ -117,8 +118,8 @@ export default function BannerSection() {
         <div className="hidden lg:col-span-2 lg:block">
           <div className="bg-primary item relative h-full rounded-lg">
             <div className="grid grid-cols-2 items-center gap-4">
-              <div className="relative z-10 flex h-full flex-col justify-center items-center p-6">
-                <h2 className="text-left font-semibold text-white md:text-3xl mt-28">
+              <div className="relative z-10 flex h-full flex-col items-center justify-center p-6">
+                <h2 className="mt-28 text-left font-semibold text-white md:text-3xl">
                   Gabung <br className="lg:hidden" />
                   Membership <br /> Sekarang!
                 </h2>
@@ -134,11 +135,11 @@ export default function BannerSection() {
                   preload
                   width={500}
                   height={500}
-                  className="absolute -bottom-30 right-0 h-auto w-[400px] -translate-y-1/2 object-contain"
+                  className="absolute right-0 -bottom-30 h-auto w-[400px] -translate-y-1/2 object-contain"
                 />
               </div>
             </div>
-            <footer className="w-full px-6 flex">
+            <footer className="flex w-full px-6">
               <Button asChild variant="secondary" className="mt-14 w-full">
                 <Link href="/valuepack">Gabung Sekarang</Link>
               </Button>
