@@ -79,10 +79,10 @@ const ClubsPage = () => {
     <>
       <MainHeader backHref="/" title="Clubs" withLogo={false} />
 
-      <main className="flex w-full flex-col pb-20 md:mt-14">
-        <div className="sticky top-24 z-10 w-full border-b bg-white md:top-14">
+      <main className="mt-24 flex w-full flex-col pb-20">
+        <div className="z-10 w-full border-b bg-white">
           {/* Search Bar */}
-          <div className="mx-auto w-11/12 max-w-7xl pt-1 pb-4">
+          <div className="mx-auto w-11/12 max-w-7xl">
             <div className="relative">
               <IconSearch className="text-muted-foreground absolute top-1/2 left-3 size-5 -translate-y-1/2" />
               <Input
@@ -96,7 +96,7 @@ const ClubsPage = () => {
           </div>
 
           {/* Filter Tabs */}
-          <div className="mx-auto mt-8 w-11/12 max-w-7xl pb-4">
+          <div className="mx-auto mt-4 w-11/12 max-w-7xl pb-4">
             <Tabs
               value={filter}
               onValueChange={(value) => setFilter(value as any)}

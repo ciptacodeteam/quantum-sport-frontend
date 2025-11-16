@@ -40,6 +40,7 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog';
+import MainBottomNavigation from '@/components/footers/MainBottomNavigation';
 
 const MyClubPage = () => {
   const router = useRouter();
@@ -193,7 +194,7 @@ const MyClubPage = () => {
 
   return (
     <>
-      <MainHeader backHref="/" title="Club Saya" withLogo={false} />
+      <MainHeader title="Club Saya" withLogo={false} withBorder />
 
       <main className="pt-24 pb-16">
         <div className="mx-auto w-11/12 flex-1 space-y-4">
@@ -414,6 +415,8 @@ const MyClubPage = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <MainBottomNavigation />
     </>
   );
 };
