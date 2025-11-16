@@ -113,6 +113,7 @@ const CreateTournamentForm = () => {
       description:
         formData.description && formData.description.length >= 3 ? formData.description : null,
       rules: formData.rules && formData.rules.length >= 3 ? formData.rules : null,
+      rulesHtml: formData.rulesHtml && formData.rulesHtml.length >= 3 ? formData.rulesHtml : null,
       image: formData.image,
       startDate: dayjs(formData.startAt).format('YYYY-MM-DD'),
       endDate: dayjs(formData.endAt).format('YYYY-MM-DD'),
