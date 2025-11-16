@@ -161,9 +161,9 @@ const ClubDetailPage = () => {
 
   return (
     <>
-      <MainHeader backHref="/clubs" title="Club Details" withLogo={false} />
+      <MainHeader backHref="/clubs" title="Detail Club" withLogo={false} />
 
-      <main className="pt-28 pb-16">
+      <main className="pt-24 pb-16">
         <div className="mx-auto w-11/12 flex-1 space-y-4">
           {/* Club Header */}
           <Card>
@@ -359,10 +359,9 @@ const ClubDetailPage = () => {
                 <div className="text-muted-foreground py-8 text-center text-sm">
                   <IconUsers className="mx-auto mb-2 size-12 opacity-50" />
                   <p>
-                    This club has {club._count.clubMember}{' '}
-                    {club._count.clubMember === 1 ? 'member' : 'members'}
+                    Club ini punya {club._count.clubMember}{' '} Anggota
                   </p>
-                  <p className="mt-1 text-xs">Member list not available</p>
+                  <p className="mt-1 text-xs">Anggota tidak tersedia</p>
                 </div>
               )}
             </CardContent>
@@ -374,13 +373,12 @@ const ClubDetailPage = () => {
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Club</DialogTitle>
+            <DialogTitle>Hapus Club</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete <span className="font-semibold">{club.name}</span>?
+              Apakah Anda yakin ingin menghapus <span className="font-semibold">{club.name}</span>?
               <br />
               <span className="text-destructive font-medium">
-                This action cannot be undone. All members will be removed and all club data will be
-                permanently deleted.
+                Tindakan ini tidak dapat dibatalkan. Semua anggota akan dihapus dan semua data klub akan dihapus secara permanen.
               </span>
             </DialogDescription>
           </DialogHeader>
@@ -390,7 +388,7 @@ const ClubDetailPage = () => {
               onClick={() => setShowDeleteDialog(false)}
               disabled={isDeleting}
             >
-              Cancel
+              Batal
             </Button>
             <Button
               variant="destructive"
@@ -399,7 +397,7 @@ const ClubDetailPage = () => {
               loading={isDeleting}
             >
               <IconTrash className="mr-2 size-4" />
-              Delete Club
+              Hapus Club
             </Button>
           </DialogFooter>
         </DialogContent>
