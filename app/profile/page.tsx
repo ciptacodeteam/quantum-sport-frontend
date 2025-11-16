@@ -2,24 +2,11 @@
 
 import MainBottomNavigation from '@/components/footers/MainBottomNavigation';
 import MainHeader from '@/components/headers/MainHeader';
+import EmailChangeModal from '@/components/profile/EmailChangeModal';
+import PasswordChangeModal from '@/components/profile/PasswordChangeModal';
+import PhoneChangeModal from '@/components/profile/PhoneChangeModal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { Skeleton } from '@/components/ui/skeleton';
-import { getPlaceholderImageUrl } from '@/lib/utils';
-import { logoutMutationOptions } from '@/mutations/auth';
-import { profileQueryOptions } from '@/queries/profile';
-import { clubMembershipsQueryOptions } from '@/queries/club';
-import { leaveClubMutationOptions } from '@/mutations/club';
-import useAuthStore from '@/stores/useAuthStore';
-import { IconCalendar, IconLogout, IconMail, IconPhone, IconUsers } from '@tabler/icons-react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import dayjs from 'dayjs';
-import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -28,19 +15,29 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog';
-import EmailChangeModal from '@/components/profile/EmailChangeModal';
-import PhoneChangeModal from '@/components/profile/PhoneChangeModal';
-import PasswordChangeModal from '@/components/profile/PasswordChangeModal';
+import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
+import { getPlaceholderImageUrl } from '@/lib/utils';
+import { logoutMutationOptions } from '@/mutations/auth';
+import { leaveClubMutationOptions } from '@/mutations/club';
+import { profileQueryOptions } from '@/queries/profile';
+import useAuthStore from '@/stores/useAuthStore';
+import { IconCalendar, IconLogout, IconMail, IconPhone } from '@tabler/icons-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import dayjs from 'dayjs';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 export default function ProfilePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: user, isPending, isError } = useQuery(profileQueryOptions);
-  const {
-    data: memberClubs,
-    isLoading: isLoadingMemberClubs,
-    error: memberClubsError
-  } = useQuery(clubMembershipsQueryOptions());
+  // const {
+  //   data: memberClubs,
+  //   isLoading: isLoadingMemberClubs,
+  //   error: memberClubsError
+  // } = useQuery(clubMembershipsQueryOptions());
   const logout = useAuthStore((state) => state.logout);
   const [clubToLeave, setClubToLeave] = useState<{ id: string; name: string } | null>(null);
   // Name (not edited via modal in this iteration)
@@ -134,9 +131,9 @@ export default function ProfilePage() {
 
   return (
     <>
-      <MainHeader backHref="/" title="Akun Saya" withLogo={false} />
+      <MainHeader title="Akun Saya" withLogo={false} />
 
-      <main className="pt-24 pb-24">
+      <main className="mt-24 pb-24">
         <div className="mx-auto w-11/12 space-y-4">
           {/* Profile Header Card */}
           <Card>
@@ -206,14 +203,13 @@ export default function ProfilePage() {
               {/* Phone */}
               <div className="flex items-center gap-3">
                 <IconPhone className="bg-primary size-4 h-10 w-10 rounded-md p-2 text-white" />
-
                 <div className="flex-1">
                   <p className="text-sm font-medium">Nomor WhatsApp</p>
 
-                  <div className='flex'>
+                  <div className="flex">
                     <button
                       type="button"
-                      className="text-muted-foreground text-sm underline-offset-2 hover:underline me-2"
+                      className="text-muted-foreground me-2 text-sm underline-offset-2 hover:underline"
                       onClick={() => {
                         setEditPhone(user.phone || '');
                         setPhoneModalOpen(true);
@@ -226,7 +222,7 @@ export default function ProfilePage() {
                       <p
                         className={`text-xs ${
                           (user as any).phoneVerified
-                            ? 'bg-green-600 w-fit rounded-full px-2 py-1 text-white'
+                            ? 'w-fit rounded-full bg-green-600 px-2 py-1 text-white'
                             : 'w-fit rounded-full bg-red-600 px-2 py-1 text-white'
                         }`}
                       >
