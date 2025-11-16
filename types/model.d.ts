@@ -109,6 +109,7 @@ export type Tournament = {
   name: string;
   description: string | null;
   rules: string | null;
+  rulesHtml: string | null;
   image: string | null;
   startDate: Date;
   endDate: Date;

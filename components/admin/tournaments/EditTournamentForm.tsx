@@ -127,6 +127,7 @@ const EditTournamentForm = ({ tournamentId }: Props) => {
       description:
         formData.description && formData.description.length >= 3 ? formData.description : null,
       rules: formData.rules && formData.rules.length >= 3 ? formData.rules : null,
+      rulesHtml: formData.rulesHtml && formData.rulesHtml.length >= 3 ? formData.rulesHtml : null,
       image: formData.image,
       startDate: dayjs(formData.startAt).format('YYYY-MM-DD'),
       endDate: dayjs(formData.endAt).format('YYYY-MM-DD'),
@@ -227,6 +228,7 @@ const EditTournamentForm = ({ tournamentId }: Props) => {
                   editorSerializedState={field.value ? JSON.parse(field.value) : undefined}
                   onSerializedChange={(state) => field.onChange(JSON.stringify(state))}
                   onHtmlGenerated={(html) => {
+                    console.log('🚀 ~ EditTournamentForm ~ html:', html);
                     form.setValue('rulesHtml', html);
                   }}
                 />
