@@ -133,8 +133,8 @@ export default function ProfilePage() {
     <>
       <MainHeader title="Akun Saya" withLogo={false} withBorder />
 
-      <main className="mt-24 pb-24">
-        <div className="mx-auto w-11/12 space-y-4">
+      <main className="mt-24 pb-24 lg:mt-28">
+        <div className="mx-auto w-11/12 max-w-7xl space-y-4">
           {/* Profile Header Card */}
           <Card>
             <CardContent className="pt-6">

@@ -56,7 +56,7 @@ export async function getProfileApiSmart() {
   const { adminApi } = await import('@/lib/adminApi');
 
   // Check if current token is admin token
-  let token = null;
+  let token: string | null = null;
   if (typeof window !== 'undefined') {
     token = localStorage.getItem('token');
     // If not in localStorage, try auth store

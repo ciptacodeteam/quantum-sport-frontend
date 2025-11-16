@@ -3,6 +3,7 @@
 import LogoImage from '@/assets/img/logo.svg';
 import { cn } from '@/lib/utils';
 import { profileQueryOptions } from '@/queries/profile';
+import { notificationsQueryOptions } from '@/queries/notification';
 import { IconBellFilled } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft } from 'lucide-react';
@@ -12,6 +13,7 @@ import { Button } from '../ui/button';
 import { Skeleton } from '../ui/skeleton';
 import { usePathname } from 'next/navigation';
 import useAuthModalStore from '@/stores/useAuthModalStore';
+import { useMemo } from 'react';
 
 type Props = {
   onBack?: () => void;
@@ -39,9 +41,21 @@ const MainHeader = ({
   const isBeranda = pathname === '/';
   const isAuthenticated = !!user?.id;
 
+  // Fetch notifications only if authenticated and notification badge is shown
+  const { data: notifications } = useQuery({
+    ...notificationsQueryOptions(),
+    enabled: isAuthenticated && !!withNotificationBadge
+  });
+
+  // Check if there are unread notifications
+  const hasUnreadNotifications = useMemo(() => {
+    if (!notifications) return false;
+    return notifications.some((notif) => !notif.isRead);
+  }, [notifications]);
+
   const navItems = [
     { title: 'Beranda', path: '/' },
-    { title: 'Pemesanan', path: '/booking' },
+    { title: 'My Club', path: '/my-club' },
     { title: 'Riwayat', path: '/invoice', requiresAuth: true },
     { title: 'Profil', path: '/profile', requiresAuth: true }
   ];
@@ -141,7 +155,9 @@ const MainHeader = ({
                           <Button variant="ghost" size="icon-sm">
                             <div className="relative flex items-center justify-center">
                               <IconBellFilled className="text-primary size-7" />
-                              <div className="bg-badge absolute top-1 right-1 size-2 rounded-full"></div>
+                              {hasUnreadNotifications && (
+                                <div className="bg-badge absolute top-1 right-1 size-2 rounded-full"></div>
+                              )}
                             </div>
                           </Button>
                         </Link>
@@ -149,7 +165,6 @@ const MainHeader = ({
                         <Button variant="ghost" size="icon-sm" onClick={openAuthModal}>
                           <div className="relative flex items-center justify-center">
                             <IconBellFilled className="text-primary size-7" />
-                            <div className="bg-badge absolute top-1 right-1 size-2 rounded-full"></div>
                           </div>
                         </Button>
                       )}

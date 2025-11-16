@@ -458,3 +458,26 @@ export type CourtCostSchedule = {
 
   court?: Court;
 };
+
+export type NotificationAudience = 'USER' | 'ADMIN' | 'ALL';
+export type NotificationType =
+  | 'ADMIN_PUSH'
+  | 'BOOKING_REMINDER'
+  | 'PAYMENT_SUCCESS'
+  | 'PAYMENT_FAILED'
+  | 'SYSTEM';
+
+export type Notification = {
+  id: string;
+  userId: string | null;
+  audience: NotificationAudience;
+  type: NotificationType;
+  title: string;
+  message: string | null;
+  data: any | null;
+  isRead: boolean;
+  readAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  user?: UserProfile;
+};
