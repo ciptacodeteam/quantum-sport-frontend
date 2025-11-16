@@ -72,21 +72,24 @@ const CoachCostingTable = ({ coachId }: Props) => {
       return [];
     }
 
-    return data.map((entry) => ({
-      ...entry,
-      slots: [...(entry.slots || [])].sort((a, b) => {
-        // Handle local time format "YYYY-MM-DD HH:mm:ss"
-        const aTime =
-          typeof a.startAt === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(a.startAt)
-            ? dayjs(a.startAt)
-            : dayjs(a.startAt);
-        const bTime =
-          typeof b.startAt === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(b.startAt)
-            ? dayjs(b.startAt)
-            : dayjs(b.startAt);
-        return aTime.diff(bTime);
-      })
-    }));
+    // Sort by date ascending with robust parsing, then sort slots by start time ascending
+    const getTimeValue = (v: unknown) => {
+      const d = dayjs(v as string);
+      return d.isValid() ? d.valueOf() : Number.POSITIVE_INFINITY;
+    };
+
+    return [...data]
+      .sort((a, b) => getTimeValue(a.date) - getTimeValue(b.date))
+      .map((entry) => ({
+        ...entry,
+        slots: [...(entry.slots || [])].sort((a, b) => {
+          const aT = dayjs(a.startAt);
+          const bT = dayjs(b.startAt);
+          const aV = aT.isValid() ? aT.valueOf() : Number.POSITIVE_INFINITY;
+          const bV = bT.isValid() ? bT.valueOf() : Number.POSITIVE_INFINITY;
+          return aV - bV;
+        })
+      }));
   }, [data]);
 
   if (!isStaffPending && staff && String(staff?.role) !== String(Role.COACH)) {

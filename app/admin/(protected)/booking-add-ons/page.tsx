@@ -32,6 +32,8 @@ import {
   IconMapPin
 } from '@tabler/icons-react';
 import Image from 'next/image';
+import { useMutation } from '@tanstack/react-query';
+import { adminCheckoutMutationOptions } from '@/mutations/admin/checkout';
 
 export default function BookingAddOns() {
   const router = useRouter();
@@ -40,6 +42,7 @@ export default function BookingAddOns() {
     selectedDate,
     selectedCustomerId,
     selectedCoaches,
+    selectedBallboys,
     selectedInventories,
     addCoach,
     removeCoach,
@@ -335,6 +338,40 @@ export default function BookingAddOns() {
   const getCurrentQuantity = (inventoryId: string, timeSlot: string, date: string): number => {
     const selected = selectedInventories.find(i => i.inventoryId === inventoryId && i.timeSlot === timeSlot && i.date === date);
     return selected ? selected.quantity : 0;
+  };
+
+  const { mutate: confirmCheckout, isPending: isConfirming } = useMutation(
+    adminCheckoutMutationOptions({
+      onSuccess: () => {
+        router.push('/admin/kelola-pemesanan/lapangan');
+      }
+    })
+  );
+
+  const handleConfirmBooking = () => {
+    if (!selectedCustomerId) {
+      toast.error('Pilih pelanggan terlebih dahulu.');
+      return;
+    }
+    if (bookingItems.length === 0) {
+      toast.error('Tidak ada booking lapangan.');
+      return;
+    }
+
+    const courtSlots = bookingItems.map((b) => b.slotId).filter(Boolean);
+    const coachSlots = selectedCoaches.map((c) => c.slotId).filter(Boolean) as string[];
+    const ballboySlots = selectedBallboys.map((b) => b.slotId).filter(Boolean) as string[];
+    const inventories = selectedInventories
+      .filter((i) => i.quantity > 0)
+      .map((i) => ({ inventoryId: i.inventoryId, quantity: i.quantity }));
+
+    confirmCheckout({
+      userId: selectedCustomerId,
+      courtSlots,
+      coachSlots: coachSlots.length ? coachSlots : undefined,
+      ballboySlots: ballboySlots.length ? ballboySlots : undefined,
+      inventories: inventories.length ? inventories : undefined
+    });
   };
 
   if (bookingItems.length === 0) {
@@ -954,12 +991,10 @@ export default function BookingAddOns() {
                 <Button 
                   className="w-full" 
                   size="default"
-                  onClick={() => {
-                    toast.success('Booking confirmed! Redirecting to payment...');
-                    // Here you would typically redirect to payment page
-                  }}
+                  onClick={handleConfirmBooking}
+                  disabled={isConfirming}
                 >
-                  Confirm Booking
+                  {isConfirming ? 'Processing...' : 'Confirm Booking'}
                 </Button>
                 <Button 
                   variant="outline" 
