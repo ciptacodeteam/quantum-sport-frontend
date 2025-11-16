@@ -1,7 +1,6 @@
 'use client';
 
 import MainHeader from '@/components/headers/MainHeader';
-import BottomNavigationWrapper from '@/components/ui/BottomNavigationWrapper';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -128,10 +127,10 @@ const TournamentsPage = () => {
   return (
     <>
       <MainHeader backHref="/" title="Turnamen" withLogo={false} />
-      <main className="mt-28 flex min-h-[calc(100dvh-96px)] w-full flex-col pb-20">
+      <main className="mx-auto w-11/12 max-w-7xl space-y-4 py-5">
         <header className="z-10">
-          <div className="mx-auto w-11/12 max-w-7xl space-y-4 py-5">
-            <div className="relative">
+          <div className="mt-20 flex w-full flex-col pb-16">
+            <div className="relative mb-3">
               <IconSearch className="text-muted-foreground absolute top-1/2 left-3 size-5 -translate-y-1/2" />
               <Input
                 value={search}
@@ -149,7 +148,7 @@ const TournamentsPage = () => {
           </div>
         </header>
 
-        <div className="mx-auto w-11/12 max-w-7xl flex-1 py-6">
+        <div className="mx-auto w-11/12 lg:max-w-7xl flex-1 py-6">
           {isLoading && (
             <div className="text-muted-foreground py-20 text-center text-sm">
               Memuat turnamen...
@@ -165,7 +164,7 @@ const TournamentsPage = () => {
           {!isLoading && !isError && dataset.length === 0 && (
             <div className="text-muted-foreground py-20 text-center text-sm">
               {search
-                ? `Tidak ada turnamen dengan kata kunci "${search}".`
+                ? `Tidak ada turnamen dengan kata kunci.`
                 : 'Belum ada turnamen tersedia.'}
             </div>
           )}
@@ -183,13 +182,6 @@ const TournamentsPage = () => {
           )}
         </div>
       </main>
-      <BottomNavigationWrapper>
-        <div className="flex-center py-3">
-          <p className="text-muted-foreground text-center text-xs">
-            Dapatkan informasi terbaru turnamen yang diselenggarakan Quantum Sport.
-          </p>
-        </div>
-      </BottomNavigationWrapper>
     </>
   );
 };
