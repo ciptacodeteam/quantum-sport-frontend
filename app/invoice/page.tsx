@@ -159,7 +159,7 @@ export default function InvoiceHistoryPage() {
 
   return (
     <div>
-      <MainHeader title="Riwayat Pemesanan" withLogo={false} />
+      <MainHeader title="Riwayat Pemesanan" withLogo={false} withBorder backHref="/" />
 
       <div className="mx-auto mt-24 pb-32">
         <div className="mx-auto w-11/12 max-w-7xl">

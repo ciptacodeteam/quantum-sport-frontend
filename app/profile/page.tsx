@@ -131,7 +131,7 @@ export default function ProfilePage() {
 
   return (
     <>
-      <MainHeader title="Akun Saya" withLogo={false} />
+      <MainHeader title="Akun Saya" withLogo={false} backHref="/" withBorder/>
 
       <main className="mt-24 pb-24">
         <div className="mx-auto w-11/12 space-y-4">

@@ -186,7 +186,7 @@ export default function PaymentPage() {
 
   return (
     <div className="bg-muted/20 min-h-screen pb-28">
-      <MainHeader title="Detail Pembayaran" backHref="/checkout" withCartBadge withLogo={false} />
+      <MainHeader title="Detail Pembayaran" backHref="/checkout" withCartBadge withLogo={false} withBorder/>
 
       <main className="mx-auto flex w-11/12 max-w-4xl flex-col gap-6 pt-24 pb-28">
         {/* Court Bookings */}

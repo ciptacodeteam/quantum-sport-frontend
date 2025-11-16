@@ -32,7 +32,7 @@ const mockNotifications = [
 export default function NotificationPage() {
   return (
     <>
-      <MainHeader backHref="/" title={'Notifikasi'} withLogo={false} />
+      <MainHeader backHref="/" title={'Notifikasi'} withLogo={false} withBorder/>
 
       <main>
         <section className="mx-auto mt-28 w-11/12">

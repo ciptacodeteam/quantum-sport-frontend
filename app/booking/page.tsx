@@ -537,7 +537,7 @@ export default function BookingPage() {
   // ...existing code...
   return (
     <>
-      <MainHeader backHref="/" title="Booking Court" withLogo={false} withCartBadge />
+      <MainHeader backHref="/" title="Booking Court" withLogo={false} withCartBadge withBorder />
 
       <main className="mt-24 flex h-[calc(100dvh-180px)] w-full flex-col md:mt-24 lg:h-[calc(100dvh-100px)]">
         <div className="sticky top-24 z-30 border-b bg-white pb-2 md:top-14">
