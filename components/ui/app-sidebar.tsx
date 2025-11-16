@@ -17,6 +17,8 @@ import {
 } from '@/components/ui/sidebar';
 import { SUPPORT_CIPTACODE_PHONE_NUMBER } from '@/lib/constants';
 import { getWhatsappMessageUrl } from '@/lib/utils';
+import { adminProfileQueryOptions } from '@/queries/admin/auth';
+import type { AppSidebarItem } from '@/types';
 import {
   IconAd2,
   IconCategory,
@@ -29,11 +31,9 @@ import {
   IconUsers,
   IconUsersGroup
 } from '@tabler/icons-react';
+import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import type { AppSidebarItem } from '@/types';
-import { useQuery } from '@tanstack/react-query';
-import { adminProfileQueryOptions } from '@/queries/admin/auth';
 
 const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
   navMain: [
@@ -106,12 +106,12 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
       icon: IconUser,
       items: []
     },
-    {
-      title: 'Kelola Kelas',
-      url: '/admin/kelola-kelas',
-      icon: IconSchool,
-      items: []
-    },
+    // {
+    //   title: 'Kelola Kelas',
+    //   url: '/admin/kelola-kelas',
+    //   icon: IconSchool,
+    //   items: []
+    // },
     {
       title: 'Kelola Turnamen',
       url: '/admin/kelola-turnamen',
