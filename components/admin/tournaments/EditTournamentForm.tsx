@@ -1,5 +1,6 @@
 'use client';
 
+import { Editor } from '@/components/blocks/editor-00/editor';
 import { Button } from '@/components/ui/button';
 import DatetimePicker from '@/components/ui/datetime-picker';
 import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from '@/components/ui/field';
@@ -14,7 +15,9 @@ import type { Tournament } from '@/types/model';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { Controller, type SubmitHandler, useForm } from 'react-hook-form';
 import z from 'zod';
 
@@ -26,6 +29,7 @@ const formSchema = z
       .max(100, { message: 'Nama turnamen maksimal 100 karakter.' }),
     description: z.string().max(500).optional().or(z.literal('')),
     rules: z.string().max(2000).optional().or(z.literal('')),
+    rulesHtml: z.string().max(4000).optional().or(z.literal('')),
     image: z.instanceof(File).optional(),
     startAt: z.date({ message: 'Tanggal dan waktu mulai wajib diisi.' }),
     endAt: z.date({ message: 'Tanggal dan waktu selesai wajib diisi.' }),
@@ -94,6 +98,10 @@ const EditTournamentForm = ({ tournamentId }: Props) => {
     }
   });
 
+  const [imagePreview, setImagePreview] = useState<string | ArrayBuffer | null>(
+    data?.image || null
+  );
+
   const { mutate, isPending } = useMutation(
     adminUpdateTournamentMutationOptions({
       onSuccess: () => {
@@ -154,29 +162,75 @@ const EditTournamentForm = ({ tournamentId }: Props) => {
       <FieldSet>
         <FieldGroup>
           <Field>
-            <FieldLabel htmlFor="name">Nama Turnamen</FieldLabel>
+            <FieldLabel htmlFor="image">Image</FieldLabel>
+            {imagePreview && (
+              <Image
+                src={String(imagePreview)}
+                unoptimized
+                alt="Preview"
+                width={400}
+                height={300}
+                className="border-muted max-w-xs rounded-md border object-cover"
+              />
+            )}
+            <Controller
+              control={form.control}
+              name="image"
+              render={({ field }) => (
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    field.onChange(file);
+
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setImagePreview(reader.result);
+                      };
+                      reader.readAsDataURL(file);
+                    } else {
+                      setImagePreview(null);
+                    }
+                  }}
+                />
+              )}
+            />
+            <FieldError>{form.formState.errors.image?.message}</FieldError>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="name">Tournament Name</FieldLabel>
             <Input
               id="name"
               {...form.register('name')}
-              placeholder="e.g. Turnamen Badminton 2025"
+              placeholder="e.g. Badminton Championship 2025"
             />
             <FieldError>{form.formState.errors.name?.message}</FieldError>
           </Field>
           <Field>
-            <FieldLabel htmlFor="description">Deskripsi</FieldLabel>
+            <FieldLabel htmlFor="description">Description (Optional)</FieldLabel>
             <Textarea
               id="description"
               {...form.register('description')}
-              placeholder="e.g. Turnamen badminton tahunan dengan berbagai kategori"
+              placeholder="e.g. Annual badminton tournament with multiple categories"
             />
             <FieldError>{form.formState.errors.description?.message}</FieldError>
           </Field>
           <Field>
-            <FieldLabel htmlFor="rules">Aturan</FieldLabel>
-            <Textarea
-              id="rules"
-              {...form.register('rules')}
-              placeholder="e.g. Setiap tim terdiri dari 2 pemain, sistem gugur"
+            <FieldLabel htmlFor="rules">Rules (Optional)</FieldLabel>
+            <Controller
+              control={form.control}
+              name="rules"
+              render={({ field }) => (
+                <Editor
+                  editorSerializedState={field.value ? JSON.parse(field.value) : undefined}
+                  onSerializedChange={(state) => field.onChange(JSON.stringify(state))}
+                  onHtmlGenerated={(html) => {
+                    form.setValue('rulesHtml', html);
+                  }}
+                />
+              )}
             />
             <FieldError>{form.formState.errors.rules?.message}</FieldError>
           </Field>
@@ -211,37 +265,17 @@ const EditTournamentForm = ({ tournamentId }: Props) => {
             </Field>
           </div>
           <Field>
-            <FieldLabel htmlFor="location">Lokasi</FieldLabel>
+            <FieldLabel htmlFor="location">Location</FieldLabel>
             <Input
               id="location"
               {...form.register('location')}
-              placeholder="e.g. Lapangan Badminton Sentral"
+              placeholder="e.g. Central Badminton Court"
             />
             <FieldError>{form.formState.errors.location?.message}</FieldError>
           </Field>
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
             <Field>
-              <FieldLabel htmlFor="teamSize">Jumlah Pemain per Tim</FieldLabel>
-              <Controller
-                control={form.control}
-                name="teamSize"
-                render={({ field }) => (
-                  <NumberInput
-                    id="teamSize"
-                    thousandSeparator="."
-                    decimalSeparator=","
-                    withControl={false}
-                    min={1}
-                    placeholder="e.g. 2"
-                    value={field.value}
-                    onValueChange={(value) => field.onChange(value || 1)}
-                  />
-                )}
-              />
-              <FieldError>{form.formState.errors.teamSize?.message}</FieldError>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="maxTeams">Maksimal Tim</FieldLabel>
+              <FieldLabel htmlFor="maxTeams">Max Teams</FieldLabel>
               <Controller
                 control={form.control}
                 name="maxTeams"
@@ -260,9 +294,29 @@ const EditTournamentForm = ({ tournamentId }: Props) => {
               />
               <FieldError>{form.formState.errors.maxTeams?.message}</FieldError>
             </Field>
+            <Field>
+              <FieldLabel htmlFor="teamSize">Team Size (Players per Team)</FieldLabel>
+              <Controller
+                control={form.control}
+                name="teamSize"
+                render={({ field }) => (
+                  <NumberInput
+                    id="teamSize"
+                    thousandSeparator="."
+                    decimalSeparator=","
+                    withControl={false}
+                    min={1}
+                    placeholder="e.g. 2"
+                    value={field.value}
+                    onValueChange={(value) => field.onChange(value || 1)}
+                  />
+                )}
+              />
+              <FieldError>{form.formState.errors.teamSize?.message}</FieldError>
+            </Field>
           </div>
           <Field>
-            <FieldLabel htmlFor="entryFee">Biaya Pendaftaran</FieldLabel>
+            <FieldLabel htmlFor="entryFee">Entry Fee</FieldLabel>
             <Controller
               control={form.control}
               name="entryFee"
@@ -282,19 +336,7 @@ const EditTournamentForm = ({ tournamentId }: Props) => {
             />
             <FieldError>{form.formState.errors.entryFee?.message}</FieldError>
           </Field>
-          <Field>
-            <FieldLabel htmlFor="image">Tournament Image</FieldLabel>
-            <Input
-              id="image"
-              type="file"
-              accept="image/*"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) form.setValue('image', file);
-              }}
-            />
-            <FieldError>{form.formState.errors.image?.message}</FieldError>
-          </Field>
+
           <Field>
             <FieldLabel htmlFor="isActive">Status</FieldLabel>
             <Controller
