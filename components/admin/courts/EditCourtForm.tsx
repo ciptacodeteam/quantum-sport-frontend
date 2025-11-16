@@ -94,6 +94,7 @@ const EditCourtForm = ({ courtId }: Props) => {
                 src={String(imagePreview)}
                 unoptimized
                 alt="Preview"
+                loading="lazy"
                 width={400}
                 height={300}
                 className="border-muted max-h-44 max-w-xs rounded-md border object-cover"

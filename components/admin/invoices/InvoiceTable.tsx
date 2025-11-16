@@ -92,10 +92,11 @@ const InvoiceTable = () => {
     <DataTable
       loading={isPending}
       data={
-        (data || []).map((item) => ({
-          ...item,
-          issuedAt: item.issuedAt.toISOString()
-        })) as InvoiceListItem[]
+        []
+        // (data || []).map((item) => ({
+        //   ...item,
+        //   issuedAt: item.issuedAt?.toISOString()
+        // })) as InvoiceListItem[]
       }
       columns={columns}
       enableRowSelection={false}

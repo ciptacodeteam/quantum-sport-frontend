@@ -8,7 +8,7 @@ import MenuSection from '@/components/section/home/MenuSection';
 export default function HomePage() {
   return (
     <>
-      <MainHeader withNotificationBadge withBorder/>
+      <MainHeader withNotificationBadge withBorder />
       <main className="mt-28 lg:mt-28">
         <BannerSection />
         <MenuSection />
