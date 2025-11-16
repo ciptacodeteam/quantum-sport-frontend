@@ -45,7 +45,7 @@ export default function MembershipDetailsCard({
           <span className="text-amber-900">Detail Membership</span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6 pt-6">
+      <CardContent className="space-y-6 pt-2">
         {/* Membership Name & Status */}
         <div className="flex items-start justify-between">
           <div className="flex-1">

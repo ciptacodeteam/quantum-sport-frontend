@@ -3,11 +3,11 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { resolveMediaUrl } from '@/lib/utils';
-import dayjs from 'dayjs';
+import { CheckCircle, Copy, CreditCard } from 'lucide-react';
 import Image from 'next/image';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { CheckCircle, Copy, CreditCard } from 'lucide-react';
+import PaymentCountdown from './PaymentCountdown';
 
 export default function PaymentActionCard({
   invoice,
@@ -39,6 +39,8 @@ export default function PaymentActionCard({
   const vaDisplayName = vaAction?.display_name || paymentMethod?.name;
   const vaExpiry = vaAction?.expiry || paymentMeta?.channel_properties?.expires_at;
 
+  const paymentExpiry = vaExpiry ? vaExpiry : invoice ? invoice.dueDate : null;
+
   const isEWallet = ['OVO', 'DANA', 'LINKAJA', 'SHOPEEPAY'].includes(channelCode);
   const paymentUrl =
     paymentMeta?.actions?.find(
@@ -57,7 +59,7 @@ export default function PaymentActionCard({
       <CardContent className="pt-6">
         <div className="text-center">
           {paymentMethod && (
-            <div className="mb-3 flex items-center justify-center gap-2">
+            <div className="mb-3 flex flex-col items-center justify-center gap-2">
               {paymentMethod.logo && (
                 <Image
                   src={resolveMediaUrl(paymentMethod.logo) || ''}
@@ -69,17 +71,14 @@ export default function PaymentActionCard({
                 />
               )}
               <span className="text-sm font-medium">{paymentMethod.name}</span>
-              {paymentMethod.channel && (
-                <span className="text-muted-foreground text-xs">({paymentMethod.channel})</span>
-              )}
             </div>
           )}
 
-          <h3 className="mb-2 text-xl font-bold">Menunggu Pembayaran</h3>
-          <p className="mb-6 text-gray-600">
-            Silakan lakukan pembayaran sebelum{' '}
-            {dayjs(invoice.dueDate).format('DD MMMM YYYY, HH:mm')}
-          </p>
+          <h3 className="text-sm text-gray-700">Total Pembayaran</h3>
+
+          <h4 className="mb-6 text-2xl font-bold">
+            {currencyFormatter.format(invoice.total).replace(/\s/g, '')}
+          </h4>
 
           {isQRIS && qrString && (
             <div className="space-y-4">
@@ -97,15 +96,15 @@ export default function PaymentActionCard({
                   </div>
                 </div>
               </div>
-              <p className="text-sm text-gray-600">
+
+              {paymentExpiry && (
+                <div className="mb-5 flex justify-center">
+                  <PaymentCountdown dueDate={paymentExpiry} status={invoice.status} />
+                </div>
+              )}
+              <p className="text-xs text-gray-600">
                 Scan QR code di atas menggunakan aplikasi pembayaran QRIS Anda
               </p>
-              {paymentMeta?.channel_properties?.expires_at && (
-                <p className="text-xs text-orange-600">
-                  QR Code berlaku hingga:{' '}
-                  {dayjs(paymentMeta.channel_properties.expires_at).format('DD MMM YYYY, HH:mm')}
-                </p>
-              )}
             </div>
           )}
 
@@ -125,11 +124,6 @@ export default function PaymentActionCard({
                 </div>
                 <div className="mt-2 text-xs text-gray-500">
                   Bank: <span className="font-semibold">{vaDisplayName}</span>
-                  {vaExpiry && (
-                    <span className="ml-4 text-orange-600">
-                      Berlaku hingga: {dayjs(vaExpiry).format('DD MMM YYYY, HH:mm')}
-                    </span>
-                  )}
                 </div>
               </div>
               <div className="space-y-2 text-left text-sm text-gray-700">

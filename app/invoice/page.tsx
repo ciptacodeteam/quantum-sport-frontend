@@ -161,8 +161,8 @@ export default function InvoiceHistoryPage() {
     <div>
       <MainHeader title="Riwayat Pemesanan" withLogo={false} backHref="/" />
 
-      <div className="mx-auto pt-24 pb-24 lg:mt-28">
-        <div className="mx-auto w-11/12">
+      <div className="mx-auto mt-28 pb-32">
+        <div className="mx-auto w-11/12 max-w-7xl">
           {/* Filters */}
           {invoices.length > 0 && (
             <div className="mb-4 flex items-center gap-2">

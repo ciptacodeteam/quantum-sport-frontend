@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 export default function SuccessMessageCard() {
   return (
     <Card className="border-green-200 bg-green-50">
-      <CardContent className="pt-6">
+      <CardContent className="py-6">
         <div className="text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
             <svg
