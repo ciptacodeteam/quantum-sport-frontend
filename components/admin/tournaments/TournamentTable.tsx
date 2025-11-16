@@ -4,14 +4,8 @@ import { deleteTournamentApi } from '@/api/admin/tournament';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
-import {
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  ManagedDialog
-} from '@/components/ui/dialog';
 import { useConfirmMutation } from '@/hooks/useConfirmDialog';
+import { STATUS_BADGE_VARIANT, STATUS_MAP } from '@/lib/constants';
 import { formatNumber } from '@/lib/utils';
 import { adminTournamentsQueryOptions } from '@/queries/admin/tournament';
 import type { Tournament } from '@/types/model';
@@ -19,11 +13,12 @@ import { IconPencil, IconPlus, IconTrash } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
+import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
-import CreateTournamentForm from './CreateTournamentForm';
-import EditTournamentForm from './EditTournamentForm';
 
 const TournamentTable = () => {
+  const router = useRouter();
+
   const { confirmAndMutate } = useConfirmMutation(
     {
       mutationFn: deleteTournamentApi
@@ -52,32 +47,17 @@ const TournamentTable = () => {
         cell: (info) => info.getValue()
       }),
       colHelper.accessor('startDate', {
-        header: 'Tanggal Mulai',
-        cell: (info) => dayjs(info.getValue()).format('DD/MM/YYYY')
-      }),
-      colHelper.accessor('endDate', {
-        header: 'Tanggal Selesai',
-        cell: (info) => dayjs(info.getValue()).format('DD/MM/YYYY')
-      }),
-      colHelper.accessor('startTime', {
-        header: 'Waktu Mulai',
-        cell: (info) => info.getValue()
-      }),
-      colHelper.accessor('endTime', {
-        header: 'Waktu Selesai',
-        cell: (info) => info.getValue()
+        header: 'Tanggal',
+        cell: (info) =>
+          `${dayjs(info.getValue()).format('DD/MM/YYYY HH:mm')} - ${dayjs(info.row.original.endDate).format('DD/MM/YYYY HH:mm')}`
       }),
       colHelper.accessor('location', {
         header: 'Lokasi',
-        cell: (info) => info.getValue()
+        cell: (info) => <p className="line-clamp-1">{info.getValue()}</p>
       }),
       colHelper.accessor('maxTeams', {
         header: 'Maks Tim',
         cell: (info) => info.getValue()
-      }),
-      colHelper.accessor('teamSize', {
-        header: 'Ukuran Tim',
-        cell: (info) => `${info.getValue()} pemain`
       }),
       colHelper.accessor('entryFee', {
         header: 'Biaya Pendaftaran',
@@ -86,8 +66,8 @@ const TournamentTable = () => {
       colHelper.accessor('isActive', {
         header: 'Status',
         cell: (info) => (
-          <Badge variant={info.getValue() ? 'success' : 'secondary'}>
-            {info.getValue() ? 'Active' : 'Inactive'}
+          <Badge variant={STATUS_BADGE_VARIANT[Number(info.getValue())]}>
+            {STATUS_MAP[Number(info.getValue())]}
           </Badge>
         )
       }),
@@ -100,19 +80,13 @@ const TournamentTable = () => {
         header: 'Aksi',
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
-            <ManagedDialog id={`edit-tournament-${row.original.id}`}>
-              <DialogTrigger asChild>
-                <Button size="icon" variant="lightInfo">
-                  <IconPencil />
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader className="mb-4">
-                  <DialogTitle>Edit Turnamen</DialogTitle>
-                </DialogHeader>
-                <EditTournamentForm data={row.original} />
-              </DialogContent>
-            </ManagedDialog>
+            <Button
+              size="icon"
+              variant="lightInfo"
+              onClick={() => router.push(`/admin/kelola-turnamen/${row.original.id}`)}
+            >
+              <IconPencil />
+            </Button>
             <Button
               size="icon"
               variant="lightDanger"
@@ -124,7 +98,7 @@ const TournamentTable = () => {
         )
       })
     ],
-    [colHelper, confirmAndMutate]
+    [colHelper, confirmAndMutate, router]
   );
 
   const { data, isPending } = useQuery(adminTournamentsQueryOptions());
@@ -136,23 +110,12 @@ const TournamentTable = () => {
       columns={columns}
       enableRowSelection={false}
       addButton={
-        <ManagedDialog id="create-tournament">
-          <DialogTrigger asChild>
-            <Button>
-              <IconPlus />
-              Tambah
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader className="mb-4">
-              <DialogTitle>Tambah Turnamen Baru</DialogTitle>
-            </DialogHeader>
-            <CreateTournamentForm />
-          </DialogContent>
-        </ManagedDialog>
+        <Button onClick={() => router.push('/admin/kelola-turnamen/tambah')}>
+          <IconPlus />
+          Tambah
+        </Button>
       }
     />
   );
 };
 export default TournamentTable;
-
