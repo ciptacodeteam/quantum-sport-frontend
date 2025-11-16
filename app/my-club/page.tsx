@@ -197,7 +197,7 @@ const MyClubPage = () => {
       <MainHeader title="Club Saya" withLogo={false} withBorder />
 
       <main className="pt-24 pb-16">
-        <div className="mx-auto w-11/12 flex-1 space-y-4">
+        <div className="mx-auto w-11/12 max-w-7xl flex-1 space-y-4 lg:mt-6">
           {/* Club Header */}
           <Card>
             <CardContent>

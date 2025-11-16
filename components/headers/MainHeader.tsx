@@ -55,7 +55,7 @@ const MainHeader = ({
 
   const navItems = [
     { title: 'Beranda', path: '/' },
-    { title: 'Pemesanan', path: '/booking' },
+    { title: 'My Club', path: '/my-club' },
     { title: 'Riwayat', path: '/invoice', requiresAuth: true },
     { title: 'Profil', path: '/profile', requiresAuth: true }
   ];
