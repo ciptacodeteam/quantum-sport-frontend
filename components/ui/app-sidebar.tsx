@@ -32,6 +32,8 @@ import {
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { AppSidebarItem } from '@/types';
+import { useQuery } from '@tanstack/react-query';
+import { adminProfileQueryOptions } from '@/queries/admin/auth';
 
 const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
   navMain: [
@@ -170,6 +172,22 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   const isDashboardActive = pathname === '/admin/dashboard' || pathname === '/admin/dashboard/';
+  const { data: me } = useQuery(adminProfileQueryOptions);
+  const isCoach = me?.role?.toUpperCase?.() === 'COACH';
+
+  const navMainItems = React.useMemo<AppSidebarItem[]>(() => {
+    if (isCoach) {
+      return [
+        {
+          title: 'Jadwal Saya',
+          url: '/admin/kelola-karyawan',
+          icon: IconSchool,
+          items: []
+        }
+      ];
+    }
+    return data.navMain;
+  }, [isCoach]);
 
   return (
     <Sidebar variant="inset" {...props}>
@@ -191,7 +209,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={navMainItems} />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>

@@ -1,4 +1,4 @@
-import { getAdminCoachAvailabilityApi } from '@/api/admin/coach';
+import { getAdminCoachAvailabilityApi, getMyCoachScheduleApi } from '@/api/admin/coach';
 import type { CoachAvailability } from '@/types/model';
 import { queryOptions } from '@tanstack/react-query';
 
@@ -13,5 +13,12 @@ export const adminCoachAvailabilityQueryOptions = (startAt?: string, endAt?: str
       return getAdminCoachAvailabilityApi({ startAt, endAt });
     },
     select: (res) => res.data as CoachAvailability[]
+  });
+
+export const adminCoachMyScheduleQueryOptions = (startAt?: string, endAt?: string) =>
+  queryOptions({
+    queryKey: ['admin', 'coach', 'me', 'schedule', startAt ?? 'auto', endAt ?? 'auto'],
+    queryFn: () => getMyCoachScheduleApi({ startAt, endAt }),
+    select: (res) => res.data as any[]
   });
 

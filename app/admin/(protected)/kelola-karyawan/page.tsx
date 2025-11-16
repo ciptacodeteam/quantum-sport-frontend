@@ -1,4 +1,9 @@
+'use client';
+
 import StaffTable from '@/components/admin/staffs/StaffTable';
+import CoachSelfView from '@/components/admin/staffs/CoachSelfView';
+import { useQuery } from '@tanstack/react-query';
+import { adminProfileQueryOptions } from '@/queries/admin/auth';
 import {
   Section,
   SectionContent,
@@ -8,16 +13,21 @@ import {
 } from '@/components/ui/section';
 
 const ManageStaffPage = () => {
+  const { data: me } = useQuery(adminProfileQueryOptions);
+  const isCoach = me?.role?.toUpperCase?.() === 'COACH';
+
   return (
     <main>
       <Section>
         <SectionHeader>
-          <SectionTitle title="Kelola Karyawan" />
-          <SectionDescription description="Atur dan pantau karyawan Anda di sini." />
+          <SectionTitle title={isCoach ? 'Profil & Jadwal Saya' : 'Kelola Karyawan'} />
+          <SectionDescription
+            description={
+              isCoach ? 'Lihat profil dan jadwal mengajar Anda.' : 'Atur dan pantau karyawan Anda di sini.'
+            }
+          />
         </SectionHeader>
-        <SectionContent>
-          <StaffTable />
-        </SectionContent>
+        <SectionContent>{isCoach ? <CoachSelfView /> : <StaffTable />}</SectionContent>
       </Section>
     </main>
   );
