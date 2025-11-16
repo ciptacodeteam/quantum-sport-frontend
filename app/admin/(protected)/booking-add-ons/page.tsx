@@ -31,7 +31,6 @@ import {
   IconCalendar,
   IconMapPin
 } from '@tabler/icons-react';
-import Image from 'next/image';
 import { useMutation } from '@tanstack/react-query';
 import { adminCheckoutMutationOptions } from '@/mutations/admin/checkout';
 
@@ -50,6 +49,7 @@ export default function BookingAddOns() {
     removeCoach,
     addInventory,
     removeInventory,
+    removeBookingItem,
     updateInventoryQuantity,
     getTotalAmount,
     courtTotal,
@@ -83,6 +83,21 @@ export default function BookingAddOns() {
   const { data: coachAvailabilityData } = useQuery(
     adminCoachAvailabilityQueryOptions(dateRange?.startAt, dateRange?.endAt)
   );
+
+  // Helpers to avoid timezone shifts; use UTC time parts from ISO strings
+  const getISODate = (isoString: string) => (isoString ? isoString.slice(0, 10) : '');
+  const getHHmmUTC = (isoString: string) => {
+    try {
+      const d = new Date(isoString);
+      const hh = String(d.getUTCHours()).padStart(2, '0');
+      const mm = String(d.getUTCMinutes()).padStart(2, '0');
+      return `${hh}:${mm}`;
+    } catch {
+      return '';
+    }
+  };
+  const getTimeRangeUTC = (startAt: string, endAt: string) =>
+    `${getHHmmUTC(startAt)} - ${getHHmmUTC(endAt)}`;
 
   // Fetch inventory availability
   const { data: inventoryAvailabilityData } = useQuery(
@@ -138,9 +153,9 @@ export default function BookingAddOns() {
     >();
 
     coachAvailabilityData.forEach((slot) => {
-      const dateKey = dayjs(slot.startAt).format('YYYY-MM-DD');
-      const dateLabel = dayjs(slot.startAt).format('dddd, DD MMM YYYY');
-      const timeRange = `${dayjs(slot.startAt).format('HH:mm')} - ${dayjs(slot.endAt).format('HH:mm')}`;
+      const dateKey = getISODate(slot.startAt);
+      const dateLabel = getISODate(slot.startAt); // keep simple; avoids TZ confusion
+      const timeRange = getTimeRangeUTC(slot.startAt, slot.endAt);
 
       if (!map.has(dateKey)) {
         map.set(dateKey, {
@@ -161,15 +176,15 @@ export default function BookingAddOns() {
     });
 
     return Array.from(map.entries())
-      .sort(([a], [b]) => dayjs(a).valueOf() - dayjs(b).valueOf())
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
       .map(([date, info]) => ({
         date,
         dateLabel: info.dateLabel,
-        slots: info.slots.sort(
-          (slotA, slotB) =>
-            dayjs(`${date} ${slotA.timeRange.split(' - ')[0]}`).valueOf() -
-            dayjs(`${date} ${slotB.timeRange.split(' - ')[0]}`).valueOf()
-        )
+        slots: info.slots.sort((slotA, slotB) => {
+          const [a] = slotA.timeRange.split(' - ');
+          const [b] = slotB.timeRange.split(' - ');
+          return a.localeCompare(b);
+        })
       }));
   }, [coachAvailabilityData]);
 
@@ -231,11 +246,11 @@ export default function BookingAddOns() {
   // Helper functions for coach availability - now uses real API data
   const isCoachAvailable = (coachId: string, timeSlot: string, date: string): boolean => {
     if (!coachAvailabilityData) return false;
-    const slotDate = dayjs(date).format('YYYY-MM-DD');
+    const wantedDate = date; // already YYYY-MM-DD in store
     return coachAvailabilityData.some((slot) => {
-      const slotStartTime = dayjs(slot.startAt).format('HH:mm');
-      const slotDateStr = dayjs(slot.startAt).format('YYYY-MM-DD');
-      return slot.coach.id === coachId && slotDateStr === slotDate && slotStartTime === timeSlot;
+      const slotDateStr = getISODate(slot.startAt);
+      const slotTimeRange = getTimeRangeUTC(slot.startAt, slot.endAt);
+      return slot.coach.id === coachId && slotDateStr === wantedDate && slotTimeRange === timeSlot;
     });
   };
 
@@ -524,89 +539,47 @@ export default function BookingAddOns() {
 
           {/* Coaches Tab */}
           {activeTab === 'coaches' && (
-            <div className="space-y-6">
-              <div className="text-center py-3 bg-slate-50 rounded-lg border">
-                <p className="text-sm text-muted-foreground mb-2">
-                  Select coaches for your booked dates and times
-                </p>
-                <div className="text-xs text-muted-foreground mb-2">
-                  {Object.entries(bookingsByDate).map(([date, info]) => (
-                    <div key={date} className="inline-block mx-2">
-                      <strong>{info.shortDate}:</strong> {info.timeSlots.join(', ')}
-                    </div>
-                  ))}
+            <div className="space-y-4">
+              <div className="rounded-md border bg-white p-3 sm:p-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-sm font-medium">Select coaches</p>
+                  <Badge variant="outline" className="text-[10px] sm:text-xs">
+                    {(() => {
+                      // Count only slots that match booked dates and time ranges
+                      if (!coachAvailabilityData || bookingItems.length === 0) return 0;
+
+                      const bookedPairs = new Set<string>();
+                      Object.entries(bookingsByDate).forEach(([date, info]) => {
+                        info.timeSlots.forEach((t) => bookedPairs.add(`${date}|${t}`));
+                      });
+
+                      const count = coachAvailabilityData.reduce((acc, slot) => {
+                        const d = getISODate(slot.startAt);
+                        const range = getTimeRangeUTC(slot.startAt, slot.endAt);
+                        return bookedPairs.has(`${d}|${range}`) ? acc + 1 : acc;
+                      }, 0);
+
+                      return count;
+                    })()} slots
+                  </Badge>
                 </div>
-                <div className="flex justify-center gap-4 text-xs">
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span>Available</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 bg-amber-500 rounded-full"></div>
-                    <span>Partially Available</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                    <span>Unavailable</span>
-                  </div>
+                <div className="text-[11px] text-muted-foreground">
+                  {Object.entries(bookingsByDate).map(([date, info]) => (
+                    <span key={date} className="mr-3 inline-block">
+                      <span className="font-medium">{info.shortDate}:</span> {info.timeSlots.join(', ')}
+                    </span>
+                  ))}
                 </div>
               </div>
 
-              {coachAvailabilityByDate.length > 0 && (
-                <div className="rounded-lg border bg-white p-4 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-semibold">Coach Availability (Admin)</p>
-                      <p className="text-xs text-muted-foreground">
-                        Showing real-time availability from admin API
-                      </p>
-                    </div>
-                    <Badge variant="outline" className="text-xs">
-                      {coachAvailabilityData?.length ?? 0} slots
-                    </Badge>
-                  </div>
-
-                  <div className="mt-4 max-h-64 overflow-y-auto pr-1 space-y-4">
-                    {coachAvailabilityByDate.map(({ date, dateLabel, slots }) => (
-                      <div key={date} className="space-y-2">
-                        <p className="text-xs font-medium text-muted-foreground">{dateLabel}</p>
-                        <div className="flex flex-wrap gap-2">
-                          {slots.map((slot) => (
-                            <div
-                              key={slot.id}
-                              className="border border-primary/20 bg-primary/5 rounded-lg px-3 py-2 text-left text-xs min-w-[200px] space-y-1"
-                            >
-                              <div>
-                                <p className="font-semibold text-primary">{slot.timeRange}</p>
-                                <p className="text-muted-foreground">{slot.coachName}</p>
-                              </div>
-                              <p className="text-primary/80 font-medium">
-                                Rp {slot.price.toLocaleString('id-ID')}
-                              </p>
-                              <Button
-                                size="sm"
-                                variant="secondary"
-                                className="w-full text-[11px] py-1"
-                                onClick={() => handleAddCoachFromAvailability(slot)}
-                              >
-                                Tambahkan ke booking
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Group timeslots per coach */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
                 {coaches
-                  .filter(coach => isCoachAvailableForBookings(coach))
+                  .filter((coach) => isCoachAvailableForBookings(coach))
                   .map((coach) => {
-                    // Get all available times for this coach across all booked dates
+                    // Collect available times per booked date for this coach
                     const availableSlots = Object.entries(bookingsByDate).reduce((acc, [date, dateInfo]) => {
-                      const availableForDate = dateInfo.timeSlots.filter(timeSlot => 
+                      const availableForDate = dateInfo.timeSlots.filter((timeSlot) =>
                         isCoachAvailable(coach.id, timeSlot, date)
                       );
                       if (availableForDate.length > 0) {
@@ -617,104 +590,75 @@ export default function BookingAddOns() {
                         });
                       }
                       return acc;
-                    }, [] as Array<{date: string; shortDate: string; timeSlots: string[]}>);
+                    }, [] as Array<{ date: string; shortDate: string; timeSlots: string[] }>);
 
-                    // Get coach details from first slot
                     const firstSlot = coach.slots[0];
                     if (!firstSlot) return null;
 
                     return (
-                  <Card key={coach.id} className="overflow-hidden">
-                    <div className="relative h-48">
-                      <Image
-                        src={firstSlot.coach.image || '/assets/img/placeholder-coach.jpg'}
-                        alt={firstSlot.coach.name}
-                        fill
-                        className="object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = '/assets/img/placeholder-coach.jpg';
-                        }}
-                      />
-                      <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full px-2 py-1 flex items-center gap-1">
-                        <IconStar className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                        <span className="text-xs font-medium">5.0</span>
-                      </div>
-                    </div>
-                    
-                    <CardContent className="p-4">
-                      <div className="space-y-3">
-                        <div>
-                          <h3 className="font-semibold text-lg">{firstSlot.coach.name}</h3>
-                          <p className="text-sm text-muted-foreground">{firstSlot.coach.role || 'Professional Coach'}</p>
-                        </div>
-
-                        <div className="flex flex-wrap gap-1">
-                          <Badge variant="outline" className="text-xs">
-                            Certified Coach
-                          </Badge>
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-primary">
-                            Rp {firstSlot.price.toLocaleString('id-ID')}/hr
-                          </span>
-                        </div>
-
-                        <Separator />
-
-                        <div className="space-y-3">
-                          <p className="text-sm font-medium">Available Times:</p>
-                          
-                          {/* Show only available times */}
-                          {availableSlots.map(({ date, shortDate, timeSlots }) => (
-                            <div key={date} className="space-y-2">
-                              <div className="text-xs font-medium text-muted-foreground">
-                                {shortDate}
+                      <Card key={coach.id} className="border-muted">
+                        <CardContent className="p-3 sm:p-4">
+                          <div className="space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <h3 className="truncate text-sm font-semibold">{firstSlot.coach.name}</h3>
+                                <p className="text-[11px] text-muted-foreground">{firstSlot.coach.role || 'Coach'}</p>
                               </div>
-                              <div className="grid grid-cols-3 gap-2 ml-2">
-                                {timeSlots.map((timeSlot) => {
-                                  const isSelected = selectedCoaches.some(c => 
-                                    c.coachId === coach.id && c.timeSlot === timeSlot && c.date === date
-                                  );
-
-                                  // Find the matching slot to get the price
-                                  const matchingSlot = coach.slots.find(slot => {
-                                    const slotTime = dayjs(slot.startAt).format('HH:mm');
-                                    const slotDate = dayjs(slot.startAt).format('YYYY-MM-DD');
-                                    return slotTime === timeSlot && slotDate === date;
-                                  });
-
-                                  return (
-                                    <Button
-                                      key={`${date}-${timeSlot}`}
-                                      variant={isSelected ? "default" : "outline"}
-                                      size="sm"
-                                      className={cn(
-                                        "text-xs w-full",
-                                        isSelected && "bg-primary text-primary-foreground shadow-md",
-                                        !isSelected && "hover:bg-primary/10 hover:border-primary"
-                                      )}
-                                      onClick={() => handleCoachSelect(
-                                        coach.id, 
-                                        firstSlot.coach.name, 
-                                        timeSlot, 
-                                        date,
-                                        matchingSlot?.price || firstSlot.price
-                                      )}
-                                    >
-                                      {timeSlot}
-                                      {isSelected && <IconCheck className="h-3 w-3 ml-1" />}
-                                    </Button>
-                                  );
-                                })}
-                              </div>
+                              <span className="shrink-0 text-sm font-bold text-primary">
+                                Rp {firstSlot.price.toLocaleString('id-ID')}/hr
+                              </span>
                             </div>
-                          ))}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+
+                            <div className="space-y-2">
+                              {availableSlots.map(({ date, shortDate, timeSlots }) => (
+                                <div key={date} className="space-y-1">
+                                  <div className="text-[11px] font-medium text-muted-foreground">
+                                    {shortDate}
+                                  </div>
+                                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                                    {timeSlots.map((timeSlot) => {
+                                      const isSelected = selectedCoaches.some(
+                                        (c) => c.coachId === coach.id && c.timeSlot === timeSlot && c.date === date
+                                      );
+
+                                      // Find the matching slot for price
+                                      const matchingSlot = coach.slots.find((slot) => {
+                                        const slotTime = getHHmmUTC(slot.startAt);
+                                        const slotDate = getISODate(slot.startAt);
+                                        return slotTime === timeSlot && slotDate === date;
+                                      });
+
+                                      return (
+                                        <Button
+                                          key={`${date}-${timeSlot}`}
+                                          variant={isSelected ? 'default' : 'outline'}
+                                          size="sm"
+                                          className={cn(
+                                            'h-7 text-[11px] w-full truncate whitespace-nowrap px-2',
+                                            isSelected && 'bg-primary text-primary-foreground shadow-sm',
+                                            !isSelected && 'hover:bg-primary/10 hover:border-primary'
+                                          )}
+                                          onClick={() =>
+                                            handleCoachSelect(
+                                              coach.id,
+                                              firstSlot.coach.name,
+                                              timeSlot,
+                                              date,
+                                              matchingSlot?.price || firstSlot.price
+                                            )
+                                          }
+                                        >
+                                          {timeSlot.split(' - ')[0]}
+                                        </Button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
                     );
                   })}
               </div>
@@ -951,14 +895,24 @@ export default function BookingAddOns() {
                       {dateInfo.shortDate}
                     </div>
                     {dateInfo.items.map((booking, index) => (
-                      <div key={`${date}-${index}`} className="flex items-center justify-between p-2 bg-muted rounded text-xs ml-2">
-                        <div>
-                          <p className="font-medium">{booking.courtName}</p>
-                          <p className="text-muted-foreground">{booking.timeSlot} - {booking.endTime}</p>
+                      <div key={`${date}-${index}`} className="flex items-center justify-between gap-2 p-2 bg-muted rounded text-xs ml-2">
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">{booking.courtName}</p>
+                          <p className="text-muted-foreground">{booking.timeSlot}{booking.endTime ? ` - ${booking.endTime}` : ''}</p>
                         </div>
-                        <span className="font-semibold text-primary">
-                          Rp {booking.price.toLocaleString('id-ID')}
-                        </span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="font-semibold text-primary">
+                            Rp {booking.price.toLocaleString('id-ID')}
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0 text-red-500 hover:bg-red-50 hover:text-red-700"
+                            onClick={() => removeBookingItem(booking.courtId, booking.timeSlot, booking.date)}
+                          >
+                            <IconX className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -970,14 +924,24 @@ export default function BookingAddOns() {
                 <div className="space-y-2">
                   <h4 className="font-medium text-sm text-muted-foreground">Selected Coaches</h4>
                   {selectedCoaches.map((coach, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 bg-blue-50 rounded text-xs">
-                      <div>
-                        <p className="font-medium">{coach.coachName}</p>
+                    <div key={index} className="flex items-center justify-between gap-2 p-2 bg-blue-50 rounded text-xs">
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{coach.coachName}</p>
                         <p className="text-muted-foreground">{dayjs(coach.date).format('DD MMM')} • {coach.timeSlot}</p>
                       </div>
-                      <span className="font-semibold text-primary">
-                        Rp {coach.price.toLocaleString('id-ID')}
-                      </span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="font-semibold text-primary">
+                          Rp {coach.price.toLocaleString('id-ID')}
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0 text-red-500 hover:bg-red-50 hover:text-red-700"
+                          onClick={() => removeCoach(coach.coachId, coach.timeSlot, coach.slotId)}
+                        >
+                          <IconX className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -988,16 +952,26 @@ export default function BookingAddOns() {
                 <div className="space-y-2">
                   <h4 className="font-medium text-sm text-muted-foreground">Selected Equipment</h4>
                   {selectedInventories.map((inventory, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 bg-green-50 rounded text-xs">
-                      <div>
-                        <p className="font-medium">{inventory.inventoryName}</p>
+                    <div key={index} className="flex items-center justify-between gap-2 p-2 bg-green-50 rounded text-xs">
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{inventory.inventoryName}</p>
                         <p className="text-muted-foreground">
                           {dayjs(inventory.date).format('DD MMM')} • {inventory.timeSlot} • Qty: {inventory.quantity}
                         </p>
                       </div>
-                      <span className="font-semibold text-primary">
-                        Rp {inventory.price.toLocaleString('id-ID')}
-                      </span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="font-semibold text-primary">
+                          Rp {inventory.price.toLocaleString('id-ID')}
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0 text-red-500 hover:bg-red-50 hover:text-red-700"
+                          onClick={() => removeInventory(inventory.inventoryId, inventory.timeSlot)}
+                        >
+                          <IconX className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
