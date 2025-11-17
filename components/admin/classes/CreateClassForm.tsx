@@ -18,7 +18,7 @@ import { NumberInput } from '@/components/ui/number-input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Gender, GENDER_OPTIONS } from '@/lib/constants';
+import { GENDER, GENDER_OPTIONS } from '@/lib/constants';
 import { adminCreateClassMutationOptions } from '@/mutations/admin/class';
 import { adminClassesQueryOptions } from '@/queries/admin/class';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -45,7 +45,7 @@ const formSchema = z.object({
   sessions: z.number().min(1),
   capacity: z.number().min(1),
   maxBookingPax: z.number().min(1),
-  gender: z.enum(Gender),
+  gender: z.nativeEnum(GENDER),
   ageMin: z.number().min(0),
   isActive: z.boolean().default(true)
 });
@@ -70,7 +70,7 @@ const CreateClassForm = () => {
       sessions: 1,
       capacity: 1,
       maxBookingPax: 1,
-      gender: Gender.ALL,
+      gender: GENDER.ALL,
       ageMin: 0,
       isActive: true
     }

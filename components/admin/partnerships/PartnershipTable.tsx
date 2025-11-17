@@ -25,11 +25,17 @@ import CreatePartnershipForm from './CreatePartnershipForm';
 import EditPartnershipForm from './EditPartnershipForm';
 
 const PartnershipTable = () => {
-  const { confirmAndMutate } = useConfirmMutation({
-    mutationFn: deletePartnershipApi,
-    successMessage: 'Data berhasil dihapus!',
-    invalidateQueryKey: adminPartnershipsQueryOptions.queryKey
-  });
+  const { confirmAndMutate } = useConfirmMutation(
+    {
+      mutationFn: deletePartnershipApi
+    },
+    {
+      toastMessages: {
+        success: 'Data berhasil dihapus!'
+      },
+      invalidate: adminPartnershipsQueryOptions.queryKey
+    }
+  );
 
   const colHelper = createColumnHelper<Partnership>();
 

@@ -154,3 +154,41 @@ export const hoursInDay = Array.from({ length: 24 }, (_, i) => ({
   label: i === 0 ? '00:00' : i < 10 ? `0${i}:00` : `${i}:00`,
   value: i
 }));
+
+export const dummyNotification = [
+  {
+    id: '1',
+    read: false,
+    title: 'Pembayaran Berhasil',
+    content: 'Pembayaran untuk booking lapangan telah berhasil diproses.',
+    time: '2 jam yang lalu'
+  },
+  {
+    id: '2',
+    read: false,
+    title: 'Booking Dikonfirmasi',
+    content: 'Booking Anda untuk tanggal 15 Januari 2024 telah dikonfirmasi.',
+    time: '5 jam yang lalu'
+  },
+  {
+    id: '3',
+    read: true,
+    title: 'Reminder: Booking Besok',
+    content: 'Jangan lupa, Anda memiliki booking besok pukul 14:00.',
+    time: '1 hari yang lalu'
+  },
+  {
+    id: '4',
+    read: true,
+    title: 'Pembayaran Berhasil',
+    content: 'Pembayaran untuk kelas telah berhasil diproses.',
+    time: '2 hari yang lalu'
+  },
+  {
+    id: '5',
+    read: false,
+    title: 'Kelas Baru Tersedia',
+    content: 'Kelas baru "Padel untuk Pemula" sekarang tersedia untuk didaftar.',
+    time: '3 hari yang lalu'
+  }
+];

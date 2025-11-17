@@ -1,4 +1,4 @@
-import { dummyNotification } from '@/components/ui/app-notification-dropdown';
+import { dummyNotification } from '@/lib/constants';
 import AppSectionHeader from '@/components/ui/app-section-header';
 import { cn } from '@/lib/utils';
 import {
