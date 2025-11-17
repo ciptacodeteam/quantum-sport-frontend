@@ -5,8 +5,9 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { IconBell, IconLock, IconUser } from '@tabler/icons-react';
 import AppSectionHeader from '@/components/ui/app-section-header';
-import { dummyNotification } from '@/components/ui/app-notification-dropdown';
 import { Badge } from '@/components/ui/badge';
+import { useQuery } from '@tanstack/react-query';
+import { adminNotificationsQueryOptions } from '@/queries/admin/notification';
 
 type Props = {
   children: React.ReactNode;
@@ -32,6 +33,13 @@ const settingMenus = [
 
 const SettingLayout = ({ children }: Props) => {
   const pathname = usePathname();
+
+  // Fetch admin notifications to show unread count
+  const { data: notifications = [] } = useQuery(
+    adminNotificationsQueryOptions({ limit: 100, page: 1 })
+  );
+
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   const isActive = (path: string) => pathname === path;
 
@@ -62,12 +70,12 @@ const SettingLayout = ({ children }: Props) => {
                       {icon}
                       <span className="inline">{label}</span>
                     </div>
-                    {label === 'Notifikasi' && dummyNotification.some((n) => !n.read) && (
+                    {label === 'Notifikasi' && unreadCount > 0 && (
                       <Badge
                         className="h-5 min-w-5 rounded-full px-1 font-mono font-semibold tabular-nums"
                         variant="secondary"
                       >
-                        {dummyNotification.filter((n) => !n.read).length}
+                        {unreadCount}
                       </Badge>
                     )}
                   </Link>

@@ -612,3 +612,32 @@ export type OngoingBookingItem = {
   inventories: OngoingBookingInventory[];
   invoice: OngoingBookingInvoice | null;
 };
+
+export type AdminNotification = {
+  id: string;
+  userId: string | null;
+  audience: NotificationAudience;
+  type: NotificationType;
+  title: string;
+  message: string | null;
+  data: any | null;
+  isRead: boolean;
+  readAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  user?: {
+    id: string;
+    name: string;
+    email: string | null;
+    phone: string;
+  };
+};
+
+export type CreateNotificationPayload = {
+  userId?: string;
+  audience?: NotificationAudience;
+  title: string;
+  message?: string;
+  type?: NotificationType;
+  data?: Record<string, any>;
+};

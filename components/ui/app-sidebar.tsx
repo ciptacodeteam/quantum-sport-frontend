@@ -129,6 +129,10 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
       icon: IconAd2,
       items: [
         {
+          title: 'Push Notification',
+          url: '/admin/kelola-notifikasi'
+        },
+        {
           title: 'Kelola Banner',
           url: '/admin/kelola-banner'
         },
