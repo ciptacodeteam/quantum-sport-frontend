@@ -532,3 +532,75 @@ export type DailyTransactionsResponse = {
 };
 
 export type TransactionPeriod = '7days' | '30days' | '3months';
+
+export type OngoingBookingCourt = {
+  courtId: string;
+  courtName: string;
+  courtImage: string;
+  slotStart: string;
+  slotEnd: string;
+  price: number;
+};
+
+export type OngoingBookingCoach = {
+  coachId?: string;
+  coachName: string;
+  coachImage?: string;
+  slotStart: string;
+  slotEnd: string;
+  price?: number;
+};
+
+export type OngoingBookingBallboy = {
+  ballboyId?: string;
+  ballboyName: string;
+  slotStart: string;
+  slotEnd: string;
+};
+
+export type OngoingBookingInventory = {
+  inventoryId: string;
+  inventoryName: string;
+  quantity: number;
+  price: number;
+};
+
+export type OngoingBookingSchedule = {
+  startAt: string;
+  endAt: string;
+  status: 'upcoming' | 'ongoing' | 'completed';
+  minutesFromNow: number;
+  timeDisplay: string;
+};
+
+export type OngoingBookingInvoice = {
+  id: string;
+  number: string;
+  status: string;
+  total: number;
+  paidAt: string | null;
+};
+
+export type OngoingBookingItem = {
+  booking: {
+    id: string;
+    userId: string;
+    status: string;
+    totalPrice: number;
+    processingFee: number;
+    createdAt: string;
+  };
+  user: {
+    id: string;
+    name: string;
+    email: string | null;
+    phone: string;
+    image: string | null;
+  };
+  schedule: OngoingBookingSchedule;
+  courts: OngoingBookingCourt[];
+  coaches: OngoingBookingCoach[];
+  ballboys: OngoingBookingBallboy[];
+  inventories: OngoingBookingInventory[];
+  invoice: OngoingBookingInvoice | null;
+};

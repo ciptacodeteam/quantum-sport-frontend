@@ -2,7 +2,7 @@
 
 import TransactionChart from '@/components/admin/charts/TransactionChart';
 import StatsCard from '@/components/admin/dashboard/StatsCard';
-import RecentTransactionSection from '@/components/admin/sections/RecentTransactionSection';
+import OnGoingBookingScheduleSection from '@/components/admin/sections/OnGoingBookingScheduleSection';
 import AppSectionHeader from '@/components/ui/app-section-header';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -51,7 +51,7 @@ export default function DashboardPage() {
       <section className="mt-6">
         <TransactionChart />
       </section>
-      <RecentTransactionSection />
+      <OnGoingBookingScheduleSection />
     </main>
   );
 }

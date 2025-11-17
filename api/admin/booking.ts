@@ -14,6 +14,11 @@ export async function getBookingApi(id: string) {
   return data;
 }
 
+export async function getOngoingBookingsApi() {
+  const { data } = await adminApi.get('/bookings/ongoing-schedule');
+  return data;
+}
+
 export async function createBookingApi(payload: CreateMutationPayload) {
   const { data } = await adminApi.post('/bookings', payload.data);
   return data;
@@ -28,4 +33,3 @@ export async function cancelBookingApi(id: string, reason?: string) {
   const { data } = await adminApi.put(`/bookings/${id}/cancel`, { reason });
   return data;
 }
-
