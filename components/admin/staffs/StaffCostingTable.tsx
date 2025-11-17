@@ -14,7 +14,7 @@ import dayjs from 'dayjs';
 import { useMemo } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import CreateStaffCostForm from './CreateStaffCostForm';
-import { Role } from '@/lib/constants';
+import { ROLE } from '@/lib/constants';
 import {
   Section,
   SectionContent,
@@ -67,7 +67,7 @@ const StaffCostingTable = ({ staffId }: Props) => {
   const { data, isPending } = useQuery(adminCoachCostingQueryOptions(staffId));
 
   // Only show costing table for non-admin staff (coach, ballboy, etc.)
-  if (!isStaffPending && staff && String(staff?.role) === String(Role.ADMIN)) {
+  if (!isStaffPending && staff && String(staff?.role) === String(ROLE.ADMIN)) {
     return null;
   }
 

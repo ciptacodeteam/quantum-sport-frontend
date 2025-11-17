@@ -492,3 +492,43 @@ export type Notification = {
   updatedAt: string;
   user?: UserProfile;
 };
+
+export type StatItem = {
+  value: number;
+  formatted?: string;
+  percentageChange: number;
+  trend: 'up' | 'down';
+  description: string;
+  subtitle: string;
+};
+
+export type DashboardStats = {
+  totalRevenue: StatItem;
+  totalSales: StatItem;
+  newCustomers: StatItem;
+  activeAccounts: StatItem;
+};
+
+export type DailyTransactionData = {
+  date: string;
+  total: number;
+};
+
+export type DailyTransactionSummary = {
+  period: string;
+  totalTransactions: number;
+  totalRevenue: number;
+  averagePerDay: number;
+  daysWithTransactions: number;
+  dateRange: {
+    start: string;
+    end: string;
+  };
+};
+
+export type DailyTransactionsResponse = {
+  chartData: DailyTransactionData[];
+  summary: DailyTransactionSummary;
+};
+
+export type TransactionPeriod = '7days' | '30days' | '3months';

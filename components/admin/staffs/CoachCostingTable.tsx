@@ -15,7 +15,7 @@ import { formatSlotTime, formatSlotTimeRange } from '@/lib/time-utils';
 import { useMemo } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import CreateCoachCostForm from './CreateCoachCostForm';
-import { Role } from '@/lib/constants';
+import { ROLE } from '@/lib/constants';
 import {
   Section,
   SectionContent,
@@ -92,7 +92,7 @@ const CoachCostingTable = ({ coachId }: Props) => {
       }));
   }, [data]);
 
-  if (!isStaffPending && staff && String(staff?.role) !== String(Role.COACH)) {
+  if (!isStaffPending && staff && String(staff?.role) !== String(ROLE.COACH)) {
     return null;
   }
 

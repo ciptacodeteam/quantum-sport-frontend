@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
-import { Role } from '@/lib/constants';
+import { ROLE, ROLE_OPTIONS } from '@/lib/constants';
 import { cn, formatPhone, getPlaceholderImageUrl } from '@/lib/utils';
 import { adminCreateStaffMutationOptions } from '@/mutations/admin/staff';
 import { adminStaffsQueryOptions } from '@/queries/admin/staff';
@@ -38,7 +38,9 @@ const formSchema = z
     image: z.file().optional(),
     name: z.string().min(1, { message: 'Nama wajib diisi' }),
     email: z.string().email({ message: 'Email tidak valid' }),
-    role: z.enum([Role.ADMIN, Role.BALLBOY, Role.COACH], { message: 'Role tidak valid' }),
+    role: z.enum([ROLE.ADMIN, ROLE.BALLBOY, ROLE.COACH, ROLE.CASHIER], {
+      message: 'Role tidak valid'
+    }),
     phone: z
       .string()
       .min(10, { message: 'Nomor telepon minimal 10 digit' })
@@ -60,7 +62,7 @@ const CreateStaffForm = () => {
     defaultValues: {
       name: '',
       email: '',
-      role: Role.ADMIN,
+      role: ROLE.ADMIN,
       phone: '',
       password: '',
       confirmPassword: '',
@@ -213,13 +215,11 @@ const CreateStaffForm = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      {Object.values(Role)
-                        .filter((value) => value !== Role.USER)
-                        .map((role) => (
-                          <SelectItem key={role} value={role}>
-                            {role.charAt(0).toUpperCase() + role.slice(1).toLowerCase()}
-                          </SelectItem>
-                        ))}
+                      {ROLE_OPTIONS.filter((option) => option.value !== ROLE.USER).map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
                     </SelectGroup>
                   </SelectContent>
                 </Select>
