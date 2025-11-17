@@ -14,11 +14,7 @@ import {
 import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useConfirmMutation } from '@/hooks/useConfirmDialog';
-import {
-  BOOKING_STATUS_BADGE_VARIANT,
-  BOOKING_STATUS_MAP,
-  BookingStatus
-} from '@/lib/constants';
+import { BOOKING_STATUS_BADGE_VARIANT, BOOKING_STATUS_MAP, BookingStatus } from '@/lib/constants';
 import { formatPhone } from '@/lib/utils';
 import { adminBookingsQueryOptions } from '@/queries/admin/booking';
 import type { Booking } from '@/types/model';
@@ -83,9 +79,7 @@ const BookingTable = () => {
     () => [
       colHelper.accessor('id', {
         header: 'ID Pemesanan',
-        cell: (info) => (
-          <span className="font-mono text-xs">{info.getValue().slice(0, 8)}...</span>
-        )
+        cell: (info) => <span className="font-mono text-xs">{info.getValue().slice(0, 8)}...</span>
       }),
       colHelper.accessor('user', {
         header: 'Pelanggan',
@@ -96,7 +90,7 @@ const BookingTable = () => {
             <div className="flex flex-col">
               <span className="font-medium">{user.name}</span>
               {user.phone && (
-                <span className="text-xs text-muted-foreground">{formatPhone(user.phone)}</span>
+                <span className="text-muted-foreground text-xs">{formatPhone(user.phone)}</span>
               )}
             </div>
           );
@@ -114,13 +108,13 @@ const BookingTable = () => {
             <div className="flex flex-col">
               <span className="font-medium">{court?.name || '-'}</span>
               {slot && (
-                <span className="text-xs text-muted-foreground">
+                <span className="text-muted-foreground text-xs">
                   {dayjs(slot.startAt).format('DD MMM YYYY')} -{' '}
                   {dayjs(slot.startAt).format('HH:mm')} - {dayjs(slot.endAt).format('HH:mm')}
                 </span>
               )}
               {details.length > 1 && (
-                <span className="text-xs text-muted-foreground">+{details.length - 1} slot</span>
+                <span className="text-muted-foreground text-xs">+{details.length - 1} slot</span>
               )}
             </div>
           );
@@ -148,7 +142,7 @@ const BookingTable = () => {
                 Rp {new Intl.NumberFormat('id-ID').format(total + processingFee)}
               </span>
               {processingFee > 0 && (
-                <span className="text-xs text-muted-foreground">
+                <span className="text-muted-foreground text-xs">
                   (termasuk fee: Rp {new Intl.NumberFormat('id-ID').format(processingFee)})
                 </span>
               )}
@@ -204,26 +198,26 @@ const BookingTable = () => {
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-sm text-muted-foreground">ID Pemesanan</p>
+                        <p className="text-muted-foreground text-sm">ID Pemesanan</p>
                         <p className="font-mono text-sm">{booking.id}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Status</p>
+                        <p className="text-muted-foreground text-sm">Status</p>
                         <Badge variant={BOOKING_STATUS_BADGE_VARIANT[status]}>
                           {BOOKING_STATUS_MAP[status]}
                         </Badge>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Pelanggan</p>
+                        <p className="text-muted-foreground text-sm">Pelanggan</p>
                         <p className="font-medium">{booking.user?.name || '-'}</p>
                         {booking.user?.phone && (
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-muted-foreground text-xs">
                             {formatPhone(booking.user.phone)}
                           </p>
                         )}
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Total Harga</p>
+                        <p className="text-muted-foreground text-sm">Total Harga</p>
                         <p className="font-medium">
                           Rp{' '}
                           {new Intl.NumberFormat('id-ID').format(
@@ -232,12 +226,14 @@ const BookingTable = () => {
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Dibuat Pada</p>
-                        <p className="text-sm">{dayjs(booking.createdAt).format('DD/MM/YYYY HH:mm')}</p>
+                        <p className="text-muted-foreground text-sm">Dibuat Pada</p>
+                        <p className="text-sm">
+                          {dayjs(booking.createdAt).format('DD/MM/YYYY HH:mm')}
+                        </p>
                       </div>
                       {booking.holdExpiresAt && (
                         <div>
-                          <p className="text-sm text-muted-foreground">Kedaluwarsa</p>
+                          <p className="text-muted-foreground text-sm">Kedaluwarsa</p>
                           <p className="text-sm">
                             {dayjs(booking.holdExpiresAt).format('DD/MM/YYYY HH:mm')}
                           </p>
@@ -245,26 +241,23 @@ const BookingTable = () => {
                       )}
                     </div>
                     {booking.details && booking.details.length > 0 && (
-                      <div>
-                        <p className="text-sm font-medium mb-2">Detail Slot</p>
+                      <div className="border-t pt-4">
+                        <p className="mb-2 text-sm font-medium">Detail Slot</p>
                         <div className="space-y-2">
                           {booking.details.map((detail) => (
-                            <div
-                              key={detail.id}
-                              className="border rounded-lg p-3 bg-muted/50"
-                            >
-                              <div className="flex justify-between items-start">
+                            <div key={detail.id} className="bg-muted/50 rounded-lg border p-3">
+                              <div className="flex items-start justify-between">
                                 <div>
-                                  <p className="font-medium">{detail.court?.name || '-'}</p>
+                                  <p className="text-sm font-medium">{detail.court?.name || '-'}</p>
                                   {detail.slot && (
-                                    <p className="text-sm text-muted-foreground">
+                                    <p className="text-muted-foreground text-xs">
                                       {dayjs(detail.slot.startAt).format('DD MMM YYYY')} -{' '}
                                       {dayjs(detail.slot.startAt).format('HH:mm')} -{' '}
                                       {dayjs(detail.slot.endAt).format('HH:mm')}
                                     </p>
                                   )}
                                 </div>
-                                <p className="font-medium">
+                                <p className="text-base font-medium">
                                   Rp {new Intl.NumberFormat('id-ID').format(detail.price)}
                                 </p>
                               </div>
@@ -275,7 +268,7 @@ const BookingTable = () => {
                     )}
                     {booking.cancellationReason && (
                       <div>
-                        <p className="text-sm text-muted-foreground">Alasan Pembatalan</p>
+                        <p className="text-muted-foreground text-sm">Alasan Pembatalan</p>
                         <p className="text-sm">{booking.cancellationReason}</p>
                       </div>
                     )}
@@ -290,20 +283,95 @@ const BookingTable = () => {
                       <IconPencil />
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader className="mb-4">
-                      <DialogTitle>Ubah Status Pemesanan</DialogTitle>
+                  <DialogContent className="max-w-lg">
+                    <DialogHeader className="mb-2">
+                      <DialogTitle className="text-base">Ubah Status Pemesanan</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4">
-                      <div className="space-y-2">
-                        <p className="text-sm text-muted-foreground">Status Saat Ini</p>
-                        <Badge variant={BOOKING_STATUS_BADGE_VARIANT[status]}>
-                          {BOOKING_STATUS_MAP[status]}
-                        </Badge>
+                      {/* Booking Info Summary */}
+                      <div className="bg-muted/50 space-y-3 rounded-lg border p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="text-muted-foreground text-xs">ID Pemesanan</p>
+                            <p className="font-mono text-sm">{booking.id.slice(0, 12)}...</p>
+                          </div>
+                          <Badge variant={BOOKING_STATUS_BADGE_VARIANT[status]}>
+                            {BOOKING_STATUS_MAP[status]}
+                          </Badge>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 pt-2">
+                          <div>
+                            <p className="text-muted-foreground text-xs">Pelanggan</p>
+                            <p className="text-sm font-medium">{booking.user?.name || '-'}</p>
+                            {booking.user?.phone && (
+                              <p className="text-muted-foreground text-xs">
+                                {formatPhone(booking.user.phone)}
+                              </p>
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground text-xs">Total Harga</p>
+                            <p className="text-sm font-medium">
+                              Rp{' '}
+                              {new Intl.NumberFormat('id-ID').format(
+                                booking.totalPrice + (booking.processingFee || 0)
+                              )}
+                            </p>
+                          </div>
+                        </div>
+
+                        {booking.details && booking.details.length > 0 && (
+                          <div className="border-t pt-3">
+                            <p className="text-muted-foreground mb-2 text-xs">Detail Pemesanan</p>
+                            <div className="space-y-2">
+                              {booking.details.slice(0, 2).map((detail) => (
+                                <div
+                                  key={detail.id}
+                                  className="flex items-start justify-between text-sm"
+                                >
+                                  <div>
+                                    <p className="font-medium">{detail.court?.name || '-'}</p>
+                                    {detail.slot && (
+                                      <p className="text-muted-foreground text-xs">
+                                        {dayjs(detail.slot.startAt).format('DD MMM, HH:mm')} -{' '}
+                                        {dayjs(detail.slot.endAt).format('HH:mm')}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <p className="text-muted-foreground text-xs">
+                                    Rp {new Intl.NumberFormat('id-ID').format(detail.price)}
+                                  </p>
+                                </div>
+                              ))}
+                              {booking.details.length > 2 && (
+                                <p className="text-muted-foreground text-xs">
+                                  +{booking.details.length - 2} slot lainnya
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {booking.holdExpiresAt && status === BookingStatus.HOLD && (
+                          <div className="border-t pt-3">
+                            <p className="text-muted-foreground text-xs">Kedaluwarsa</p>
+                            <p className="text-sm">
+                              {dayjs(booking.holdExpiresAt).format('DD MMM YYYY, HH:mm')}
+                            </p>
+                            {dayjs(booking.holdExpiresAt).isBefore(dayjs()) && (
+                              <p className="text-destructive mt-1 text-xs">
+                                ⚠️ Pemesanan sudah kedaluwarsa
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      <div className="space-y-2">
-                        <p className="text-sm text-muted-foreground">Ubah ke Status</p>
-                        <div className="flex gap-2">
+
+                      {/* Status Actions */}
+                      <div className="space-y-3">
+                        <p className="text-sm font-medium">Tindakan yang Tersedia</p>
+                        <div className="flex flex-col gap-2">
                           {status === BookingStatus.HOLD && (
                             <Button
                               onClick={() =>
@@ -312,16 +380,30 @@ const BookingTable = () => {
                                   status: BookingStatus.CONFIRMED
                                 })
                               }
+                              className="w-full justify-start py-7"
+                              variant="default"
                             >
-                              Konfirmasi
+                              <IconPencil className="mr-2" />
+                              <div className="flex flex-col items-start">
+                                <span>Konfirmasi Pemesanan</span>
+                                <span className="text-xs opacity-80">
+                                  Ubah status menjadi Confirmed
+                                </span>
+                              </div>
                             </Button>
                           )}
                           <Button
                             variant="destructive"
                             onClick={() => cancelBooking(booking.id)}
+                            className="w-full justify-start py-7"
                           >
                             <IconX className="mr-2" />
-                            Batalkan
+                            <div className="flex flex-col items-start">
+                              <span>Batalkan Pemesanan</span>
+                              <span className="text-xs opacity-80">
+                                Pemesanan tidak dapat diproses
+                              </span>
+                            </div>
                           </Button>
                         </div>
                       </div>
@@ -357,4 +439,3 @@ const BookingTable = () => {
   );
 };
 export default BookingTable;
-
