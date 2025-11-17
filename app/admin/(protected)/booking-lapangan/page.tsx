@@ -22,7 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
-import { formatSlotTimeRange } from '@/lib/time-utils';
+import { formatSlotTime, formatSlotTimeRange } from '@/lib/time-utils';
 import { cn, getPlaceholderImageUrl } from '@/lib/utils';
 import { adminCustomersQueryOptions } from '@/queries/admin/customer';
 import { courtsSlotsQueryOptions } from '@/queries/court';
@@ -30,11 +30,107 @@ import { useBookingStore } from '@/stores/useBookingStore';
 import type { Court, Slot } from '@/types/model';
 import { IconCalendar, IconCheck, IconClock, IconMapPin, IconX } from '@tabler/icons-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import dayjs from 'dayjs';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
+
+// Helper functions to replace dayjs
+const formatDate = (date: Date | string, format: string): string => {
+  // Ensure we have a Date object
+  const dateObj = date instanceof Date ? date : new Date(date);
+  
+  // Check if date is valid
+  if (isNaN(dateObj.getTime())) {
+    console.error('Invalid date:', date);
+    return '-';
+  }
+  
+  const year = dateObj.getFullYear();
+  const month = dateObj.getMonth();
+  const day = dateObj.getDate();
+  const hours = dateObj.getHours();
+  const minutes = dateObj.getMinutes();
+
+  const pad = (n: number) => n.toString().padStart(2, '0');
+
+  const monthNames = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec'
+  ];
+
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const dayNamesShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  return format
+    .replace('YYYY', year.toString())
+    .replace('MMM', monthNames[month])
+    .replace('MM', pad(month + 1))
+    .replace('DD', pad(day))
+    .replace('dddd', dayNames[dateObj.getDay()])
+    .replace('ddd', dayNamesShort[dateObj.getDay()])
+    .replace('HH', pad(hours))
+    .replace('mm', pad(minutes));
+};
+
+const formatDateString = (date: Date | string): string => {
+  const dateObj = date instanceof Date ? date : new Date(date);
+  return formatDate(dateObj, 'YYYY-MM-DD');
+};
+
+const startOfDay = (date: Date | string): Date => {
+  const d = date instanceof Date ? new Date(date.getTime()) : new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
+const isSameDay = (date1: Date | string, date2: Date | string): boolean => {
+  const d1 = date1 instanceof Date ? date1 : new Date(date1);
+  const d2 = date2 instanceof Date ? date2 : new Date(date2);
+  return (
+    d1.getFullYear() === d2.getFullYear() &&
+    d1.getMonth() === d2.getMonth() &&
+    d1.getDate() === d2.getDate()
+  );
+};
+
+const isSameMonth = (date1: Date | string, date2: Date | string): boolean => {
+  const d1 = date1 instanceof Date ? date1 : new Date(date1);
+  const d2 = date2 instanceof Date ? date2 : new Date(date2);
+  return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth();
+};
+
+const isBefore = (date1: Date | string, date2: Date | string, unit?: string): boolean => {
+  const d1 = date1 instanceof Date ? date1 : new Date(date1);
+  const d2 = date2 instanceof Date ? date2 : new Date(date2);
+  if (unit === 'day') {
+    return startOfDay(d1).getTime() < startOfDay(d2).getTime();
+  }
+  return d1.getTime() < d2.getTime();
+};
+
+const addDays = (date: Date | string, days: number): Date => {
+  const d = date instanceof Date ? new Date(date.getTime()) : new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+};
+
+const startOfWeek = (date: Date | string): Date => {
+  const d = date instanceof Date ? new Date(date.getTime()) : new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day;
+  return startOfDay(new Date(d.setDate(diff)));
+};
 
 // Time slots will be generated from actual API data
 
@@ -125,13 +221,17 @@ export default function BookingLapangan() {
 
   // Fetch slots for the selected date
   // Include next day's 00:00 slot (which is actually the end of the current day in Jakarta time)
-  const selectedDateString = dayjs(localSelectedDate).format('YYYY-MM-DD');
+  const selectedDateString = formatDateString(localSelectedDate);
   const slotQueryParams = useMemo(
-    () => ({
-      startAt: dayjs(selectedDateString).startOf('day').toISOString(),
-      endAt: dayjs(selectedDateString).add(1, 'day').startOf('day').toISOString()
-    }),
-    [selectedDateString]
+    () => {
+      const start = startOfDay(localSelectedDate);
+      const end = startOfDay(addDays(localSelectedDate, 1));
+      return {
+        startAt: start.toISOString(),
+        endAt: end.toISOString()
+      };
+    },
+    [localSelectedDate]
   );
 
   const { data: slotsData, isLoading: isSlotsLoading } = useQuery(
@@ -187,7 +287,8 @@ export default function BookingLapangan() {
       if (!courtId) return;
 
       // Check if this slot belongs to the selected date
-      const slotDate = dayjs(slot.startAt).format('YYYY-MM-DD');
+      const slotDateObj = new Date(slot.startAt);
+      const slotDate = formatDateString(slotDateObj);
 
       // Only include slots that belong to the selected date
       if (slotDate === selectedDateString) {
@@ -196,7 +297,7 @@ export default function BookingLapangan() {
         }
 
         // Use start time (HH:mm) as key to match availableTimeSlots
-        const startTime = dayjs(slot.startAt).format('HH:mm');
+        const startTime = formatSlotTime(slot.startAt);
         map.get(courtId)!.set(startTime, slot);
       }
     });
@@ -208,10 +309,11 @@ export default function BookingLapangan() {
   const availableTimeSlots = useMemo(() => {
     const timeMap = new Map<string, { startAt: Date; endAt: Date; fullRange: string }>();
     slots.forEach((slot) => {
-      const slotDate = dayjs(slot.startAt).format('YYYY-MM-DD');
+      const slotDateObj = new Date(slot.startAt);
+      const slotDate = formatDateString(slotDateObj);
       if (slotDate === selectedDateString) {
         // Format start time as HH:mm
-        const startTime = dayjs(slot.startAt).format('HH:mm');
+        const startTime = formatSlotTime(slot.startAt);
         const fullRange = formatSlotTimeRange(slot.startAt, slot.endAt);
 
         if (!timeMap.has(startTime)) {
@@ -238,8 +340,9 @@ export default function BookingLapangan() {
 
     // Debug each slot's date
     slots.forEach((slot, index) => {
-      const slotDate = dayjs(slot.startAt).format('YYYY-MM-DD');
-      const startTime = dayjs(slot.startAt).format('HH:mm');
+      const slotDateObj = new Date(slot.startAt);
+      const slotDate = formatDateString(slotDateObj);
+      const startTime = formatSlotTime(slot.startAt);
       console.log(`Slot ${index}:`, {
         startAt: slot.startAt,
         slotDate: slotDate,
@@ -259,16 +362,17 @@ export default function BookingLapangan() {
 
   // Get current week for horizontal scroll
   const getWeekDates = () => {
-    const start = dayjs(localSelectedDate).startOf('week');
+    const start = startOfWeek(localSelectedDate);
     return Array.from({ length: 14 }, (_, i) => {
-      const date = start.add(i, 'day');
+      const date = addDays(start, i);
+      const today = new Date();
       return {
-        date: date.toDate(),
-        day: date.format('ddd'),
-        dayNumber: date.format('D'),
-        month: date.format('MMM'),
-        isToday: date.isSame(dayjs(), 'day'),
-        isCurrentMonth: date.isSame(dayjs(localSelectedDate), 'month')
+        date: date,
+        day: formatDate(date, 'ddd'),
+        dayNumber: date.getDate().toString(),
+        month: formatDate(date, 'MMM'),
+        isToday: isSameDay(date, today),
+        isCurrentMonth: isSameMonth(date, localSelectedDate)
       };
     });
   };
@@ -315,11 +419,11 @@ export default function BookingLapangan() {
     }
 
     // Create new bookings with the current selected date
-    const currentDateFormatted = dayjs(localSelectedDate).format('YYYY-MM-DD');
+    const currentDateFormatted = formatDateString(localSelectedDate);
     const newBookings = selectedSlots.map(({ slot, timeSlot }) => {
       // Use simple time format without timezone conversion
-      const startTime = dayjs(slot.startAt).format('HH:mm');
-      const endTime = dayjs(slot.endAt).format('HH:mm');
+      const startTime = formatSlotTime(slot.startAt);
+      const endTime = formatSlotTime(slot.endAt);
       const timeRange = `${startTime} - ${endTime}`;
 
       return {
@@ -358,7 +462,7 @@ export default function BookingLapangan() {
     setSelectedTimeSlots([]);
     setSelectedCourt(null);
     toast.success(
-      `Added ${newBookings.length} booking(s) for ${dayjs(localSelectedDate).format('DD MMM YYYY')}`
+      `Added ${newBookings.length} booking(s) for ${formatDate(localSelectedDate, 'DD MMM YYYY')}`
     );
   };
 
@@ -368,14 +472,23 @@ export default function BookingLapangan() {
     setBookings(updatedBookings);
 
     // Update store to remove the booking item
-    const updatedBookingItems: any = updatedBookings.map((booking) => ({
-      courtId: booking.courtId,
-      courtName: booking.courtName,
-      timeSlot: booking.timeSlot,
-      price: booking.price,
-      date: booking.date,
-      endTime: dayjs(`2000-01-01 ${booking.timeSlot}`).add(1, 'hour').format('HH:mm')
-    }));
+    const updatedBookingItems: any = updatedBookings.map((booking) => {
+      // Extract start time from timeSlot (format: "HH:mm - HH:mm")
+      const startTime = booking.timeSlot.split(' - ')[0];
+      const [hours, minutes] = startTime.split(':').map(Number);
+      const tempDate = new Date(2000, 0, 1, hours, minutes);
+      tempDate.setHours(tempDate.getHours() + 1);
+      const endTime = formatSlotTime(tempDate);
+      
+      return {
+        courtId: booking.courtId,
+        courtName: booking.courtName,
+        timeSlot: booking.timeSlot,
+        price: booking.price,
+        date: booking.date,
+        endTime: endTime
+      };
+    });
 
     setBookingItems(updatedBookingItems);
   };
@@ -411,7 +524,9 @@ export default function BookingLapangan() {
 
     // Set the selected date to the most recent booking date
     const latestDate = bookings.reduce((latest, booking) => {
-      return dayjs(booking.date).isAfter(dayjs(latest)) ? booking.date : latest;
+      const bookingDate = new Date(booking.date);
+      const latestDateObj = new Date(latest);
+      return bookingDate.getTime() > latestDateObj.getTime() ? booking.date : latest;
     }, bookings[0].date);
     setStoreDate(new Date(latestDate));
 
@@ -461,9 +576,9 @@ export default function BookingLapangan() {
     // If slot exists but isAvailable is false, it's booked
     if (!slot.isAvailable) return false;
 
-    const dateToCheck = dayjs(localSelectedDate).format('YYYY-MM-DD');
-    const startTime = dayjs(slot.startAt).format('HH:mm');
-    const endTime = dayjs(slot.endAt).format('HH:mm');
+    const dateToCheck = formatDateString(localSelectedDate);
+    const startTime = formatSlotTime(slot.startAt);
+    const endTime = formatSlotTime(slot.endAt);
     const slotTimeRange = `${startTime} - ${endTime}`;
 
     // Check user bookings for the specific date
@@ -499,9 +614,9 @@ export default function BookingLapangan() {
               <Button variant="outline" className="shrink-0 gap-2">
                 <IconCalendar className="h-4 w-4" />
                 <span className="hidden sm:inline">
-                  {dayjs(localSelectedDate).format('DD MMM YYYY')}
+                  {formatDate(localSelectedDate, 'DD MMM YYYY')}
                 </span>
-                <span className="sm:hidden">{dayjs(localSelectedDate).format('DD MMM')}</span>
+                <span className="sm:hidden">{formatDate(localSelectedDate, 'DD MMM')}</span>
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0">
@@ -536,7 +651,7 @@ export default function BookingLapangan() {
                 <Button
                   key={index}
                   variant={
-                    dayjs(localSelectedDate).isSame(dayjs(dateInfo.date), 'day')
+                    isSameDay(localSelectedDate, dateInfo.date)
                       ? 'default'
                       : 'outline'
                   }
@@ -546,7 +661,7 @@ export default function BookingLapangan() {
                     !dateInfo.isCurrentMonth && 'opacity-50'
                   )}
                   onClick={() => setLocalSelectedDate(dateInfo.date)}
-                  disabled={dayjs(dateInfo.date).isBefore(dayjs(), 'day')}
+                  disabled={isBefore(dateInfo.date, new Date(), 'day')}
                 >
                   <span className="text-xs leading-tight font-medium">{dateInfo.day}</span>
                   <span className="text-lg leading-none font-bold">{dateInfo.dayNumber}</span>
@@ -748,9 +863,10 @@ export default function BookingLapangan() {
                           isTimeSlotAvailableForCourt(timeSlot, court.id)
                         );
 
-                        const isPastedTime = dayjs(`${selectedDateString}T${timeSlot}:00`).isBefore(
-                          dayjs()
-                        );
+                        // Check if the time slot is in the past
+                        const slotDateTime = new Date(`${selectedDateString}T${timeSlot}:00`);
+                        const now = new Date();
+                        const isPastedTime = slotDateTime.getTime() < now.getTime();
 
                         if (isPastedTime) {
                           return (
@@ -1030,7 +1146,7 @@ export default function BookingLapangan() {
                       ).map(([date, dateBookings]) => (
                         <div key={date} className="space-y-2">
                           <div className="text-muted-foreground border-b pb-1 text-xs font-medium">
-                            {dayjs(date).format('dddd, DD MMM YYYY')}
+                            {formatDate(new Date(date), 'dddd, DD MMM YYYY')}
                           </div>
                           {dateBookings.map((booking) => (
                             <div

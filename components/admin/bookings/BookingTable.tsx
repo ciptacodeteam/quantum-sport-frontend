@@ -15,16 +15,96 @@ import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useConfirmMutation } from '@/hooks/useConfirmDialog';
 import { BOOKING_STATUS_BADGE_VARIANT, BOOKING_STATUS_MAP, BookingStatus } from '@/lib/constants';
+import { formatSlotTime } from '@/lib/time-utils';
 import { formatPhone, getTwoWordName } from '@/lib/utils';
 import { adminBookingsQueryOptions } from '@/queries/admin/booking';
 import type { Booking } from '@/types/model';
 import { IconEye, IconPencil, IconPlus, IconX } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
-import dayjs from 'dayjs';
 import { useMemo } from 'react';
 import { toast } from 'sonner';
 import { CopyButton } from '@/components/ui/clipboard-copy';
+
+// Helper function to parse ISO string without timezone conversion
+const parseISOString = (value: string): { year: number; month: number; day: number; hours: number; minutes: number } | null => {
+  // Handle ISO format: "2024-01-15T07:00:00Z" or "2024-01-15T07:00:00+07:00" or "2024-01-15T07:00:00.000Z"
+  const isoRegex = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?$/;
+  const match = value.match(isoRegex);
+  
+  if (match) {
+    return {
+      year: parseInt(match[1], 10),
+      month: parseInt(match[2], 10) - 1, // Month is 0-indexed
+      day: parseInt(match[3], 10),
+      hours: parseInt(match[4], 10),
+      minutes: parseInt(match[5], 10)
+    };
+  }
+  
+  return null;
+};
+
+// Helper functions to replace dayjs
+const formatDate = (date: Date | string, format: string): string => {
+  let dateObj: Date;
+  
+  // If it's a string (likely ISO format), parse it directly to avoid timezone conversion
+  if (typeof date === 'string') {
+    const parsed = parseISOString(date);
+    if (parsed) {
+      // Create a date object with the parsed components (treats as local time)
+      dateObj = new Date(parsed.year, parsed.month, parsed.day, parsed.hours, parsed.minutes);
+    } else {
+      // Fallback to standard Date parsing if regex doesn't match
+      dateObj = new Date(date);
+    }
+  } else {
+    dateObj = date;
+  }
+  
+  if (isNaN(dateObj.getTime())) {
+    console.error('Invalid date:', date);
+    return '-';
+  }
+  
+  const year = dateObj.getFullYear();
+  const month = dateObj.getMonth();
+  const day = dateObj.getDate();
+  const hours = dateObj.getHours();
+  const minutes = dateObj.getMinutes();
+
+  const pad = (n: number) => n.toString().padStart(2, '0');
+
+  const monthNames = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec'
+  ];
+
+  return format
+    .replace('YYYY', year.toString())
+    .replace('MMM', monthNames[month])
+    .replace('MM', pad(month + 1))
+    .replace('DD', pad(day))
+    .replace('HH', pad(hours))
+    .replace('mm', pad(minutes));
+};
+
+const isBefore = (date1: Date | string, date2: Date | string): boolean => {
+  const d1 = date1 instanceof Date ? date1 : new Date(date1);
+  const d2 = date2 instanceof Date ? date2 : new Date(date2);
+  return d1.getTime() < d2.getTime();
+};
 
 // Helper function to convert numeric status to BookingStatus enum
 const getBookingStatus = (status: number | BookingStatus): BookingStatus => {
@@ -115,8 +195,8 @@ const BookingTable = () => {
               <span className="font-medium">{court?.name || '-'}</span>
               {slot && (
                 <span className="text-muted-foreground text-xs">
-                  {dayjs(slot.startAt).format('DD MMM YYYY')} -{' '}
-                  {dayjs(slot.startAt).format('HH:mm')} - {dayjs(slot.endAt).format('HH:mm')}
+                  {formatDate(slot.startAt, 'DD MMM YYYY')} -{' '}
+                  {formatSlotTime(slot.startAt)} - {formatSlotTime(slot.endAt)}
                 </span>
               )}
               {details.length > 1 && (
@@ -167,7 +247,7 @@ const BookingTable = () => {
                   : 'Online'}
               </span>
 
-              {dayjs(info.getValue()).format('DD/MM/YYYY HH:mm')}
+              {formatDate(info.getValue(), 'DD/MM/YYYY HH:mm')}
             </div>
           );
         }
@@ -177,12 +257,13 @@ const BookingTable = () => {
         cell: (info) => {
           const expiresAt = info.getValue();
           if (!expiresAt) return '-';
-          const isExpired = dayjs(expiresAt).isBefore(dayjs());
+          const now = new Date();
+          const isExpired = isBefore(expiresAt, now);
           return (
             <Tooltip>
               <TooltipTrigger>
                 <span className={isExpired ? 'text-destructive' : ''}>
-                  {dayjs(expiresAt).format('DD/MM/YYYY HH:mm')}
+                  {formatDate(expiresAt, 'DD/MM/YYYY HH:mm')}
                 </span>
               </TooltipTrigger>
               {isExpired && (
@@ -246,14 +327,14 @@ const BookingTable = () => {
                       <div>
                         <p className="text-muted-foreground text-sm">Dibuat Pada</p>
                         <p className="text-sm">
-                          {dayjs(booking.createdAt).format('DD/MM/YYYY HH:mm')}
+                          {formatDate(booking.createdAt, 'DD/MM/YYYY HH:mm')}
                         </p>
                       </div>
                       {booking.holdExpiresAt && (
                         <div>
                           <p className="text-muted-foreground text-sm">Kedaluwarsa</p>
                           <p className="text-sm">
-                            {dayjs(booking.holdExpiresAt).format('DD/MM/YYYY HH:mm')}
+                            {formatDate(booking.holdExpiresAt, 'DD/MM/YYYY HH:mm')}
                           </p>
                         </div>
                       )}
@@ -269,9 +350,9 @@ const BookingTable = () => {
                                   <p className="text-sm font-medium">{detail.court?.name || '-'}</p>
                                   {detail.slot && (
                                     <p className="text-muted-foreground text-xs">
-                                      {dayjs(detail.slot.startAt).format('DD MMM YYYY')} -{' '}
-                                      {dayjs(detail.slot.startAt).format('HH:mm')} -{' '}
-                                      {dayjs(detail.slot.endAt).format('HH:mm')}
+                                      {formatDate(detail.slot.startAt, 'DD MMM YYYY')} -{' '}
+                                      {formatSlotTime(detail.slot.startAt)} -{' '}
+                                      {formatSlotTime(detail.slot.endAt)}
                                     </p>
                                   )}
                                 </div>
@@ -352,8 +433,8 @@ const BookingTable = () => {
                                     <p className="font-medium">{detail.court?.name || '-'}</p>
                                     {detail.slot && (
                                       <p className="text-muted-foreground text-xs">
-                                        {dayjs(detail.slot.startAt).format('DD MMM, HH:mm')} -{' '}
-                                        {dayjs(detail.slot.endAt).format('HH:mm')}
+                                        {formatDate(detail.slot.startAt, 'DD MMM, HH:mm')} -{' '}
+                                        {formatSlotTime(detail.slot.endAt)}
                                       </p>
                                     )}
                                   </div>
@@ -375,9 +456,9 @@ const BookingTable = () => {
                           <div className="border-t pt-3">
                             <p className="text-muted-foreground text-xs">Kedaluwarsa</p>
                             <p className="text-sm">
-                              {dayjs(booking.holdExpiresAt).format('DD MMM YYYY, HH:mm')}
+                              {formatDate(booking.holdExpiresAt, 'DD MMM YYYY, HH:mm')}
                             </p>
-                            {dayjs(booking.holdExpiresAt).isBefore(dayjs()) && (
+                            {isBefore(booking.holdExpiresAt, new Date()) && (
                               <p className="text-destructive mt-1 text-xs">
                                 ⚠️ Pemesanan sudah kedaluwarsa
                               </p>
