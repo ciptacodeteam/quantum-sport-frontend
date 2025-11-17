@@ -1,7 +1,8 @@
 enum Role {
   ADMIN = 'ADMIN',
   COACH = 'COACH',
-  BALLBOY = 'BALLBOY'
+  BALLBOY = 'BALLBOY',
+  CASHIER = 'CASHIER'
 }
 
 export type AdminProfile = {

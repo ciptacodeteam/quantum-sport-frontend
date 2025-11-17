@@ -15,7 +15,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem
 } from '@/components/ui/sidebar';
-import { SUPPORT_CIPTACODE_PHONE_NUMBER } from '@/lib/constants';
+import { SUPPORT_CIPTACODE_PHONE_NUMBER, ROLE } from '@/lib/constants';
 import { getWhatsappMessageUrl } from '@/lib/utils';
 import { adminProfileQueryOptions } from '@/queries/admin/auth';
 import type { AppSidebarItem } from '@/types';
@@ -177,7 +177,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   const isDashboardActive = pathname === '/admin/dashboard' || pathname === '/admin/dashboard/';
   const { data: me } = useQuery(adminProfileQueryOptions);
-  const isCoach = me?.role?.toUpperCase?.() === 'COACH';
+  const isCoach = me?.role?.toUpperCase?.() === ROLE.COACH;
+  const isCashier = me?.role?.toUpperCase?.() === ROLE.CASHIER;
 
   const navMainItems = React.useMemo<AppSidebarItem[]>(() => {
     if (isCoach) {
@@ -190,8 +191,52 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         }
       ];
     }
+
+    if (isCashier) {
+      return [
+        {
+          title: 'Booking System',
+          icon: IconScan,
+          items: [
+            {
+              title: 'Book Courts',
+              url: '/admin/booking-lapangan'
+            }
+          ]
+        },
+        {
+          title: 'Kelola Pemesanan',
+          icon: IconShoppingCart,
+          items: [
+            {
+              title: 'Lapangan',
+              url: '/admin/kelola-pemesanan/lapangan'
+            },
+            {
+              title: 'Inventori',
+              url: '/admin/kelola-pemesanan/inventori'
+            },
+            {
+              title: 'Coach',
+              url: '/admin/kelola-pemesanan/coach'
+            }
+          ]
+        },
+        {
+          title: 'Kustomer',
+          icon: IconUsers,
+          items: [
+            {
+              title: 'Kelola Kustomer',
+              url: '/admin/kelola-kustomer'
+            }
+          ]
+        }
+      ];
+    }
+
     return data.navMain;
-  }, [isCoach]);
+  }, [isCoach, isCashier]);
 
   return (
     <Sidebar variant="inset" {...props}>

@@ -9,7 +9,9 @@ const INACTIVE = 0;
 export const STATUS = {
   ACTIVE,
   INACTIVE
-};
+} as const;
+
+export type Status = (typeof STATUS)[keyof typeof STATUS];
 
 export const STATUS_MAP: Record<number, string> = {
   [ACTIVE]: 'Active',
@@ -26,63 +28,73 @@ export const STATUS_BADGE_VARIANT: Record<number, BadgeVariant['variant']> = {
   [INACTIVE]: 'lightDestructive'
 };
 
-export enum Role {
-  ADMIN = 'ADMIN',
-  USER = 'USER',
-  BALLBOY = 'BALLBOY',
-  COACH = 'COACH'
-}
+export const ROLE = {
+  ADMIN: 'ADMIN',
+  USER: 'USER',
+  BALLBOY: 'BALLBOY',
+  COACH: 'COACH',
+  CASHIER: 'CASHIER'
+} as const;
 
-export enum Gender {
-  MALE = 'MALE',
-  FEMALE = 'FEMALE',
-  ALL = 'ALL'
-}
+export type Role = keyof typeof ROLE;
+
+export const GENDER = {
+  MALE: 'MALE',
+  FEMALE: 'FEMALE',
+  ALL: 'ALL'
+} as const;
+
+export type Gender = keyof typeof GENDER;
 
 export const GENDER_MAP: Record<Gender, string> = {
-  [Gender.MALE]: 'Male',
-  [Gender.FEMALE]: 'Female',
-  [Gender.ALL]: 'All'
+  [GENDER.MALE]: 'Male',
+  [GENDER.FEMALE]: 'Female',
+  [GENDER.ALL]: 'All'
 };
 
 export const GENDER_OPTIONS: Array<{ label: string; value: Gender }> = [
-  { label: 'Male', value: Gender.MALE },
-  { label: 'Female', value: Gender.FEMALE },
-  { label: 'All', value: Gender.ALL }
+  { label: 'Male', value: GENDER.MALE },
+  { label: 'Female', value: GENDER.FEMALE },
+  { label: 'All', value: GENDER.ALL }
 ];
 
 export const GENDER_BADGE_VARIANT: Record<Gender, BadgeVariant['variant']> = {
-  [Gender.MALE]: 'lightInfo',
-  [Gender.FEMALE]: 'lightInfo',
-  [Gender.ALL]: 'lightSuccess'
+  [GENDER.MALE]: 'lightInfo',
+  [GENDER.FEMALE]: 'lightInfo',
+  [GENDER.ALL]: 'lightSuccess'
 };
 
 export const ROLE_MAP: Record<Role, string> = {
-  [Role.ADMIN]: 'Admin',
-  [Role.USER]: 'User',
-  [Role.BALLBOY]: 'Ballboy',
-  [Role.COACH]: 'Coach'
+  [ROLE.ADMIN]: 'Admin',
+  [ROLE.USER]: 'User',
+  [ROLE.BALLBOY]: 'Ballboy',
+  [ROLE.COACH]: 'Coach',
+  [ROLE.CASHIER]: 'Cashier'
 };
 
 export const ROLE_OPTIONS: Array<{ label: string; value: Role }> = [
-  { label: 'Admin', value: Role.ADMIN },
-  { label: 'User', value: Role.USER },
-  { label: 'Ballboy', value: Role.BALLBOY },
-  { label: 'Coach', value: Role.COACH }
+  { label: 'Admin', value: ROLE.ADMIN },
+  { label: 'User', value: ROLE.USER },
+  { label: 'Ballboy', value: ROLE.BALLBOY },
+  { label: 'Coach', value: ROLE.COACH },
+  { label: 'Cashier', value: ROLE.CASHIER }
 ];
 
 export const ROLE_BADGE_VARIANT: Record<Role, BadgeVariant['variant']> = {
-  [Role.ADMIN]: 'lightSuccess',
-  [Role.USER]: 'lightNeutral',
-  [Role.BALLBOY]: 'lightInfo',
-  [Role.COACH]: 'lightWarning'
+  [ROLE.ADMIN]: 'lightSuccess',
+  [ROLE.USER]: 'lightNeutral',
+  [ROLE.BALLBOY]: 'lightInfo',
+  [ROLE.COACH]: 'lightWarning',
+  [ROLE.CASHIER]: 'lightDestructive'
 };
 
-export enum SlotType {
-  COURT = 'COURT',
-  COACH = 'COACH',
-  BALLBOY = 'BALLBOY'
-}
+export const SlotType = {
+  COURT: 'COURT',
+  COACH: 'COACH',
+  BALLBOY: 'BALLBOY'
+} as const;
+
+export type SlotType = keyof typeof SlotType;
 
 export const SLOT_TYPE_MAP: Record<SlotType, string> = {
   [SlotType.COURT]: 'Court',
@@ -136,7 +148,7 @@ export const daysOfWeek = [
   { label: 'Jumat', value: 5 },
   { label: 'Sabtu', value: 6 },
   { label: 'Minggu', value: 7 }
-];
+] as const;
 
 export const hoursInDay = Array.from({ length: 24 }, (_, i) => ({
   label: i === 0 ? '00:00' : i < 10 ? `0${i}:00` : `${i}:00`,

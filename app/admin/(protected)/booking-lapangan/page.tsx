@@ -4,7 +4,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Command,
+  CommandEmpty,
+  CommandInput,
+  CommandItem,
+  CommandList
+} from '@/components/ui/command';
 import {
   Dialog,
   DialogContent,
@@ -12,20 +18,18 @@ import {
   DialogTitle,
   DialogTrigger
 } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
-import { formatSlotTimeRange, getSlotTimeKey } from '@/lib/time-utils';
+import { formatSlotTimeRange } from '@/lib/time-utils';
 import { cn, getPlaceholderImageUrl } from '@/lib/utils';
+import { adminCustomersQueryOptions } from '@/queries/admin/customer';
 import { courtsSlotsQueryOptions } from '@/queries/court';
 import { useBookingStore } from '@/stores/useBookingStore';
 import type { Court, Slot } from '@/types/model';
 import { IconCalendar, IconCheck, IconClock, IconMapPin, IconX } from '@tabler/icons-react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { adminCreateBookingMutationOptions } from '@/mutations/admin/booking';
-import { adminCustomersQueryOptions } from '@/queries/admin/customer';
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -209,7 +213,7 @@ export default function BookingLapangan() {
         // Format start time as HH:mm
         const startTime = dayjs(slot.startAt).format('HH:mm');
         const fullRange = formatSlotTimeRange(slot.startAt, slot.endAt);
-        
+
         if (!timeMap.has(startTime)) {
           timeMap.set(startTime, { startAt: slot.startAt, endAt: slot.endAt, fullRange });
         }
@@ -231,7 +235,7 @@ export default function BookingLapangan() {
     console.log('Selected Date String:', selectedDateString);
     console.log('Slots Data:', slotsData);
     console.log('Formatted Slots:', slots);
-    
+
     // Debug each slot's date
     slots.forEach((slot, index) => {
       const slotDate = dayjs(slot.startAt).format('YYYY-MM-DD');
@@ -243,7 +247,7 @@ export default function BookingLapangan() {
         matchesSelectedDate: slotDate === selectedDateString
       });
     });
-    
+
     console.log('Courts:', courts);
     console.log('Available Time Slots:', availableTimeSlots);
   }, [slotsData, slots, courts, slotQueryParams, selectedDateString, availableTimeSlots]);
@@ -407,9 +411,7 @@ export default function BookingLapangan() {
 
     // Set the selected date to the most recent booking date
     const latestDate = bookings.reduce((latest, booking) => {
-      return dayjs(booking.date).isAfter(dayjs(latest))
-        ? booking.date
-        : latest;
+      return dayjs(booking.date).isAfter(dayjs(latest)) ? booking.date : latest;
     }, bookings[0].date);
     setStoreDate(new Date(latestDate));
 
@@ -728,42 +730,74 @@ export default function BookingLapangan() {
                   </div>
                 ) : selectedCourt ? (
                   <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:flex lg:flex-wrap">
-                    {availableTimeSlots.map((timeSlot) => {
-                      const isSelected = selectedTimeSlots.includes(timeSlot);
-                      const isBooked = selectedCourt
-                        ? !isTimeSlotAvailableForCourt(timeSlot, selectedCourt)
-                        : !courts.some((court) => isTimeSlotAvailableForCourt(timeSlot, court.id));
-                      const availableCourts = courts.filter((court) =>
-                        isTimeSlotAvailableForCourt(timeSlot, court.id)
-                      );
+                    {availableTimeSlots.length === 0 ? (
+                      <div className="flex-center w-full py-8 text-center">
+                        <p className="text-muted-foreground text-sm">
+                          No time slots available for the selected court on this date
+                        </p>
+                      </div>
+                    ) : (
+                      availableTimeSlots.map((timeSlot) => {
+                        const isSelected = selectedTimeSlots.includes(timeSlot);
+                        const isBooked = selectedCourt
+                          ? !isTimeSlotAvailableForCourt(timeSlot, selectedCourt)
+                          : !courts.some((court) =>
+                              isTimeSlotAvailableForCourt(timeSlot, court.id)
+                            );
+                        const availableCourts = courts.filter((court) =>
+                          isTimeSlotAvailableForCourt(timeSlot, court.id)
+                        );
 
-                      return (
-                        <div key={timeSlot} className="relative">
-                          <Badge
-                            variant={isSelected ? 'default' : isBooked ? 'secondary' : 'outline'}
-                            className={cn(
-                              'w-full justify-center px-2 py-1 text-xs font-medium transition-all lg:w-auto lg:px-4 lg:py-2 lg:text-sm',
-                              isSelected && 'bg-primary text-primary-foreground shadow-lg',
-                              isBooked && 'cursor-not-allowed bg-gray-100 text-gray-500 opacity-50',
-                              !isBooked &&
-                                !isSelected &&
-                                'hover:bg-primary/10 hover:border-primary cursor-pointer hover:scale-105'
+                        const isPastedTime = dayjs(`${selectedDateString}T${timeSlot}:00`).isBefore(
+                          dayjs()
+                        );
+
+                        if (isPastedTime) {
+                          return (
+                            <div key={timeSlot} className="relative">
+                              <Badge
+                                variant="secondary"
+                                className="w-full cursor-not-allowed justify-center bg-gray-100 px-2 py-1 text-xs font-medium text-gray-500 opacity-50 lg:w-auto lg:px-4 lg:py-2 lg:text-sm"
+                                onClick={() => {
+                                  toast.warning('Jadwal sudah lewat!');
+                                }}
+                              >
+                                <span className="truncate">{timeSlot}</span>
+                              </Badge>
+                              <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full border-2 border-white bg-red-500"></div>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div key={timeSlot} className="relative">
+                            <Badge
+                              variant={isSelected ? 'default' : isBooked ? 'secondary' : 'outline'}
+                              className={cn(
+                                'w-full justify-center px-2 py-1 text-xs font-medium transition-all lg:w-auto lg:px-4 lg:py-2 lg:text-sm',
+                                isSelected && 'bg-primary text-primary-foreground shadow-lg',
+                                isBooked &&
+                                  'cursor-not-allowed bg-gray-100 text-gray-500 opacity-50',
+                                !isBooked &&
+                                  !isSelected &&
+                                  'hover:bg-primary/10 hover:border-primary cursor-pointer hover:scale-105'
+                              )}
+                              onClick={() => !isBooked && handleTimeSlotSelect(timeSlot)}
+                            >
+                              <span className="truncate">{timeSlot}</span>
+                              {!selectedCourt && availableCourts.length > 0 && (
+                                <span className="ml-1 hidden text-xs opacity-75 sm:inline">
+                                  ({availableCourts.length})
+                                </span>
+                              )}
+                            </Badge>
+                            {isBooked && (
+                              <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full border-2 border-white bg-red-500"></div>
                             )}
-                            onClick={() => !isBooked && handleTimeSlotSelect(timeSlot)}
-                          >
-                            <span className="truncate">{timeSlot}</span>
-                            {!selectedCourt && availableCourts.length > 0 && (
-                              <span className="ml-1 hidden text-xs opacity-75 sm:inline">
-                                ({availableCourts.length})
-                              </span>
-                            )}
-                          </Badge>
-                          {isBooked && (
-                            <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full border-2 border-white bg-red-500"></div>
-                          )}
-                        </div>
-                      );
-                    })}
+                          </div>
+                        );
+                      })
+                    )}
                   </div>
                 ) : (
                   <div className="py-8 text-center">
@@ -942,12 +976,14 @@ export default function BookingLapangan() {
 
                   {/* Show current walk-in selection if available */}
                   {(storeWalkInName || storeWalkInPhone) && !localCustomerId && (
-                    <div className="mt-2 rounded-md border bg-muted px-3 py-2 text-xs">
+                    <div className="bg-muted mt-2 rounded-md border px-3 py-2 text-xs">
                       <div className="flex items-center justify-between">
                         <div>
                           <span className="font-medium">Walk-in:</span>{' '}
                           <span>{storeWalkInName || '-'}</span>
-                          {storeWalkInPhone && <span className="ml-1 text-muted-foreground">({storeWalkInPhone})</span>}
+                          {storeWalkInPhone && (
+                            <span className="text-muted-foreground ml-1">({storeWalkInPhone})</span>
+                          )}
                         </div>
                         <Button
                           type="button"

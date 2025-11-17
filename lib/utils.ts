@@ -2,6 +2,7 @@ import type { SearchParamsData } from '@/types';
 import { clsx, type ClassValue } from 'clsx';
 import { jwtDecode } from 'jwt-decode';
 import { twMerge } from 'tailwind-merge';
+import { ROLE } from '@/lib/constants';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -137,7 +138,12 @@ export function isAdminToken(token: string | null): boolean {
   try {
     const decoded: any = jwtDecode(token);
     // Check if token has admin role
-    return decoded?.role === 'ADMIN' || decoded?.role === 'COACH' || decoded?.role === 'BALLBOY';
+    return (
+      decoded?.role === ROLE.ADMIN ||
+      decoded?.role === ROLE.COACH ||
+      decoded?.role === ROLE.BALLBOY ||
+      decoded?.role === ROLE.CASHIER
+    );
   } catch {
     return false;
   }

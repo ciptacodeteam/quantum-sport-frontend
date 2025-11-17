@@ -8,8 +8,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { STATUS_BADGE_VARIANT, STATUS_MAP } from '@/lib/constants';
 import { formatPhone, getNameInitial } from '@/lib/utils';
 import { adminCustomersQueryOptions } from '@/queries/admin/customer';
+import { adminProfileQueryOptions } from '@/queries/admin/auth';
 import type { Customer } from '@/types/model';
-import { IconCircleCheckFilled, IconCircleXFilled, IconPencil } from '@tabler/icons-react';
+import { ROLE } from '@/lib/constants';
+import { IconCircleCheckFilled, IconCircleXFilled, IconPencil, IconEye } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
@@ -17,6 +19,9 @@ import Link from 'next/link';
 import { useMemo } from 'react';
 
 const CustomerTable = () => {
+  const { data: me } = useQuery(adminProfileQueryOptions);
+  const isCashier = me?.role?.toUpperCase?.() === 'CASHIER';
+
   // const { confirmAndMutate } = useConfirmMutation(
   //   {
   //     mutationFn: deleteCustomerApi
@@ -123,15 +128,15 @@ const CustomerTable = () => {
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
             <Link href={`/admin/kelola-kustomer/${row.original.id}`} prefetch>
-              <Button size="icon" variant="lightInfo">
-                <IconPencil />
+              <Button size="icon" variant={isCashier ? 'lightInfo' : 'lightInfo'}>
+                {isCashier ? <IconEye /> : <IconPencil />}
               </Button>
             </Link>
           </div>
         )
       })
     ],
-    [colHelper]
+    [colHelper, isCashier]
   );
 
   const { data, isPending } = useQuery(adminCustomersQueryOptions);
