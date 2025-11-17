@@ -18,10 +18,10 @@ import { Controller, type SubmitHandler, useForm } from 'react-hook-form';
 import z from 'zod';
 
 const formSchema = z.object({
-  name: z.string().min(1, { message: 'Nama wajib diisi.' }).optional(),
+  name: z.string().min(1, { message: 'Nama wajib diisi.' }),
   description: z.string().optional(),
-  isActive: z.boolean().optional(),
-  logo: z.any().optional()
+  isActive: z.boolean().default(true),
+  logo: z.file().min(1, { message: 'Logo wajib diunggah.' })
 });
 
 type FormSchema = z.infer<typeof formSchema>;
@@ -124,7 +124,12 @@ const EditPartnershipForm = ({ data }: Props) => {
 
           <Field>
             <FieldLabel htmlFor="description">Deskripsi</FieldLabel>
-            <Textarea id="description" rows={3} {...form.register('description')} placeholder="Deskripsi" />
+            <Textarea
+              id="description"
+              rows={3}
+              {...form.register('description')}
+              placeholder="Deskripsi"
+            />
             <FieldError>{form.formState.errors.description?.message}</FieldError>
           </Field>
 
@@ -153,7 +158,11 @@ const EditPartnershipForm = ({ data }: Props) => {
 
           <Field className="mt-2 ml-auto w-fit">
             <div className="flex items-center gap-4">
-              <Button type="button" variant="ghost" onClick={() => closeDialog(`edit-partnership-${data.id}`)}>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => closeDialog(`edit-partnership-${data.id}`)}
+              >
                 Batal
               </Button>
               <Button type="submit" loading={isPending}>
@@ -167,5 +176,3 @@ const EditPartnershipForm = ({ data }: Props) => {
   );
 };
 export default EditPartnershipForm;
-
-
