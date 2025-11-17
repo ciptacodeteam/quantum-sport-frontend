@@ -367,6 +367,13 @@ export type Slot = {
   staff?: Staff;
 };
 
+export type Cashier = {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+};
+
 export type Booking = {
   id: string;
   userId: string;
@@ -380,6 +387,7 @@ export type Booking = {
   cancellationReason: string | null;
 
   user?: UserProfile;
+  cashier?: Cashier;
   details?: BookingDetail[];
   inventories?: Inventory[];
   ballboys?: Staff[];

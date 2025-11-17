@@ -15,7 +15,7 @@ import Link from 'next/link';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useConfirmMutation } from '@/hooks/useConfirmDialog';
 import { BOOKING_STATUS_BADGE_VARIANT, BOOKING_STATUS_MAP, BookingStatus } from '@/lib/constants';
-import { formatPhone } from '@/lib/utils';
+import { formatPhone, getTwoWordName } from '@/lib/utils';
 import { adminBookingsQueryOptions } from '@/queries/admin/booking';
 import type { Booking } from '@/types/model';
 import { IconEye, IconPencil, IconPlus, IconX } from '@tabler/icons-react';
@@ -24,6 +24,7 @@ import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
 import { useMemo } from 'react';
 import { toast } from 'sonner';
+import { CopyButton } from '@/components/ui/clipboard-copy';
 
 // Helper function to convert numeric status to BookingStatus enum
 const getBookingStatus = (status: number | BookingStatus): BookingStatus => {
@@ -77,9 +78,14 @@ const BookingTable = () => {
 
   const columns = useMemo(
     () => [
-      colHelper.accessor('id', {
-        header: 'ID Pemesanan',
-        cell: (info) => <span className="font-mono text-xs">{info.getValue().slice(0, 8)}...</span>
+      colHelper.accessor('invoice.number', {
+        header: 'Invoice',
+        cell: (info) => (
+          <div className="flex items-center gap-2">
+            {info.getValue()?.slice(0, 8) + '...'}
+            <CopyButton variant={'ghost'} size={'sm'} content={info.getValue() || '-'} />
+          </div>
+        )
       }),
       colHelper.accessor('user', {
         header: 'Pelanggan',
@@ -152,7 +158,19 @@ const BookingTable = () => {
       }),
       colHelper.accessor('createdAt', {
         header: 'Dibuat Pada',
-        cell: (info) => dayjs(info.getValue()).format('DD/MM/YYYY HH:mm')
+        cell: (info) => {
+          return (
+            <div className="flex flex-col">
+              <span className="text-muted-foreground text-xs">
+                {info.row.original.cashier
+                  ? `Kasir: ${getTwoWordName(info.row.original.cashier.name)}`
+                  : 'Online'}
+              </span>
+
+              {dayjs(info.getValue()).format('DD/MM/YYYY HH:mm')}
+            </div>
+          );
+        }
       }),
       colHelper.accessor('holdExpiresAt', {
         header: 'Kedaluwarsa',
