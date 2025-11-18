@@ -27,11 +27,14 @@ import { toast } from 'sonner';
 import { CopyButton } from '@/components/ui/clipboard-copy';
 
 // Helper function to parse ISO string without timezone conversion
-const parseISOString = (value: string): { year: number; month: number; day: number; hours: number; minutes: number } | null => {
+const parseISOString = (
+  value: string
+): { year: number; month: number; day: number; hours: number; minutes: number } | null => {
   // Handle ISO format: "2024-01-15T07:00:00Z" or "2024-01-15T07:00:00+07:00" or "2024-01-15T07:00:00.000Z"
-  const isoRegex = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?$/;
+  const isoRegex =
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?$/;
   const match = value.match(isoRegex);
-  
+
   if (match) {
     return {
       year: parseInt(match[1], 10),
@@ -41,14 +44,14 @@ const parseISOString = (value: string): { year: number; month: number; day: numb
       minutes: parseInt(match[5], 10)
     };
   }
-  
+
   return null;
 };
 
 // Helper functions to replace dayjs
 const formatDate = (date: Date | string, format: string): string => {
   let dateObj: Date;
-  
+
   // If it's a string (likely ISO format), parse it directly to avoid timezone conversion
   if (typeof date === 'string') {
     const parsed = parseISOString(date);
@@ -62,12 +65,12 @@ const formatDate = (date: Date | string, format: string): string => {
   } else {
     dateObj = date;
   }
-  
+
   if (isNaN(dateObj.getTime())) {
     console.error('Invalid date:', date);
     return '-';
   }
-  
+
   const year = dateObj.getFullYear();
   const month = dateObj.getMonth();
   const day = dateObj.getDate();
@@ -195,8 +198,8 @@ const BookingTable = () => {
               <span className="font-medium">{court?.name || '-'}</span>
               {slot && (
                 <span className="text-muted-foreground text-xs">
-                  {formatDate(slot.startAt, 'DD MMM YYYY')} -{' '}
-                  {formatSlotTime(slot.startAt)} - {formatSlotTime(slot.endAt)}
+                  {formatDate(slot.startAt, 'DD MMM YYYY')} - {formatSlotTime(slot.startAt)} -{' '}
+                  {formatSlotTime(slot.endAt)}
                 </span>
               )}
               {details.length > 1 && (
@@ -527,7 +530,7 @@ const BookingTable = () => {
       columns={columns}
       enableRowSelection={false}
       addButton={
-        <Link href="/admin/kelola-pemesanan/lapangan/tambah" prefetch>
+        <Link href="/admin/booking-lapangan" prefetch>
           <Button>
             <IconPlus />
             Tambah

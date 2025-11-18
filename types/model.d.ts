@@ -243,6 +243,35 @@ export type MembershipUser = {
 
   user?: UserProfile;
   membership?: Membership;
+  invoice?: MembershipInvoice;
+};
+
+export type MembershipInvoice = {
+  id: string;
+  number: string;
+  total: number;
+  status: PaymentStatus;
+  paymentUrl: string | null;
+  paymentRequestId: string | null;
+  expiresAt: Date | null;
+  paidAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  payment?: {
+    id: string;
+    amount: number;
+    fee: number;
+    referenceId: string;
+    paymentMethodId: string;
+    createdAt: Date;
+    method: {
+      id: string;
+      name: string;
+      logo: string | null;
+      fees?: number;
+      percentage?: number;
+    };
+  };
 };
 
 enum Gender {

@@ -140,6 +140,40 @@ export const BOOKING_STATUS_BADGE_VARIANT: Record<BookingStatus, BadgeVariant['v
   [BookingStatus.CANCELLED]: 'lightDestructive'
 };
 
+export const PaymentStatus = {
+  PENDING: 'PENDING',
+  PAID: 'PAID',
+  FAILED: 'FAILED',
+  EXPIRED: 'EXPIRED',
+  CANCELLED: 'CANCELLED'
+} as const;
+
+export type PaymentStatus = keyof typeof PaymentStatus;
+
+export const PAYMENT_STATUS_MAP: Record<PaymentStatus, string> = {
+  [PaymentStatus.PENDING]: 'Pending',
+  [PaymentStatus.PAID]: 'Paid',
+  [PaymentStatus.FAILED]: 'Failed',
+  [PaymentStatus.EXPIRED]: 'Expired',
+  [PaymentStatus.CANCELLED]: 'Cancelled'
+};
+
+export const PAYMENT_STATUS_OPTIONS: Array<{ label: string; value: PaymentStatus }> = [
+  { label: 'Pending', value: PaymentStatus.PENDING },
+  { label: 'Paid', value: PaymentStatus.PAID },
+  { label: 'Failed', value: PaymentStatus.FAILED },
+  { label: 'Expired', value: PaymentStatus.EXPIRED },
+  { label: 'Cancelled', value: PaymentStatus.CANCELLED }
+];
+
+export const PAYMENT_STATUS_BADGE_VARIANT: Record<PaymentStatus, BadgeVariant['variant']> = {
+  [PaymentStatus.PENDING]: 'lightWarning',
+  [PaymentStatus.PAID]: 'lightSuccess',
+  [PaymentStatus.FAILED]: 'lightDestructive',
+  [PaymentStatus.EXPIRED]: 'lightNeutral',
+  [PaymentStatus.CANCELLED]: 'lightDestructive'
+};
+
 export const daysOfWeek = [
   { label: 'Senin', value: 1 },
   { label: 'Selasa', value: 2 },

@@ -73,6 +73,10 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
         {
           title: 'Coach',
           url: '/admin/kelola-pemesanan/coach'
+        },
+        {
+          title: 'Membership',
+          url: '/admin/kelola-pemesanan/membership'
         }
       ]
     },
@@ -93,11 +97,11 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
         {
           title: 'Kelola Kustomer',
           url: '/admin/kelola-kustomer'
-        },
-        {
-          title: 'Kustomer Membership',
-          url: '/admin/kelola-kustomer/membership'
         }
+        // {
+        //   title: 'Kustomer Membership',
+        //   url: '/admin/kelola-kustomer/membership'
+        // }
       ]
     },
     {
