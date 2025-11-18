@@ -19,8 +19,18 @@ import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
 import { useMemo } from 'react';
+import * as React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { CopyButton } from '@/components/ui/clipboard-copy';
+import {
+  useApproveMembershipTransactionMutation,
+  useRejectMembershipTransactionMutation,
+  useSuspendMembershipTransactionMutation,
+  useUnsuspendMembershipTransactionMutation,
+  useExportMembershipTransactionsExcel
+} from '@/mutations/admin/membershipTransaction';
+import { Input } from '@/components/ui/input';
+import DatePickerInput from '@/components/ui/date-picker-input';
 
 const columnHelper = createColumnHelper<MembershipUser>();
 
@@ -32,6 +42,12 @@ const MembershipTransactionTable = () => {
   const { data: transactions = [], isLoading } = useQuery(
     adminMembershipTransactionsQueryOptions({})
   );
+
+  const { confirmAndMutate: approveTx } = useApproveMembershipTransactionMutation();
+  const { confirmAndMutate: rejectTx } = useRejectMembershipTransactionMutation();
+  const { mutate: suspendTx } = useSuspendMembershipTransactionMutation();
+  const { confirmAndMutate: unsuspendTx } = useUnsuspendMembershipTransactionMutation();
+  const { mutate: exportExcel, isPending: exporting } = useExportMembershipTransactionsExcel();
 
   const columns = useMemo(
     () => [
@@ -180,6 +196,7 @@ const MembershipTransactionTable = () => {
         header: 'Actions',
         cell: (info) => {
           const transaction = info.row.original;
+          const canApproveOrReject = transaction.invoice?.status === 'PENDING';
 
           return (
             <div className="flex gap-2">
@@ -196,6 +213,38 @@ const MembershipTransactionTable = () => {
                   <MembershipTransactionDetail transaction={transaction} />
                 </DialogContent>
               </ManagedDialog>
+
+              {canApproveOrReject && (
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondarySuccess"
+                    onClick={() => approveTx(transaction.id)}
+                  >
+                    Approve
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondaryDanger"
+                    onClick={() => rejectTx({ id: transaction.id })}
+                  >
+                    Reject
+                  </Button>
+                </div>
+              )}
+
+              {!transaction.isSuspended && !transaction.isExpired && (
+                <SuspendMembershipDialog
+                  onSubmit={(reason, endDate) =>
+                    suspendTx({ id: transaction.id, reason, endDate: endDate ?? undefined })
+                  }
+                />
+              )}
+              {transaction.isSuspended && (
+                <Button size="sm" variant="outline" onClick={() => unsuspendTx(transaction.id)}>
+                  Unsuspend
+                </Button>
+              )}
             </div>
           );
         },
@@ -207,6 +256,11 @@ const MembershipTransactionTable = () => {
 
   return (
     <div>
+      <div className="mb-3 flex items-center justify-end gap-2">
+        <Button variant="outline" size="sm" onClick={() => exportExcel({})} disabled={exporting}>
+          {exporting ? 'Exporting…' : 'Export Excel'}
+        </Button>
+      </div>
       <DataTable columns={columns} data={transactions} loading={isLoading} />
     </div>
   );
@@ -389,3 +443,58 @@ const MembershipTransactionDetail = ({ transaction }: { transaction: MembershipU
 };
 
 export default MembershipTransactionTable;
+
+const SuspendMembershipDialog = ({
+  onSubmit
+}: {
+  onSubmit: (reason: string, endDate?: string | null) => void;
+}) => {
+  const [open, setOpen] = React.useState(false);
+  const [reason, setReason] = React.useState('');
+  const [endDate, setEndDate] = React.useState<Date | null | undefined>(undefined);
+
+  function handleSubmit() {
+    if (!reason.trim()) return;
+    onSubmit(reason.trim(), endDate ? endDate.toISOString() : undefined);
+    setOpen(false);
+    setReason('');
+    setEndDate(undefined);
+  }
+
+  return (
+    <ManagedDialog id={`suspend-membership`} open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline">
+          Suspend
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Suspend Membership</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <p className="mb-1 text-sm">Reason</p>
+            <Input
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Enter reason"
+            />
+          </div>
+          <div>
+            <p className="mb-1 text-sm">End Date (optional)</p>
+            <DatePickerInput value={endDate ?? null} onValueChange={setEndDate} />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit} disabled={!reason.trim()}>
+              Confirm Suspend
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </ManagedDialog>
+  );
+};
