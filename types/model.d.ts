@@ -1,5 +1,6 @@
 enum Role {
   ADMIN = 'ADMIN',
+  ADMIN_VIEWER = 'ADMIN_VIEWER',
   COACH = 'COACH',
   BALLBOY = 'BALLBOY',
   CASHIER = 'CASHIER'

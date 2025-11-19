@@ -12,8 +12,9 @@ import {
 } from '@/components/ui/dialog';
 import { useConfirmMutation } from '@/hooks/useConfirmDialog';
 import { adminPaymentMethodsQueryOptions } from '@/queries/admin/paymentMethod';
+import { adminProfileQueryOptions } from '@/queries/admin/auth';
 import type { PaymentMethod } from '@/types/model';
-import { IconPencil, IconPlus, IconTrash } from '@tabler/icons-react';
+import { IconPencil, IconPlus, IconTrash, IconEye } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
@@ -23,8 +24,10 @@ import EditPaymentMethodForm from './EditPaymentMethodForm';
 import PreviewImage from '@/components/ui/preview-image';
 import { Badge } from '@/components/ui/badge';
 import { STATUS_BADGE_VARIANT, STATUS_MAP } from '@/lib/constants';
+import { hasCreatePermission, hasEditPermission, hasDeletePermission } from '@/lib/utils';
 
 const PaymentMethodTable = () => {
+  const { data: me } = useQuery(adminProfileQueryOptions);
   const { confirmAndMutate } = useConfirmMutation(
     {
       mutationFn: deletePaymentMethodApi
@@ -83,32 +86,33 @@ const PaymentMethodTable = () => {
         header: 'Aksi',
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
-            <ManagedDialog id={`edit-payment-method-${row.original.id}`}>
+            <ManagedDialog id={`${hasEditPermission(me?.role) ? 'edit' : 'view'}-payment-method-${row.original.id}`}>
               <DialogTrigger asChild>
                 <Button size="icon" variant="lightInfo">
-                  <IconPencil />
+                  {hasEditPermission(me?.role) ? <IconPencil /> : <IconEye />}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader className="mb-4">
-                  <DialogTitle>Edit Metode Pembayaran</DialogTitle>
+                  <DialogTitle>{hasEditPermission(me?.role) ? 'Edit' : 'View'} Metode Pembayaran</DialogTitle>
                 </DialogHeader>
-                {/* You would typically have an EditPaymentMethodForm component here */}
                 <EditPaymentMethodForm data={row.original} />
               </DialogContent>
             </ManagedDialog>
-            <Button
-              size="icon"
-              variant="lightDanger"
-              onClick={async () => await confirmAndMutate(row.original.id)}
-            >
-              <IconTrash />
-            </Button>
+            {hasDeletePermission(me?.role) && (
+              <Button
+                size="icon"
+                variant="lightDanger"
+                onClick={async () => await confirmAndMutate(row.original.id)}
+              >
+                <IconTrash />
+              </Button>
+            )}
           </div>
         )
       })
     ],
-    [colHelper, confirmAndMutate]
+    [colHelper, confirmAndMutate, me?.role]
   );
 
   const { data, isPending } = useQuery(adminPaymentMethodsQueryOptions);
@@ -120,20 +124,22 @@ const PaymentMethodTable = () => {
       columns={columns}
       enableRowSelection={false}
       addButton={
-        <ManagedDialog id="create-payment-method">
-          <DialogTrigger asChild>
-            <Button>
-              <IconPlus />
-              Tambah
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader className="mb-4">
-              <DialogTitle>Tambah Data Baru</DialogTitle>
-            </DialogHeader>
-            <CreatePaymentMethodForm />
-          </DialogContent>
-        </ManagedDialog>
+        hasCreatePermission(me?.role) ? (
+          <ManagedDialog id="create-payment-method">
+            <DialogTrigger asChild>
+              <Button>
+                <IconPlus />
+                Tambah
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader className="mb-4">
+                <DialogTitle>Tambah Data Baru</DialogTitle>
+              </DialogHeader>
+              <CreatePaymentMethodForm />
+            </DialogContent>
+          </ManagedDialog>
+        ) : undefined
       }
     />
   );

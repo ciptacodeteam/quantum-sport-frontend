@@ -7,9 +7,15 @@ import AppSectionHeader from '@/components/ui/app-section-header';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { dashboardStatsQueryOptions } from '@/queries/admin/analytics';
+import { adminProfileQueryOptions } from '@/queries/admin/auth';
+import { canAccessDashboard } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const { data: me } = useQuery(adminProfileQueryOptions);
   const { data: stats, isLoading, isError } = useQuery(dashboardStatsQueryOptions());
 
   return (

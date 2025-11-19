@@ -140,6 +140,7 @@ export function isAdminToken(token: string | null): boolean {
     // Check if token has admin role
     return (
       decoded?.role === ROLE.ADMIN ||
+      decoded?.role === ROLE.ADMIN_VIEWER ||
       decoded?.role === ROLE.COACH ||
       decoded?.role === ROLE.BALLBOY ||
       decoded?.role === ROLE.CASHIER
@@ -147,6 +148,44 @@ export function isAdminToken(token: string | null): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * Permission utility functions for ADMIN_VIEWER role
+ * ADMIN_VIEWER can only view, not create, edit, or delete
+ */
+export function hasCreatePermission(userRole: string | null | undefined): boolean {
+  if (!userRole) return false;
+  const role = String(userRole).toUpperCase();
+  // ADMIN_VIEWER, COACH, BALLBOY, and CASHIER cannot create
+  return role !== ROLE.ADMIN_VIEWER && role !== ROLE.COACH && role !== ROLE.BALLBOY && role !== ROLE.CASHIER;
+}
+
+export function hasEditPermission(userRole: string | null | undefined): boolean {
+  if (!userRole) return false;
+  const role = String(userRole).toUpperCase();
+  // ADMIN_VIEWER cannot edit
+  return role !== ROLE.ADMIN_VIEWER;
+}
+
+export function hasDeletePermission(userRole: string | null | undefined): boolean {
+  if (!userRole) return false;
+  const role = String(userRole).toUpperCase();
+  // ADMIN_VIEWER, COACH, BALLBOY, and CASHIER cannot delete
+  return role !== ROLE.ADMIN_VIEWER && role !== ROLE.COACH && role !== ROLE.BALLBOY && role !== ROLE.CASHIER;
+}
+
+export function hasViewPermission(userRole: string | null | undefined): boolean {
+  if (!userRole) return false;
+  // All admin roles can view
+  return true;
+}
+
+export function canAccessDashboard(userRole: string | null | undefined): boolean {
+  if (!userRole) return false;
+  const role = String(userRole).toUpperCase();
+  // ADMIN_VIEWER cannot access dashboard
+  return role !== ROLE.ADMIN_VIEWER;
 }
 
 export function sleep(ms: number) {

@@ -5,10 +5,11 @@ import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import PreviewImage from '@/components/ui/preview-image';
 import { STATUS_BADGE_VARIANT, STATUS_MAP } from '@/lib/constants';
-import { formatPhone, getNameInitial } from '@/lib/utils';
+import { formatPhone, getNameInitial, hasCreatePermission, hasEditPermission } from '@/lib/utils';
 import { adminStaffsQueryOptions } from '@/queries/admin/staff';
+import { adminProfileQueryOptions } from '@/queries/admin/auth';
 import type { Staff } from '@/types/model';
-import { IconPencil, IconPlus } from '@tabler/icons-react';
+import { IconPencil, IconPlus, IconEye } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
@@ -17,6 +18,7 @@ import { useMemo } from 'react';
 
 const StaffTable = () => {
   const colHelper = createColumnHelper<Staff>();
+  const { data: me } = useQuery(adminProfileQueryOptions);
 
   const columns = useMemo(
     () => [
@@ -69,14 +71,14 @@ const StaffTable = () => {
           <div className="flex items-center gap-2">
             <Link href={`/admin/kelola-karyawan/${row.original.id}`} prefetch>
               <Button size="icon" variant="lightInfo">
-                <IconPencil />
+                {hasEditPermission(me?.role) ? <IconPencil /> : <IconEye />}
               </Button>
             </Link>
           </div>
         )
       })
     ],
-    [colHelper]
+    [colHelper, me?.role]
   );
 
   const { data, isPending } = useQuery(adminStaffsQueryOptions);
@@ -88,12 +90,14 @@ const StaffTable = () => {
       columns={columns}
       enableRowSelection={false}
       addButton={
-        <Link href="/admin/kelola-karyawan/tambah" prefetch>
-          <Button>
-            <IconPlus />
-            Tambah
-          </Button>
-        </Link>
+        hasCreatePermission(me?.role) ? (
+          <Link href="/admin/kelola-karyawan/tambah" prefetch>
+            <Button>
+              <IconPlus />
+              Tambah
+            </Button>
+          </Link>
+        ) : undefined
       }
     />
   );
