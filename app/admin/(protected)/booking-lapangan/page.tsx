@@ -992,7 +992,7 @@ export default function BookingLapangan() {
                             })()}
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                        <PopoverContent className="w-(--radix-popover-trigger-width) p-0">
                           <Command>
                             <CommandInput
                               placeholder="Cari pelanggan..."

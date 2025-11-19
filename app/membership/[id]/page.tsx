@@ -129,7 +129,7 @@ export default function MembershipDetailPage({ params }: { params: Promise<{ id:
                 </div>
                 <div>
                   <p className="text-xl font-bold sm:text-2xl">{membership.sessions}</p>
-                  <p className="text-muted-foreground text-xs">Total Sesi</p>
+                  <p className="text-muted-foreground text-xs">Total Jam</p>
                 </div>
               </div>
 
@@ -179,7 +179,7 @@ export default function MembershipDetailPage({ params }: { params: Promise<{ id:
                   <p className="truncate text-base font-bold sm:text-lg">
                     {formatCurrency(Math.round(membership.price / membership.sessions))}
                   </p>
-                  <p className="text-muted-foreground text-xs">Per Sesi</p>
+                  <p className="text-muted-foreground text-xs">Per Jam</p>
                 </div>
               </div>
             </div>
@@ -273,8 +273,8 @@ export default function MembershipDetailPage({ params }: { params: Promise<{ id:
                   <li>
                     • Membership berlaku selama {membership.duration} hari sejak tanggal aktivasi
                   </li>
-                  <li>• Total {membership.sessions} sesi dapat digunakan dalam periode aktif</li>
-                  <li>• Sesi yang tidak terpakai akan hangus setelah masa aktif berakhir</li>
+                  <li>• Total {membership.sessions} jam dapat digunakan dalam periode aktif</li>
+                  <li>• Jam yang tidak terpakai akan hangus setelah masa aktif berakhir</li>
                   <li>• Membership tidak dapat dikembalikan atau dipindahtangankan</li>
                 </ul>
               </div>
