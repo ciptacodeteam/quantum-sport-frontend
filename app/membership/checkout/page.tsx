@@ -174,8 +174,8 @@ export default function MembershipCheckoutPage() {
 
             <div className="grid grid-cols-2 gap-4 rounded-lg bg-gray-50 p-4">
               <div>
-                <p className="text-muted-foreground text-xs">Jumlah Sesi</p>
-                <p className="font-semibold">{membership.sessions} sesi</p>
+                <p className="text-muted-foreground text-xs">Jumlah Jam</p>
+                <p className="font-semibold">{membership.sessions} jam</p>
               </div>
               <div>
                 <p className="text-muted-foreground text-xs">Durasi</p>

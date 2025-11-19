@@ -16,7 +16,7 @@ import Link from 'next/link';
 
 export default function MembershipPage() {
   const { data, isLoading, isError } = useQuery(membershipsQueryOptions());
-  const memberships = data ?? [];
+  const memberships = (data ?? []).filter((membership) => membership.isActive);
 
   return (
     <>
@@ -84,7 +84,7 @@ export default function MembershipPage() {
                           />
                         </svg>
                         <span className="text-foreground font-medium">{pack.sessions}</span>
-                        <span className="text-muted-foreground">Sesi</span>
+                        <span className="text-muted-foreground">Jam</span>
                       </div>
 
                       <div className="flex items-center gap-1.5 text-sm">

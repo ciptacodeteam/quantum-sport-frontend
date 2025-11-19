@@ -20,7 +20,7 @@ const formSchema = z.object({
   description: z.string(),
   content: z.string(),
   price: z.number().min(0, { message: 'Harga tidak boleh negatif' }),
-  sessions: z.number().min(0, { message: 'Jumlah sesi tidak boleh negatif' }),
+  sessions: z.number().min(0, { message: 'Jumlah jam tidak boleh negatif' }),
   duration: z.number().min(1, { message: 'Durasi minimal 1 hari' }),
   sequence: z.number().min(1, { message: 'Urutan minimal 1' }),
   isActive: z.boolean().optional(),
@@ -128,7 +128,7 @@ const CreateMembershipForm = () => {
               </Field>
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <Field>
-                  <FieldLabel htmlFor="sessions">Jumlah Sesi</FieldLabel>
+                  <FieldLabel htmlFor="sessions">Jumlah Jam</FieldLabel>
                   <Controller
                     control={form.control}
                     name="sessions"

@@ -20,6 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { getPlaceholderImageUrl } from '@/lib/utils';
 import { logoutMutationOptions } from '@/mutations/auth';
 import { leaveClubMutationOptions } from '@/mutations/club';
+import { myMembershipsQueryOptions } from '@/queries/membership';
 import { profileQueryOptions } from '@/queries/profile';
 import useAuthStore from '@/stores/useAuthStore';
 import { IconCalendar, IconLogout, IconMail, IconPhone } from '@tabler/icons-react';
@@ -33,6 +34,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: user, isPending, isError } = useQuery(profileQueryOptions);
+  const { data: myMemberships, isPending: isMembershipsLoading } = useQuery(myMembershipsQueryOptions);
   // const {
   //   data: memberClubs,
   //   isLoading: isLoadingMemberClubs,
@@ -262,6 +264,82 @@ export default function ProfilePage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Active Membership Card */}
+          {!isMembershipsLoading && myMemberships && myMemberships.active.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="mb-1">Membership Aktif</CardTitle>
+                <CardDescription>Informasi membership yang sedang aktif</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {myMemberships.active.map((userMembership) => (
+                  <div key={userMembership.id} className="rounded-lg border p-4">
+                    <div className="mb-3 flex items-start justify-between">
+                      <div>
+                        <h3 className="text-lg font-bold">{userMembership.membership.name}</h3>
+                        {userMembership.membership.description && (
+                          <p className="text-muted-foreground text-sm">
+                            {userMembership.membership.description}
+                          </p>
+                        )}
+                      </div>
+                      <span className="bg-primary/10 text-primary rounded-full px-2.5 py-0.5 text-xs font-medium">
+                        Aktif
+                      </span>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-md bg-muted p-3">
+                        <p className="text-muted-foreground mb-1 text-xs">Berlaku Hingga</p>
+                        <p className="font-semibold">
+                          {dayjs(userMembership.endDate).format('DD MMMM YYYY')}
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          {userMembership.remainingDuration} hari tersisa
+                        </p>
+                      </div>
+
+                      <div className="rounded-md bg-muted p-3">
+                        <p className="text-muted-foreground mb-1 text-xs">Sisa Jam</p>
+                        <p className="font-semibold">
+                          {userMembership.remainingSessions} dari {userMembership.membership.sessions} jam
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          {Math.round((userMembership.remainingSessions / userMembership.membership.sessions) * 100)}% tersisa
+                        </p>
+                      </div>
+                    </div>
+
+                    {userMembership.membership.benefits && userMembership.membership.benefits.length > 0 && (
+                      <div className="mt-3">
+                        <p className="mb-2 text-sm font-medium">Benefit:</p>
+                        <ul className="space-y-1">
+                          {userMembership.membership.benefits.map((benefit) => (
+                            <li key={benefit.id} className="flex items-start gap-2 text-sm">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="text-primary mt-0.5 h-4 w-4 shrink-0"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                              <span className="text-muted-foreground">{benefit.benefit}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Change Password (trigger) */}
           <Card>

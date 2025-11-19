@@ -35,8 +35,8 @@ const MembershipTable = () => {
         meta: { width: 150 }
       }),
       colHelper.accessor('sessions', {
-        header: 'Sesi',
-        cell: (info) => info.getValue() + ' sesi',
+        header: 'Jam',
+        cell: (info) => info.getValue() + ' jam',
         meta: { width: 100 }
       }),
       colHelper.accessor('sequence', {

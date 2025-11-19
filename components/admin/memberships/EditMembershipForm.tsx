@@ -23,7 +23,7 @@ const formSchema = z.object({
   description: z.string(),
   content: z.string(),
   price: z.number().min(0, { message: 'Harga tidak boleh negatif' }),
-  sessions: z.number().min(0, { message: 'Jumlah sesi tidak boleh negatif' }),
+  sessions: z.number().min(0, { message: 'Jumlah jam tidak boleh negatif' }),
   duration: z.number().min(1, { message: 'Durasi minimal 1 hari' }),
   sequence: z.number().min(1, { message: 'Urutan minimal 1' }),
   isActive: z.boolean().optional(),
@@ -145,7 +145,7 @@ const EditMembershipForm = ({ membershipId }: Props) => {
               </Field>
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <Field>
-                  <FieldLabel htmlFor="sessions">Jumlah Sesi</FieldLabel>
+                  <FieldLabel htmlFor="sessions">Jumlah Jam</FieldLabel>
                   <Controller
                     control={form.control}
                     name="sessions"
@@ -206,12 +206,21 @@ const EditMembershipForm = ({ membershipId }: Props) => {
                 <Controller
                   control={form.control}
                   name="content"
-                  render={({ field }) => (
-                    <Editor
-                      editorSerializedState={field.value ? JSON.parse(field.value) : undefined}
-                      onSerializedChange={(state) => field.onChange(JSON.stringify(state))}
-                    />
-                  )}
+                  render={({ field }) => {
+                    let parsedContent;
+                    try {
+                      parsedContent = field.value ? JSON.parse(field.value) : undefined;
+                    } catch (error) {
+                      // If content is not valid JSON, treat it as undefined
+                      parsedContent = undefined;
+                    }
+                    return (
+                      <Editor
+                        editorSerializedState={parsedContent}
+                        onSerializedChange={(state) => field.onChange(JSON.stringify(state))}
+                      />
+                    );
+                  }}
                 />
                 <FieldError>{form.formState.errors.content?.message}</FieldError>
               </Field>
