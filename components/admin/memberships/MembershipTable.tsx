@@ -4,9 +4,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import { STATUS_BADGE_VARIANT, STATUS_MAP } from '@/lib/constants';
+import { hasCreatePermission, hasEditPermission } from '@/lib/utils';
 import { adminMembershipsQueryOptions } from '@/queries/admin/membership';
+import { adminProfileQueryOptions } from '@/queries/admin/auth';
 import type { Membership } from '@/types/model';
-import { IconPencil, IconPlus } from '@tabler/icons-react';
+import { IconPencil, IconPlus, IconEye } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
@@ -15,6 +17,7 @@ import { useMemo } from 'react';
 
 const MembershipTable = () => {
   const colHelper = createColumnHelper<Membership>();
+  const { data: me } = useQuery(adminProfileQueryOptions);
 
   const columns = useMemo(
     () => [
@@ -65,14 +68,14 @@ const MembershipTable = () => {
           <div className="flex items-center gap-2">
             <Link href={`/admin/kelola-membership/${row.original.id}`} prefetch>
               <Button size="icon" variant="lightInfo">
-                <IconPencil />
+                {hasEditPermission(me?.role) ? <IconPencil /> : <IconEye />}
               </Button>
             </Link>
           </div>
         )
       })
     ],
-    [colHelper]
+    [colHelper, me?.role]
   );
 
   const { data, isPending } = useQuery(adminMembershipsQueryOptions);
@@ -84,12 +87,14 @@ const MembershipTable = () => {
       columns={columns}
       enableRowSelection={false}
       addButton={
-        <Link href="/admin/kelola-membership/tambah" prefetch>
-          <Button>
-            <IconPlus />
-            Tambah
-          </Button>
-        </Link>
+        hasCreatePermission(me?.role) ? (
+          <Link href="/admin/kelola-membership/tambah" prefetch>
+            <Button>
+              <IconPlus />
+              Tambah
+            </Button>
+          </Link>
+        ) : undefined
       }
     />
   );

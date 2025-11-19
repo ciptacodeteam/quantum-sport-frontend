@@ -6,10 +6,11 @@ import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import { useConfirmMutation } from '@/hooks/useConfirmDialog';
 import { STATUS_BADGE_VARIANT, STATUS_MAP } from '@/lib/constants';
-import { formatNumber } from '@/lib/utils';
+import { formatNumber, hasCreatePermission, hasEditPermission, hasDeletePermission } from '@/lib/utils';
 import { adminTournamentsQueryOptions } from '@/queries/admin/tournament';
+import { adminProfileQueryOptions } from '@/queries/admin/auth';
 import type { Tournament } from '@/types/model';
-import { IconPencil, IconPlus, IconTrash } from '@tabler/icons-react';
+import { IconPencil, IconPlus, IconTrash, IconEye } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
@@ -18,6 +19,7 @@ import { useMemo } from 'react';
 
 const TournamentTable = () => {
   const router = useRouter();
+  const { data: me } = useQuery(adminProfileQueryOptions);
 
   const { confirmAndMutate } = useConfirmMutation(
     {
@@ -85,20 +87,22 @@ const TournamentTable = () => {
               variant="lightInfo"
               onClick={() => router.push(`/admin/kelola-turnamen/${row.original.id}`)}
             >
-              <IconPencil />
+              {hasEditPermission(me?.role) ? <IconPencil /> : <IconEye />}
             </Button>
-            <Button
-              size="icon"
-              variant="lightDanger"
-              onClick={async () => await confirmAndMutate(row.original.id)}
-            >
-              <IconTrash />
-            </Button>
+            {hasDeletePermission(me?.role) && (
+              <Button
+                size="icon"
+                variant="lightDanger"
+                onClick={async () => await confirmAndMutate(row.original.id)}
+              >
+                <IconTrash />
+              </Button>
+            )}
           </div>
         )
       })
     ],
-    [colHelper, confirmAndMutate, router]
+    [colHelper, confirmAndMutate, router, me?.role]
   );
 
   const { data, isPending } = useQuery(adminTournamentsQueryOptions());
@@ -110,10 +114,12 @@ const TournamentTable = () => {
       columns={columns}
       enableRowSelection={false}
       addButton={
-        <Button onClick={() => router.push('/admin/kelola-turnamen/tambah')}>
-          <IconPlus />
-          Tambah
-        </Button>
+        hasCreatePermission(me?.role) ? (
+          <Button onClick={() => router.push('/admin/kelola-turnamen/tambah')}>
+            <IconPlus />
+            Tambah
+          </Button>
+        ) : undefined
       }
     />
   );

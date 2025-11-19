@@ -11,10 +11,11 @@ import {
   ManagedDialog
 } from '@/components/ui/dialog';
 import { useConfirmMutation } from '@/hooks/useConfirmDialog';
-import { formatNumber } from '@/lib/utils';
+import { formatNumber, hasCreatePermission, hasEditPermission, hasDeletePermission } from '@/lib/utils';
 import { adminInventoriesQueryOptions } from '@/queries/admin/inventory';
+import { adminProfileQueryOptions } from '@/queries/admin/auth';
 import type { Inventory } from '@/types/model';
-import { IconPencil, IconPlus, IconTrash } from '@tabler/icons-react';
+import { IconPencil, IconPlus, IconTrash, IconEye } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
@@ -23,6 +24,7 @@ import CreateInventoryForm from './CreateInventoryForm';
 import EditInventoryForm from './EditInventoryForm';
 
 const InventoryTable = () => {
+  const { data: me } = useQuery(adminProfileQueryOptions);
   const { confirmAndMutate } = useConfirmMutation(
     {
       mutationFn: deleteInventoryApi
@@ -71,32 +73,33 @@ const InventoryTable = () => {
         header: 'Aksi',
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
-            <ManagedDialog id={`edit-inventory-${row.original.id}`}>
+            <ManagedDialog id={`${hasEditPermission(me?.role) ? 'edit' : 'view'}-inventory-${row.original.id}`}>
               <DialogTrigger asChild>
                 <Button size="icon" variant="lightInfo">
-                  <IconPencil />
+                  {hasEditPermission(me?.role) ? <IconPencil /> : <IconEye />}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader className="mb-4">
-                  <DialogTitle>Edit Inventory</DialogTitle>
+                  <DialogTitle>{hasEditPermission(me?.role) ? 'Edit' : 'View'} Inventory</DialogTitle>
                 </DialogHeader>
-                {/* You would typically have an EditInventoryForm component here */}
                 <EditInventoryForm data={row.original} />
               </DialogContent>
             </ManagedDialog>
-            <Button
-              size="icon"
-              variant="lightDanger"
-              onClick={async () => await confirmAndMutate(row.original.id)}
-            >
-              <IconTrash />
-            </Button>
+            {hasDeletePermission(me?.role) && (
+              <Button
+                size="icon"
+                variant="lightDanger"
+                onClick={async () => await confirmAndMutate(row.original.id)}
+              >
+                <IconTrash />
+              </Button>
+            )}
           </div>
         )
       })
     ],
-    [colHelper, confirmAndMutate]
+    [colHelper, confirmAndMutate, me?.role]
   );
 
   const { data, isPending } = useQuery(adminInventoriesQueryOptions);
@@ -108,20 +111,22 @@ const InventoryTable = () => {
       columns={columns}
       enableRowSelection={false}
       addButton={
-        <ManagedDialog id="create-inventory">
-          <DialogTrigger asChild>
-            <Button>
-              <IconPlus />
-              Tambah
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader className="mb-4">
-              <DialogTitle>Tambah Data Baru</DialogTitle>
-            </DialogHeader>
-            <CreateInventoryForm />
-          </DialogContent>
-        </ManagedDialog>
+        hasCreatePermission(me?.role) ? (
+          <ManagedDialog id="create-inventory">
+            <DialogTrigger asChild>
+              <Button>
+                <IconPlus />
+                Tambah
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader className="mb-4">
+                <DialogTitle>Tambah Data Baru</DialogTitle>
+              </DialogHeader>
+              <CreateInventoryForm />
+            </DialogContent>
+          </ManagedDialog>
+        ) : undefined
       }
     />
   );

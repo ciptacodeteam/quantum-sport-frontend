@@ -188,6 +188,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const isCoach = me?.role?.toUpperCase?.() === ROLE.COACH;
   const isCashier = me?.role?.toUpperCase?.() === ROLE.CASHIER;
 
+  const isAdminViewer = me?.role?.toUpperCase?.() === ROLE.ADMIN_VIEWER;
+
   const navMainItems = React.useMemo<AppSidebarItem[]>(() => {
     if (isCoach) {
       return [
@@ -243,8 +245,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       ];
     }
 
+    if (isAdminViewer) {
+      // ADMIN_VIEWER can view everything except Dashboard and Master Data
+      return data.navMain.filter(
+        (item) => item.title !== 'Dashboard' && item.title !== 'Master Data'
+      );
+    }
+
     return data.navMain;
-  }, [isCoach, isCashier]);
+  }, [isCoach, isCashier, isAdminViewer]);
 
   return (
     <Sidebar variant="inset" {...props}>
@@ -252,13 +261,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild isActive={isDashboardActive}>
-              <Link href="/admin/dashboard" prefetch>
+              <Link href={isAdminViewer ? "/admin/booking-lapangan" : "/admin/dashboard"} prefetch>
                 <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
                   <Command className="size-4" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">Quantum Sport</span>
-                  <span className="truncate text-xs">Dashboard Admin</span>
+                  <span className="truncate text-xs">{isAdminViewer ? "Admin Panel" : "Dashboard Admin"}</span>
                 </div>
               </Link>
             </SidebarMenuButton>

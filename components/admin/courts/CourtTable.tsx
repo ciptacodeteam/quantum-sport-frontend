@@ -14,9 +14,11 @@ import {
 import PreviewImage from '@/components/ui/preview-image';
 import { useConfirmMutation } from '@/hooks/useConfirmDialog';
 import { STATUS_BADGE_VARIANT, STATUS_MAP } from '@/lib/constants';
+import { hasCreatePermission, hasEditPermission, hasDeletePermission } from '@/lib/utils';
 import { adminCourtsQueryOptions } from '@/queries/admin/court';
+import { adminProfileQueryOptions } from '@/queries/admin/auth';
 import type { Court } from '@/types/model';
-import { IconPencil, IconPlus, IconTrash } from '@tabler/icons-react';
+import { IconPencil, IconPlus, IconTrash, IconEye } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
@@ -25,6 +27,7 @@ import { useMemo } from 'react';
 import CreateCourtForm from './CreateCourtForm';
 
 const CourtTable = () => {
+  const { data: me } = useQuery(adminProfileQueryOptions);
   const { confirmAndMutate } = useConfirmMutation(
     {
       mutationFn: deleteCourtApi
@@ -79,21 +82,23 @@ const CourtTable = () => {
           <div className="flex items-center gap-2">
             <Link href={`/admin/kelola-lapangan/${row.original.id}`} prefetch>
               <Button size="icon" variant="lightInfo">
-                <IconPencil />
+                {hasEditPermission(me?.role) ? <IconPencil /> : <IconEye />}
               </Button>
             </Link>
-            <Button
-              size="icon"
-              variant="lightDanger"
-              onClick={async () => await confirmAndMutate(row.original.id)}
-            >
-              <IconTrash />
-            </Button>
+            {hasDeletePermission(me?.role) && (
+              <Button
+                size="icon"
+                variant="lightDanger"
+                onClick={async () => await confirmAndMutate(row.original.id)}
+              >
+                <IconTrash />
+              </Button>
+            )}
           </div>
         )
       })
     ],
-    [colHelper, confirmAndMutate]
+    [colHelper, confirmAndMutate, me?.role]
   );
 
   const { data, isPending } = useQuery(adminCourtsQueryOptions());
@@ -105,20 +110,22 @@ const CourtTable = () => {
       columns={columns}
       enableRowSelection={false}
       addButton={
-        <ManagedDialog id="create-court">
-          <DialogTrigger asChild>
-            <Button>
-              <IconPlus />
-              Tambah
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="lg:min-w-xl">
-            <DialogHeader className="mb-4">
-              <DialogTitle>Tambah Data Baru</DialogTitle>
-            </DialogHeader>
-            <CreateCourtForm />
-          </DialogContent>
-        </ManagedDialog>
+        hasCreatePermission(me?.role) ? (
+          <ManagedDialog id="create-court">
+            <DialogTrigger asChild>
+              <Button>
+                <IconPlus />
+                Tambah
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="lg:min-w-xl">
+              <DialogHeader className="mb-4">
+                <DialogTitle>Tambah Data Baru</DialogTitle>
+              </DialogHeader>
+              <CreateCourtForm />
+            </DialogContent>
+          </ManagedDialog>
+        ) : undefined
       }
     />
   );

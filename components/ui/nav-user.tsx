@@ -19,7 +19,7 @@ import {
   useSidebar
 } from '@/components/ui/sidebar';
 import { getNameInitial, getTwoWordName } from '@/lib/utils';
-import { logoutMutationOptions } from '@/mutations/auth';
+import { adminLogoutMutationOptions } from '@/mutations/admin/auth';
 import { adminProfileQueryOptions } from '@/queries/admin/auth';
 import useAuthStore from '@/stores/useAuthStore';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -38,7 +38,7 @@ export function NavUser() {
   const queryClient = useQueryClient();
 
   const { mutate: logoutMutate, isPending: isLogoutPending } = useMutation(
-    logoutMutationOptions({
+    adminLogoutMutationOptions({
       onSuccess: () => {
         logout();
         router.push('/admin/auth/login');

@@ -14,9 +14,11 @@ import {
 import PreviewImage from '@/components/ui/preview-image';
 import { useConfirmMutation } from '@/hooks/useConfirmDialog';
 import { STATUS_BADGE_VARIANT, STATUS_MAP } from '@/lib/constants';
+import { hasCreatePermission, hasEditPermission, hasDeletePermission } from '@/lib/utils';
 import { adminBannersQueryOptions } from '@/queries/admin/banner';
+import { adminProfileQueryOptions } from '@/queries/admin/auth';
 import type { Banner } from '@/types/model';
-import { IconExternalLink, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react';
+import { IconExternalLink, IconPencil, IconPlus, IconTrash, IconEye } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
@@ -26,6 +28,7 @@ import CreateBannerForm from './CreateBannerForm';
 import EditBannerForm from './EditBannerForm';
 
 const BannerTable = () => {
+  const { data: me } = useQuery(adminProfileQueryOptions);
   const { confirmAndMutate } = useConfirmMutation(
     {
       mutationFn: deleteBannerApi
@@ -82,17 +85,16 @@ const BannerTable = () => {
         header: 'Aksi',
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
-            <ManagedDialog id={`edit-banner-${row.original.id}`}>
+            <ManagedDialog id={`${hasEditPermission(me?.role) ? 'edit' : 'view'}-banner-${row.original.id}`}>
               <DialogTrigger asChild>
                 <Button size="icon" variant="lightInfo">
-                  <IconPencil />
+                  {hasEditPermission(me?.role) ? <IconPencil /> : <IconEye />}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader className="mb-4">
-                  <DialogTitle>Edit Banner</DialogTitle>
+                  <DialogTitle>{hasEditPermission(me?.role) ? 'Edit' : 'View'} Banner</DialogTitle>
                 </DialogHeader>
-                {/* You would typically have an EditBannerForm component here */}
                 <EditBannerForm data={row.original} />
               </DialogContent>
             </ManagedDialog>
@@ -103,18 +105,20 @@ const BannerTable = () => {
                 </Button>
               </Link>
             )}
-            <Button
-              size="icon"
-              variant="lightDanger"
-              onClick={async () => await confirmAndMutate(row.original.id)}
-            >
-              <IconTrash />
-            </Button>
+            {hasDeletePermission(me?.role) && (
+              <Button
+                size="icon"
+                variant="lightDanger"
+                onClick={async () => await confirmAndMutate(row.original.id)}
+              >
+                <IconTrash />
+              </Button>
+            )}
           </div>
         )
       })
     ],
-    [colHelper, confirmAndMutate]
+    [colHelper, confirmAndMutate, me?.role]
   );
 
   const { data, isPending } = useQuery(adminBannersQueryOptions);
@@ -126,20 +130,22 @@ const BannerTable = () => {
       columns={columns}
       enableRowSelection={false}
       addButton={
-        <ManagedDialog id="create-banner">
-          <DialogTrigger asChild>
-            <Button>
-              <IconPlus />
-              Tambah
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="lg:min-w-xl">
-            <DialogHeader className="mb-4">
-              <DialogTitle>Tambah Data Baru</DialogTitle>
-            </DialogHeader>
-            <CreateBannerForm />
-          </DialogContent>
-        </ManagedDialog>
+        hasCreatePermission(me?.role) ? (
+          <ManagedDialog id="create-banner">
+            <DialogTrigger asChild>
+              <Button>
+                <IconPlus />
+                Tambah
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="lg:min-w-xl">
+              <DialogHeader className="mb-4">
+                <DialogTitle>Tambah Data Baru</DialogTitle>
+              </DialogHeader>
+              <CreateBannerForm />
+            </DialogContent>
+          </ManagedDialog>
+        ) : undefined
       }
     />
   );

@@ -38,7 +38,7 @@ const formSchema = z
     image: z.file().optional(),
     name: z.string().min(1, { message: 'Nama wajib diisi' }),
     email: z.string().email({ message: 'Email tidak valid' }),
-    role: z.enum([ROLE.ADMIN, ROLE.BALLBOY, ROLE.COACH, ROLE.CASHIER], {
+    role: z.enum([ROLE.ADMIN, ROLE.ADMIN_VIEWER, ROLE.BALLBOY, ROLE.COACH, ROLE.CASHIER], {
       message: 'Role tidak valid'
     }),
     phone: z
