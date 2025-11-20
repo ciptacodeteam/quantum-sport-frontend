@@ -391,7 +391,49 @@ export default function BookingAddOns() {
       return;
     }
 
+    // Calculate totalHours from booking items
+    const totalHours = bookingItems.reduce((total, item) => {
+      try {
+        // Parse timeSlot and endTime to calculate hours
+        const startTimeStr = item.timeSlot.includes(':') ? item.timeSlot : `${item.timeSlot}:00`;
+        const endTimeStr = item.endTime && item.endTime.includes(':') 
+          ? item.endTime 
+          : item.endTime 
+            ? `${item.endTime}:00`
+            : null;
+        
+        const startTime = dayjs(`${item.date} ${startTimeStr}`, ['YYYY-MM-DD HH:mm', 'YYYY-MM-DD H:mm'], true);
+        
+        if (!startTime.isValid()) {
+          // Fallback: assume 1 hour per booking if parsing fails
+          return total + 1;
+        }
+        
+        let endTime;
+        if (endTimeStr) {
+          endTime = dayjs(`${item.date} ${endTimeStr}`, ['YYYY-MM-DD HH:mm', 'YYYY-MM-DD H:mm'], true);
+        } else {
+          // If no endTime, assume 1 hour duration
+          endTime = startTime.add(1, 'hour');
+        }
+        
+        if (endTime.isValid()) {
+          const hours = endTime.diff(startTime, 'hour', true);
+          // Ensure at least 1 hour per booking
+          return total + Math.max(1, hours);
+        }
+        
+        // Fallback: assume 1 hour per booking
+        return total + 1;
+      } catch (error) {
+        console.warn('Error calculating hours for booking item:', item, error);
+        // Fallback: assume 1 hour per booking
+        return total + 1;
+      }
+    }, 0);
+
     const payload: any = {
+      totalHours: Math.max(1, Math.round(totalHours * 100) / 100), // Round to 2 decimal places, minimum 1
       courtSlots,
       coachSlots: coachSlots.length ? coachSlots : undefined,
       ballboySlots: ballboySlots.length ? ballboySlots : undefined,
@@ -407,6 +449,17 @@ export default function BookingAddOns() {
       toast.error('Pilih pelanggan atau lengkapi data walk-in.');
       return;
     }
+
+    // Console log before checkout
+    console.log('=== Admin Checkout Payload ===');
+    console.log('Payload:', JSON.stringify(payload, null, 2));
+    console.log('Total Hours:', payload.totalHours);
+    console.log('Court Slots:', courtSlots.length);
+    console.log('Coach Slots:', coachSlots.length);
+    console.log('Ballboy Slots:', ballboySlots.length);
+    console.log('Inventories:', inventories.length);
+    console.log('Customer:', selectedCustomerId ? `User ID: ${selectedCustomerId}` : `Walk-in: ${walkInName} (${walkInPhone})`);
+    console.log('============================');
 
     confirmCheckout(payload);
   };
@@ -424,50 +477,6 @@ export default function BookingAddOns() {
       />
 
       <div className="flex flex-col xl:flex-row gap-6">
-        {/* Mobile Summary */}
-        <div className="xl:hidden">
-          <Card className="bg-linear-to-r from-primary/5 to-primary/10 border-primary/20">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-primary">Booking Summary</CardTitle>
-                {(bookingItems.length + selectedCoaches.length + selectedInventories.length) > 0 && (
-                  <Badge variant="secondary" className="bg-primary/10 text-primary">
-                    {bookingItems.length + selectedCoaches.length + selectedInventories.length} items
-                  </Badge>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              {selectedCustomer ? (
-                <div className="mb-3 rounded-lg bg-white/50 p-2">
-                  <p className="text-xs text-muted-foreground">Customer</p>
-                  <p className="text-sm font-semibold">{selectedCustomer.name}</p>
-                  {selectedCustomer.phone && (
-                    <p className="text-xs text-muted-foreground">{selectedCustomer.phone}</p>
-                  )}
-                </div>
-              ) : (walkInName || walkInPhone) ? (
-                <div className="mb-3 rounded-lg bg-white/50 p-2">
-                  <p className="text-xs text-muted-foreground">Walk-in Customer</p>
-                  <p className="text-sm font-semibold">{walkInName || '-'}</p>
-                  {walkInPhone && (
-                    <p className="text-xs text-muted-foreground">{walkInPhone}</p>
-                  )}
-                </div>
-              ) : null}
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Total:</span>
-                <div className="text-right">
-                  <span className="text-[10px] text-muted-foreground block">Total (excl. tax)</span>
-                  <span className="font-bold text-primary">
-                    Rp {getTotalAmount().toLocaleString('id-ID')}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Main Content */}
         <div className="flex-1 space-y-6">
           {/* Court Bookings Summary */}
@@ -854,9 +863,9 @@ export default function BookingAddOns() {
           )}
         </div>
 
-        {/* Right Sidebar - Detailed Summary */}
-        <div className="hidden xl:block xl:w-[400px] xl:shrink-0">
-          <Card className="sticky top-6">
+        {/* Booking Summary - Responsive */}
+        <div className="w-full xl:w-[400px] xl:shrink-0">
+          <Card className="xl:sticky xl:top-6">
             <CardHeader>
               <CardTitle>Booking Summary</CardTitle>
             </CardHeader>

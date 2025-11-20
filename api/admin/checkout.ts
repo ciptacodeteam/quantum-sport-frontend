@@ -1,7 +1,10 @@
 import { adminApi } from '@/lib/adminApi';
 
 export type AdminCheckoutPayload = {
-  userId: string;
+  userId?: string;
+  name?: string;
+  phone?: string;
+  totalHours: number;
   courtSlots?: string[];
   coachSlots?: string[];
   ballboySlots?: string[];

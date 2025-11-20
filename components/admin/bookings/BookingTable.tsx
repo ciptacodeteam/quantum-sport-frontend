@@ -52,16 +52,10 @@ const parseISOString = (
 const formatDate = (date: Date | string, format: string): string => {
   let dateObj: Date;
 
-  // If it's a string (likely ISO format), parse it directly to avoid timezone conversion
+  // Use native Date parsing which correctly handles timezones
+  // The Date constructor will parse ISO strings and convert them to local time
   if (typeof date === 'string') {
-    const parsed = parseISOString(date);
-    if (parsed) {
-      // Create a date object with the parsed components (treats as local time)
-      dateObj = new Date(parsed.year, parsed.month, parsed.day, parsed.hours, parsed.minutes);
-    } else {
-      // Fallback to standard Date parsing if regex doesn't match
-      dateObj = new Date(date);
-    }
+    dateObj = new Date(date);
   } else {
     dateObj = date;
   }
@@ -71,6 +65,7 @@ const formatDate = (date: Date | string, format: string): string => {
     return '-';
   }
 
+  // Get local time components (Date automatically converts UTC to local timezone)
   const year = dateObj.getFullYear();
   const month = dateObj.getMonth();
   const day = dateObj.getDate();

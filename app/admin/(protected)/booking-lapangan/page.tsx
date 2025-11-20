@@ -88,6 +88,23 @@ const formatDateString = (date: Date | string): string => {
   return formatDate(dateObj, 'YYYY-MM-DD');
 };
 
+// Helper to extract date string from ISO string without timezone conversion
+const getDateStringFromISO = (isoString: string): string => {
+  // Use the same parsing logic as formatSlotTime to avoid timezone conversion
+  const isoRegex = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?$/;
+  const match = isoString.match(isoRegex);
+  
+  if (match) {
+    const year = match[1];
+    const month = match[2];
+    const day = match[3];
+    return `${year}-${month}-${day}`;
+  }
+  
+  // Fallback to Date parsing if regex doesn't match
+  return formatDateString(new Date(isoString));
+};
+
 const startOfDay = (date: Date | string): Date => {
   const d = date instanceof Date ? new Date(date.getTime()) : new Date(date);
   d.setHours(0, 0, 0, 0);
@@ -141,44 +158,8 @@ type SelectedBooking = {
   price: number;
   date: string;
   slotId: string;
+  endTime?: string;
 };
-
-// Indonesian day and month mappings
-// const indonesianDays = {
-//   Sun: 'Min',
-//   Mon: 'Sen',
-//   Tue: 'Sel',
-//   Wed: 'Rab',
-//   Thu: 'Kam',
-//   Fri: 'Jum',
-//   Sat: 'Sab'
-// };
-
-// const indonesianMonths = {
-//   Jan: 'Jan',
-//   Feb: 'Feb',
-//   Mar: 'Mar',
-//   Apr: 'Apr',
-//   May: 'Mei',
-//   Jun: 'Jun',
-//   Jul: 'Jul',
-//   Aug: 'Agu',
-//   Sep: 'Sep',
-//   Oct: 'Okt',
-//   Nov: 'Nov',
-//   Dec: 'Des'
-// };
-
-// Helper functions for Indonesian formatting
-// const getIndonesianDay = (date: dayjs.Dayjs) => {
-//   const englishDay = date.format('ddd');
-//   return indonesianDays[englishDay as keyof typeof indonesianDays] || englishDay;
-// };
-
-// const getIndonesianMonth = (date: dayjs.Dayjs) => {
-//   const englishMonth = date.format('MMM');
-//   return indonesianMonths[englishMonth as keyof typeof indonesianMonths] || englishMonth;
-// };
 
 export default function BookingLapangan() {
   const router = useRouter();
@@ -193,8 +174,6 @@ export default function BookingLapangan() {
     setWalkInCustomer,
     walkInName: storeWalkInName,
     walkInPhone: storeWalkInPhone
-    // getTotalAmount,
-    // getTotalWithTax
   } = useBookingStore();
 
   const [localSelectedDate, setLocalSelectedDate] = useState<Date>(selectedDate);
@@ -208,7 +187,8 @@ export default function BookingLapangan() {
       timeSlot: item.timeSlot,
       price: item.price,
       date: item.date,
-      slotId: item.slotId || ''
+      slotId: item.slotId || '',
+      endTime: item.endTime
     }))
   );
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -279,7 +259,9 @@ export default function BookingLapangan() {
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [slots]);
 
-  // Get available slots for the selected date, grouped by court and time
+  // Get all slots for the selected date, grouped by court and time
+  // Note: We include ALL slots regardless of isAvailable status
+  // Slots with isAvailable: false will be shown but marked as "booked"
   const slotsByCourtAndTime = useMemo(() => {
     const map = new Map<string, Map<string, Slot & { court?: Court }>>();
     slots.forEach((slot) => {
@@ -287,17 +269,24 @@ export default function BookingLapangan() {
       if (!courtId) return;
 
       // Check if this slot belongs to the selected date
-      const slotDateObj = new Date(slot.startAt);
-      const slotDate = formatDateString(slotDateObj);
+      // Use timezone-safe date extraction to avoid conversion issues
+      const slotDate = typeof slot.startAt === 'string' 
+        ? getDateStringFromISO(slot.startAt)
+        : formatDateString(slot.startAt);
 
-      // Only include slots that belong to the selected date
+      // Include ALL slots that belong to the selected date (both available and booked)
       if (slotDate === selectedDateString) {
         if (!map.has(courtId)) {
           map.set(courtId, new Map());
         }
 
         // Use start time (HH:mm) as key to match availableTimeSlots
+        // IMPORTANT: Use the actual slot's start time, not a computed value
         const startTime = formatSlotTime(slot.startAt);
+        
+        // Store the slot with its start time as the key
+        // If there's already a slot at this time, we'll overwrite it
+        // (This shouldn't normally happen, but if it does, the last one wins)
         map.get(courtId)!.set(startTime, slot);
       }
     });
@@ -305,54 +294,47 @@ export default function BookingLapangan() {
     return map;
   }, [slots, selectedDateString]);
 
-  // Get all unique time slots from available slots (sorted)
+  // Get all unique time slots from all slots (sorted)
+  // IMPORTANT: We include ALL time slots regardless of isAvailable status
+  // Slots with isAvailable: false will be shown but marked as "booked" status
+  // We do NOT filter out any slots - all slots are displayed to the user
   const availableTimeSlots = useMemo(() => {
-    const timeMap = new Map<string, { startAt: Date; endAt: Date; fullRange: string }>();
+    const timeSet = new Set<string>();
+    
+    // Iterate through ALL slots and collect unique start times
+    // Do NOT filter by isAvailable - include everything
     slots.forEach((slot) => {
-      const slotDateObj = new Date(slot.startAt);
-      const slotDate = formatDateString(slotDateObj);
+      // Use timezone-safe date extraction to avoid conversion issues
+      const slotDate = typeof slot.startAt === 'string' 
+        ? getDateStringFromISO(slot.startAt)
+        : formatDateString(slot.startAt);
+      
+      // Include ALL slots for the selected date - regardless of isAvailable status
       if (slotDate === selectedDateString) {
         // Format start time as HH:mm
         const startTime = formatSlotTime(slot.startAt);
-        const fullRange = formatSlotTimeRange(slot.startAt, slot.endAt);
-
-        if (!timeMap.has(startTime)) {
-          timeMap.set(startTime, { startAt: slot.startAt, endAt: slot.endAt, fullRange });
-        }
+        // Add to set (automatically handles uniqueness)
+        timeSet.add(startTime);
       }
     });
 
-    // Sort by start time
-    return Array.from(timeMap.entries())
-      .sort((a, b) => {
-        return new Date(a[1].startAt).getTime() - new Date(b[1].startAt).getTime();
-      })
-      .map(([startTime]) => startTime);
+    // Convert to array and sort
+    return Array.from(timeSet)
+      .sort((a, b) => a.localeCompare(b));
   }, [slots, selectedDateString]);
 
   // Debug: Log fetched data
   useEffect(() => {
-    console.log('=== Booking Lapangan Data ===');
-    console.log('Query Params:', slotQueryParams);
-    console.log('Selected Date String:', selectedDateString);
-    console.log('Slots Data:', slotsData);
-    console.log('Formatted Slots:', slots);
-
-    // Debug each slot's date
-    slots.forEach((slot, index) => {
-      const slotDateObj = new Date(slot.startAt);
-      const slotDate = formatDateString(slotDateObj);
-      const startTime = formatSlotTime(slot.startAt);
-      console.log(`Slot ${index}:`, {
-        startAt: slot.startAt,
-        slotDate: slotDate,
-        startTime: startTime,
-        matchesSelectedDate: slotDate === selectedDateString
-      });
+    // Debug slots for selected date
+    const slotsForDate = slots.filter((slot) => {
+      const slotDate = typeof slot.startAt === 'string' 
+        ? getDateStringFromISO(slot.startAt)
+        : formatDateString(slot.startAt);
+      return slotDate === selectedDateString;
     });
-
-    console.log('Courts:', courts);
-    console.log('Available Time Slots:', availableTimeSlots);
+    slotsForDate.forEach((slot, index) => {
+      const startTime = formatSlotTime(slot.startAt);
+    });
   }, [slotsData, slots, courts, slotQueryParams, selectedDateString, availableTimeSlots]);
 
   // Sync with store when component mounts
@@ -432,8 +414,9 @@ export default function BookingLapangan() {
         timeSlot: timeRange,
         price: slot.price || 0,
         date: currentDateFormatted,
-        slotId: slot.id
-      };
+        slotId: slot.id,
+        endTime: endTime
+      } as SelectedBooking;
     });
 
     const updatedBookings = [...bookings, ...newBookings];
@@ -451,7 +434,9 @@ export default function BookingLapangan() {
       courtName: booking.courtName,
       timeSlot: booking.timeSlot,
       price: booking.price,
-      date: booking.date
+      date: booking.date,
+      slotId: booking.slotId,
+      endTime: booking.endTime
     }));
 
     const allBookingItems: any = [...existingBookingItems, ...newBookingItems];
@@ -473,12 +458,8 @@ export default function BookingLapangan() {
 
     // Update store to remove the booking item
     const updatedBookingItems: any = updatedBookings.map((booking) => {
-      // Extract start time from timeSlot (format: "HH:mm - HH:mm")
-      const startTime = booking.timeSlot.split(' - ')[0];
-      const [hours, minutes] = startTime.split(':').map(Number);
-      const tempDate = new Date(2000, 0, 1, hours, minutes);
-      tempDate.setHours(tempDate.getHours() + 1);
-      const endTime = formatSlotTime(tempDate);
+      // Extract end time from timeSlot (format: "HH:mm - HH:mm") or use stored endTime
+      const endTime = booking.endTime || booking.timeSlot.split(' - ')[1] || '';
       
       return {
         courtId: booking.courtId,
@@ -486,6 +467,7 @@ export default function BookingLapangan() {
         timeSlot: booking.timeSlot,
         price: booking.price,
         date: booking.date,
+        slotId: booking.slotId,
         endTime: endTime
       };
     });
@@ -518,7 +500,8 @@ export default function BookingLapangan() {
       timeSlot: booking.timeSlot,
       price: booking.price,
       date: booking.date,
-      slotId: booking.slotId
+      slotId: booking.slotId,
+      endTime: booking.endTime || booking.timeSlot.split(' - ')[1] || ''
     }));
     setBookingItems(bookingItemsForStore);
 
@@ -566,31 +549,46 @@ export default function BookingLapangan() {
   //   });
   // };
 
-  // Check if a time slot is available for a court
-  const isTimeSlotAvailableForCourt = (timeSlot: string, courtId: string) => {
-    const slot = slotsByCourtAndTime.get(courtId)?.get(timeSlot);
+  // Simple check: is a time slot booked?
+  // 1. Find the slot by court and start time
+  // 2. If isAvailable is false, it's booked
+  // 3. If current time > start time, it's booked (past time)
+  const isTimeSlotBooked = (timeSlot: string, courtId: string) => {
+    // Find the slot for this court and time
+    const matchingSlot = slots.find((slot) => {
+      const slotCourtId = slot.courtId || slot.court?.id;
+      if (slotCourtId !== courtId) return false;
 
-    // If slot doesn't exist, it's booked
-    if (!slot) return false;
+      // Check if this slot belongs to the selected date
+      const slotDate = typeof slot.startAt === 'string' 
+        ? getDateStringFromISO(slot.startAt)
+        : formatDateString(slot.startAt);
+      if (slotDate !== selectedDateString) return false;
 
-    // If slot exists but isAvailable is false, it's booked
-    if (!slot.isAvailable) return false;
+      // Check if the slot's start time matches the timeSlot we're checking
+      const slotStartTime = formatSlotTime(slot.startAt);
+      return slotStartTime === timeSlot;
+    });
 
-    const dateToCheck = formatDateString(localSelectedDate);
-    const startTime = formatSlotTime(slot.startAt);
-    const endTime = formatSlotTime(slot.endAt);
-    const slotTimeRange = `${startTime} - ${endTime}`;
+    // If no matching slot found, it's not shown (not booked, just doesn't exist)
+    if (!matchingSlot) return false;
 
-    // Check user bookings for the specific date
-    const userBooked = bookings.some(
-      (booking) =>
-        booking.timeSlot === slotTimeRange &&
-        booking.courtId === courtId &&
-        booking.date === dateToCheck
-    );
+    // Check if slot is not available
+    if (!matchingSlot.isAvailable) {
+      return true;
+    }
 
-    return !userBooked;
+    // Check if the slot's start time is in the past
+    const slotStartDateTime = new Date(matchingSlot.startAt);
+    const now = new Date();
+    if (slotStartDateTime.getTime() < now.getTime()) {
+      return true;
+    }
+
+    // Otherwise, it's available
+    return false;
   };
+
 
   // const handleClearBookings = () => {
   //   setBookings([]);
@@ -673,34 +671,6 @@ export default function BookingLapangan() {
         </Card>
 
         <div className="flex flex-col gap-6 xl:flex-row">
-          {/* Mobile: Enhanced Booking Summary at top */}
-          <div className="xl:hidden">
-            <Card className="from-primary/5 to-primary/10 border-primary/20 bg-linear-to-r">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-primary">Quick Summary</CardTitle>
-                  {bookings.length > 0 && (
-                    <Badge variant="secondary" className="bg-primary/10 text-primary">
-                      {bookings.length} items
-                    </Badge>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                {bookings.length > 0 ? (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Total:</span>
-                    <span className="text-primary font-bold">
-                      Rp {(totalPrice * 1.1).toLocaleString('id-ID')}
-                    </span>
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground text-sm">No bookings yet</p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
           {/* Main Content - Court Selection & Time Selection */}
           <div className="flex-1 space-y-6">
             {/* Court Selection (Green Section) */}
@@ -725,9 +695,24 @@ export default function BookingLapangan() {
                 ) : (
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:gap-4">
                     {courts.map((court) => {
+                      // Count available slots (not booked)
                       const availableSlotsCount = availableTimeSlots.filter((timeSlot) =>
-                        isTimeSlotAvailableForCourt(timeSlot, court.id)
+                        !isTimeSlotBooked(timeSlot, court.id)
                       ).length;
+                      // Count total slots for this court (including booked ones)
+                      const totalSlotsCount = availableTimeSlots.filter((timeSlot) => {
+                        // Check if there's a slot for this court and time
+                        return slots.some((slot) => {
+                          const slotCourtId = slot.courtId || slot.court?.id;
+                          if (slotCourtId !== court.id) return false;
+                          const slotDate = typeof slot.startAt === 'string' 
+                            ? getDateStringFromISO(slot.startAt)
+                            : formatDateString(slot.startAt);
+                          if (slotDate !== selectedDateString) return false;
+                          const slotStartTime = formatSlotTime(slot.startAt);
+                          return slotStartTime === timeSlot;
+                        });
+                      }).length;
                       const isDisabled = false;
 
                       return (
@@ -787,7 +772,7 @@ export default function BookingLapangan() {
                                   variant="outline"
                                   className="border-green-200 bg-green-50 text-xs text-green-700"
                                 >
-                                  {availableSlotsCount} available
+                                  {availableSlotsCount}/{totalSlotsCount} available
                                 </Badge>
                               </div>
                             </div>
@@ -852,39 +837,17 @@ export default function BookingLapangan() {
                         </p>
                       </div>
                     ) : (
+                      // Display ALL time slots - never hide booked slots, just show them with booked indicator
                       availableTimeSlots.map((timeSlot) => {
                         const isSelected = selectedTimeSlots.includes(timeSlot);
                         const isBooked = selectedCourt
-                          ? !isTimeSlotAvailableForCourt(timeSlot, selectedCourt)
-                          : !courts.some((court) =>
-                              isTimeSlotAvailableForCourt(timeSlot, court.id)
-                            );
+                          ? isTimeSlotBooked(timeSlot, selectedCourt)
+                          : courts.some((court) => isTimeSlotBooked(timeSlot, court.id));
                         const availableCourts = courts.filter((court) =>
-                          isTimeSlotAvailableForCourt(timeSlot, court.id)
+                          !isTimeSlotBooked(timeSlot, court.id)
                         );
 
-                        // Check if the time slot is in the past
-                        const slotDateTime = new Date(`${selectedDateString}T${timeSlot}:00`);
-                        const now = new Date();
-                        const isPastedTime = slotDateTime.getTime() < now.getTime();
-
-                        if (isPastedTime) {
-                          return (
-                            <div key={timeSlot} className="relative">
-                              <Badge
-                                variant="secondary"
-                                className="w-full cursor-not-allowed justify-center bg-gray-100 px-2 py-1 text-xs font-medium text-gray-500 opacity-50 lg:w-auto lg:px-4 lg:py-2 lg:text-sm"
-                                onClick={() => {
-                                  toast.warning('Jadwal sudah lewat!');
-                                }}
-                              >
-                                <span className="truncate">{timeSlot}</span>
-                              </Badge>
-                              <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full border-2 border-white bg-red-500"></div>
-                            </div>
-                          );
-                        }
-
+                        // Always show the time slot, even if booked - just mark it visually
                         return (
                           <div key={timeSlot} className="relative">
                             <Badge
@@ -898,17 +861,23 @@ export default function BookingLapangan() {
                                   !isSelected &&
                                   'hover:bg-primary/10 hover:border-primary cursor-pointer hover:scale-105'
                               )}
-                              onClick={() => !isBooked && handleTimeSlotSelect(timeSlot)}
+                              onClick={() => {
+                                if (isBooked) {
+                                  toast.info('Slot ini sudah dipesan');
+                                } else {
+                                  handleTimeSlotSelect(timeSlot);
+                                }
+                              }}
                             >
                               <span className="truncate">{timeSlot}</span>
-                              {!selectedCourt && availableCourts.length > 0 && (
+                              {!selectedCourt && availableCourts.length > 0 && !isBooked && (
                                 <span className="ml-1 hidden text-xs opacity-75 sm:inline">
                                   ({availableCourts.length})
                                 </span>
                               )}
                             </Badge>
                             {isBooked && (
-                              <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full border-2 border-white bg-red-500"></div>
+                              <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full border-2 border-white bg-red-500" title="Booked"></div>
                             )}
                           </div>
                         );
@@ -958,9 +927,9 @@ export default function BookingLapangan() {
             </Card>
           </div>
 
-          {/* Right Sidebar - Booking Summary */}
-          <div className="hidden xl:block xl:w-[618px] xl:shrink-0">
-            <Card className="lg:sticky lg:top-6">
+          {/* Booking Summary - Responsive */}
+          <div className="w-full xl:w-[618px] xl:shrink-0">
+            <Card className="xl:sticky xl:top-6">
               <CardHeader className="pb-3 lg:pb-6">
                 <CardTitle className="text-lg lg:text-xl">Booking Summary</CardTitle>
               </CardHeader>
