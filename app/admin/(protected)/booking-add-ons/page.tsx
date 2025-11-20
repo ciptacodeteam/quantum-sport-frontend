@@ -18,6 +18,7 @@ import { useQuery } from '@tanstack/react-query';
 import { adminCustomersQueryOptions } from '@/queries/admin/customer';
 import { adminCoachAvailabilityQueryOptions } from '@/queries/admin/coach';
 import { adminInventoryAvailabilityQueryOptions } from '@/queries/admin/inventory';
+import { useMembershipDiscount } from '@/hooks/useMembershipDiscount';
 import { 
   IconChevronLeft,
   IconStar, 
@@ -33,6 +34,7 @@ import {
 } from '@tabler/icons-react';
 import { useMutation } from '@tanstack/react-query';
 import { adminCheckoutMutationOptions } from '@/mutations/admin/checkout';
+import type { AdminCheckoutPayload } from '@/api/admin/checkout';
 
 export default function BookingAddOns() {
   const router = useRouter();
@@ -52,6 +54,7 @@ export default function BookingAddOns() {
     removeBookingItem,
     updateInventoryQuantity,
     getTotalAmount,
+    setMembershipDiscount,
     courtTotal,
     coachTotal,
     inventoryTotal
@@ -63,6 +66,15 @@ export default function BookingAddOns() {
   // Fetch customers to get customer or show walk-in
   const { data: customers } = useQuery(adminCustomersQueryOptions);
   const selectedCustomer = customers?.find(c => c.id === selectedCustomerId);
+
+  // Calculate membership discount for court bookings
+  // Note: The hook will fetch membership data if selectedCustomerId is provided
+  const membershipDiscount = useMembershipDiscount(selectedCustomerId || null, bookingItems);
+
+  // Update store with membership discount
+  useEffect(() => {
+    setMembershipDiscount(membershipDiscount.discountAmount);
+  }, [membershipDiscount.discountAmount, setMembershipDiscount]);
 
   // Get date range from bookings
   const dateRange = useMemo(() => {
@@ -321,11 +333,20 @@ export default function BookingAddOns() {
   };
 
   // Handle coach selection - now uses real API data
-  const handleCoachSelect = (coachId: string, coachName: string, timeSlot: string, date: string, price: number) => {
+  const handleCoachSelect = (
+    coachId: string, 
+    coachName: string, 
+    timeSlot: string, 
+    date: string, 
+    price: number,
+    matchingSlot?: { id: string; startAt: string; endAt: string }
+  ) => {
     const isSelected = selectedCoaches.some(c => c.coachId === coachId && c.timeSlot === timeSlot && c.date === date);
     
     if (isSelected) {
-      removeCoach(coachId, timeSlot);
+      // Find the selected coach to get slotId for removal
+      const selectedCoach = selectedCoaches.find(c => c.coachId === coachId && c.timeSlot === timeSlot && c.date === date);
+      removeCoach(coachId, timeSlot, selectedCoach?.slotId);
       toast.success(`Removed ${coachName} from ${timeSlot} on ${dayjs(date).format('DD MMM')}`);
     } else {
       addCoach({
@@ -333,7 +354,10 @@ export default function BookingAddOns() {
         coachName,
         timeSlot,
         price,
-        date: date
+        date: date,
+        slotId: matchingSlot?.id,
+        startAt: matchingSlot?.startAt,
+        endAt: matchingSlot?.endAt
       });
       toast.success(`Added ${coachName} for ${timeSlot} on ${dayjs(date).format('DD MMM')}`);
     }
@@ -439,12 +463,12 @@ export default function BookingAddOns() {
       }
     }, 0);
 
-    const payload: any = {
-      totalHours: Math.max(1, Math.round(totalHours * 100) / 100), // Round to 2 decimal places, minimum 1
-      courtSlots,
-      coachSlots: coachSlots.length ? coachSlots : undefined,
-      ballboySlots: ballboySlots.length ? ballboySlots : undefined,
-      inventories: inventories.length ? inventories : undefined
+    const payload: AdminCheckoutPayload = {
+      totalHours: Math.max(1, Math.round(totalHours * 100) / 100), // Round to 2 decimal places, minimum 1,
+      courtSlots: courtSlots.length > 0 ? courtSlots : undefined,
+      coachSlots: coachSlots.length > 0 ? coachSlots : undefined,
+      ballboySlots: ballboySlots.length > 0 ? ballboySlots : undefined,
+      inventories: inventories.length > 0 ? inventories : undefined
     };
 
     if (selectedCustomerId) {
@@ -456,17 +480,6 @@ export default function BookingAddOns() {
       toast.error('Pilih pelanggan atau lengkapi data walk-in.');
       return;
     }
-
-    // Console log before checkout
-    console.log('=== Admin Checkout Payload ===');
-    console.log('Payload:', JSON.stringify(payload, null, 2));
-    console.log('Total Hours:', payload.totalHours);
-    console.log('Court Slots:', courtSlots.length);
-    console.log('Coach Slots:', coachSlots.length);
-    console.log('Ballboy Slots:', ballboySlots.length);
-    console.log('Inventories:', inventories.length);
-    console.log('Customer:', selectedCustomerId ? `User ID: ${selectedCustomerId}` : `Walk-in: ${walkInName} (${walkInPhone})`);
-    console.log('============================');
 
     confirmCheckout(payload);
   };
@@ -508,7 +521,7 @@ export default function BookingAddOns() {
                           <div>
                             <p className="font-medium text-sm">{booking.courtName}</p>
                             <p className="text-xs text-muted-foreground">
-                              {booking.timeSlot} - {booking.endTime}
+                              {booking.timeSlot}
                             </p>
                           </div>
                         </div>
@@ -637,12 +650,19 @@ export default function BookingAddOns() {
                                         (c) => c.coachId === coach.id && c.timeSlot === timeSlot && c.date === date
                                       );
 
-                                      // Find the matching slot for price
+                                      // Find the matching slot for price and slotId
+                                      // timeSlot is in format "13:00 - 14:00", so we need to extract just the start time
+                                      const timeSlotStart = timeSlot.split(' - ')[0];
                                       const matchingSlot = coach.slots.find((slot) => {
                                         const slotTime = getHHmmUTC(slot.startAt);
                                         const slotDate = getISODate(slot.startAt);
-                                        return slotTime === timeSlot && slotDate === date;
+                                        return slotTime === timeSlotStart && slotDate === date;
                                       });
+
+                                      // Ensure we have a matching slot with slotId before allowing selection
+                                      if (!matchingSlot || !matchingSlot.slotId) {
+                                        return null;
+                                      }
 
                                       return (
                                         <Button
@@ -660,7 +680,12 @@ export default function BookingAddOns() {
                                               firstSlot.coach.name,
                                               timeSlot,
                                               date,
-                                              matchingSlot?.price || firstSlot.price
+                                              matchingSlot.price || firstSlot.price,
+                                              {
+                                                id: matchingSlot.slotId,
+                                                startAt: matchingSlot.startAt,
+                                                endAt: matchingSlot.endAt
+                                              }
                                             )
                                           }
                                         >
@@ -878,15 +903,60 @@ export default function BookingAddOns() {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Customer Info */}
-              {selectedCustomer ? (
+              {selectedCustomerId ? (
                 <>
-                  <div className="rounded-lg bg-primary/5 p-3">
-                    <p className="text-xs text-muted-foreground mb-1">Customer</p>
-                    <p className="font-semibold">{selectedCustomer.name}</p>
-                    {selectedCustomer.phone && (
-                      <p className="text-sm text-muted-foreground">{selectedCustomer.phone}</p>
-                    )}
-                  </div>
+                  {selectedCustomer && (
+                    <div className="rounded-lg bg-primary/5 p-3 mb-2">
+                      <p className="text-xs text-muted-foreground mb-1">Customer</p>
+                      <p className="font-semibold">{selectedCustomer.name}</p>
+                      {selectedCustomer.phone && (
+                        <p className="text-sm text-muted-foreground">{selectedCustomer.phone}</p>
+                      )}
+                    </div>
+                  )}
+                  {/* Show membership information if available */}
+                  {membershipDiscount.activeMembership && (
+                    <div className="mt-2 rounded-lg bg-primary/5 border border-primary/20 p-3">
+                      <div className="mb-1 flex items-center justify-between">
+                        <span className="text-xs font-medium text-primary">Membership Aktif</span>
+                        <Badge
+                          variant={
+                            membershipDiscount.activeMembership.isExpired ||
+                            membershipDiscount.activeMembership.isSuspended
+                              ? 'destructive'
+                              : 'default'
+                          }
+                          className="text-[10px]"
+                        >
+                          {membershipDiscount.activeMembership.isExpired
+                            ? 'Expired'
+                            : membershipDiscount.activeMembership.isSuspended
+                              ? 'Suspended'
+                              : 'Active'}
+                        </Badge>
+                      </div>
+                      <div className="space-y-1 text-[11px]">
+                        <div>
+                          <span className="text-muted-foreground">Paket:</span>{' '}
+                          <span className="font-medium">
+                            {membershipDiscount.activeMembership.membership.name}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Sisa Sesi:</span>{' '}
+                          <span className="font-medium">
+                            {membershipDiscount.remainingSessions} sesi
+                          </span>
+                        </div>
+                        {membershipDiscount.canUseMembership && bookingItems.length > 0 && (
+                          <div className="text-primary mt-1 font-medium">
+                            {membershipDiscount.slotsToDeduct} slot akan gratis menggunakan
+                            membership
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   <Separator />
                 </>
               ) : (walkInName || walkInPhone) ? (
@@ -910,27 +980,82 @@ export default function BookingAddOns() {
                     <div className="text-xs font-medium text-muted-foreground">
                       {dateInfo.shortDate}
                     </div>
-                    {dateInfo.items.map((booking, index) => (
-                      <div key={`${date}-${index}`} className="flex items-center justify-between gap-2 p-2 bg-muted rounded text-xs ml-2">
-                        <div className="min-w-0">
-                          <p className="font-medium truncate">{booking.courtName}</p>
-                          <p className="text-muted-foreground">{booking.timeSlot}{booking.endTime ? ` - ${booking.endTime}` : ''}</p>
+                    {dateInfo.items.map((booking, index) => {
+                      // Check if this booking is free due to membership
+                      const sortedBookings = [...bookingItems].sort((a, b) => {
+                        const dateCompare = a.date.localeCompare(b.date);
+                        if (dateCompare !== 0) return dateCompare;
+                        return a.timeSlot.localeCompare(b.timeSlot);
+                      });
+                      const bookingIndex = sortedBookings.findIndex(
+                        (b) =>
+                          b.courtId === booking.courtId &&
+                          b.timeSlot === booking.timeSlot &&
+                          b.date === booking.date
+                      );
+                      const isFree =
+                        membershipDiscount.canUseMembership &&
+                        bookingIndex >= 0 &&
+                        bookingIndex < membershipDiscount.slotsToDeduct;
+
+                      return (
+                        <div
+                          key={`${date}-${index}`}
+                          className={cn(
+                            'flex items-center justify-between gap-2 p-2 rounded text-xs ml-2',
+                            isFree
+                              ? 'bg-green-50 border-l-4 border-l-green-500'
+                              : 'bg-muted'
+                          )}
+                        >
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1">
+                              <p className="font-medium truncate">{booking.courtName}</p>
+                              {isFree && (
+                                <Badge
+                                  variant="outline"
+                                  className="border-green-500 bg-green-50 text-[10px] text-green-700"
+                                >
+                                  Gratis
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-muted-foreground">
+                              {booking.timeSlot}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span
+                              className={cn(
+                                'font-semibold',
+                                isFree ? 'text-green-600 line-through' : 'text-primary'
+                              )}
+                            >
+                              {isFree ? (
+                                <>
+                                  <span className="text-muted-foreground">
+                                    Rp {booking.price.toLocaleString('id-ID')}
+                                  </span>{' '}
+                                  <span className="ml-1">Gratis</span>
+                                </>
+                              ) : (
+                                `Rp ${booking.price.toLocaleString('id-ID')}`
+                              )}
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0 text-red-500 hover:bg-red-50 hover:text-red-700"
+                              onClick={() =>
+                                removeBookingItem(booking.courtId, booking.timeSlot, booking.date)
+                              }
+                            >
+                              <IconX className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="font-semibold text-primary">
-                            Rp {booking.price.toLocaleString('id-ID')}
-                          </span>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-6 w-6 p-0 text-red-500 hover:bg-red-50 hover:text-red-700"
-                            onClick={() => removeBookingItem(booking.courtId, booking.timeSlot, booking.date)}
-                          >
-                            <IconX className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ))}
               </div>
@@ -1001,6 +1126,18 @@ export default function BookingAddOns() {
                   <span>Courts</span>
                   <span>Rp {courtTotal.toLocaleString('id-ID')}</span>
                 </div>
+                {membershipDiscount.canUseMembership &&
+                  membershipDiscount.slotsToDeduct > 0 && (
+                    <div className="flex justify-between items-center text-xs text-green-600">
+                      <span>
+                        Membership Discount ({membershipDiscount.slotsToDeduct} slot
+                        {membershipDiscount.slotsToDeduct > 1 ? 's' : ''})
+                      </span>
+                      <span className="font-medium">
+                        - Rp {membershipDiscount.discountAmount.toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                  )}
                 <div className="flex justify-between items-center text-sm">
                   <span>Coaches</span>
                   <span>Rp {coachTotal.toLocaleString('id-ID')}</span>
@@ -1009,6 +1146,7 @@ export default function BookingAddOns() {
                   <span>Equipment</span>
                   <span>Rp {inventoryTotal.toLocaleString('id-ID')}</span>
                 </div>
+                <Separator />
                 <div className="flex justify-between items-center font-bold text-lg">
                   <span>Total</span>
                   <span className="text-primary">

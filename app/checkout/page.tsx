@@ -7,6 +7,7 @@ import { cn, resolveMediaUrl } from '@/lib/utils';
 import { checkoutMutationOptions } from '@/mutations/booking';
 import { paymentMethodsQueryOptions } from '@/queries/paymentMethod';
 import { profileQueryOptions } from '@/queries/profile';
+import { useMembershipDiscount } from '@/hooks/useMembershipDiscount';
 import useAuthModalStore from '@/stores/useAuthModalStore';
 import { useBookingStore } from '@/stores/useBookingStore';
 import type { PaymentMethod } from '@/types/model';
@@ -68,12 +69,23 @@ export default function CheckoutPage() {
   const selectedInventories = useBookingStore((state) => state.selectedInventories);
 
   const addOnsTotal = coachTotal + inventoryTotal;
-  const grandTotal = courtTotal + addOnsTotal;
 
   // Authentication check
   const { data: user, isPending: isUserPending } = useQuery(profileQueryOptions);
   const isAuthenticated = !!user?.id;
   const openAuthModal = useAuthModalStore((state) => state.open);
+
+  // Calculate membership discount for court bookings (only if user is authenticated)
+  const membershipDiscount = useMembershipDiscount(
+    user?.id || null,
+    bookingItems,
+    undefined,
+    true // isUser = true, so it fetches membership for current logged-in user
+  );
+
+  // Apply membership discount to court total
+  const discountedCourtTotal = membershipDiscount.discountedTotal;
+  const grandTotal = discountedCourtTotal + addOnsTotal;
 
   const { data: paymentMethods = [], isPending: isLoadingPaymentMethods } = useQuery(
     paymentMethodsQueryOptions()
@@ -148,6 +160,17 @@ export default function CheckoutPage() {
 
   const paymentFeeBreakdown = (() => {
     if (!selectedPaymentMethod) {
+      return {
+        fixedFee: 0,
+        percentageRate: 0,
+        percentageFee: 0,
+        totalFee: 0
+      };
+    }
+
+    // If checkout only contains court bookings (no add-ons), no payment fee
+    const hasAddOns = addOnsTotal > 0;
+    if (!hasAddOns) {
       return {
         fixedFee: 0,
         percentageRate: 0,
@@ -305,27 +328,72 @@ export default function CheckoutPage() {
 
               <div className="space-y-2">
                 {[...group.slots]
-                  .sort((a, b) => a.timeSlot.localeCompare(b.timeSlot))
-                  .map((slot, slotIndex) => (
-                    <div
-                      key={`${slot.courtId}-${slot.timeSlot}-${slotIndex}`}
-                      className="border-muted/60 bg-muted/50 flex items-center justify-between rounded-md border px-4 py-3"
-                    >
-                      <div className="flex flex-col">
-                        {(() => {
-                          const range = getSlotDisplayRange(slot.timeSlot);
-                          return (
-                            <span className="text-sm font-medium">
-                              {range.start} - {range.end}
-                            </span>
-                          );
-                        })()}
+                  .sort((a, b) => {
+                    const dateCompare = a.date.localeCompare(b.date);
+                    if (dateCompare !== 0) return dateCompare;
+                    return a.timeSlot.localeCompare(b.timeSlot);
+                  })
+                  .map((slot, slotIndex) => {
+                    // Check if this slot is free due to membership
+                    const sortedBookings = [...bookingItems].sort((a, b) => {
+                      const dateCompare = a.date.localeCompare(b.date);
+                      if (dateCompare !== 0) return dateCompare;
+                      return a.timeSlot.localeCompare(b.timeSlot);
+                    });
+                    const bookingIndex = sortedBookings.findIndex(
+                      (b) =>
+                        b.courtId === slot.courtId &&
+                        b.timeSlot === slot.timeSlot &&
+                        b.date === slot.date
+                    );
+                    const isFree =
+                      membershipDiscount.canUseMembership &&
+                      bookingIndex >= 0 &&
+                      bookingIndex < membershipDiscount.slotsToDeduct;
+
+                    return (
+                      <div
+                        key={`${slot.courtId}-${slot.timeSlot}-${slotIndex}`}
+                        className={cn(
+                          'border-muted/60 flex items-center justify-between rounded-md border px-4 py-3',
+                          isFree ? 'bg-green-50 border-green-200' : 'bg-muted/50'
+                        )}
+                      >
+                        <div className="flex flex-col">
+                          {(() => {
+                            const range = getSlotDisplayRange(slot.timeSlot);
+                            return (
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium">
+                                  {range.start} - {range.end}
+                                </span>
+                                {isFree && (
+                                  <span className="text-xs font-medium text-green-600">(Gratis)</span>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                        <span
+                          className={cn(
+                            'text-sm font-semibold',
+                            isFree && 'text-green-600 line-through'
+                          )}
+                        >
+                          {isFree ? (
+                            <>
+                              <span className="text-muted-foreground">
+                                {formatCurrency(slot.price)}
+                              </span>{' '}
+                              <span className="ml-1">Gratis</span>
+                            </>
+                          ) : (
+                            formatCurrency(slot.price)
+                          )}
+                        </span>
                       </div>
-                      <span className="text-foreground text-sm font-semibold">
-                        {formatCurrency(slot.price)}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
               </div>
             </div>
           ))}
@@ -430,6 +498,41 @@ export default function CheckoutPage() {
             </div>
           </div>
 
+          {/* Membership Information */}
+          {isAuthenticated && membershipDiscount.activeMembership && (
+            <div className="border-muted rounded-lg border bg-primary/5 p-4">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-sm font-medium text-primary">Membership Aktif</span>
+                <span className={membershipDiscount.activeMembership.isExpired || membershipDiscount.activeMembership.isSuspended ? 'text-xs text-red-600' : 'text-xs text-green-600'}>
+                  {membershipDiscount.activeMembership.isExpired
+                    ? 'Expired'
+                    : membershipDiscount.activeMembership.isSuspended
+                      ? 'Suspended'
+                      : 'Active'}
+                </span>
+              </div>
+              <div className="space-y-1 text-xs">
+                <div>
+                  <span className="text-muted-foreground">Paket:</span>{' '}
+                  <span className="font-medium">
+                    {membershipDiscount.activeMembership.membership.name}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Sisa Sesi:</span>{' '}
+                  <span className="font-medium">
+                    {membershipDiscount.remainingSessions} sesi
+                  </span>
+                </div>
+                {membershipDiscount.canUseMembership && bookingItems.length > 0 && (
+                  <div className="text-primary mt-1 font-medium">
+                    {membershipDiscount.slotsToDeduct} slot akan gratis menggunakan membership
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="border-muted rounded-lg border bg-white p-4">
             <h3 className="mb-3 text-base font-semibold">Ringkasan Pembayaran</h3>
             <div className="space-y-2 text-sm">
@@ -437,6 +540,17 @@ export default function CheckoutPage() {
                 <span className="text-muted-foreground">Subtotal</span>
                 <span className="text-foreground font-medium">{formatCurrency(courtTotal)}</span>
               </div>
+              {membershipDiscount.canUseMembership && membershipDiscount.slotsToDeduct > 0 && (
+                <div className="flex items-center justify-between text-green-600">
+                  <span>
+                    Membership Discount ({membershipDiscount.slotsToDeduct} slot
+                    {membershipDiscount.slotsToDeduct > 1 ? 's' : ''})
+                  </span>
+                  <span className="font-medium">
+                    - {formatCurrency(membershipDiscount.discountAmount)}
+                  </span>
+                </div>
+              )}
               {addOnsTotal > 0 && (
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Add-ons Subtotal</span>

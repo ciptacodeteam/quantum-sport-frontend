@@ -104,6 +104,7 @@ interface BookingState {
   courtTotal: number;
   coachTotal: number;
   inventoryTotal: number;
+  membershipDiscount: number; // Discount amount from membership sessions
 
   // Cart Sheet
   isCartOpen: boolean;
@@ -122,9 +123,8 @@ interface BookingState {
   removeInventory: (inventoryId: string, timeSlot?: string) => void;
   updateInventoryQuantity: (inventoryId: string, timeSlot: string, quantity: number) => void;
   clearAll: () => void;
+  setMembershipDiscount: (discount: number) => void;
   getTotalAmount: () => number;
-  getTotalWithTax: () => number;
-  getTax: () => number;
   setCartOpen: (open: boolean) => void;
 }
 
@@ -142,6 +142,7 @@ export const useBookingStore = create<BookingState>()(
       courtTotal: 0,
       coachTotal: 0,
       inventoryTotal: 0,
+      membershipDiscount: 0,
       isCartOpen: false,
 
       // Actions
@@ -296,24 +297,17 @@ export const useBookingStore = create<BookingState>()(
           walkInPhone: null,
           courtTotal: 0,
           coachTotal: 0,
-          inventoryTotal: 0
+          inventoryTotal: 0,
+          membershipDiscount: 0
         }),
+
+      setMembershipDiscount: (discount) => set({ membershipDiscount: discount }),
 
       getTotalAmount: () => {
         const state = get();
-        return state.courtTotal + state.coachTotal + state.inventoryTotal;
-      },
-
-      getTotalWithTax: () => {
-        const state = get();
-        const total = state.courtTotal + state.coachTotal + state.inventoryTotal;
-        return total * 1.1; // 10% tax
-      },
-
-      getTax: () => {
-        const state = get();
-        const total = state.courtTotal + state.coachTotal + state.inventoryTotal;
-        return total * 0.1; // 10% tax
+        // Apply membership discount to court total only
+        const discountedCourtTotal = Math.max(0, state.courtTotal - state.membershipDiscount);
+        return discountedCourtTotal + state.coachTotal + state.inventoryTotal;
       },
 
       setCartOpen: (open) => set({ isCartOpen: open })
@@ -331,7 +325,8 @@ export const useBookingStore = create<BookingState>()(
         selectedInventories: state.selectedInventories,
         courtTotal: state.courtTotal,
         coachTotal: state.coachTotal,
-        inventoryTotal: state.inventoryTotal
+        inventoryTotal: state.inventoryTotal,
+        membershipDiscount: state.membershipDiscount
       })
     }
   )

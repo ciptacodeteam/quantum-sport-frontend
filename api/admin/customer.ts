@@ -47,3 +47,15 @@ export async function sendResetPasswordLinkApi(id: string) {
   const { data } = await adminApi.post(`/customers/${id}/send-reset-password`);
   return data;
 }
+
+export async function getCustomerMembershipApi(id: string) {
+  const { data } = await adminApi.get(`/customers/${id}/membership`);
+  return data;
+}
+
+export async function searchCustomersApi(params: { q: string; limit?: string }) {
+  const url = '/customers/search';
+  const mergedUrl = mergedQueryParamUrl(url, params);
+  const res = await adminApi.get(mergedUrl);
+  return res.data;
+}

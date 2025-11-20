@@ -1,4 +1,4 @@
-import { getMembershipsApi, getMembershipApi, getMyMembershipsApi } from '@/api/membership';
+import { getMembershipsApi, getMembershipApi, getMyMembershipsApi, getMyMembershipApi } from '@/api/membership';
 import type { Membership } from '@/types/model';
 import { queryOptions } from '@tanstack/react-query';
 
@@ -36,4 +36,28 @@ export const myMembershipsQueryOptions = queryOptions({
     suspended: Array<any>;
     total: number;
   }
+});
+
+export type UserMembershipResponse = {
+  activeMembership: {
+    id: string;
+    startDate: string;
+    endDate: string;
+    remainingSessions: number;
+    remainingDuration: number;
+    isExpired: boolean;
+    isSuspended: boolean;
+    membership: {
+      id: string;
+      name: string;
+      price: number;
+    };
+  } | null;
+};
+
+export const myMembershipQueryOptions = queryOptions({
+  queryKey: ['memberships', 'my', 'active'],
+  queryFn: getMyMembershipApi,
+  select: (res) => res.data as UserMembershipResponse,
+  enabled: true // Will be controlled by authentication status
 });
