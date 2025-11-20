@@ -2,6 +2,14 @@ import { adminApi } from '@/lib/adminApi';
 import { mergedQueryParamUrl } from '@/lib/utils';
 import type { CreateMutationPayload, SearchParamsData, UpdateMutationPayload } from '@/types';
 
+export type AdminMembershipCheckoutPayload = {
+  membershipId: string;
+  userId?: string;
+  name?: string;
+  phone?: string;
+  startDate?: string;
+};
+
 export async function getMembershipsApi(queryParams: SearchParamsData = {}) {
   const url = '/memberships';
   const mergedUrl = mergedQueryParamUrl(url, queryParams);
@@ -26,5 +34,10 @@ export async function updateMembershipApi(payload: UpdateMutationPayload) {
 
 export async function deleteMembershipApi(id: string) {
   const { data } = await adminApi.delete(`/memberships/${id}`);
+  return data;
+}
+
+export async function adminMembershipCheckoutApi(payload: AdminMembershipCheckoutPayload) {
+  const { data } = await adminApi.post('/memberships/checkout', payload);
   return data;
 }
