@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useBookingStore } from '@/stores/useBookingStore';
 import type { Coach, InventoryItem } from '@/stores/useBookingStore';
@@ -202,9 +202,16 @@ export default function BookingAddOns() {
     }));
   }, [inventoryAvailabilityData]);
 
-  // If no bookings, redirect back
+  // If no bookings on initial visit, redirect back
+  const shouldGuardEmptyBookingsRef = useRef(bookingItems.length === 0);
+
   useEffect(() => {
-    if (bookingItems.length === 0) {
+    if (bookingItems.length > 0) {
+      shouldGuardEmptyBookingsRef.current = false;
+      return;
+    }
+
+    if (shouldGuardEmptyBookingsRef.current && bookingItems.length === 0) {
       toast.error('No court bookings found. Please book courts first.');
       router.push('/admin/booking-lapangan');
     }

@@ -1,4 +1,4 @@
-import { getCourtApi, getCourtCostingApi, getCourtsApi, getCourtSlotsApi } from '@/api/admin/court';
+import { getCourtApi, getCourtsApi, getCourtSlotsApi, getCourtsSlotsApi, getCourtCostingApi } from '@/api/admin/court';
 import type { Court, Slot } from '@/types/model';
 import { queryOptions } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -18,7 +18,15 @@ export const adminCourtQueryOptions = (id: string) =>
     select: (res) => res.data as Court
   });
 
-export const adminCourtCostingQueryOptions = (id: string, queryParams?: SearchParamsData) =>
+export const adminCourtCostingQueryOptions = (queryParams: SearchParamsData) =>
+  queryOptions({
+    queryKey: ['courts', 'slots', queryParams],
+    queryFn: () => getCourtsSlotsApi(queryParams),
+    select: (res) => res.data as (Slot & { court?: Court })[]
+  });
+
+
+export const adminCourtCostingQueryOptionsById = (id: string, queryParams?: SearchParamsData) =>
   queryOptions({
     queryKey: ['admin', 'courts', id, 'costing', queryParams],
     queryFn: () => getCourtCostingApi(id, queryParams),

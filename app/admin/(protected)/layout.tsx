@@ -39,27 +39,27 @@ const AdminDashboardLayout = ({ children }: PropsWithChildren) => {
   // Sync fetched user to Zustand store
   useEffect(() => {
     if (user && !persistedUser) {
-      console.log('💾 Saving user to Zustand store:', user.name);
+      // console.log('💾 Saving user to Zustand store:', user.name);
       // Store as any to avoid type mismatch between AdminProfile and UserProfile
       useAuthStore.getState().setUser(user as any);
     }
   }, [user, persistedUser]);
 
   // Debug logging
-  useEffect(() => {
-    console.log('🔒 Admin Auth Debug:', {
-      isHydrated,
-      token: token ? `${token.substring(0, 20)}...` : null,
-      hasToken: !!token,
-      isPending,
-      isError,
-      hasUser: !!(user || persistedUser),
-      persistedUser: persistedUser?.name || null,
-      fetchedUser: user?.name || null,
-      errorDetails: error,
-      hasRedirected: hasRedirected.current
-    });
-  }, [isHydrated, token, isPending, isError, user, persistedUser, error]);
+  // useEffect(() => {
+  //   console.log('🔒 Admin Auth Debug:', {
+  //     isHydrated,
+  //     token: token ? `${token.substring(0, 20)}...` : null,
+  //     hasToken: !!token,
+  //     isPending,
+  //     isError,
+  //     hasUser: !!(user || persistedUser),
+  //     persistedUser: persistedUser?.name || null,
+  //     fetchedUser: user?.name || null,
+  //     errorDetails: error,
+  //     hasRedirected: hasRedirected.current
+  //   });
+  // }, [isHydrated, token, isPending, isError, user, persistedUser, error]);
 
   // Handle redirects - only redirect once
   useEffect(() => {

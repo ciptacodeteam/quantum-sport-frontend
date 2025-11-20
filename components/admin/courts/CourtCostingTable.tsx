@@ -6,7 +6,7 @@ import { DataTable } from '@/components/ui/data-table';
 import { DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ManagedDialog } from '@/components/ui/dialog-context';
 import { formatSlotTimeRange } from '@/lib/time-utils';
-import { adminCourtCostingQueryOptions } from '@/queries/admin/court';
+import { adminCourtCostingQueryOptionsById } from '@/queries/admin/court';
 import type { Slot } from '@/types/model';
 import { IconPlus } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
@@ -54,7 +54,7 @@ const CourtCostingTable = ({ courtId }: Props) => {
     [colHelper]
   );
 
-  const { data, isPending } = useQuery(adminCourtCostingQueryOptions(courtId));
+  const { data, isPending } = useQuery(adminCourtCostingQueryOptionsById(courtId));
 
   const normalizedData = useMemo(() => {
     if (!data) {

@@ -24,6 +24,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Separator } from '@/components/ui/separator';
 import { formatSlotTime, formatSlotTimeRange } from '@/lib/time-utils';
 import { cn, getPlaceholderImageUrl } from '@/lib/utils';
+import { adminCourtCostingQueryOptions } from '@/queries/admin/court';
 import { adminCustomersQueryOptions } from '@/queries/admin/customer';
 import { courtsSlotsQueryOptions } from '@/queries/court';
 import { useBookingStore } from '@/stores/useBookingStore';
@@ -215,7 +216,8 @@ export default function BookingLapangan() {
   );
 
   const { data: slotsData, isLoading: isSlotsLoading } = useQuery(
-    courtsSlotsQueryOptions(slotQueryParams)
+    // courtsSlotsQueryOptions(slotQueryParams)
+    adminCourtCostingQueryOptions(slotQueryParams)
   );
 
   const { data: customers } = useQuery(adminCustomersQueryOptions);
@@ -739,8 +741,8 @@ export default function BookingLapangan() {
                                 unoptimized
                                 alt={court.name}
                                 className="h-full w-full object-cover"
-                                layout="fill"
-                                objectFit="cover"
+                                fill
+                                loading="eager"
                               />
                             ) : (
                               <div className="absolute inset-0 flex items-center justify-center">

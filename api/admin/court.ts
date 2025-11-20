@@ -28,6 +28,13 @@ export async function getCourtCostingApi(id: string, queryParams?: SearchParamsD
   return data;
 }
 
+export async function getCourtsSlotsApi(queryParams: SearchParamsData = {}) {
+  const url = '/courts/slots';
+  const mergedUrl = mergedQueryParamUrl(url, queryParams);
+  const res = await adminApi.get(mergedUrl);
+  return res.data;
+}
+
 export async function createCourtApi(payload: CreateMutationPayload) {
   const { data } = await adminApi.post('/courts', payload, {
     headers: { 'Content-Type': 'multipart/form-data' }
