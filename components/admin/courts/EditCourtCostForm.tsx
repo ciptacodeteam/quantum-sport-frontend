@@ -9,7 +9,7 @@ import { NumberInput } from '@/components/ui/number-input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { hoursInDay } from '@/lib/constants';
 import { adminUpdateCourtCostMutationOptions } from '@/mutations/admin/court';
-import { adminCourtCostingQueryOptions } from '@/queries/admin/court';
+import { adminCourtCostingQueryOptionsById } from '@/queries/admin/court';
 import type { CourtCostSchedule } from '@/types/model';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { IconInfoCircle } from '@tabler/icons-react';
@@ -52,7 +52,7 @@ const EditCourtCostForm = ({ data }: Props) => {
     adminUpdateCourtCostMutationOptions({
       onSuccess: () => {
         queryClient.invalidateQueries({
-          queryKey: adminCourtCostingQueryOptions(data.courtId).queryKey
+          queryKey: adminCourtCostingQueryOptionsById(data.courtId).queryKey
         });
         form.reset();
         closeDialog(`edit-court-costing-${data.id}`);
