@@ -80,6 +80,14 @@ const LoginForm = ({ onRegisterClick, openVerifyPhoneOtpModal, onLoginSuccess }:
     forgotPasswordMutationOptions({
       onSuccess: (res) => {
         const requestId = res?.data?.requestId;
+        const phone = res?.data?.phone;
+
+        if (!phone) {
+          toast.error('Failed to get phone number. Please try again later.');
+          return;
+        }
+
+        setPhone(phone);
 
         if (requestId) {
           setRequestId(requestId);
