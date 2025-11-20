@@ -52,14 +52,10 @@ const parseISOString = (
 const formatDate = (date: Date | string, format: string): string => {
   let dateObj: Date;
 
+  // Use native Date parsing which correctly handles timezones
+  // The Date constructor will parse ISO strings and convert them to local time
   if (typeof date === 'string') {
-    const parsed = parseISOString(date);
-    if (parsed) {
-      // Treat the incoming string as already in the correct timezone (Jakarta)
-      dateObj = new Date(parsed.year, parsed.month, parsed.day, parsed.hours, parsed.minutes);
-    } else {
-      dateObj = new Date(date);
-    }
+    dateObj = new Date(date);
   } else {
     dateObj = date;
   }
@@ -69,6 +65,7 @@ const formatDate = (date: Date | string, format: string): string => {
     return '-';
   }
 
+  // Get local time components (Date automatically converts UTC to local timezone)
   const year = dateObj.getFullYear();
   const month = dateObj.getMonth();
   const day = dateObj.getDate();
@@ -99,6 +96,17 @@ const formatDate = (date: Date | string, format: string): string => {
     .replace('DD', pad(day))
     .replace('HH', pad(hours))
     .replace('mm', pad(minutes));
+};
+
+const formatSlotDate = (date: Date | string, format: string): string => {
+  if (typeof date === 'string') {
+    const parsed = parseISOString(date);
+    if (parsed) {
+      const dateObj = new Date(parsed.year, parsed.month, parsed.day, parsed.hours, parsed.minutes);
+      return formatDate(dateObj, format);
+    }
+  }
+  return formatDate(date, format);
 };
 
 const isBefore = (date1: Date | string, date2: Date | string): boolean => {
@@ -196,7 +204,7 @@ const BookingTable = () => {
               <span className="font-medium">{court?.name || '-'}</span>
               {slot && (
                 <span className="text-muted-foreground text-xs">
-                  {formatDate(slot.startAt, 'DD MMM YYYY')} - {formatSlotTime(slot.startAt)} -{' '}
+                  {formatSlotDate(slot.startAt, 'DD MMM YYYY')} - {formatSlotTime(slot.startAt)} -{' '}
                   {formatSlotTime(slot.endAt)}
                 </span>
               )}
@@ -351,7 +359,7 @@ const BookingTable = () => {
                                   <p className="text-sm font-medium">{detail.court?.name || '-'}</p>
                                   {detail.slot && (
                                     <p className="text-muted-foreground text-xs">
-                                      {formatDate(detail.slot.startAt, 'DD MMM YYYY')} -{' '}
+                                      {formatSlotDate(detail.slot.startAt, 'DD MMM YYYY')} -{' '}
                                       {formatSlotTime(detail.slot.startAt)} -{' '}
                                       {formatSlotTime(detail.slot.endAt)}
                                     </p>
@@ -434,7 +442,7 @@ const BookingTable = () => {
                                     <p className="font-medium">{detail.court?.name || '-'}</p>
                                     {detail.slot && (
                                       <p className="text-muted-foreground text-xs">
-                                        {formatDate(detail.slot.startAt, 'DD MMM, HH:mm')} -{' '}
+                                        {formatSlotDate(detail.slot.startAt, 'DD MMM, HH:mm')} -{' '}
                                         {formatSlotTime(detail.slot.endAt)}
                                       </p>
                                     )}
