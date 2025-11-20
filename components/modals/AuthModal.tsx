@@ -54,12 +54,10 @@ const AuthModal = () => {
     (open: boolean) => {
       setOpen(open);
       if (!open) {
-        setPhone(null);
-        setRequestId(null);
         clearRegisterData();
       }
     },
-    [setOpen, setPhone, setRequestId, clearRegisterData]
+    [setOpen, clearRegisterData]
   );
 
   const handleRegisterFromLogin = () => {
