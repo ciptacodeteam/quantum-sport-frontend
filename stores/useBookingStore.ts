@@ -92,6 +92,8 @@ interface BookingState {
   bookingItems: BookingItem[];
   selectedDate: Date;
   selectedCustomerId: string | null;
+  selectedCustomerName?: string | null;
+  selectedCustomerPhone?: string | null;
   walkInName?: string | null;
   walkInPhone?: string | null;
 
@@ -114,6 +116,7 @@ interface BookingState {
   removeBookingItem: (courtId: string, timeSlot: string, date: string) => void;
   setSelectedDate: (date: Date) => void;
   setSelectedCustomerId: (customerId: string | null) => void;
+  setSelectedCustomerDetails: (name: string | null, phone: string | null) => void;
   setWalkInCustomer: (name: string | null, phone: string | null) => void;
   addCoach: (coach: SelectedCoach) => void;
   removeCoach: (coachId: string, timeSlot: string, slotId?: string) => void;
@@ -134,6 +137,8 @@ export const useBookingStore = create<BookingState>()(
       bookingItems: [],
       selectedDate: new Date(),
       selectedCustomerId: null,
+      selectedCustomerName: null,
+      selectedCustomerPhone: null,
       walkInName: null,
       walkInPhone: null,
       selectedCoaches: [],
@@ -163,6 +168,9 @@ export const useBookingStore = create<BookingState>()(
       setSelectedDate: (date) => set({ selectedDate: date }),
 
       setSelectedCustomerId: (customerId) => set({ selectedCustomerId: customerId }),
+
+      setSelectedCustomerDetails: (name, phone) =>
+        set({ selectedCustomerName: name, selectedCustomerPhone: phone }),
 
       setWalkInCustomer: (name, phone) => set({ walkInName: name, walkInPhone: phone }),
 
@@ -319,6 +327,8 @@ export const useBookingStore = create<BookingState>()(
         bookingItems: state.bookingItems,
         selectedDate: state.selectedDate,
         selectedCustomerId: state.selectedCustomerId,
+        selectedCustomerName: state.selectedCustomerName,
+        selectedCustomerPhone: state.selectedCustomerPhone,
         walkInName: state.walkInName,
         walkInPhone: state.walkInPhone,
         selectedCoaches: state.selectedCoaches,

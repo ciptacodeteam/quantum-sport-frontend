@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -39,7 +39,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { adminMembershipsQueryOptions } from '@/queries/admin/membership';
 import type { AdminMembershipCheckoutPayload } from '@/api/admin/membership';
-import { adminCustomersQueryOptions } from '@/queries/admin/customer';
+import { adminCustomerSearchQueryOptions, type CustomerSearchResult } from '@/queries/admin/customer';
 import { adminMembershipCheckoutMutationOptions } from '@/mutations/admin/membership';
 import type { Membership } from '@/types/model';
 
@@ -54,7 +54,6 @@ const BookingMembershipPage = () => {
   const { data: membershipsData, isPending: isMembershipsLoading } = useQuery(
     adminMembershipsQueryOptions
   );
-  const { data: customers } = useQuery(adminCustomersQueryOptions);
 
   const memberships = useMemo<Membership[]>(() => {
     if (!membershipsData) return [];
@@ -65,19 +64,32 @@ const BookingMembershipPage = () => {
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());
   const [isCustomerOpen, setIsCustomerOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [customerId, setCustomerId] = useState('');
+  const [selectedCustomer, setSelectedCustomer] = useState<CustomerSearchResult | null>(null);
   const [isWalkInOpen, setIsWalkInOpen] = useState(false);
   const [walkInName, setWalkInName] = useState('');
   const [walkInPhone, setWalkInPhone] = useState('');
 
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(customerSearch);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [customerSearch]);
+
+  // Use search endpoint instead of fetching all customers
+  const { data: searchResults, isLoading: isSearching } = useQuery(
+    adminCustomerSearchQueryOptions({
+      q: debouncedSearch,
+      limit: '20'
+    })
+  );
+
   const selectedMembership = useMemo(
     () => memberships.find((item) => item.id === selectedMembershipId),
     [memberships, selectedMembershipId]
-  );
-
-  const selectedCustomer = useMemo(
-    () => customers?.find((customer) => customer.id === customerId),
-    [customers, customerId]
   );
 
   const { mutate: createMembershipCheckout, isPending: isSubmitting } = useMutation(
@@ -257,33 +269,37 @@ const BookingMembershipPage = () => {
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-(--radix-popover-trigger-width) p-0">
-                      <Command>
+                      <Command shouldFilter={false}>
                         <CommandInput
-                          placeholder="Nama atau nomor telepon"
+                          placeholder="Cari pelanggan (min. 2 karakter)"
                           value={customerSearch}
                           onValueChange={setCustomerSearch}
                         />
                         <CommandList>
-                          <CommandEmpty>Tidak ada pelanggan.</CommandEmpty>
-                          <CommandGroup>
-                            {(customers || [])
-                              .filter((customer) => {
-                                if (!customerSearch.trim()) return true;
-                                const query = customerSearch.trim().toLowerCase();
-                                return (
-                                  customer.name.toLowerCase().includes(query) ||
-                                  customer.phone?.toLowerCase().includes(query)
-                                );
-                              })
-                              .map((customer) => (
+                          {isSearching ? (
+                            <div className="py-6 text-center text-sm text-muted-foreground">
+                              Mencari pelanggan...
+                            </div>
+                          ) : !debouncedSearch || debouncedSearch.length < 2 ? (
+                            <div className="py-6 text-center text-sm text-muted-foreground">
+                              Ketik minimal 2 karakter untuk mencari
+                            </div>
+                          ) : !searchResults || searchResults.length === 0 ? (
+                            <CommandEmpty>Tidak ada pelanggan ditemukan.</CommandEmpty>
+                          ) : (
+                            <CommandGroup>
+                              {searchResults.map((customer) => (
                                 <CommandItem
                                   key={customer.id}
-                                  value={customer.id}
+                                  value={`${customer.name} ${customer.phone || ''}`}
                                   onSelect={() => {
                                     setCustomerId(customer.id);
+                                    setSelectedCustomer(customer);
                                     setWalkInName('');
                                     setWalkInPhone('');
                                     setIsCustomerOpen(false);
+                                    setCustomerSearch('');
+                                    setDebouncedSearch('');
                                   }}
                                 >
                                   <div className="flex flex-col">
@@ -294,7 +310,8 @@ const BookingMembershipPage = () => {
                                   </div>
                                 </CommandItem>
                               ))}
-                          </CommandGroup>
+                            </CommandGroup>
+                          )}
                         </CommandList>
                       </Command>
                     </PopoverContent>
@@ -369,7 +386,10 @@ const BookingMembershipPage = () => {
                       variant="ghost"
                       size="sm"
                       className="mt-2 h-6 px-2 text-xs"
-                      onClick={() => setCustomerId('')}
+                      onClick={() => {
+                        setCustomerId('');
+                        setSelectedCustomer(null);
+                      }}
                     >
                       Hapus pilihan
                     </Button>

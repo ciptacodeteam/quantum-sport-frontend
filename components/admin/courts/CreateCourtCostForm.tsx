@@ -54,8 +54,13 @@ const CreateCourtCostForm = ({ courtId }: Props) => {
   const { mutate, isPending } = useMutation(
     adminCreateCourtCostMutationOptions({
       onSuccess: () => {
+        // Invalidate all queries related to this court's costing
         queryClient.invalidateQueries({
-          queryKey: adminCourtCostingQueryOptions(courtId).queryKey
+          queryKey: ['admin', 'courts', courtId, 'costing']
+        });
+        // Also invalidate general court slots queries
+        queryClient.invalidateQueries({
+          queryKey: ['courts', 'slots']
         });
         form.reset();
         closeDialog('create-court-costing');

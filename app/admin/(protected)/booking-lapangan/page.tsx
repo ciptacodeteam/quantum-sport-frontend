@@ -4,29 +4,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Command,
-  CommandEmpty,
-  CommandInput,
-  CommandItem,
-  CommandList
-} from '@/components/ui/command';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { formatSlotTime } from '@/lib/time-utils';
 import { cn, getPlaceholderImageUrl } from '@/lib/utils';
 import { adminCourtCostingQueryOptions } from '@/queries/admin/court';
-import { adminCustomerSearchQueryOptions, type CustomerSearchResult } from '@/queries/admin/customer';
+import type { CustomerSearchResult } from '@/queries/admin/customer';
 import { useMembershipDiscount } from '@/hooks/useMembershipDiscount';
+import BookingSummary from '@/components/admin/booking/BookingSummary';
 import { useBookingStore } from '@/stores/useBookingStore';
 import type { Court, Slot } from '@/types/model';
 import { IconCalendar, IconCheck, IconClock, IconMapPin, IconX } from '@tabler/icons-react';
@@ -169,9 +154,12 @@ export default function BookingLapangan() {
     bookingItems,
     selectedDate,
     selectedCustomerId,
+    selectedCustomerName: storeCustomerName,
+    selectedCustomerPhone: storeCustomerPhone,
     setBookingItems,
     setSelectedDate: setStoreDate,
     setSelectedCustomerId,
+    setSelectedCustomerDetails,
     setWalkInCustomer,
     setMembershipDiscount,
     walkInName: storeWalkInName,
@@ -194,23 +182,8 @@ export default function BookingLapangan() {
     }))
   );
   const [calendarOpen, setCalendarOpen] = useState(false);
-  // Removed "Tambah Baru" (create customer) utility
-  const [isWalkInOpen, setIsWalkInOpen] = useState(false);
-  const [walkInName, setWalkInName] = useState('');
-  const [walkInPhone, setWalkInPhone] = useState('');
-  const [isCustomerOpen, setIsCustomerOpen] = useState(false);
-  const [customerSearch, setCustomerSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  // Customer selection is now handled by BookingSummary component
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerSearchResult | null>(null);
-
-  // Debounce search query
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(customerSearch);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [customerSearch]);
 
   // Fetch slots for the selected date
   // Include next day's 00:00 slot (which is actually the end of the current day in Jakarta time)
@@ -230,14 +203,6 @@ export default function BookingLapangan() {
   const { data: slotsData, isLoading: isSlotsLoading } = useQuery(
     // courtsSlotsQueryOptions(slotQueryParams)
     adminCourtCostingQueryOptions(slotQueryParams)
-  );
-
-  // Use search endpoint instead of fetching all customers
-  const { data: searchResults, isLoading: isSearching } = useQuery(
-    adminCustomerSearchQueryOptions({
-      q: debouncedSearch,
-      limit: '20'
-    })
   );
 
   // Calculate membership discount - convert SelectedBooking to BookingItem format
@@ -652,10 +617,12 @@ export default function BookingLapangan() {
       return true;
     }
 
-    // Check if the slot's start time is in the past
+    // Check if the slot's start time is in the past (with 15-minute grace period)
     const slotStartDateTime = new Date(matchingSlot.startAt);
     const now = new Date();
-    if (slotStartDateTime.getTime() < now.getTime()) {
+    const gracePeriodMinutes = 15;
+    const gracePeriodEnd = slotStartDateTime.getTime() + gracePeriodMinutes * 60 * 1000;
+    if (gracePeriodEnd < now.getTime()) {
       return true;
     }
 
@@ -784,11 +751,13 @@ export default function BookingLapangan() {
 
                       // Available slots (not booked) for this court
                       const availableSlotsCount = courtSlots.filter((slot) => {
-                        // Check if slot is available (not booked and not in the past)
+                        // Check if slot is available (not booked and not in the past with 15-minute grace period)
                         if (!slot.isAvailable) return false;
                         const slotStartDateTime = new Date(slot.startAt);
                         const now = new Date();
-                        return slotStartDateTime.getTime() >= now.getTime();
+                        const gracePeriodMinutes = 15;
+                        const gracePeriodEnd = slotStartDateTime.getTime() + gracePeriodMinutes * 60 * 1000;
+                        return gracePeriodEnd >= now.getTime();
                       }).length;
 
                       const isDisabled = false;
@@ -918,9 +887,11 @@ export default function BookingLapangan() {
                       // Display ALL time slots - never hide booked slots, just show them with booked indicator
                       availableTimeSlots.map((timeSlot) => {
                         const isSelected = selectedTimeSlots.includes(timeSlot);
+                        // When a court is selected, check if that specific court has the slot booked
+                        // When no court is selected, only mark as booked if ALL courts have it booked
                         const isBooked = selectedCourt
                           ? isTimeSlotBooked(timeSlot, selectedCourt)
-                          : courts.some((court) => isTimeSlotBooked(timeSlot, court.id));
+                          : courts.every((court) => isTimeSlotBooked(timeSlot, court.id));
                         const availableCourts = courts.filter((court) =>
                           !isTimeSlotBooked(timeSlot, court.id)
                         );
@@ -1006,401 +977,70 @@ export default function BookingLapangan() {
           </div>
 
           {/* Booking Summary - Responsive */}
-          <div className="w-full xl:w-[618px] xl:shrink-0">
-            <Card className="xl:sticky xl:top-6">
-              <CardHeader className="pb-3 lg:pb-6">
-                <CardTitle className="text-lg lg:text-xl">Booking Summary</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 pt-0 lg:space-y-4">
-                {/* Customer Selection */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Pilih Pelanggan</label>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1">
-                      <Popover
-                        open={isCustomerOpen}
-                        onOpenChange={(o) => {
-                          setIsCustomerOpen(o);
-                          if (!o) {
-                            setCustomerSearch('');
-                            setDebouncedSearch('');
-                          }
-                        }}
-                      >
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={isCustomerOpen}
-                            className="w-full justify-between"
-                          >
-                            {selectedCustomer
-                              ? `${selectedCustomer.name}${selectedCustomer.phone ? ` (${selectedCustomer.phone})` : ''}`
-                              : 'Pilih pelanggan...'}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-(--radix-popover-trigger-width) p-0">
-                          <Command>
-                            <CommandInput
-                              placeholder="Cari pelanggan (min 2 karakter)..."
-                              value={customerSearch}
-                              onValueChange={setCustomerSearch}
-                            />
-                            <CommandList>
-                              {isSearching ? (
-                                <div className="py-6 text-center text-sm text-muted-foreground">
-                                  Mencari...
-                                </div>
-                              ) : debouncedSearch.length < 2 ? (
-                                <div className="py-6 text-center text-sm text-muted-foreground">
-                                  Ketik minimal 2 karakter untuk mencari
-                                </div>
-                              ) : !searchResults || searchResults.length === 0 ? (
-                                <CommandEmpty>Tidak ada hasil.</CommandEmpty>
-                              ) : (
-                                searchResults.map((customer) => (
-                                  <CommandItem
-                                    key={customer.id}
-                                    value={customer.name}
-                                    onSelect={() => {
-                                      setLocalCustomerId(customer.id);
-                                      setSelectedCustomerId(customer.id);
-                                      setSelectedCustomer(customer);
-                                      // Clear any walk-in selection when a customer is picked
-                                      setWalkInCustomer(null, null);
-                                      setIsCustomerOpen(false);
-                                      setCustomerSearch('');
-                                      setDebouncedSearch('');
-                                    }}
-                                  >
-                                    <span className="truncate">
-                                      {customer.name} {customer.phone && `(${customer.phone})`}
-                                    </span>
-                                  </CommandItem>
-                                ))
-                              )}
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    {/* Walk-in customer capture */}
-                    <Dialog open={isWalkInOpen} onOpenChange={setIsWalkInOpen}>
-                      <DialogTrigger asChild>
-                        <Button type="button" variant="outline" size="sm">
-                          Walk-in
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                          <DialogTitle>Tambah Walk-in Customer</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="walkInName">Nama</Label>
-                            <Input
-                              id="walkInName"
-                              placeholder="Nama pelanggan"
-                              value={walkInName}
-                              onChange={(e) => setWalkInName(e.target.value)}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="walkInPhone">Nomor Telepon</Label>
-                            <Input
-                              id="walkInPhone"
-                              placeholder="08xxxxxxxxxx"
-                              value={walkInPhone}
-                              onChange={(e) => setWalkInPhone(e.target.value)}
-                            />
-                          </div>
-                          <div className="flex justify-end gap-2 pt-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => setIsWalkInOpen(false)}
-                            >
-                              Batal
-                            </Button>
-                            <Button
-                              type="button"
-                              disabled={!walkInName.trim() || !walkInPhone.trim()}
-                              onClick={() => {
-                                setWalkInCustomer(walkInName.trim(), walkInPhone.trim());
-                                // Ensure we don't send userId if walk-in is set
-                                setLocalCustomerId('');
-                                setSelectedCustomerId(null);
-                                setSelectedCustomer(null);
-                                toast.success('Walk-in customer disimpan');
-                                setIsWalkInOpen(false);
-                              }}
-                            >
-                              Simpan
-                            </Button>
-                          </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-
-                  {/* Show current walk-in selection if available */}
-                  {(storeWalkInName || storeWalkInPhone) && !localCustomerId && (
-                    <div className="bg-muted mt-2 rounded-md border px-3 py-2 text-xs">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <span className="font-medium">Walk-in:</span>{' '}
-                          <span>{storeWalkInName || '-'}</span>
-                          {storeWalkInPhone && (
-                            <span className="text-muted-foreground ml-1">({storeWalkInPhone})</span>
-                          )}
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setWalkInCustomer(null, null);
-                            toast.info('Walk-in customer dibersihkan');
-                          }}
-                        >
-                          Hapus
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Show membership information if available */}
-                  {membershipDiscount.activeMembership && localCustomerId && (
-                    <div className="bg-primary/5 mt-2 rounded-md border border-primary/20 px-3 py-2 text-xs">
-                      <div className="mb-1 flex items-center justify-between">
-                        <span className="font-medium text-primary">Membership Aktif</span>
-                        <Badge
-                          variant={
-                            membershipDiscount.activeMembership.isExpired ||
-                            membershipDiscount.activeMembership.isSuspended
-                              ? 'destructive'
-                              : 'default'
-                          }
-                          className="text-xs"
-                        >
-                          {membershipDiscount.activeMembership.isExpired
-                            ? 'Expired'
-                            : membershipDiscount.activeMembership.isSuspended
-                              ? 'Suspended'
-                              : 'Active'}
-                        </Badge>
-                      </div>
-                      <div className="space-y-1 text-xs">
-                        <div>
-                          <span className="text-muted-foreground">Paket:</span>{' '}
-                          <span className="font-medium">
-                            {membershipDiscount.activeMembership.membership.name}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Sisa Sesi:</span>{' '}
-                          <span className="font-medium">
-                            {membershipDiscount.remainingSessions} sesi
-                          </span>
-                        </div>
-                        {membershipDiscount.canUseMembership && bookings.length > 0 && (
-                          <div className="text-primary mt-1 font-medium">
-                            {membershipDiscount.slotsToDeduct} slot akan gratis menggunakan
-                            membership
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <Separator />
-
-                {bookings.length === 0 ? (
-                  <div className="py-6 text-center lg:py-8">
-                    <IconCalendar className="text-muted-foreground/50 mx-auto mb-3 h-10 w-10 lg:mb-4 lg:h-12 lg:w-12" />
-                    <p className="text-muted-foreground text-sm lg:text-base">
-                      No bookings selected
-                    </p>
-                    <p className="text-muted-foreground text-xs lg:text-sm">
-                      Select time slots and court to start booking
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    {/* Booking Items - Group by Date */}
-                    <div className="max-h-48 space-y-2 overflow-y-auto lg:max-h-64 lg:space-y-3">
-                      {Object.entries(
-                        bookings.reduce(
-                          (groups, booking, index) => {
-                            const date = booking.date;
-                            if (!groups[date]) groups[date] = [];
-                            groups[date].push({ ...booking, originalIndex: index });
-                            return groups;
-                          },
-                          {} as Record<string, Array<SelectedBooking & { originalIndex: number }>>
-                        )
-                      ).map(([date, dateBookings]) => (
-                        <div key={date} className="space-y-2">
-                          <div className="text-muted-foreground border-b pb-1 text-xs font-medium">
-                            {formatDate(new Date(date), 'dddd, DD MMM YYYY')}
-                          </div>
-                          {dateBookings.map((booking) => {
-                            // Check if this booking is free due to membership
-                            const sortedBookings = [...bookings].sort((a, b) => {
-                              const dateCompare = a.date.localeCompare(b.date);
-                              if (dateCompare !== 0) return dateCompare;
-                              return a.timeSlot.localeCompare(b.timeSlot);
-                            });
-                            const bookingIndex = sortedBookings.findIndex(
-                              (b) =>
-                                b.courtId === booking.courtId &&
-                                b.timeSlot === booking.timeSlot &&
-                                b.date === booking.date
-                            );
-                            const isFree =
-                              membershipDiscount.canUseMembership &&
-                              bookingIndex >= 0 &&
-                              bookingIndex < membershipDiscount.slotsToDeduct;
-
-                            return (
-                              <div
-                                key={booking.originalIndex}
-                                className={cn(
-                                  'bg-muted ml-2 flex items-start justify-between rounded-lg border-l-4 p-2 lg:p-3',
-                                  isFree
-                                    ? 'border-l-green-500 bg-green-50/50'
-                                    : 'border-l-primary'
-                                )}
-                              >
-                                <div className="min-w-0 flex-1">
-                                  <div className="mb-1 flex items-center gap-1 lg:gap-2">
-                                    <IconMapPin className="text-primary h-3 w-3 shrink-0" />
-                                    <p className="truncate text-xs font-medium lg:text-sm">
-                                      {booking.courtName}
-                                    </p>
-                                    {isFree && (
-                                      <Badge
-                                        variant="outline"
-                                        className="border-green-500 bg-green-50 text-xs text-green-700"
-                                      >
-                                        Gratis
-                                      </Badge>
-                                    )}
-                                  </div>
-                                  <div className="mb-1 flex items-center gap-1 lg:gap-2">
-                                    <IconClock className="text-muted-foreground h-3 w-3 shrink-0" />
-                                    <p className="text-muted-foreground truncate text-xs">
-                                      {booking.timeSlot}
-                                    </p>
-                                  </div>
-                                  <p
-                                    className={cn(
-                                      'text-xs font-semibold',
-                                      isFree ? 'text-green-600 line-through' : 'text-primary'
-                                    )}
-                                  >
-                                    {isFree ? (
-                                      <>
-                                        <span className="text-muted-foreground">
-                                          Rp {booking.price.toLocaleString('id-ID')}
-                                        </span>{' '}
-                                        <span className="ml-1">Gratis</span>
-                                      </>
-                                    ) : (
-                                      `Rp ${booking.price.toLocaleString('id-ID')}`
-                                    )}
-                                  </p>
-                                </div>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleRemoveBooking(booking.originalIndex)}
-                                  className="ml-1 h-6 w-6 shrink-0 p-0 text-red-500 hover:bg-red-50 hover:text-red-700 lg:ml-2 lg:h-8 lg:w-8"
-                                >
-                                  <IconX className="h-3 w-3 lg:h-4 lg:w-4" />
-                                </Button>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ))}
-                    </div>
-
-                    <Separator />
-
-                    {/* Total */}
-                    <div className="space-y-1 lg:space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs lg:text-sm">
-                          Subtotal ({bookings.length} slots)
-                        </span>
-                        <span className="text-xs font-medium lg:text-sm">
-                          Rp{' '}
-                          {bookings
-                            .reduce((sum, booking) => sum + booking.price, 0)
-                            .toLocaleString('id-ID')}
-                        </span>
-                      </div>
-                      {membershipDiscount.canUseMembership &&
-                        membershipDiscount.slotsToDeduct > 0 && (
-                          <>
-                            <div className="flex items-center justify-between text-xs text-green-600 lg:text-sm">
-                              <span>
-                                Membership Discount ({membershipDiscount.slotsToDeduct} slot
-                                {membershipDiscount.slotsToDeduct > 1 ? 's' : ''})
-                              </span>
-                              <span className="font-medium">
-                                - Rp {membershipDiscount.discountAmount.toLocaleString('id-ID')}
-                              </span>
-                            </div>
-                            <Separator />
-                          </>
-                        )}
-                      <div className="flex items-center justify-between text-base font-bold lg:text-lg">
-                        <span>Total</span>
-                        <span className="text-primary">
-                          Rp {totalPrice.toLocaleString('id-ID')}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Booking Actions */}
-                    <div className="space-y-2 pt-3 lg:pt-4">
-                      <Button
-                        className="w-full"
-                        size="default"
-                        onClick={handleProceedToAddOns}
-                        disabled={
-                          (!localCustomerId && !(storeWalkInName && storeWalkInPhone)) ||
-                          bookings.length === 0
-                        }
-                      >
-                        Proceed to Add-Ons
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="w-full"
-                        size="sm"
-                        onClick={() => {
-                          setBookings([]);
-                          setBookingItems([]);
-                          setLocalCustomerId('');
-                          setSelectedCustomerId('');
-                          setSelectedCustomer(null);
-                          setCustomerSearch('');
-                          setDebouncedSearch('');
-                          toast.info('All bookings cleared');
-                        }}
-                      >
-                        Clear All
-                      </Button>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+          <BookingSummary
+            bookingItems={bookingItemsForDiscount}
+            selectedCustomerId={localCustomerId || null}
+            selectedCustomerName={storeCustomerName}
+            selectedCustomerPhone={storeCustomerPhone}
+            walkInName={storeWalkInName}
+            walkInPhone={storeWalkInPhone}
+            onCustomerSelect={(customerId, customer) => {
+              setLocalCustomerId(customerId);
+              setSelectedCustomerId(customerId);
+              setSelectedCustomer(customer); // Keep for membership discount calculation
+              setSelectedCustomerDetails(customer.name, customer.phone);
+              setWalkInCustomer(null, null);
+            }}
+            onCustomerClear={() => {
+              setLocalCustomerId('');
+              setSelectedCustomerId(null);
+              setSelectedCustomer(null);
+            }}
+            onWalkInSet={(name, phone) => {
+              setWalkInCustomer(name, phone);
+              setLocalCustomerId('');
+              setSelectedCustomerId(null);
+              setSelectedCustomer(null);
+            }}
+            onWalkInClear={() => {
+              setWalkInCustomer(null, null);
+            }}
+            courtTotal={bookings.reduce((sum, booking) => sum + booking.price, 0)}
+            totalAmount={totalPrice}
+            membershipDiscountDetails={membershipDiscount}
+            onBookingRemove={(courtId, timeSlot, date) => {
+              // Find the booking index
+              const bookingIndex = bookings.findIndex(
+                (b) => b.courtId === courtId && b.timeSlot === timeSlot && b.date === date
+              );
+              if (bookingIndex !== -1) {
+                handleRemoveBooking(bookingIndex);
+              }
+            }}
+            primaryAction={{
+              label: 'Proceed to Add-Ons',
+              onClick: handleProceedToAddOns,
+              disabled:
+                (!localCustomerId && !(storeWalkInName && storeWalkInPhone)) ||
+                bookings.length === 0
+            }}
+            secondaryActions={[
+              {
+                label: 'Clear All',
+                onClick: () => {
+                  setBookings([]);
+                  setBookingItems([]);
+                  setLocalCustomerId('');
+                  setSelectedCustomerId(null);
+                  setSelectedCustomer(null);
+                  toast.info('All bookings cleared');
+                },
+                variant: 'outline'
+              }
+            ]}
+            showAddOns={false}
+            width="w-full xl:w-[618px] xl:shrink-0"
+          />
         </div>
       </div>
     </div>

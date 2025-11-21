@@ -116,11 +116,16 @@ const MembershipTransactionTable = () => {
         header: 'Period',
         cell: (info) => {
           const row = info.row.original;
+          // Calculate end date based on start date + remaining duration
+          const calculatedEndDate = row.remainingDuration > 0
+            ? dayjs(row.startDate).add(row.remainingDuration, 'day').toDate()
+            : null;
+          
           return (
             <div className="text-sm">
               <p className="font-medium">{formatDate(row.startDate)}</p>
               <p className="text-muted-foreground text-xs">
-                to {row.endDate ? formatDate(row.endDate) : '-'}
+                to {calculatedEndDate ? formatDate(calculatedEndDate) : '-'}
               </p>
             </div>
           );
@@ -339,7 +344,9 @@ const MembershipTransactionDetail = ({ transaction }: { transaction: MembershipU
           <div>
             <p className="text-muted-foreground text-sm">End Date</p>
             <p className="font-medium">
-              {transaction.endDate ? formatDate(transaction.endDate) : '-'}
+              {transaction.remainingDuration > 0
+                ? formatDate(dayjs(transaction.startDate).add(transaction.remainingDuration, 'day').toDate())
+                : '-'}
             </p>
           </div>
           <div>
