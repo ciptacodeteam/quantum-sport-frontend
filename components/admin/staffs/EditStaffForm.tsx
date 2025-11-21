@@ -77,7 +77,7 @@ const EditStaffForm = ({ staffId }: Props) => {
       name: data?.name || '',
       email: data?.email || '',
       role: data?.role,
-      coachType: data?.coachTypeId || undefined,
+      coachType: data?.coachTypeId ?? undefined,
       phone: data?.phone ? formatPhone(data.phone).replace(/^\+62/, '') : '',
       image: undefined,
       joinedAt: data?.joinedAt ? new Date(data.joinedAt) : undefined,
@@ -260,7 +260,11 @@ const EditStaffForm = ({ staffId }: Props) => {
                 control={form.control}
                 name="coachType"
                 render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select 
+                    onValueChange={(value) => {console.log(value); field.onChange(value)}} 
+                    value={field.value || ''}
+                    defaultValue={field.value || ''}
+                  >
                     <SelectTrigger className="w-[180px]">
                       <SelectValue placeholder="Select coach type" />
                     </SelectTrigger>
