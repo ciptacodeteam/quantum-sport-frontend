@@ -33,20 +33,34 @@ import { useState } from 'react';
 import { Controller, type SubmitHandler, useForm } from 'react-hook-form';
 import z from 'zod';
 
-const formSchema = z.object({
-  image: z.file().optional(),
-  name: z.string().min(1, { message: 'Nama wajib diisi' }),
-  email: z.string().email({ message: 'Email tidak valid' }),
-  role: z.enum([ROLE.ADMIN, ROLE.ADMIN_VIEWER, ROLE.BALLBOY, ROLE.COACH, ROLE.CASHIER], {
-    message: 'Role tidak valid'
-  }),
-  phone: z
-    .string()
-    .min(10, { message: 'Nomor telepon minimal 10 digit' })
-    .max(15, { message: 'Nomor telepon maksimal 15 digit' }),
-  joinedAt: z.date().optional(),
-  isActive: z.boolean().optional()
-});
+const formSchema = z
+  .object({
+    image: z.file().optional(),
+    name: z.string().min(1, { message: 'Nama wajib diisi' }),
+    email: z.string().email({ message: 'Email tidak valid' }),
+    role: z.enum([ROLE.ADMIN, ROLE.ADMIN_VIEWER, ROLE.BALLBOY, ROLE.COACH, ROLE.CASHIER], {
+      message: 'Role tidak valid'
+    }),
+    coachType: z.string().optional(),
+    phone: z
+      .string()
+      .min(10, { message: 'Nomor telepon minimal 10 digit' })
+      .max(15, { message: 'Nomor telepon maksimal 15 digit' }),
+    joinedAt: z.date().optional(),
+    isActive: z.boolean().optional()
+  })
+  .refine(
+    (data) => {
+      if (data.role === ROLE.COACH) {
+        return !!data.coachType;
+      }
+      return true;
+    },
+    {
+      message: 'Coach type wajib diisi untuk role Coach',
+      path: ['coachType']
+    }
+  );
 
 type FormSchema = z.infer<typeof formSchema>;
 
@@ -63,6 +77,7 @@ const EditStaffForm = ({ staffId }: Props) => {
       name: data?.name || '',
       email: data?.email || '',
       role: data?.role,
+      coachType: data?.coachTypeId ?? undefined,
       phone: data?.phone ? formatPhone(data.phone).replace(/^\+62/, '') : '',
       image: undefined,
       joinedAt: data?.joinedAt ? new Date(data.joinedAt) : undefined,
@@ -70,6 +85,8 @@ const EditStaffForm = ({ staffId }: Props) => {
     },
     mode: 'onChange'
   });
+
+  const selectedRole = form.watch('role');
 
   const [imagePreview, setImagePreview] = useState<string | ArrayBuffer | null>(null);
 
@@ -210,7 +227,15 @@ const EditStaffForm = ({ staffId }: Props) => {
               control={form.control}
               name="role"
               render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value}>
+                <Select
+                  onValueChange={(value) => {
+                    field.onChange(value);
+                    if (value !== ROLE.COACH) {
+                      form.setValue('coachType', undefined);
+                    }
+                  }}
+                  value={field.value}
+                >
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Select a role" />
                   </SelectTrigger>
@@ -228,6 +253,33 @@ const EditStaffForm = ({ staffId }: Props) => {
             />
             <FieldError>{form.formState.errors.role?.message}</FieldError>
           </Field>
+          {selectedRole === ROLE.COACH && (
+            <Field>
+              <FieldLabel htmlFor="coachType">Coach Type</FieldLabel>
+              <Controller
+                control={form.control}
+                name="coachType"
+                render={({ field }) => (
+                  <Select 
+                    onValueChange={(value) => {console.log(value); field.onChange(value)}} 
+                    value={field.value || ''}
+                    defaultValue={field.value || ''}
+                  >
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Select coach type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="GUIDED_MATCH">Guided Match</SelectItem>
+                        <SelectItem value="COACH">Coach</SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              <FieldError>{form.formState.errors.coachType?.message}</FieldError>
+            </Field>
+          )}
           <Field>
             <FieldLabel htmlFor="joinedAt">Tanggal Bergabung</FieldLabel>
             <Controller

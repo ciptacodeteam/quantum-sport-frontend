@@ -41,6 +41,7 @@ const formSchema = z
     role: z.enum([ROLE.ADMIN, ROLE.ADMIN_VIEWER, ROLE.BALLBOY, ROLE.COACH, ROLE.CASHIER], {
       message: 'Role tidak valid'
     }),
+    coachType: z.string().optional(),
     phone: z
       .string()
       .min(10, { message: 'Nomor telepon minimal 10 digit' })
@@ -52,7 +53,19 @@ const formSchema = z
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Password dan konfirmasi password tidak sesuai',
     path: ['confirmPassword']
-  });
+  })
+  .refine(
+    (data) => {
+      if (data.role === ROLE.COACH) {
+        return !!data.coachType;
+      }
+      return true;
+    },
+    {
+      message: 'Coach type wajib diisi untuk role Coach',
+      path: ['coachType']
+    }
+  );
 
 type FormSchema = z.infer<typeof formSchema>;
 
@@ -63,6 +76,7 @@ const CreateStaffForm = () => {
       name: '',
       email: '',
       role: ROLE.ADMIN,
+      coachType: undefined,
       phone: '',
       password: '',
       confirmPassword: '',
@@ -70,6 +84,8 @@ const CreateStaffForm = () => {
       joinedAt: new Date()
     }
   });
+
+  const selectedRole = form.watch('role');
 
   const [imagePreview, setImagePreview] = useState<string | ArrayBuffer | null>(null);
 
@@ -209,7 +225,15 @@ const CreateStaffForm = () => {
               control={form.control}
               name="role"
               render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value}>
+                <Select
+                  onValueChange={(value) => {
+                    field.onChange(value);
+                    if (value !== ROLE.COACH) {
+                      form.setValue('coachType', undefined);
+                    }
+                  }}
+                  value={field.value}
+                >
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Select a role" />
                   </SelectTrigger>
@@ -227,6 +251,29 @@ const CreateStaffForm = () => {
             />
             <FieldError>{form.formState.errors.role?.message}</FieldError>
           </Field>
+          {selectedRole === ROLE.COACH && (
+            <Field>
+              <FieldLabel htmlFor="coachType">Coach Type</FieldLabel>
+              <Controller
+                control={form.control}
+                name="coachType"
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Select coach type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="GUIDED_MATCH">Guided Match</SelectItem>
+                        <SelectItem value="COACH">Coach</SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              <FieldError>{form.formState.errors.coachType?.message}</FieldError>
+            </Field>
+          )}
           <Field>
             <FieldLabel htmlFor="joinedAt">Tanggal Bergabung</FieldLabel>
             <Controller
