@@ -824,16 +824,114 @@ export default function BookingLapangan() {
                               </div>
                             </div>
 
-                            <div className="flex items-center justify-between">
-                              <span className="text-primary truncate text-xs font-bold sm:text-sm">
-                                Rp {court.pricePerHour.toLocaleString('id-ID')}/hr
-                              </span>
-                              {selectedCourt === court.id && (
+                            {/* Price Overview */}
+                            <div className="mt-2 space-y-1">
+                              {(() => {
+                                // Get slots for this court on the selected date
+                                const courtSlotsForDate = slots.filter((slot) => {
+                                  const slotCourtId = slot.courtId || slot.court?.id;
+                                  if (slotCourtId !== court.id) return false;
+                                  const slotDate = typeof slot.startAt === 'string' 
+                                    ? getDateStringFromISO(slot.startAt)
+                                    : formatDateString(slot.startAt);
+                                  return slotDate === selectedDateString;
+                                }).sort((a, b) => {
+                                  // Sort by start time
+                                  const timeA = formatSlotTime(a.startAt);
+                                  const timeB = formatSlotTime(b.startAt);
+                                  return timeA.localeCompare(timeB);
+                                });
+
+                                // Group slots by price ranges
+                                const priceRanges: Array<{ startTime: string; endTime: string; price: number }> = [];
+                                
+                                if (courtSlotsForDate.length > 0) {
+                                  // Group slots by price first
+                                  const slotsByPrice = new Map<number, Array<{ startTime: string; endTime: string }>>();
+                                  
+                                  courtSlotsForDate.forEach((slot) => {
+                                    const slotPrice = slot.price || 0;
+                                    const slotStartTime = formatSlotTime(slot.startAt);
+                                    const slotEndTime = formatSlotTime(slot.endAt);
+                                    
+                                    if (!slotsByPrice.has(slotPrice)) {
+                                      slotsByPrice.set(slotPrice, []);
+                                    }
+                                    slotsByPrice.get(slotPrice)!.push({
+                                      startTime: slotStartTime,
+                                      endTime: slotEndTime
+                                    });
+                                  });
+
+                                  // For each price group, create ranges from consecutive slots
+                                  slotsByPrice.forEach((timeSlots, price) => {
+                                    // Sort by start time
+                                    timeSlots.sort((a, b) => a.startTime.localeCompare(b.startTime));
+                                    
+                                    let currentRange = {
+                                      startTime: timeSlots[0].startTime,
+                                      endTime: timeSlots[0].endTime,
+                                      price: price
+                                    };
+
+                                    for (let i = 1; i < timeSlots.length; i++) {
+                                      const slot = timeSlots[i];
+                                      
+                                      // Check if this slot's start time matches the current range's end time (consecutive)
+                                      if (slot.startTime === currentRange.endTime) {
+                                        // Extend the current range
+                                        currentRange.endTime = slot.endTime;
+                                      } else {
+                                        // Save current range and start new one
+                                        priceRanges.push({ ...currentRange });
+                                        currentRange = {
+                                          startTime: slot.startTime,
+                                          endTime: slot.endTime,
+                                          price: price
+                                        };
+                                      }
+                                    }
+                                    
+                                    // Add the last range for this price
+                                    priceRanges.push({ ...currentRange });
+                                  });
+
+                                  // Sort ranges by start time
+                                  priceRanges.sort((a, b) => a.startTime.localeCompare(b.startTime));
+                                }
+
+                                // Limit to 3 ranges for display, show first and last if more
+                                const displayRanges = priceRanges.length > 3
+                                  ? [priceRanges[0], { startTime: '...', endTime: '...', price: 0 }, priceRanges[priceRanges.length - 1]]
+                                  : priceRanges;
+
+                                return displayRanges.length > 0 ? (
+                                  <div className="space-y-0.5">
+                                    {displayRanges.map((range, idx) => (
+                                      range.startTime === '...' ? (
+                                        <div key={idx} className="text-muted-foreground text-[10px] text-center">...</div>
+                                      ) : (
+                                        <div key={idx} className="text-primary text-[10px] sm:text-xs font-medium">
+                                          {range.startTime}-{range.endTime} is Rp {range.price.toLocaleString('id-ID')}
+                                        </div>
+                                      )
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <span className="text-primary text-[10px] sm:text-xs font-medium">
+                                    Rp {court.pricePerHour.toLocaleString('id-ID')}/hr
+                                  </span>
+                                );
+                              })()}
+                            </div>
+
+                            {selectedCourt === court.id && (
+                              <div className="mt-2 flex justify-end">
                                 <Badge variant="default" className="shrink-0 text-xs">
                                   Selected
                                 </Badge>
-                              )}
-                            </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       );
