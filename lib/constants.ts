@@ -118,6 +118,23 @@ export const SLOT_TYPE_BADGE_VARIANT: Record<SlotType, BadgeVariant['variant']> 
   [SlotType.BALLBOY]: 'lightInfo'
 };
 
+export const COACH_TYPE = {
+  GUIDED_MATCH: 'GUIDED_MATCH',
+  COACH: 'COACH'
+} as const;
+
+export type CoachType = keyof typeof COACH_TYPE;
+
+export const COACH_TYPE_MAP: Record<CoachType, string> = {
+  [COACH_TYPE.GUIDED_MATCH]: 'Guided Match',
+  [COACH_TYPE.COACH]: 'Coach'
+};
+
+export const COACH_TYPE_OPTIONS: Array<{ label: string; value: CoachType }> = [
+  { label: 'Guided Match', value: COACH_TYPE.GUIDED_MATCH },
+  { label: 'Coach', value: COACH_TYPE.COACH }
+];
+
 export const BookingStatus = {
   HOLD: 'HOLD', // temporary hold on slots before payment (expiry)
   CONFIRMED: 'CONFIRMED', // paid; slots locked

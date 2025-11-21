@@ -194,6 +194,7 @@ export type Staff = {
   isActive: boolean;
   image: string | null;
   joinedAt: Date | null;
+  coachTypeId: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
