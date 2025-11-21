@@ -1,4 +1,9 @@
-import { createMembershipApi, updateMembershipApi } from '@/api/admin/membership';
+import {
+  adminMembershipCheckoutApi,
+  type AdminMembershipCheckoutPayload,
+  createMembershipApi,
+  updateMembershipApi
+} from '@/api/admin/membership';
 import type { MutationFuncProps } from '@/types';
 import { mutationOptions } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -33,6 +38,24 @@ export const adminUpdateMembershipMutationOptions = ({
     onError: (error) => {
       console.error('Error:', error);
       toast.error(error.msg || 'Gagal memperbarui data. Silakan coba lagi.');
+      onError?.(error);
+    }
+  });
+
+export const adminMembershipCheckoutMutationOptions = ({
+  onSuccess,
+  onError
+}: MutationFuncProps = {}) =>
+  mutationOptions({
+    mutationFn: (payload: AdminMembershipCheckoutPayload) =>
+      adminMembershipCheckoutApi(payload),
+    onSuccess: (data) => {
+      toast.success('Membership berhasil dipesan!');
+      onSuccess?.(data);
+    },
+    onError: (error) => {
+      console.error('Error:', error);
+      toast.error(error.msg || 'Gagal memproses booking membership. Silakan coba lagi.');
       onError?.(error);
     }
   });

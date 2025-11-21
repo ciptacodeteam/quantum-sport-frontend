@@ -23,3 +23,8 @@ export async function doMembershipCheckoutApi(payload: CreateMutationPayload) {
   const { data } = await api.post('/memberships/checkout', payload);
   return data;
 }
+
+export async function getMyMembershipApi() {
+  const { data } = await api.get('/memberships/my/active');
+  return data;
+}

@@ -4,36 +4,21 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Command,
-  CommandEmpty,
-  CommandInput,
-  CommandItem,
-  CommandList
-} from '@/components/ui/command';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
-import { formatSlotTime, formatSlotTimeRange } from '@/lib/time-utils';
+import { formatSlotTime } from '@/lib/time-utils';
 import { cn, getPlaceholderImageUrl } from '@/lib/utils';
 import { adminCourtCostingQueryOptions } from '@/queries/admin/court';
-import { adminCustomersQueryOptions } from '@/queries/admin/customer';
-import { courtsSlotsQueryOptions } from '@/queries/court';
+import type { CustomerSearchResult } from '@/queries/admin/customer';
+import { useMembershipDiscount } from '@/hooks/useMembershipDiscount';
+import BookingSummary from '@/components/admin/booking/BookingSummary';
 import { useBookingStore } from '@/stores/useBookingStore';
 import type { Court, Slot } from '@/types/model';
 import { IconCalendar, IconCheck, IconClock, IconMapPin, IconX } from '@tabler/icons-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 
 // Helper functions to replace dayjs
@@ -169,10 +154,14 @@ export default function BookingLapangan() {
     bookingItems,
     selectedDate,
     selectedCustomerId,
+    selectedCustomerName: storeCustomerName,
+    selectedCustomerPhone: storeCustomerPhone,
     setBookingItems,
     setSelectedDate: setStoreDate,
     setSelectedCustomerId,
+    setSelectedCustomerDetails,
     setWalkInCustomer,
+    setMembershipDiscount,
     walkInName: storeWalkInName,
     walkInPhone: storeWalkInPhone
   } = useBookingStore();
@@ -193,12 +182,8 @@ export default function BookingLapangan() {
     }))
   );
   const [calendarOpen, setCalendarOpen] = useState(false);
-  // Removed "Tambah Baru" (create customer) utility
-  const [isWalkInOpen, setIsWalkInOpen] = useState(false);
-  const [walkInName, setWalkInName] = useState('');
-  const [walkInPhone, setWalkInPhone] = useState('');
-  const [isCustomerOpen, setIsCustomerOpen] = useState(false);
-  const [customerSearch, setCustomerSearch] = useState('');
+  // Customer selection is now handled by BookingSummary component
+  const [selectedCustomer, setSelectedCustomer] = useState<CustomerSearchResult | null>(null);
 
   // Fetch slots for the selected date
   // Include next day's 00:00 slot (which is actually the end of the current day in Jakarta time)
@@ -220,7 +205,32 @@ export default function BookingLapangan() {
     adminCourtCostingQueryOptions(slotQueryParams)
   );
 
-  const { data: customers } = useQuery(adminCustomersQueryOptions);
+  // Calculate membership discount - convert SelectedBooking to BookingItem format
+  const bookingItemsForDiscount = useMemo(
+    () =>
+      bookings.map((booking) => ({
+        slotId: booking.slotId,
+        courtId: booking.courtId,
+        courtName: booking.courtName,
+        timeSlot: booking.timeSlot,
+        price: booking.price,
+        date: booking.date,
+        endTime: booking.endTime || booking.timeSlot.split(' - ')[1] || ''
+      })),
+    [bookings]
+  );
+  
+  // Pass membership data from selected customer to avoid separate API call
+  const membershipDiscount = useMembershipDiscount(
+    localCustomerId,
+    bookingItemsForDiscount,
+    selectedCustomer ? { activeMembership: selectedCustomer.activeMembership } : null
+  );
+
+  // Update store with membership discount
+  useEffect(() => {
+    setMembershipDiscount(membershipDiscount.discountAmount);
+  }, [membershipDiscount.discountAmount, setMembershipDiscount]);
 
   const slots = useMemo(() => slotsData ?? [], [slotsData]);
 
@@ -296,16 +306,24 @@ export default function BookingLapangan() {
     return map;
   }, [slots, selectedDateString]);
 
-  // Get all unique time slots from all slots (sorted)
+  // Get time slots filtered by selected court (if a court is selected)
   // IMPORTANT: We include ALL time slots regardless of isAvailable status
   // Slots with isAvailable: false will be shown but marked as "booked" status
   // We do NOT filter out any slots - all slots are displayed to the user
   const availableTimeSlots = useMemo(() => {
     const timeSet = new Set<string>();
     
-    // Iterate through ALL slots and collect unique start times
-    // Do NOT filter by isAvailable - include everything
+    // Iterate through slots and collect unique start times
+    // If a court is selected, only show slots for that court
+    // If no court is selected, show all slots from all courts
     slots.forEach((slot) => {
+      const slotCourtId = slot.courtId || slot.court?.id;
+      
+      // If a court is selected, only include slots for that court
+      if (selectedCourt && slotCourtId !== selectedCourt) {
+        return;
+      }
+      
       // Use timezone-safe date extraction to avoid conversion issues
       const slotDate = typeof slot.startAt === 'string' 
         ? getDateStringFromISO(slot.startAt)
@@ -323,7 +341,7 @@ export default function BookingLapangan() {
     // Convert to array and sort
     return Array.from(timeSet)
       .sort((a, b) => a.localeCompare(b));
-  }, [slots, selectedDateString]);
+  }, [slots, selectedDateString, selectedCourt]);
 
   // Debug: Log fetched data
   useEffect(() => {
@@ -375,6 +393,9 @@ export default function BookingLapangan() {
   // Handle court selection
   const handleCourtSelect = (courtId: string) => {
     setSelectedCourt(courtId);
+    // Clear selected time slots when switching courts
+    // This prevents selecting slots that don't exist for the new court
+    setSelectedTimeSlots([]);
   };
 
   // Add booking to selection
@@ -477,8 +498,8 @@ export default function BookingLapangan() {
     setBookingItems(updatedBookingItems);
   };
 
-  // Calculate total price
-  const totalPrice = bookings.reduce((sum, booking) => sum + booking.price, 0);
+  // Use membership discount calculation
+  const totalPrice = membershipDiscount.discountedTotal;
 
   // Handle proceed to add-ons
   const handleProceedToAddOns = () => {
@@ -552,10 +573,26 @@ export default function BookingLapangan() {
   // };
 
   // Simple check: is a time slot booked?
-  // 1. Find the slot by court and start time
-  // 2. If isAvailable is false, it's booked
-  // 3. If current time > start time, it's booked (past time)
+  // 1. Check if user has already added this slot to bookings
+  // 2. Find the slot by court and start time
+  // 3. If isAvailable is false, it's booked
+  // 4. If current time > start time, it's booked (past time)
   const isTimeSlotBooked = (timeSlot: string, courtId: string) => {
+    // First, check if user has already added this slot to their bookings
+    // timeSlot is in format "HH:mm" (just the start time)
+    const isUserBooked = bookings.some((booking) => {
+      if (booking.courtId !== courtId) return false;
+      if (booking.date !== selectedDateString) return false;
+      
+      // Extract start time from booking.timeSlot (format: "HH:mm - HH:mm")
+      const bookingStartTime = booking.timeSlot.split(' - ')[0];
+      return bookingStartTime === timeSlot;
+    });
+
+    if (isUserBooked) {
+      return true;
+    }
+
     // Find the slot for this court and time
     const matchingSlot = slots.find((slot) => {
       const slotCourtId = slot.courtId || slot.court?.id;
@@ -580,10 +617,12 @@ export default function BookingLapangan() {
       return true;
     }
 
-    // Check if the slot's start time is in the past
+    // Check if the slot's start time is in the past (with 15-minute grace period)
     const slotStartDateTime = new Date(matchingSlot.startAt);
     const now = new Date();
-    if (slotStartDateTime.getTime() < now.getTime()) {
+    const gracePeriodMinutes = 15;
+    const gracePeriodEnd = slotStartDateTime.getTime() + gracePeriodMinutes * 60 * 1000;
+    if (gracePeriodEnd < now.getTime()) {
       return true;
     }
 
@@ -697,24 +736,30 @@ export default function BookingLapangan() {
                 ) : (
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:gap-4">
                     {courts.map((court) => {
-                      // Count available slots (not booked)
-                      const availableSlotsCount = availableTimeSlots.filter((timeSlot) =>
-                        !isTimeSlotBooked(timeSlot, court.id)
-                      ).length;
-                      // Count total slots for this court (including booked ones)
-                      const totalSlotsCount = availableTimeSlots.filter((timeSlot) => {
-                        // Check if there's a slot for this court and time
-                        return slots.some((slot) => {
-                          const slotCourtId = slot.courtId || slot.court?.id;
-                          if (slotCourtId !== court.id) return false;
-                          const slotDate = typeof slot.startAt === 'string' 
-                            ? getDateStringFromISO(slot.startAt)
-                            : formatDateString(slot.startAt);
-                          if (slotDate !== selectedDateString) return false;
-                          const slotStartTime = formatSlotTime(slot.startAt);
-                          return slotStartTime === timeSlot;
-                        });
+                      // Count slots directly from the slots array for this specific court
+                      const courtSlots = slots.filter((slot) => {
+                        const slotCourtId = slot.courtId || slot.court?.id;
+                        if (slotCourtId !== court.id) return false;
+                        const slotDate = typeof slot.startAt === 'string' 
+                          ? getDateStringFromISO(slot.startAt)
+                          : formatDateString(slot.startAt);
+                        return slotDate === selectedDateString;
+                      });
+
+                      // Total slots for this court (all slots regardless of availability)
+                      const totalSlotsCount = courtSlots.length;
+
+                      // Available slots (not booked) for this court
+                      const availableSlotsCount = courtSlots.filter((slot) => {
+                        // Check if slot is available (not booked and not in the past with 15-minute grace period)
+                        if (!slot.isAvailable) return false;
+                        const slotStartDateTime = new Date(slot.startAt);
+                        const now = new Date();
+                        const gracePeriodMinutes = 15;
+                        const gracePeriodEnd = slotStartDateTime.getTime() + gracePeriodMinutes * 60 * 1000;
+                        return gracePeriodEnd >= now.getTime();
                       }).length;
+
                       const isDisabled = false;
 
                       return (
@@ -842,9 +887,11 @@ export default function BookingLapangan() {
                       // Display ALL time slots - never hide booked slots, just show them with booked indicator
                       availableTimeSlots.map((timeSlot) => {
                         const isSelected = selectedTimeSlots.includes(timeSlot);
+                        // When a court is selected, check if that specific court has the slot booked
+                        // When no court is selected, only mark as booked if ALL courts have it booked
                         const isBooked = selectedCourt
                           ? isTimeSlotBooked(timeSlot, selectedCourt)
-                          : courts.some((court) => isTimeSlotBooked(timeSlot, court.id));
+                          : courts.every((court) => isTimeSlotBooked(timeSlot, court.id));
                         const availableCourts = courts.filter((court) =>
                           !isTimeSlotBooked(timeSlot, court.id)
                         );
@@ -930,285 +977,70 @@ export default function BookingLapangan() {
           </div>
 
           {/* Booking Summary - Responsive */}
-          <div className="w-full xl:w-[618px] xl:shrink-0">
-            <Card className="xl:sticky xl:top-6">
-              <CardHeader className="pb-3 lg:pb-6">
-                <CardTitle className="text-lg lg:text-xl">Booking Summary</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 pt-0 lg:space-y-4">
-                {/* Customer Selection */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Pilih Pelanggan</label>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1">
-                      <Popover
-                        open={isCustomerOpen}
-                        onOpenChange={(o) => {
-                          setIsCustomerOpen(o);
-                          if (!o) setCustomerSearch('');
-                        }}
-                      >
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={isCustomerOpen}
-                            className="w-full justify-between"
-                          >
-                            {(() => {
-                              const current = customers?.find((c) => c.id === localCustomerId);
-                              return current
-                                ? `${current.name}${current.phone ? ` (${current.phone})` : ''}`
-                                : 'Pilih pelanggan...';
-                            })()}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-(--radix-popover-trigger-width) p-0">
-                          <Command>
-                            <CommandInput
-                              placeholder="Cari pelanggan..."
-                              value={customerSearch}
-                              onValueChange={setCustomerSearch}
-                            />
-                            <CommandList>
-                              <CommandEmpty>Tidak ada hasil.</CommandEmpty>
-                              {(customers || [])
-                                .filter((c) => {
-                                  const q = customerSearch.trim().toLowerCase();
-                                  if (!q) return true;
-                                  return (
-                                    c.name.toLowerCase().includes(q) ||
-                                    (c.phone ? c.phone.toLowerCase().includes(q) : false)
-                                  );
-                                })
-                                .map((customer) => (
-                                  <CommandItem
-                                    key={customer.id}
-                                    value={customer.name}
-                                    onSelect={() => {
-                                      setLocalCustomerId(customer.id);
-                                      setSelectedCustomerId(customer.id);
-                                      // Clear any walk-in selection when a customer is picked
-                                      setWalkInCustomer(null, null);
-                                      setIsCustomerOpen(false);
-                                    }}
-                                  >
-                                    <span className="truncate">
-                                      {customer.name} {customer.phone && `(${customer.phone})`}
-                                    </span>
-                                  </CommandItem>
-                                ))}
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    {/* Walk-in customer capture */}
-                    <Dialog open={isWalkInOpen} onOpenChange={setIsWalkInOpen}>
-                      <DialogTrigger asChild>
-                        <Button type="button" variant="outline" size="sm">
-                          Walk-in
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                          <DialogTitle>Tambah Walk-in Customer</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="walkInName">Nama</Label>
-                            <Input
-                              id="walkInName"
-                              placeholder="Nama pelanggan"
-                              value={walkInName}
-                              onChange={(e) => setWalkInName(e.target.value)}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="walkInPhone">Nomor Telepon</Label>
-                            <Input
-                              id="walkInPhone"
-                              placeholder="08xxxxxxxxxx"
-                              value={walkInPhone}
-                              onChange={(e) => setWalkInPhone(e.target.value)}
-                            />
-                          </div>
-                          <div className="flex justify-end gap-2 pt-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => setIsWalkInOpen(false)}
-                            >
-                              Batal
-                            </Button>
-                            <Button
-                              type="button"
-                              disabled={!walkInName.trim() || !walkInPhone.trim()}
-                              onClick={() => {
-                                setWalkInCustomer(walkInName.trim(), walkInPhone.trim());
-                                // Ensure we don't send userId if walk-in is set
-                                setLocalCustomerId('');
-                                setSelectedCustomerId(null);
-                                toast.success('Walk-in customer disimpan');
-                                setIsWalkInOpen(false);
-                              }}
-                            >
-                              Simpan
-                            </Button>
-                          </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-
-                  {/* Show current walk-in selection if available */}
-                  {(storeWalkInName || storeWalkInPhone) && !localCustomerId && (
-                    <div className="bg-muted mt-2 rounded-md border px-3 py-2 text-xs">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <span className="font-medium">Walk-in:</span>{' '}
-                          <span>{storeWalkInName || '-'}</span>
-                          {storeWalkInPhone && (
-                            <span className="text-muted-foreground ml-1">({storeWalkInPhone})</span>
-                          )}
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setWalkInCustomer(null, null);
-                            toast.info('Walk-in customer dibersihkan');
-                          }}
-                        >
-                          Hapus
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <Separator />
-
-                {bookings.length === 0 ? (
-                  <div className="py-6 text-center lg:py-8">
-                    <IconCalendar className="text-muted-foreground/50 mx-auto mb-3 h-10 w-10 lg:mb-4 lg:h-12 lg:w-12" />
-                    <p className="text-muted-foreground text-sm lg:text-base">
-                      No bookings selected
-                    </p>
-                    <p className="text-muted-foreground text-xs lg:text-sm">
-                      Select time slots and court to start booking
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    {/* Booking Items - Group by Date */}
-                    <div className="max-h-48 space-y-2 overflow-y-auto lg:max-h-64 lg:space-y-3">
-                      {Object.entries(
-                        bookings.reduce(
-                          (groups, booking, index) => {
-                            const date = booking.date;
-                            if (!groups[date]) groups[date] = [];
-                            groups[date].push({ ...booking, originalIndex: index });
-                            return groups;
-                          },
-                          {} as Record<string, Array<SelectedBooking & { originalIndex: number }>>
-                        )
-                      ).map(([date, dateBookings]) => (
-                        <div key={date} className="space-y-2">
-                          <div className="text-muted-foreground border-b pb-1 text-xs font-medium">
-                            {formatDate(new Date(date), 'dddd, DD MMM YYYY')}
-                          </div>
-                          {dateBookings.map((booking) => (
-                            <div
-                              key={booking.originalIndex}
-                              className="bg-muted border-l-primary ml-2 flex items-start justify-between rounded-lg border-l-4 p-2 lg:p-3"
-                            >
-                              <div className="min-w-0 flex-1">
-                                <div className="mb-1 flex items-center gap-1 lg:gap-2">
-                                  <IconMapPin className="text-primary h-3 w-3 shrink-0" />
-                                  <p className="truncate text-xs font-medium lg:text-sm">
-                                    {booking.courtName}
-                                  </p>
-                                </div>
-                                <div className="mb-1 flex items-center gap-1 lg:gap-2">
-                                  <IconClock className="text-muted-foreground h-3 w-3 shrink-0" />
-                                  <p className="text-muted-foreground truncate text-xs">
-                                    {booking.timeSlot}
-                                  </p>
-                                </div>
-                                <p className="text-primary text-xs font-semibold">
-                                  Rp {booking.price.toLocaleString('id-ID')}
-                                </p>
-                              </div>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleRemoveBooking(booking.originalIndex)}
-                                className="ml-1 h-6 w-6 shrink-0 p-0 text-red-500 hover:bg-red-50 hover:text-red-700 lg:ml-2 lg:h-8 lg:w-8"
-                              >
-                                <IconX className="h-3 w-3 lg:h-4 lg:w-4" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-
-                    <Separator />
-
-                    {/* Total */}
-                    <div className="space-y-1 lg:space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs lg:text-sm">
-                          Subtotal ({bookings.length} slots)
-                        </span>
-                        <span className="text-xs font-medium lg:text-sm">
-                          Rp {totalPrice.toLocaleString('id-ID')}
-                        </span>
-                      </div>
-                      <Separator />
-                      <div className="flex items-center justify-between text-base font-bold lg:text-lg">
-                        <span>Total</span>
-                        <span className="text-primary">
-                          Rp {totalPrice.toLocaleString('id-ID')}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Booking Actions */}
-                    <div className="space-y-2 pt-3 lg:pt-4">
-                      <Button
-                        className="w-full"
-                        size="default"
-                        onClick={handleProceedToAddOns}
-                        disabled={
-                          (!localCustomerId && !(storeWalkInName && storeWalkInPhone)) ||
-                          bookings.length === 0
-                        }
-                      >
-                        Proceed to Add-Ons
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="w-full"
-                        size="sm"
-                        onClick={() => {
-                          setBookings([]);
-                          setBookingItems([]);
-                          setLocalCustomerId('');
-                          setSelectedCustomerId('');
-                          toast.info('All bookings cleared');
-                        }}
-                      >
-                        Clear All
-                      </Button>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+          <BookingSummary
+            bookingItems={bookingItemsForDiscount}
+            selectedCustomerId={localCustomerId || null}
+            selectedCustomerName={storeCustomerName}
+            selectedCustomerPhone={storeCustomerPhone}
+            walkInName={storeWalkInName}
+            walkInPhone={storeWalkInPhone}
+            onCustomerSelect={(customerId, customer) => {
+              setLocalCustomerId(customerId);
+              setSelectedCustomerId(customerId);
+              setSelectedCustomer(customer); // Keep for membership discount calculation
+              setSelectedCustomerDetails(customer.name, customer.phone);
+              setWalkInCustomer(null, null);
+            }}
+            onCustomerClear={() => {
+              setLocalCustomerId('');
+              setSelectedCustomerId(null);
+              setSelectedCustomer(null);
+            }}
+            onWalkInSet={(name, phone) => {
+              setWalkInCustomer(name, phone);
+              setLocalCustomerId('');
+              setSelectedCustomerId(null);
+              setSelectedCustomer(null);
+            }}
+            onWalkInClear={() => {
+              setWalkInCustomer(null, null);
+            }}
+            courtTotal={bookings.reduce((sum, booking) => sum + booking.price, 0)}
+            totalAmount={totalPrice}
+            membershipDiscountDetails={membershipDiscount}
+            onBookingRemove={(courtId, timeSlot, date) => {
+              // Find the booking index
+              const bookingIndex = bookings.findIndex(
+                (b) => b.courtId === courtId && b.timeSlot === timeSlot && b.date === date
+              );
+              if (bookingIndex !== -1) {
+                handleRemoveBooking(bookingIndex);
+              }
+            }}
+            primaryAction={{
+              label: 'Proceed to Add-Ons',
+              onClick: handleProceedToAddOns,
+              disabled:
+                (!localCustomerId && !(storeWalkInName && storeWalkInPhone)) ||
+                bookings.length === 0
+            }}
+            secondaryActions={[
+              {
+                label: 'Clear All',
+                onClick: () => {
+                  setBookings([]);
+                  setBookingItems([]);
+                  setLocalCustomerId('');
+                  setSelectedCustomerId(null);
+                  setSelectedCustomer(null);
+                  toast.info('All bookings cleared');
+                },
+                variant: 'outline'
+              }
+            ]}
+            showAddOns={false}
+            width="w-full xl:w-[618px] xl:shrink-0"
+          />
         </div>
       </div>
     </div>

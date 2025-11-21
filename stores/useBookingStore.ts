@@ -92,6 +92,8 @@ interface BookingState {
   bookingItems: BookingItem[];
   selectedDate: Date;
   selectedCustomerId: string | null;
+  selectedCustomerName?: string | null;
+  selectedCustomerPhone?: string | null;
   walkInName?: string | null;
   walkInPhone?: string | null;
 
@@ -104,6 +106,7 @@ interface BookingState {
   courtTotal: number;
   coachTotal: number;
   inventoryTotal: number;
+  membershipDiscount: number; // Discount amount from membership sessions
 
   // Cart Sheet
   isCartOpen: boolean;
@@ -113,6 +116,7 @@ interface BookingState {
   removeBookingItem: (courtId: string, timeSlot: string, date: string) => void;
   setSelectedDate: (date: Date) => void;
   setSelectedCustomerId: (customerId: string | null) => void;
+  setSelectedCustomerDetails: (name: string | null, phone: string | null) => void;
   setWalkInCustomer: (name: string | null, phone: string | null) => void;
   addCoach: (coach: SelectedCoach) => void;
   removeCoach: (coachId: string, timeSlot: string, slotId?: string) => void;
@@ -122,9 +126,8 @@ interface BookingState {
   removeInventory: (inventoryId: string, timeSlot?: string) => void;
   updateInventoryQuantity: (inventoryId: string, timeSlot: string, quantity: number) => void;
   clearAll: () => void;
+  setMembershipDiscount: (discount: number) => void;
   getTotalAmount: () => number;
-  getTotalWithTax: () => number;
-  getTax: () => number;
   setCartOpen: (open: boolean) => void;
 }
 
@@ -134,6 +137,8 @@ export const useBookingStore = create<BookingState>()(
       bookingItems: [],
       selectedDate: new Date(),
       selectedCustomerId: null,
+      selectedCustomerName: null,
+      selectedCustomerPhone: null,
       walkInName: null,
       walkInPhone: null,
       selectedCoaches: [],
@@ -142,6 +147,7 @@ export const useBookingStore = create<BookingState>()(
       courtTotal: 0,
       coachTotal: 0,
       inventoryTotal: 0,
+      membershipDiscount: 0,
       isCartOpen: false,
 
       // Actions
@@ -162,6 +168,9 @@ export const useBookingStore = create<BookingState>()(
       setSelectedDate: (date) => set({ selectedDate: date }),
 
       setSelectedCustomerId: (customerId) => set({ selectedCustomerId: customerId }),
+
+      setSelectedCustomerDetails: (name, phone) =>
+        set({ selectedCustomerName: name, selectedCustomerPhone: phone }),
 
       setWalkInCustomer: (name, phone) => set({ walkInName: name, walkInPhone: phone }),
 
@@ -296,24 +305,17 @@ export const useBookingStore = create<BookingState>()(
           walkInPhone: null,
           courtTotal: 0,
           coachTotal: 0,
-          inventoryTotal: 0
+          inventoryTotal: 0,
+          membershipDiscount: 0
         }),
+
+      setMembershipDiscount: (discount) => set({ membershipDiscount: discount }),
 
       getTotalAmount: () => {
         const state = get();
-        return state.courtTotal + state.coachTotal + state.inventoryTotal;
-      },
-
-      getTotalWithTax: () => {
-        const state = get();
-        const total = state.courtTotal + state.coachTotal + state.inventoryTotal;
-        return total * 1.1; // 10% tax
-      },
-
-      getTax: () => {
-        const state = get();
-        const total = state.courtTotal + state.coachTotal + state.inventoryTotal;
-        return total * 0.1; // 10% tax
+        // Apply membership discount to court total only
+        const discountedCourtTotal = Math.max(0, state.courtTotal - state.membershipDiscount);
+        return discountedCourtTotal + state.coachTotal + state.inventoryTotal;
       },
 
       setCartOpen: (open) => set({ isCartOpen: open })
@@ -325,13 +327,16 @@ export const useBookingStore = create<BookingState>()(
         bookingItems: state.bookingItems,
         selectedDate: state.selectedDate,
         selectedCustomerId: state.selectedCustomerId,
+        selectedCustomerName: state.selectedCustomerName,
+        selectedCustomerPhone: state.selectedCustomerPhone,
         walkInName: state.walkInName,
         walkInPhone: state.walkInPhone,
         selectedCoaches: state.selectedCoaches,
         selectedInventories: state.selectedInventories,
         courtTotal: state.courtTotal,
         coachTotal: state.coachTotal,
-        inventoryTotal: state.inventoryTotal
+        inventoryTotal: state.inventoryTotal,
+        membershipDiscount: state.membershipDiscount
       })
     }
   )

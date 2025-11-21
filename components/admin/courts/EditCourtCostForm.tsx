@@ -51,8 +51,13 @@ const EditCourtCostForm = ({ data }: Props) => {
   const { mutate, isPending } = useMutation(
     adminUpdateCourtCostMutationOptions({
       onSuccess: () => {
+        // Invalidate all queries related to this court's costing
         queryClient.invalidateQueries({
-          queryKey: adminCourtCostingQueryOptionsById(data.courtId).queryKey
+          queryKey: ['admin', 'courts', data.courtId, 'costing']
+        });
+        // Also invalidate general court slots queries
+        queryClient.invalidateQueries({
+          queryKey: ['courts', 'slots']
         });
         form.reset();
         closeDialog(`edit-court-costing-${data.id}`);

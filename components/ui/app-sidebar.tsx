@@ -55,6 +55,10 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
         {
           title: 'Add-ons & Equipment',
           url: '/admin/booking-add-ons'
+        },
+        {
+          title: 'Book Membership',
+          url: '/admin/booking-membership'
         }
       ]
     },
@@ -211,6 +215,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             {
               title: 'Book Courts',
               url: '/admin/booking-lapangan'
+            },
+            {
+              title: 'Book Membership',
+              url: '/admin/booking-membership'
             }
           ]
         },
