@@ -9,7 +9,7 @@ export default function HomePage() {
   return (
     <>
       <MainHeader withNotificationBadge withBorder />
-      <main className="mt-28 lg:mt-32">
+      <main className="mt-28 lg:mt-32 lg:pb-36">
         <BannerSection />
         <MenuSection />
         {/* <ActiveCourtSection /> */}

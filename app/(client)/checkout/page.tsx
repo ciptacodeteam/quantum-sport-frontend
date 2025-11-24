@@ -18,6 +18,7 @@ import customParseFormat from 'dayjs/plugin/customParseFormat';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
+import BottomNavigationWrapper from '@/components/ui/BottomNavigationWrapper';
 
 dayjs.locale('id');
 dayjs.extend(customParseFormat);
@@ -295,8 +296,14 @@ export default function CheckoutPage() {
   };
 
   return (
-    <div className="bg-muted/20 min-h-screen pb-24">
-      <MainHeader title="Detail Pembayaran" backHref="/booking" withCartBadge withLogo={false} withBorder/>
+    <div className="min-h-screen pb-24">
+      <MainHeader
+        title="Detail Pembayaran"
+        backHref="/booking"
+        withCartBadge
+        withLogo={false}
+        withBorder
+      />
 
       <main className="mx-auto flex w-11/12 max-w-4xl flex-col gap-6 pt-28">
         <section className="border-muted space-y-4 rounded-lg border bg-white p-4">
@@ -345,7 +352,7 @@ export default function CheckoutPage() {
                         key={`${slot.courtId}-${slot.timeSlot}-${slotIndex}`}
                         className={cn(
                           'border-muted/60 flex items-center justify-between rounded-md border px-4 py-3',
-                          isFree ? 'bg-green-50 border-green-200' : 'bg-muted/50'
+                          isFree ? 'border-green-200 bg-green-50' : 'bg-muted/50'
                         )}
                       >
                         <div className="flex flex-col">
@@ -357,7 +364,9 @@ export default function CheckoutPage() {
                                   {range.start} - {range.end}
                                 </span>
                                 {isFree && (
-                                  <span className="text-xs font-medium text-green-600">(Gratis)</span>
+                                  <span className="text-xs font-medium text-green-600">
+                                    (Gratis)
+                                  </span>
                                 )}
                               </div>
                             );
@@ -471,7 +480,9 @@ export default function CheckoutPage() {
                     {selectedPaymentMethod ? selectedPaymentMethod.name : 'Pilih Metode Pembayaran'}
                   </p>
                   <p className="text-muted-foreground text-xs">
-                    {selectedPaymentMethod ? 'Konfirmasi Instan' : 'Klik untuk memilih metode pembayaran'}
+                    {selectedPaymentMethod
+                      ? 'Konfirmasi Instan'
+                      : 'Klik untuk memilih metode pembayaran'}
                   </p>
                 </div>
               </div>
@@ -487,10 +498,17 @@ export default function CheckoutPage() {
 
           {/* Membership Information */}
           {isAuthenticated && membershipDiscount.activeMembership && (
-            <div className="border-muted rounded-lg border bg-primary/5 p-4">
+            <div className="border-muted bg-primary/5 rounded-lg border p-4">
               <div className="mb-2 flex items-center justify-between">
-                <span className="text-sm font-medium text-primary">Membership Aktif</span>
-                <span className={membershipDiscount.activeMembership.isExpired || membershipDiscount.activeMembership.isSuspended ? 'text-xs text-red-600' : 'text-xs text-green-600'}>
+                <span className="text-primary text-sm font-medium">Membership Aktif</span>
+                <span
+                  className={
+                    membershipDiscount.activeMembership.isExpired ||
+                    membershipDiscount.activeMembership.isSuspended
+                      ? 'text-xs text-red-600'
+                      : 'text-xs text-green-600'
+                  }
+                >
                   {membershipDiscount.activeMembership.isExpired
                     ? 'Expired'
                     : membershipDiscount.activeMembership.isSuspended
@@ -507,9 +525,7 @@ export default function CheckoutPage() {
                 </div>
                 <div>
                   <span className="text-muted-foreground">Sisa Sesi:</span>{' '}
-                  <span className="font-medium">
-                    {membershipDiscount.remainingSessions} sesi
-                  </span>
+                  <span className="font-medium">{membershipDiscount.remainingSessions} sesi</span>
                 </div>
                 {membershipDiscount.canUseMembership && bookingItems.length > 0 && (
                   <div className="text-primary mt-1 font-medium">
@@ -561,8 +577,8 @@ export default function CheckoutPage() {
         </section>
       </main>
 
-      <footer className="border-muted fixed inset-x-0 bottom-0 border-t bg-white shadow-lg">
-        <div className="mx-auto w-11/12 max-w-4xl py-4">
+      <BottomNavigationWrapper className="pb-4">
+        <div className="mx-auto w-11/12 py-4 lg:max-w-lg">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-muted-foreground text-xs">Total Pembayaran</p>
@@ -588,7 +604,7 @@ export default function CheckoutPage() {
             </Button>
           </div>
         </div>
-      </footer>
+      </BottomNavigationWrapper>
 
       <Dialog open={isPaymentModalOpen} onOpenChange={setPaymentModalOpen}>
         <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-lg">
