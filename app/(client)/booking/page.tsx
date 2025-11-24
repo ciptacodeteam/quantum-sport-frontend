@@ -178,6 +178,8 @@ export default function BookingPage() {
   // Hydrate local selections from persisted booking items on initial load
   useEffect(() => {
     if (hasHydratedFromStoreRef.current) return;
+    // Wait for slotMap to be available so we can get the real slot IDs
+    if (slotMap.size === 0) return;
 
     const hydrateFromState = () => {
       const state = useBookingStore.getState();
@@ -196,8 +198,25 @@ export default function BookingPage() {
         if (!hydratedSelections[dateKey]) {
           hydratedSelections[dateKey] = [];
         }
+        
+        // Use the actual slot ID from slotMap if available, otherwise use item.slotId if it exists and is valid
+        // Check if item.slotId looks like a constructed one (contains time format like "06:00")
+        const isConstructedSlotId = item.slotId && /-\d{2}:\d{2}$/.test(item.slotId);
+        let actualSlotId = item.slotId;
+        
+        // If slotId is constructed or missing, look it up from slotMap
+        if (isConstructedSlotId || !actualSlotId) {
+          const slot = slotMap.get(`${item.courtId}-${item.timeSlot}`);
+          if (slot?.id) {
+            actualSlotId = slot.id;
+          } else if (!actualSlotId) {
+            // Fallback: use constructed ID only if we can't find the slot
+            actualSlotId = `${item.courtId}-${item.timeSlot}`;
+          }
+        }
+        
         hydratedSelections[dateKey].push({
-          slotId: `${item.courtId}-${item.timeSlot}`,
+          slotId: actualSlotId,
           courtId: item.courtId,
           courtName: item.courtName,
           time: item.timeSlot,
@@ -235,7 +254,7 @@ export default function BookingPage() {
     return () => {
       unsubscribe?.();
     };
-  }, []);
+  }, [slotMap]);
 
   useEffect(() => {
     // Skip this filter during initial hydration

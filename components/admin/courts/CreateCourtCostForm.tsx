@@ -9,7 +9,7 @@ import { NumberInput } from '@/components/ui/number-input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { daysOfWeek, hoursInDay } from '@/lib/constants';
 import { adminCreateCourtCostMutationOptions } from '@/mutations/admin/court';
-import { adminCourtCostingQueryOptions } from '@/queries/admin/court';
+import { adminCourtCostingQueryOptionsById } from '@/queries/admin/court';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { IconInfoCircle } from '@tabler/icons-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';

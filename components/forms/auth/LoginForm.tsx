@@ -12,6 +12,7 @@ import {
   loginMutationOptions
 } from '@/mutations/auth';
 import useAuthStore from '@/stores/useAuthStore';
+import useAuthRedirectStore from '@/stores/useAuthRedirectStore';
 import { usePhoneStore } from '@/stores/usePhoneStore';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { IconRefresh } from '@tabler/icons-react';
@@ -112,6 +113,7 @@ const LoginForm = ({ onRegisterClick, openVerifyPhoneOtpModal, onLoginSuccess }:
 
   const queryClient = useQueryClient();
   const setToken = useAuthStore((state) => state.setToken);
+  const consumeRedirectPath = useAuthRedirectStore((state) => state.consumeRedirectPath);
 
   const { mutate: login, isPending: isLoginPending } = useMutation(
     loginMutationOptions({
@@ -126,7 +128,12 @@ const LoginForm = ({ onRegisterClick, openVerifyPhoneOtpModal, onLoginSuccess }:
 
         setToken(token);
         form.reset();
-        router.refresh();
+        const redirectPath = consumeRedirectPath();
+        if (redirectPath) {
+          router.push(redirectPath);
+        } else {
+          router.refresh();
+        }
         onLoginSuccess?.();
       },
       onError: (err) => {

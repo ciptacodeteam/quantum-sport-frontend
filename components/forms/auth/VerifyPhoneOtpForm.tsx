@@ -8,6 +8,7 @@ import { registerMutationOptions, verifyPhoneOtpMutationOptions } from '@/mutati
 import { sendPhoneOtpMutationOptions } from '@/mutations/phone';
 import { profileQueryOptions } from '@/queries/profile';
 import useAuthStore from '@/stores/useAuthStore';
+import useAuthRedirectStore from '@/stores/useAuthRedirectStore';
 import { usePhoneStore } from '@/stores/usePhoneStore';
 import { useRegisterStore } from '@/stores/useRegisterStore';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -50,6 +51,7 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
 
   const queryClient = useQueryClient();
   const setToken = useAuthStore((state) => state.setToken);
+  const consumeRedirectPath = useAuthRedirectStore((state) => state.consumeRedirectPath);
 
   const clearRegisterData = useRegisterStore((state) => state.clear);
 
@@ -64,7 +66,8 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
         }
 
         setToken(token);
-        router.push('/');
+        const redirectPath = consumeRedirectPath();
+        router.push(redirectPath ?? '/');
         clearRegisterData();
         queryClient.invalidateQueries({ queryKey: profileQueryOptions.queryKey });
         onVerifySuccess?.();

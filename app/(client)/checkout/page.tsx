@@ -16,9 +16,10 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/id';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import BottomNavigationWrapper from '@/components/ui/BottomNavigationWrapper';
+import useAuthRedirectStore from '@/stores/useAuthRedirectStore';
 
 dayjs.locale('id');
 dayjs.extend(customParseFormat);
@@ -61,6 +62,8 @@ const getSlotDisplayRange = (timeSlot: string) => {
 
 export default function CheckoutPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const bookingItems = useBookingStore((state) => state.bookingItems);
   const courtTotal = useBookingStore((state) => state.courtTotal);
   const coachTotal = useBookingStore((state) => state.coachTotal);
@@ -75,6 +78,7 @@ export default function CheckoutPage() {
   const { data: user, isPending: isUserPending } = useQuery(profileQueryOptions);
   const isAuthenticated = !!user?.id;
   const openAuthModal = useAuthModalStore((state) => state.open);
+  const setRedirectPath = useAuthRedirectStore((state) => state.setRedirectPath);
 
   // Calculate membership discount for court bookings (only if user is authenticated)
   const membershipDiscount = useMembershipDiscount(
@@ -139,11 +143,24 @@ export default function CheckoutPage() {
   );
 
   // Show login modal if user is not authenticated and has items in cart
+  const currentPath = useMemo(() => {
+    const params = searchParams.toString();
+    return params ? `${pathname}?${params}` : pathname;
+  }, [pathname, searchParams]);
+
   useEffect(() => {
     if (!isUserPending && !isAuthenticated && bookingItems.length > 0) {
+      setRedirectPath(currentPath);
       openAuthModal();
     }
-  }, [isUserPending, isAuthenticated, bookingItems.length, openAuthModal]);
+  }, [
+    isUserPending,
+    isAuthenticated,
+    bookingItems.length,
+    openAuthModal,
+    setRedirectPath,
+    currentPath
+  ]);
 
   useEffect(() => {
     if (paymentMethods.length === 0) return;
@@ -253,8 +270,15 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Court slots: array of slot IDs only
-    const courtSlots = bookingItems.filter((item) => item.slotId).map((item) => item.slotId);
+    // Court slots: array of slot IDs only (filter out constructed IDs that include time)
+    const courtSlots = bookingItems
+      .filter((item) => {
+        if (!item.slotId) return false;
+        // Filter out constructed slotIds that contain time format (e.g., "courtId-06:00")
+        const isConstructed = /-\d{2}:\d{2}$/.test(item.slotId);
+        return !isConstructed;
+      })
+      .map((item) => item.slotId);
 
     // Coach slots: array of slot IDs only
     const coachSlots = selectedCoaches.filter((coach) => coach.slotId).map((coach) => coach.slotId);
