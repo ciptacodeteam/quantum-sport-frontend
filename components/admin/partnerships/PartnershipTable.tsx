@@ -14,9 +14,11 @@ import {
 import PreviewImage from '@/components/ui/preview-image';
 import { useConfirmMutation } from '@/hooks/useConfirmDialog';
 import { STATUS_BADGE_VARIANT, STATUS_MAP } from '@/lib/constants';
+import { hasCreatePermission, hasDeletePermission, hasEditPermission } from '@/lib/utils';
 import { adminPartnershipsQueryOptions } from '@/queries/admin/partnership';
+import { adminProfileQueryOptions } from '@/queries/admin/auth';
 import type { Partnership } from '@/types/model';
-import { IconPencil, IconPlus, IconTrash } from '@tabler/icons-react';
+import { IconEye, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
@@ -25,13 +27,21 @@ import CreatePartnershipForm from './CreatePartnershipForm';
 import EditPartnershipForm from './EditPartnershipForm';
 
 const PartnershipTable = () => {
+  const { data: me } = useQuery(adminProfileQueryOptions);
   const { confirmAndMutate } = useConfirmMutation(
     {
       mutationFn: deletePartnershipApi
     },
     {
+      title: 'Hapus Data',
+      description: 'Apakah Anda yakin ingin menghapus data ini?',
+      confirmText: 'Hapus',
+      cancelText: 'Batal',
+      destructive: true,
       toastMessages: {
-        success: 'Data berhasil dihapus!'
+        loading: 'Menghapus data...',
+        success: () => 'Data berhasil dihapus.',
+        error: 'Gagal menghapus data.'
       },
       invalidate: adminPartnershipsQueryOptions.queryKey
     }
@@ -42,22 +52,24 @@ const PartnershipTable = () => {
   const columns = useMemo(
     () => [
       colHelper.accessor('logo', {
-        id: 'logo',
         header: 'Logo',
         cell: (info) => (
-          <div className="w-16">
-            <PreviewImage src={info.getValue() || ''} alt={info.row.original.name} className="rounded-md" />
-          </div>
+          <PreviewImage
+            src={info.getValue() || ''}
+            className="aspect-square w-auto"
+            placeholder="No Logo"
+          />
         )
       }),
-      colHelper.accessor('name', { id: 'name', header: 'Name' }),
+      colHelper.accessor('name', {
+        header: 'Nama',
+        cell: (info) => info.getValue()
+      }),
       colHelper.accessor('description', {
-        id: 'description',
         header: 'Deskripsi',
-        cell: (info) => info.getValue() || '-'
+        cell: (info) => <p className="line-clamp-2">{info.getValue() || '-'}</p>
       }),
       colHelper.accessor('isActive', {
-        id: 'isActive',
         header: 'Status',
         cell: (info) => (
           <Badge variant={STATUS_BADGE_VARIANT[Number(info.getValue())]}>
@@ -66,13 +78,11 @@ const PartnershipTable = () => {
         )
       }),
       colHelper.accessor('createdAt', {
-        id: 'createdAt',
-        header: 'Dibuat',
+        header: 'Dibuat Pada',
         cell: (info) => dayjs(info.getValue()).format('DD/MM/YYYY HH:mm')
       }),
       colHelper.accessor('updatedAt', {
-        id: 'updatedAt',
-        header: 'Diperbarui',
+        header: 'Diperbarui Pada',
         cell: (info) => dayjs(info.getValue()).format('DD/MM/YYYY HH:mm')
       }),
       colHelper.display({
@@ -80,31 +90,33 @@ const PartnershipTable = () => {
         header: 'Aksi',
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
-            <ManagedDialog id={`edit-partnership-${row.original.id}`}>
+            <ManagedDialog id={`${hasEditPermission(me?.role) ? 'edit' : 'view'}-partnership-${row.original.id}`}>
               <DialogTrigger asChild>
                 <Button size="icon" variant="lightInfo">
-                  <IconPencil />
+                  {hasEditPermission(me?.role) ? <IconPencil /> : <IconEye />}
                 </Button>
               </DialogTrigger>
               <DialogContent className="lg:min-w-xl">
                 <DialogHeader className="mb-4">
-                  <DialogTitle>Edit Partnership</DialogTitle>
+                  <DialogTitle>{hasEditPermission(me?.role) ? 'Edit' : 'View'} Partnership</DialogTitle>
                 </DialogHeader>
                 <EditPartnershipForm data={row.original} />
               </DialogContent>
             </ManagedDialog>
-            <Button
-              size="icon"
-              variant="lightDanger"
-              onClick={async () => await confirmAndMutate(row.original.id)}
-            >
-              <IconTrash />
-            </Button>
+            {hasDeletePermission(me?.role) && (
+              <Button
+                size="icon"
+                variant="lightDanger"
+                onClick={async () => await confirmAndMutate(row.original.id)}
+              >
+                <IconTrash />
+              </Button>
+            )}
           </div>
         )
       })
     ],
-    [colHelper, confirmAndMutate]
+    [colHelper, confirmAndMutate, me?.role]
   );
 
   const { data, isPending } = useQuery(adminPartnershipsQueryOptions);
@@ -116,24 +128,24 @@ const PartnershipTable = () => {
       columns={columns}
       enableRowSelection={false}
       addButton={
-        <ManagedDialog id="create-partnership">
-          <DialogTrigger asChild>
-            <Button>
-              <IconPlus />
-              Tambah
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="lg:min-w-xl">
-            <DialogHeader className="mb-4">
-              <DialogTitle>Tambah Data Baru</DialogTitle>
-            </DialogHeader>
-            <CreatePartnershipForm />
-          </DialogContent>
-        </ManagedDialog>
+        hasCreatePermission(me?.role) ? (
+          <ManagedDialog id="create-partnership">
+            <DialogTrigger asChild>
+              <Button>
+                <IconPlus />
+                Tambah
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="lg:min-w-xl">
+              <DialogHeader className="mb-4">
+                <DialogTitle>Tambah Data Baru</DialogTitle>
+              </DialogHeader>
+              <CreatePartnershipForm />
+            </DialogContent>
+          </ManagedDialog>
+        ) : undefined
       }
     />
   );
 };
 export default PartnershipTable;
-
-

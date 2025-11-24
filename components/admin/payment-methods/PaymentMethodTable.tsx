@@ -69,6 +69,10 @@ const PaymentMethodTable = () => {
         header: 'Biaya Layanan',
         cell: (info) => 'Rp ' + info.getValue().toLocaleString('id-ID')
       }),
+      colHelper.accessor('percentage', {
+        header: "Biaya Persentase",
+        cell: (info) => info.getValue() + '%'
+      }),
       colHelper.accessor('isActive', {
         header: 'Status',
         cell: (info) => (

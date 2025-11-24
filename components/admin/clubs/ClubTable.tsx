@@ -7,9 +7,10 @@ import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import { useConfirmMutation } from '@/hooks/useConfirmDialog';
 import { adminClubsQueryOptions } from '@/queries/admin/club';
+import { approveAdminClubMutationOptions } from '@/mutations/admin/club';
 import type { Club } from '@/types/model';
-import { IconEye, IconTrash, IconWorld, IconLock } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import { IconEye, IconTrash, IconWorld, IconLock, IconCheck } from '@tabler/icons-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
 import { useRouter } from 'next/navigation';
@@ -17,6 +18,7 @@ import { useMemo } from 'react';
 
 const ClubTable = () => {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const { data: clubs, isLoading } = useQuery(adminClubsQueryOptions());
 
@@ -37,6 +39,14 @@ const ClubTable = () => {
       },
       invalidate: adminClubsQueryOptions().queryKey
     }
+  );
+
+  const { mutate: approveClub, isPending: isApproving } = useMutation(
+    approveAdminClubMutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: adminClubsQueryOptions().queryKey });
+      }
+    })
   );
 
   const colHelper = createColumnHelper<Club>();
@@ -99,29 +109,44 @@ const ClubTable = () => {
       colHelper.display({
         id: 'actions',
         header: 'Actions',
-        cell: (info) => (
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => router.push(`/admin/kelola-club/${info.row.original.id}`)}
-            >
-              <IconEye className="size-4 mr-1" />
-              View
-            </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => confirmAndMutate(info.row.original.id)}
-            >
-              <IconTrash className="size-4 mr-1" />
-              Delete
-            </Button>
-          </div>
-        )
+        cell: (info) => {
+          const club = info.row.original;
+          return (
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => router.push(`/admin/kelola-club/${club.id}`)}
+              >
+                <IconEye className="size-4 mr-1" />
+                View
+              </Button>
+              {!club.isActive && (
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={() => approveClub(club.id)}
+                  disabled={isApproving}
+                  loading={isApproving}
+                >
+                  <IconCheck className="size-4 mr-1" />
+                  Approve
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => confirmAndMutate(club.id)}
+              >
+                <IconTrash className="size-4 mr-1" />
+                Delete
+              </Button>
+            </div>
+          );
+        }
       })
     ],
-    [colHelper, router, confirmAndMutate]
+    [colHelper, router, confirmAndMutate, approveClub, isApproving]
   );
 
   return (

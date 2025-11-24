@@ -162,7 +162,7 @@ export type Club = {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
-  _count: {
+  _count?: {
     clubMember: number;
   };
 
@@ -195,6 +195,7 @@ export type Staff = {
   image: string | null;
   joinedAt: Date | null;
   coachTypeId: string | null;
+  coachType?: string | null;
   createdAt: Date;
   updatedAt: Date;
 };

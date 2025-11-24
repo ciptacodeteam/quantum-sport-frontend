@@ -21,3 +21,8 @@ export async function deleteAdminClubApi(clubId: string) {
   const { data } = await adminApi.delete(`/clubs/${clubId}`);
   return data;
 }
+
+export async function approveAdminClubApi(clubId: string) {
+  const { data } = await adminApi.post(`/clubs/${clubId}/approve`);
+  return data;
+}

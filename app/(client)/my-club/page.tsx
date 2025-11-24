@@ -26,7 +26,8 @@ import {
   IconLogout,
   IconTrash,
   IconUserMinus,
-  IconPlus
+  IconPlus,
+  IconAlertTriangle
 } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
 import useAuthStore from '@/stores/useAuthStore';
@@ -41,6 +42,7 @@ import {
   DialogTitle
 } from '@/components/ui/dialog';
 import MainBottomNavigation from '@/components/footers/MainBottomNavigation';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const MyClubPage = () => {
   const router = useRouter();
@@ -102,10 +104,23 @@ const MyClubPage = () => {
   }, [ownedClubs, memberClubs]);
 
   // Fetch full club details
-  const { data: club, isLoading: isLoadingClub } = useQuery({
+  const { data: clubData, isLoading: isLoadingClub } = useQuery({
     ...clubQueryOptions(primaryClubId!),
     enabled: !!primaryClubId && isAuth && isHydrated
   });
+
+  // Explicitly set club to null when there's no primaryClubId to prevent using stale cached data
+  const club = primaryClubId ? clubData : null;
+
+  // Clear club query cache when transitioning from having a club to not having one
+  useEffect(() => {
+    if (!primaryClubId && isHydrated && clubData) {
+      // Only clear if we had club data but now don't have a primaryClubId
+      // This prevents stale data from being used
+      queryClient.setQueryData(['clubs', 'my'], []);
+      queryClient.setQueryData(['clubs', 'membership'], []);
+    }
+  }, [primaryClubId, isHydrated, clubData, queryClient]);
 
   const isLeader = isAuth && isHydrated && user?.id === club?.leaderId;
   const isLoading = isLoadingOwned || isLoadingMember || isLoadingClub || isUserLoading;
@@ -235,7 +250,7 @@ const MyClubPage = () => {
                     </Badge>
                     <div className="flex items-center gap-2">
                       <IconUsers className="size-4" />
-                      <span>{club._count.clubMember} Anggota</span>
+                      <span>{club._count?.clubMember || club.clubMember?.length || 0} Anggota</span>
                     </div>
                   </div>
                 </div>
@@ -268,6 +283,18 @@ const MyClubPage = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Warning Banner - Club Pending Approval */}
+          {!club.isActive && (
+            <Alert variant="warning">
+              <IconAlertTriangle />
+              <AlertTitle>Club Menunggu Persetujuan Admin</AlertTitle>
+              <AlertDescription>
+                Club Anda sedang menunggu persetujuan dari admin. Anda tidak dapat menggunakan fitur club
+                hingga club Anda disetujui. Harap tunggu notifikasi atau hubungi admin untuk informasi lebih lanjut.
+              </AlertDescription>
+            </Alert>
+          )}
 
           {/* Description */}
           {club.description && (
@@ -325,8 +352,8 @@ const MyClubPage = () => {
             </Card>
           )}
 
-          {/* Join Requests - Only visible to club leader for private clubs */}
-          {isAuth && isHydrated && club.visibility === 'PRIVATE' && (
+          {/* Join Requests - Only visible to club leader for private clubs when club is active */}
+          {isAuth && isHydrated && club.visibility === 'PRIVATE' && club.isActive && (
             <ClubJoinRequests clubId={primaryClubId!} isLeader={isLeader} />
           )}
 
@@ -334,7 +361,7 @@ const MyClubPage = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between text-lg">
-                <span>Members ({club.clubMember?.length || club._count.clubMember})</span>
+                <span>Members ({club.clubMember?.length || club._count?.clubMember || 0})</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -375,7 +402,7 @@ const MyClubPage = () => {
               ) : (
                 <div className="text-muted-foreground py-8 text-center text-sm">
                   <IconUsers className="mx-auto mb-2 size-12 opacity-50" />
-                  <p>Club ini punya {club._count.clubMember} Anggota</p>
+                  <p>Club ini punya {club._count?.clubMember || club.clubMember?.length || 0} Anggota</p>
                   <p className="mt-1 text-xs">Anggota tidak tersedia</p>
                 </div>
               )}
