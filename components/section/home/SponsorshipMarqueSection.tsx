@@ -28,11 +28,11 @@ const SponsorshipMarqueSection = () => {
           <div className="pointer-events-none absolute top-0 right-0 z-10 h-full w-8 bg-linear-to-l from-white via-white/80 to-transparent" />
 
           <Marquee autoFill speed={50}>
-            {partnerships.map((logoUrl, i) => (
+            {partnerships.map((partnership) => (
               <Image
-                key={`sponsor-${i}`}
-                src={logoUrl}
-                alt={`Partner ${i + 1}`}
+                key={partnership.id}
+                src={partnership.logo || ''}
+                alt={partnership.name}
                 className="h-auto w-30 object-contain px-4 transition duration-300 ease-in-out sm:h-12 md:w-42 lg:w-42 lg:px-4"
                 width={200}
                 height={200}
