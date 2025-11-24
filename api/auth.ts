@@ -90,6 +90,11 @@ export async function updateProfileApi(payload) {
   return data;
 }
 
+export async function verifyPasswordApi(payload) {
+  const { data } = await api.post('/auth/verify-password', payload);
+  return data;
+}
+
 export async function changePasswordApi(payload) {
   const { data } = await api.post('/auth/change-password', payload);
   return data;

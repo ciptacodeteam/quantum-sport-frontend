@@ -7,6 +7,7 @@ import {
   registerApi,
   resetPasswordApi,
   sendLoginOtpApi,
+  verifyPasswordApi,
   changePasswordApi
 } from '@/api/auth';
 import { verifyPhoneOtpApi } from '@/api/phone';
@@ -113,7 +114,10 @@ export const resetPasswordMutationOptions = ({ onSuccess, onError }: MutationFun
     }
   });
 
-export const resetPasswordWithTokenMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
+export const resetPasswordWithTokenMutationOptions = ({
+  onSuccess,
+  onError
+}: MutationFuncProps = {}) =>
   mutationOptions({
     mutationFn: passwordResetWithTokenApi,
     onSuccess: (data) => {
@@ -140,16 +144,30 @@ export const verifyPhoneOtpMutationOptions = ({ onSuccess, onError }: MutationFu
     }
   });
 
-export const changePasswordMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
+export const verifyPasswordMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
   mutationOptions({
-    mutationFn: changePasswordApi,
+    mutationFn: verifyPasswordApi,
     onSuccess: (data) => {
-      toast.success('Password changed successfully!');
+      toast.success('Kata sandi diverifikasi!');
       onSuccess?.(data);
     },
     onError: (error) => {
       console.error('Error:', error);
-      toast.error(error.msg || 'Failed to change password. Please try again.');
+      toast.error(error.msg || 'Kata sandi salah. Silakan coba lagi.');
+      onError?.(error);
+    }
+  });
+
+export const changePasswordMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
+  mutationOptions({
+    mutationFn: changePasswordApi,
+    onSuccess: (data) => {
+      toast.success('Kata sandi berhasil diubah! Email konfirmasi telah dikirim.');
+      onSuccess?.(data);
+    },
+    onError: (error) => {
+      console.error('Error:', error);
+      toast.error(error.msg || 'Gagal mengubah kata sandi. Silakan coba lagi.');
       onError?.(error);
     }
   });

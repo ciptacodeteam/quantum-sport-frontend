@@ -1,5 +1,6 @@
 'use client';
 
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -8,15 +9,12 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
+import { changePasswordMutationOptions, verifyPasswordMutationOptions } from '@/mutations/auth';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
-import { loginMutationOptions, changePasswordMutationOptions } from '@/mutations/auth';
-import { toast } from 'sonner';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PasswordInput } from '../ui/password-input';
 
@@ -62,10 +60,9 @@ export default function PasswordChangeModal({ open, userEmail, onOpenChange }: P
   });
 
   const { mutate: verifyCurrentPassword, isPending: isVerifying } = useMutation(
-    loginMutationOptions({
+    verifyPasswordMutationOptions({
       onSuccess: () => {
         setStep('change');
-        toast.success('Password verified');
       }
     })
   );
@@ -77,22 +74,21 @@ export default function PasswordChangeModal({ open, userEmail, onOpenChange }: P
         changeForm.reset();
         setStep('verify');
         onOpenChange(false);
-        toast.success('Password changed');
       }
     })
   );
 
   const handleVerifySubmit = (data: VerifyPasswordFormData) => {
-    if (!userEmail) {
-      toast.error('No email on account');
-      return;
-    }
-    verifyCurrentPassword({ email: userEmail, password: data.currentPassword });
+    verifyCurrentPassword({ password: data.currentPassword });
   };
 
   const handleChangeSubmit = (data: ChangePasswordFormData) => {
-    const currentPassword = verifyForm.getValues('currentPassword');
-    changePassword({ currentPassword, newPassword: data.newPassword });
+    const oldPassword = verifyForm.getValues('currentPassword');
+    changePassword({
+      currentPassword: oldPassword,
+      newPassword: data.newPassword,
+      confirmNewPassword: data.confirmPassword
+    });
   };
 
   const close = (o: boolean) => {
@@ -119,11 +115,6 @@ export default function PasswordChangeModal({ open, userEmail, onOpenChange }: P
         </DialogHeader>
         {step === 'verify' ? (
           <form onSubmit={verifyForm.handleSubmit(handleVerifySubmit)} className="space-y-4">
-            {!userEmail && (
-              <p className="text-destructive text-sm">
-                Tidak ada email yang terkait dengan akun ini. Tidak dapat memverifikasi kata sandi.
-              </p>
-            )}
             <FieldGroup>
               <Field>
                 <FieldLabel htmlFor="currentPwd">Kata Sandi Saat Ini</FieldLabel>
@@ -150,8 +141,12 @@ export default function PasswordChangeModal({ open, userEmail, onOpenChange }: P
           <form onSubmit={changeForm.handleSubmit(handleChangeSubmit)} className="space-y-4">
             <FieldGroup>
               <Field>
-                <FieldLabel htmlFor="newPwd">New Password</FieldLabel>
-                <Input id="newPwd" type="password" {...changeForm.register('newPassword')} />
+                <FieldLabel htmlFor="newPwd">Kata Sandi Baru</FieldLabel>
+                <PasswordInput
+                  id="newPwd"
+                  placeholder="Masukkan kata sandi baru"
+                  {...changeForm.register('newPassword')}
+                />
                 {changeForm.formState.errors.newPassword && (
                   <FieldError>{changeForm.formState.errors.newPassword.message}</FieldError>
                 )}
@@ -159,7 +154,7 @@ export default function PasswordChangeModal({ open, userEmail, onOpenChange }: P
             </FieldGroup>
             <FieldGroup>
               <Field>
-                <FieldLabel htmlFor="confirmPwd">Confirm New Password</FieldLabel>
+                <FieldLabel htmlFor="confirmPwd">Konfirmasi Kata Sandi Baru</FieldLabel>
                 <PasswordInput
                   id="confirmPwd"
                   placeholder="Masukkan ulang kata sandi baru Anda"
