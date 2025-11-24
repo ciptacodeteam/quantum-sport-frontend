@@ -24,7 +24,7 @@ import { myMembershipsQueryOptions } from '@/queries/membership';
 import { profileQueryOptions } from '@/queries/profile';
 import useAuthStore from '@/stores/useAuthStore';
 import type { UserProfile } from '@/types/model';
-import { IconCalendar, IconLogout, IconMail, IconPhone } from '@tabler/icons-react';
+import { IconCalendar, IconLogout, IconMail, IconPhone, IconFileText } from '@tabler/icons-react';
 import { Badge } from '@/components/ui/badge';
 import { sendVerificationOtpMutationOptions } from '@/mutations/verification';
 import { VerifyContactOtpDialog } from '@/components/profile/VerifyContactOtpDialog';
@@ -411,6 +411,20 @@ export default function ProfilePage() {
             <CardContent>
               <Button variant="outline" onClick={() => setPasswordModalOpen(true)}>
                 Ganti Kata Sandi
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Terms & Conditions */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="mb-1">Syarat & Ketentuan</CardTitle>
+              <CardDescription>Baca ketentuan penggunaan layanan kami</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="outline" onClick={() => router.push('/terms-and-conditions')}>
+                <IconFileText className="mr-2 size-4" />
+                Lihat Syarat & Ketentuan
               </Button>
             </CardContent>
           </Card>
