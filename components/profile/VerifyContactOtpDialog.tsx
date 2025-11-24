@@ -7,11 +7,11 @@ import { profileQueryOptions } from '@/queries/profile';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Mail, Phone } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
+import { toast } from 'sonner';
 import { z } from 'zod';
 import { ResendOtpButton } from '../buttons/ResendOtpButton';
-import { toast } from 'sonner';
 
 const formSchema = z.object({ otp: z.string().min(1, 'OTP wajib diisi') });
 
@@ -38,7 +38,9 @@ export function VerifyContactOtpDialog({
     defaultValues: { otp: '' }
   });
 
-  const maxLength = type === 'phone' ? 4 : 6;
+  const maxLength = useMemo(() => {
+    return type === 'phone' ? 4 : 6;
+  }, [type]);
 
   const { mutate, isPending } = useMutation(
     verifyVerificationOtpMutationOptions({
