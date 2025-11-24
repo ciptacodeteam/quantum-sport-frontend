@@ -58,7 +58,7 @@ export default function NotificationPage() {
       <MainHeader backHref="/" title={'Notifikasi'} withLogo={false} withBorder />
 
       <main>
-        <section className="mx-auto mt-28 w-11/12 pb-20">
+        <section className="mx-auto mt-28 w-11/12 max-w-7xl pb-20">
           {isLoading && (
             <div className="text-muted-foreground flex min-h-[50vh] flex-col items-center justify-center py-16">
               <div className="text-sm">Memuat notifikasi...</div>
