@@ -65,7 +65,9 @@ const MainHeader = ({
       <header
         className={cn('fixed top-0 right-0 left-0 z-40', withBorder && 'border-b', 'bg-white')}
       >
-        <div className="mx-auto w-11/12 py-2 lg:max-w-7xl">
+        <div
+          className={cn('mx-auto w-11/12 py-2', pathname === '/' ? 'lg:max-w-7xl' : 'lg:max-w-lg')}
+        >
           <main
             className={cn(
               'flex min-h-16 items-center gap-4 lg:min-h-[72px]',
@@ -105,7 +107,7 @@ const MainHeader = ({
             {/* Kanan: Navigasi + Notifikasi */}
             <div className="ml-auto flex items-center justify-end gap-6">
               {/* Menu navigasi (desktop only) */}
-              <div className="hidden items-center gap-8 lg:flex">
+              <div className="hidden items-center gap-8">
                 {navItems.map((item, index) => {
                   const requiresAuth = item.requiresAuth ?? false;
 

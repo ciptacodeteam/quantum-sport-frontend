@@ -35,6 +35,7 @@ export function ResendOtpButton({
 
   return (
     <button
+      type="button"
       onClick={handleClick}
       disabled={loading || isCoolingDown}
       aria-disabled={loading || isCoolingDown}

@@ -159,10 +159,12 @@ const MyClubPage = () => {
   if (isLoading) {
     return (
       <>
-        <MainHeader backHref="/" title="Club Saya" withLogo={false} />
+        <MainHeader title="Club Saya" withLogo={false} withBorder />
         <main className="mx-auto w-11/12 flex-col py-28 md:mt-14">
           <div className="text-muted-foreground py-20 text-center text-sm">Memuat club...</div>
         </main>
+
+        <MainBottomNavigation />
       </>
     );
   }
@@ -171,7 +173,7 @@ const MyClubPage = () => {
   if (!club) {
     return (
       <>
-        <MainHeader backHref="/" title="Club Saya" withLogo={false} />
+        <MainHeader title="Club Saya" withLogo={false} withBorder />
         <main className="pt-24 pb-16">
           <div className="mx-auto w-11/12 flex-1">
             <div className="text-muted-foreground space-y-4 py-20 text-center">
@@ -188,6 +190,8 @@ const MyClubPage = () => {
             </div>
           </div>
         </main>
+
+        <MainBottomNavigation />
       </>
     );
   }
@@ -205,7 +209,7 @@ const MyClubPage = () => {
                 <Avatar className="size-20 rounded-lg">
                   <AvatarImage src={club.logo || undefined} alt={club.name} />
                   <AvatarFallback className="bg-primary/10 text-primary rounded-lg text-xl font-bold">
-                    {club.name.substring(0, 2).toUpperCase()}
+                    {club.name?.substring(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
 

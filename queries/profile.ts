@@ -1,5 +1,5 @@
-import { getProfileApi, getProfileApiSmart } from '@/api/auth';
-import type { UserProfile, AdminProfile } from '@/types/model';
+import { getProfileApiSmart } from '@/api/auth';
+import type { AdminProfile, UserProfile } from '@/types/model';
 import { queryOptions } from '@tanstack/react-query';
 
 export const profileQueryOptions = queryOptions({

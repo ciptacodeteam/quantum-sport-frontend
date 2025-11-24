@@ -1,5 +1,7 @@
 'use client';
 
+import { updateProfileApi } from '@/api/auth';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -8,20 +10,23 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { sendPhoneOtpMutationOptions } from '@/mutations/phone';
-import { verifyPhoneOtpMutationOptions } from '@/mutations/auth';
+import { InputGroup, InputGroupText } from '@/components/ui/input-group';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { useResendCountdown } from '@/hooks/useResendCountdown';
+import { formatPhone } from '@/lib/utils';
+import { verifyPhoneOtpMutationOptions } from '@/mutations/auth';
+import { sendPhoneOtpMutationOptions } from '@/mutations/phone';
 import { profileQueryOptions } from '@/queries/profile';
-import { updateProfileApi } from '@/api/auth';
-import { toast } from 'sonner';
-import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Phone } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { toast } from 'sonner';
 import { z } from 'zod';
+import { ResendOtpButton } from '../buttons/ResendOtpButton';
 
 const phoneSchema = z.object({
   phone: z.string().min(1, 'Phone number is required').max(15, 'Phone number is too long')
@@ -49,7 +54,7 @@ export default function PhoneChangeModal({ open, phone, onOpenChange, onSuccess 
   const phoneForm = useForm<PhoneFormData>({
     resolver: zodResolver(phoneSchema),
     defaultValues: {
-      phone: phone || ''
+      phone: phone && phone.startsWith('+62') ? phone.replace(/^\+62/, '') : phone || ''
     }
   });
 
@@ -62,9 +67,9 @@ export default function PhoneChangeModal({ open, phone, onOpenChange, onSuccess 
 
   useEffect(() => {
     if (phone) {
-      phoneForm.setValue('phone', phone);
+      phoneForm.setValue('phone', phone.startsWith('+62') ? phone.replace(/^\+62/, '') : phone);
     }
-  }, [phone, phoneForm]);
+  }, [phone, phoneForm, open]);
 
   const { mutate: updateProfile, isPending: isUpdating } = useMutation({
     mutationFn: async (payload: { phone: string }) => {
@@ -102,20 +107,35 @@ export default function PhoneChangeModal({ open, phone, onOpenChange, onSuccess 
   );
 
   const handlePhoneSubmit = (data: PhoneFormData) => {
-    updateProfile({ phone: data.phone });
-    sendOtp({ phone: data.phone });
+    const formatted = formatPhone(data.phone);
+    updateProfile({ phone: formatted });
+    sendOtp({ phone: formatted });
   };
 
-  const handleOtpSubmit = (data: OtpFormData) => {
-    const phone = phoneForm.getValues('phone');
-    verifyOtp({ phone, otp: data.otp });
-  };
+  const handleOtpSubmit = useCallback(
+    (data: OtpFormData) => {
+      const phoneVal = phoneForm.getValues('phone');
+      const formatted = formatPhone(phoneVal);
+      verifyOtp({ phone: formatted, otp: data.otp });
+    },
+    [phoneForm, verifyOtp]
+  );
 
   const handleResendOtp = () => {
     if (cooldown.isCoolingDown) return;
     const phone = phoneForm.getValues('phone');
     sendOtp({ phone });
   };
+
+  useEffect(() => {
+    const subscription = otpForm.watch((value) => {
+      const otp = (value as { otp?: string })?.otp;
+      if (otp && otp.length === 6) {
+        otpForm.handleSubmit(handleOtpSubmit)();
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [otpForm, handleOtpSubmit]);
 
   return (
     <Dialog
@@ -131,59 +151,110 @@ export default function PhoneChangeModal({ open, phone, onOpenChange, onSuccess 
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Change Phone</DialogTitle>
-          <DialogDescription>Update and verify your phone number</DialogDescription>
+          <DialogTitle>Ubah Nomor Whatsapp</DialogTitle>
+          <DialogDescription>Perbarui dan verifikasi nomor Whatsapp Anda</DialogDescription>
         </DialogHeader>
         {!otpSent ? (
           <form onSubmit={phoneForm.handleSubmit(handlePhoneSubmit)} className="space-y-4">
-            <FieldGroup>
-              <Field>
-                <FieldLabel htmlFor="phone-input">New Phone</FieldLabel>
-                <Input id="phone-input" type="tel" {...phoneForm.register('phone')} />
-                {phoneForm.formState.errors.phone && (
-                  <FieldError>{phoneForm.formState.errors.phone.message}</FieldError>
-                )}
-              </Field>
-            </FieldGroup>
-            <Button
-              type="submit"
-              loading={isUpdating || isSending}
-              disabled={isUpdating || isSending}
-            >
-              Save & Send OTP
-            </Button>
+            <FieldSet>
+              <FieldGroup>
+                <Field>
+                  <FieldLabel htmlFor="phone-input">Nomor Whatsapp Baru</FieldLabel>
+                  <InputGroup>
+                    <InputGroupText className="px-3">+62</InputGroupText>
+                    <Input
+                      id="phone-input"
+                      type="tel"
+                      {...phoneForm.register('phone')}
+                      placeholder="81234567890"
+                      onBlur={(e) => {
+                        const val = e.target.value ?? '';
+                        if (val.startsWith('0')) {
+                          const newVal = val.replace(/^0/, '');
+                          e.currentTarget.value = newVal;
+                          phoneForm.setValue('phone', newVal, {
+                            shouldDirty: true,
+                            shouldTouch: true
+                          });
+                        }
+                      }}
+                      onBeforeInput={(e) => {
+                        const char = e.data;
+                        if (char && !/[\d\s]/.test(char)) {
+                          e.preventDefault();
+                        }
+                      }}
+                    />
+                  </InputGroup>
+                  {phoneForm.formState.errors.phone && (
+                    <FieldError>{phoneForm.formState.errors.phone.message}</FieldError>
+                  )}
+                </Field>
+              </FieldGroup>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                  Batal
+                </Button>
+                <Button
+                  type="submit"
+                  loading={isUpdating || isSending}
+                  disabled={isUpdating || isSending}
+                >
+                  Konfirmasi
+                </Button>
+              </DialogFooter>
+            </FieldSet>
           </form>
         ) : (
           <form onSubmit={otpForm.handleSubmit(handleOtpSubmit)} className="space-y-4">
-            <FieldGroup>
-              <Field>
-                <FieldLabel htmlFor="phone-otp">OTP</FieldLabel>
-                <Input id="phone-otp" {...otpForm.register('otp')} maxLength={6} />
-                {otpForm.formState.errors.otp && (
-                  <FieldError>{otpForm.formState.errors.otp.message}</FieldError>
-                )}
-              </Field>
-            </FieldGroup>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleResendOtp}
-                disabled={cooldown.isCoolingDown || isSending}
-              >
-                {cooldown.isCoolingDown ? `Resend (${cooldown.label})` : 'Resend OTP'}
-              </Button>
-              <Button type="submit" loading={isVerifying} disabled={isVerifying}>
-                Verify Phone
-              </Button>
-            </div>
+            <FieldSet>
+              <FieldGroup>
+                <Field>
+                  <div className="flex-center flex-col gap-4">
+                    <header className="flex-center flex-col gap-4">
+                      <Phone className="text-primary size-10" />
+                      <FieldLabel htmlFor="otp" className="max-w-xs text-center leading-relaxed">
+                        Masukkan OTP yang dikirim ke nomor telepon Anda
+                        <br /> {formatPhone(phoneForm.getValues('phone'))}
+                      </FieldLabel>
+                    </header>
+                    <Controller
+                      name="otp"
+                      control={otpForm.control}
+                      defaultValue=""
+                      disabled={isVerifying}
+                      render={({ field }) => (
+                        <InputOTP
+                          maxLength={6}
+                          value={field.value}
+                          onChange={(value) => field.onChange(value)}
+                        >
+                          <InputOTPGroup>
+                            <InputOTPSlot index={0} className="size-14 md:text-xl" />
+                            <InputOTPSlot index={1} className="size-14 md:text-xl" />
+                            <InputOTPSlot index={2} className="size-14 md:text-xl" />
+                            <InputOTPSlot index={3} className="size-14 md:text-xl" />
+                            <InputOTPSlot index={4} className="size-14 md:text-xl" />
+                            <InputOTPSlot index={5} className="size-14 md:text-xl" />
+                          </InputOTPGroup>
+                        </InputOTP>
+                      )}
+                    />
+                    <FieldError>{otpForm.formState.errors.otp?.message}</FieldError>
+                    <div className="mt-2">
+                      <ResendOtpButton
+                        onSendOtp={handleResendOtp}
+                        seconds={process.env.NODE_ENV === 'development' ? 5 : 60}
+                        persistKey="otp:change-phone"
+                        autoStart
+                      />
+                    </div>
+                  </div>
+                </Field>
+              </FieldGroup>
+            </FieldSet>
           </form>
         )}
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Close
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

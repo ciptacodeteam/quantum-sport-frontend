@@ -123,6 +123,18 @@ export default function BookingPage() {
 
   const slots = useMemo(() => slotsData ?? [], [slotsData]);
 
+  // Filter time slots to exclude past hours for today
+  const availableTimeSlots = useMemo(() => {
+    const isToday = dayjs(selectedFullDate).isSame(dayjs(), 'day');
+    if (!isToday) return timeSlots;
+
+    const currentHour = dayjs().hour();
+    return timeSlots.filter((time) => {
+      const slotHour = parseInt(time.split(':')[0], 10);
+      return slotHour > currentHour;
+    });
+  }, [selectedFullDate]);
+
   const courts = useMemo(() => {
     const map = new Map<string, { id: string; name: string; image?: string | null }>();
     slots.forEach((slot) => {
@@ -486,16 +498,16 @@ export default function BookingPage() {
     });
   }, [chosenCoach, bookingItems, coachAvailability]);
 
-  const openAddons = () => {
-    if (bookingItems.length === 0) {
-      toast.error('Tambahkan minimal satu slot lapangan dulu.');
-      return;
-    }
-    setCoachStep('select-coach');
-    setChosenCoach(null);
-    setSelectedCoachSlotIds([]);
-    setAddonsOpen(true);
-  };
+  // const openAddons = () => {
+  //   if (bookingItems.length === 0) {
+  //     toast.error('Tambahkan minimal satu slot lapangan dulu.');
+  //     return;
+  //   }
+  //   setCoachStep('select-coach');
+  //   setChosenCoach(null);
+  //   setSelectedCoachSlotIds([]);
+  //   setAddonsOpen(true);
+  // };
 
   const toggleCoachSlot = (slotId: string) => {
     setSelectedCoachSlotIds((prev) =>
@@ -534,12 +546,11 @@ export default function BookingPage() {
     setAddonsOpen(false);
   };
 
-  // ...existing code...
   return (
     <>
       <MainHeader backHref="/" title="Booking Court" withLogo={false} withCartBadge withBorder />
 
-      <main className="mt-24 flex h-[calc(100dvh-180px)] w-full flex-col md:mt-24 lg:h-[calc(100dvh-100px)]">
+      <main className="mt-24 flex h-[calc(100dvh-180px)] w-full flex-col md:mt-24 lg:h-[calc(100dvh-230px)]">
         <div className="sticky top-24 z-30 border-b bg-white pb-2 md:top-14">
           <div className="flex items-center gap-2">
             <div className="flex items-center px-2 pl-4">
@@ -608,7 +619,7 @@ export default function BookingPage() {
               </thead>
 
               <tbody>
-                {timeSlots.map((time) => (
+                {availableTimeSlots.map((time) => (
                   <tr key={time}>
                     <td className="sticky left-0 z-10 w-20 border border-gray-200 bg-white px-4 py-2 text-left text-sm font-medium">
                       {time}
@@ -886,7 +897,7 @@ export default function BookingPage() {
         </header>
         <main className="flex gap-2">
           <Button
-          className='w-full'
+            className="w-full"
             size={'xl'}
             onClick={handleBooking}
             disabled={bookingItems.length === 0}
