@@ -1,14 +1,16 @@
 'use client';
 
 import MainHeader from '@/components/headers/MainHeader';
+import BottomNavigationWrapper from '@/components/ui/BottomNavigationWrapper';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useMembershipDiscount } from '@/hooks/useMembershipDiscount';
 import { cn, resolveMediaUrl } from '@/lib/utils';
 import { checkoutMutationOptions } from '@/mutations/booking';
 import { paymentMethodsQueryOptions } from '@/queries/paymentMethod';
 import { profileQueryOptions } from '@/queries/profile';
-import { useMembershipDiscount } from '@/hooks/useMembershipDiscount';
 import useAuthModalStore from '@/stores/useAuthModalStore';
+import useAuthRedirectStore from '@/stores/useAuthRedirectStore';
 import { useBookingStore } from '@/stores/useBookingStore';
 import type { PaymentMethod } from '@/types/model';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -16,10 +18,8 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/id';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import Image from 'next/image';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import BottomNavigationWrapper from '@/components/ui/BottomNavigationWrapper';
-import useAuthRedirectStore from '@/stores/useAuthRedirectStore';
 
 dayjs.locale('id');
 dayjs.extend(customParseFormat);
@@ -63,7 +63,7 @@ const getSlotDisplayRange = (timeSlot: string) => {
 export default function CheckoutPage() {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
+  // const searchParams = useSearchParams();
   const bookingItems = useBookingStore((state) => state.bookingItems);
   const courtTotal = useBookingStore((state) => state.courtTotal);
   const coachTotal = useBookingStore((state) => state.coachTotal);
@@ -143,14 +143,14 @@ export default function CheckoutPage() {
   );
 
   // Show login modal if user is not authenticated and has items in cart
-  const currentPath = useMemo(() => {
-    const params = searchParams.toString();
-    return params ? `${pathname}?${params}` : pathname;
-  }, [pathname, searchParams]);
+  // const currentPath = useMemo(() => {
+  //   const params = searchParams.toString();
+  //   return params ? `${pathname}?${params}` : pathname;
+  // }, [pathname, searchParams]);
 
   useEffect(() => {
     if (!isUserPending && !isAuthenticated && bookingItems.length > 0) {
-      setRedirectPath(currentPath);
+      // setRedirectPath(currentPath);
       openAuthModal();
     }
   }, [
@@ -158,8 +158,8 @@ export default function CheckoutPage() {
     isAuthenticated,
     bookingItems.length,
     openAuthModal,
-    setRedirectPath,
-    currentPath
+    setRedirectPath
+    // currentPath
   ]);
 
   useEffect(() => {
