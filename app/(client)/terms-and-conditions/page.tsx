@@ -138,12 +138,9 @@ export default function TermsAndConditionsPage() {
                   <p>Kami berhak membatalkan pemesanan jika terjadi:</p>
                   <ul className="list-disc space-y-2 pl-6">
                     <li>Kerusakan fasilitas</li>
-                    <li>Force majeure</li>
                     <li>Kendala operasional</li>
                   </ul>
-                  <p className="mt-2">
-                    Pelanggan berhak mendapatkan refund penuh atau penjadwalan ulang.
-                  </p>
+                  <p className="mt-2">Pelanggan berhak mendapatkan penjadwalan ulang.</p>
                 </div>
               </div>
             </section>
@@ -195,7 +192,7 @@ export default function TermsAndConditionsPage() {
             <hr className="border-border my-8" />
 
             {/* Section 10 */}
-            <section className="space-y-3">
+            {/* <section className="space-y-3">
               <h2 className="text-xl font-semibold lg:text-2xl">10. Force Majeure</h2>
               <p>
                 Force majeure meliputi: hujan deras, bencana alam, listrik padam, atau kejadian tak
@@ -203,16 +200,16 @@ export default function TermsAndConditionsPage() {
               </p>
               <p>Dalam kondisi seperti ini:</p>
               <ul className="list-disc space-y-2 pl-6">
-                <li>Pelanggan dapat meminta refund penuh, atau</li>
+                <li>Pelanggan dapat meminta pembatalan transaksi</li>
                 <li>Menjadwalkan ulang tanpa biaya tambahan</li>
               </ul>
-            </section>
+            </section> */}
 
             <hr className="border-border my-8" />
 
-            {/* Section 11 */}
+            {/* Section 10 */}
             <section className="space-y-3">
-              <h2 className="text-xl font-semibold lg:text-2xl">11. Tanggung Jawab</h2>
+              <h2 className="text-xl font-semibold lg:text-2xl">10. Tanggung Jawab</h2>
               <p>Quantum Padel tidak bertanggung jawab atas:</p>
               <ul className="list-disc space-y-2 pl-6">
                 <li>Cedera pribadi akibat kelalaian pelanggan</li>
@@ -223,18 +220,18 @@ export default function TermsAndConditionsPage() {
 
             <hr className="border-border my-8" />
 
-            {/* Section 12 */}
+            {/* Section 11 */}
             <section className="space-y-3">
-              <h2 className="text-xl font-semibold lg:text-2xl">12. Perubahan Ketentuan</h2>
+              <h2 className="text-xl font-semibold lg:text-2xl">11. Perubahan Ketentuan</h2>
               <p>Kami berhak mengubah Syarat & Ketentuan kapan saja.</p>
               <p>Perubahan berlaku setelah dipublikasikan pada halaman ini.</p>
             </section>
 
             <hr className="border-border my-8" />
 
-            {/* Section 13 */}
+            {/* Section 12 */}
             <section className="space-y-3">
-              <h2 className="text-xl font-semibold lg:text-2xl">13. Kontak</h2>
+              <h2 className="text-xl font-semibold lg:text-2xl">12. Kontak</h2>
               <p>Untuk pertanyaan atau bantuan, hubungi:</p>
               <div className="space-y-2 pl-6">
                 <p>
