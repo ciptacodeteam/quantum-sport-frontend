@@ -211,7 +211,7 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
               <div className="mt-2">
                 <ResendOtpButton
                   onSendOtp={handleResendOtp}
-                  seconds={5}
+                  seconds={process.env.NODE_ENV === 'development' ? 5 : 60}
                   persistKey="otp:login"
                   autoStart
                 />

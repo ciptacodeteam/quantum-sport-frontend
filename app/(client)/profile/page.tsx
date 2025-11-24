@@ -17,13 +17,17 @@ import {
 } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getPlaceholderImageUrl } from '@/lib/utils';
+import { getPlaceholderImageUrl, cn, formatPhone } from '@/lib/utils';
 import { logoutMutationOptions } from '@/mutations/auth';
 import { leaveClubMutationOptions } from '@/mutations/club';
 import { myMembershipsQueryOptions } from '@/queries/membership';
 import { profileQueryOptions } from '@/queries/profile';
 import useAuthStore from '@/stores/useAuthStore';
-import { IconCalendar, IconLogout, IconMail, IconPhone } from '@tabler/icons-react';
+import type { UserProfile } from '@/types/model';
+import { IconCalendar, IconLogout, IconMail, IconPhone, IconFileText } from '@tabler/icons-react';
+import { Badge } from '@/components/ui/badge';
+import { sendVerificationOtpMutationOptions } from '@/mutations/verification';
+import { VerifyContactOtpDialog } from '@/components/profile/VerifyContactOtpDialog';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import Image from 'next/image';
@@ -34,7 +38,8 @@ export default function ProfilePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: user, isPending, isError } = useQuery(profileQueryOptions);
-  const { data: myMemberships, isPending: isMembershipsLoading } = useQuery(myMembershipsQueryOptions);
+  const { data: myMemberships, isPending: isMembershipsLoading } =
+    useQuery(myMembershipsQueryOptions);
   // const {
   //   data: memberClubs,
   //   isLoading: isLoadingMemberClubs,
@@ -53,6 +58,10 @@ export default function ProfilePage() {
 
   // Password modal (two-step)
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  // Generic verification dialog state
+  const [verifyDialogOpen, setVerifyDialogOpen] = useState(false);
+  const [verifyType, setVerifyType] = useState<'phone' | 'email' | null>(null);
+  const [verificationRequestId, setVerificationRequestId] = useState<string | null>(null);
 
   // Debug logging removed
 
@@ -110,6 +119,43 @@ export default function ProfilePage() {
   const confirmLeaveClub = () => {
     if (clubToLeave) {
       leaveClub(clubToLeave.id);
+    }
+  };
+
+  const { mutate: sendVerificationOtp, isPending: isSendingVerification } = useMutation(
+    sendVerificationOtpMutationOptions({
+      onSuccess: (res) => {
+        const requestId = res?.data?.requestId;
+        if (requestId) {
+          setVerificationRequestId(requestId);
+          setVerifyDialogOpen(true);
+        }
+      }
+    })
+  );
+
+  const handleStartVerification = (type: 'phone' | 'email') => {
+    if (!user) return;
+    setVerifyType(type);
+    if (type === 'phone' && user.phone && !(user as UserProfile).phoneVerified) {
+      sendVerificationOtp({
+        type: 'phone',
+        phone: formatPhone(user.phone)
+      });
+    } else if (type === 'email' && user.email && !(user as UserProfile).emailVerified) {
+      sendVerificationOtp({ type: 'email', email: user.email });
+    }
+  };
+
+  const handleResendVerificationOtp = () => {
+    if (!user || !verifyType) return;
+    if (verifyType === 'phone' && user.phone) {
+      sendVerificationOtp({
+        type: 'phone',
+        phone: formatPhone(user.phone)
+      });
+    } else if (verifyType === 'email' && user.email) {
+      sendVerificationOtp({ type: 'email', email: user.email });
     }
   };
 
@@ -193,9 +239,14 @@ export default function ProfilePage() {
                     {user.email || 'Not provided'}
                   </button>
                   {user.email && 'emailVerified' in user && (
-                    <p className="text-muted-foreground text-xs">
-                      {(user as any).emailVerified ? '✓ Verified' : '✗ Not verified'}
-                    </p>
+                    <Badge
+                      variant={(user as any).emailVerified ? 'lightSuccess' : 'lightDestructive'}
+                      className={cn('ml-2 select-none', user.emailVerified ? '' : 'cursor-pointer')}
+                      onClick={() => handleStartVerification('email')}
+                      aria-disabled={isSendingVerification}
+                    >
+                      {(user as any).emailVerified ? 'Email Terverifikasi' : 'Verifikasi Email'}
+                    </Badge>
                   )}
                 </div>
               </div>
@@ -221,15 +272,18 @@ export default function ProfilePage() {
                     </button>
 
                     {'phoneVerified' in user && (
-                      <p
-                        className={`text-xs ${
-                          (user as any).phoneVerified
-                            ? 'w-fit rounded-full bg-green-600 px-2 py-1 text-white'
-                            : 'w-fit rounded-full bg-red-600 px-2 py-1 text-white'
-                        }`}
+                      <Badge
+                        variant={
+                          (user as UserProfile).phoneVerified ? 'lightSuccess' : 'lightDestructive'
+                        }
+                        className={cn('select-none', user.phoneVerified ? '' : 'cursor-pointer')}
+                        onClick={() => handleStartVerification('phone')}
+                        aria-disabled={isSendingVerification}
                       >
-                        {(user as any).phoneVerified ? 'Verified' : 'Not verified'}
-                      </p>
+                        {(user as UserProfile).phoneVerified
+                          ? 'Nomor Terverifikasi'
+                          : 'Verifikasi Nomor'}
+                      </Badge>
                     )}
                   </div>
                 </div>
@@ -290,7 +344,7 @@ export default function ProfilePage() {
                     </div>
 
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="rounded-md bg-muted p-3">
+                      <div className="bg-muted rounded-md p-3">
                         <p className="text-muted-foreground mb-1 text-xs">Berlaku Hingga</p>
                         <p className="font-semibold">
                           {dayjs(userMembership.endDate).format('DD MMMM YYYY')}
@@ -300,41 +354,48 @@ export default function ProfilePage() {
                         </p>
                       </div>
 
-                      <div className="rounded-md bg-muted p-3">
+                      <div className="bg-muted rounded-md p-3">
                         <p className="text-muted-foreground mb-1 text-xs">Sisa Jam</p>
                         <p className="font-semibold">
-                          {userMembership.remainingSessions} dari {userMembership.membership.sessions} jam
+                          {userMembership.remainingSessions} dari{' '}
+                          {userMembership.membership.sessions} jam
                         </p>
                         <p className="text-muted-foreground text-xs">
-                          {Math.round((userMembership.remainingSessions / userMembership.membership.sessions) * 100)}% tersisa
+                          {Math.round(
+                            (userMembership.remainingSessions /
+                              userMembership.membership.sessions) *
+                              100
+                          )}
+                          % tersisa
                         </p>
                       </div>
                     </div>
 
-                    {userMembership.membership.benefits && userMembership.membership.benefits.length > 0 && (
-                      <div className="mt-3">
-                        <p className="mb-2 text-sm font-medium">Benefit:</p>
-                        <ul className="space-y-1">
-                          {userMembership.membership.benefits.map((benefit) => (
-                            <li key={benefit.id} className="flex items-start gap-2 text-sm">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="text-primary mt-0.5 h-4 w-4 shrink-0"
-                                viewBox="0 0 20 20"
-                                fill="currentColor"
-                              >
-                                <path
-                                  fillRule="evenodd"
-                                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                  clipRule="evenodd"
-                                />
-                              </svg>
-                              <span className="text-muted-foreground">{benefit.benefit}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
+                    {userMembership.membership.benefits &&
+                      userMembership.membership.benefits.length > 0 && (
+                        <div className="mt-3">
+                          <p className="mb-2 text-sm font-medium">Benefit:</p>
+                          <ul className="space-y-1">
+                            {userMembership.membership.benefits.map((benefit) => (
+                              <li key={benefit.id} className="flex items-start gap-2 text-sm">
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="text-primary mt-0.5 h-4 w-4 shrink-0"
+                                  viewBox="0 0 20 20"
+                                  fill="currentColor"
+                                >
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                    clipRule="evenodd"
+                                  />
+                                </svg>
+                                <span className="text-muted-foreground">{benefit.benefit}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                   </div>
                 ))}
               </CardContent>
@@ -350,6 +411,20 @@ export default function ProfilePage() {
             <CardContent>
               <Button variant="outline" onClick={() => setPasswordModalOpen(true)}>
                 Ganti Kata Sandi
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Terms & Conditions */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="mb-1">Syarat & Ketentuan</CardTitle>
+              <CardDescription>Baca ketentuan penggunaan layanan kami</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="outline" onClick={() => router.push('/terms-and-conditions')}>
+                <IconFileText className="mr-2 size-4" />
+                Lihat Syarat & Ketentuan
               </Button>
             </CardContent>
           </Card>
@@ -421,6 +496,17 @@ export default function ProfilePage() {
         userEmail={user.email}
         onOpenChange={setPasswordModalOpen}
       />
+
+      {/* Generic Verification OTP Dialog */}
+      {verifyType && (
+        <VerifyContactOtpDialog
+          open={verifyDialogOpen}
+          onOpenChange={setVerifyDialogOpen}
+          type={verifyType}
+          requestId={verificationRequestId}
+          onResendOtp={handleResendVerificationOtp}
+        />
+      )}
     </>
   );
 }

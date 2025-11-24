@@ -27,7 +27,7 @@ const MainBottomNavigation = () => {
 
   return (
     <BottomNavigationWrapper>
-      <ul className="flex-between mx-auto w-11/12">
+      <ul className="flex-between mx-auto w-11/12 md:max-w-lg">
         {navigationItems.map((item) => {
           const requiresAuth = item.requiresAuth ?? false;
 

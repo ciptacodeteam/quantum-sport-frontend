@@ -59,6 +59,10 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
         {
           title: 'Book Membership',
           url: '/admin/booking-membership'
+        },
+        {
+          title: 'Schedule',
+          url: '/admin/schedule'
         }
       ]
     },
@@ -219,6 +223,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             {
               title: 'Book Membership',
               url: '/admin/booking-membership'
+            },
+            {
+              title: 'Schedule',
+              url: '/admin/schedule'
             }
           ]
         },

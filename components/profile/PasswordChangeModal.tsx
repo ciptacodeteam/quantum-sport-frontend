@@ -1,5 +1,6 @@
 'use client';
 
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -8,28 +9,26 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
+import { changePasswordMutationOptions, verifyPasswordMutationOptions } from '@/mutations/auth';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
-import { loginMutationOptions, changePasswordMutationOptions } from '@/mutations/auth';
-import { toast } from 'sonner';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { PasswordInput } from '../ui/password-input';
 
 const verifyPasswordSchema = z.object({
-  currentPassword: z.string().min(1, 'Current password is required')
+  currentPassword: z.string().min(1, 'Kata sandi saat ini diperlukan')
 });
 
 const changePasswordSchema = z
   .object({
-    newPassword: z.string().min(6, 'Password must be at least 6 characters'),
-    confirmPassword: z.string().min(1, 'Please confirm your password')
+    newPassword: z.string().min(6, 'Kata sandi harus terdiri dari minimal 6 karakter'),
+    confirmPassword: z.string().min(1, 'Harap konfirmasi kata sandi Anda')
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
-    message: 'Passwords do not match',
+    message: 'Kata sandi tidak cocok',
     path: ['confirmPassword']
   });
 
@@ -61,10 +60,9 @@ export default function PasswordChangeModal({ open, userEmail, onOpenChange }: P
   });
 
   const { mutate: verifyCurrentPassword, isPending: isVerifying } = useMutation(
-    loginMutationOptions({
+    verifyPasswordMutationOptions({
       onSuccess: () => {
         setStep('change');
-        toast.success('Password verified');
       }
     })
   );
@@ -76,22 +74,21 @@ export default function PasswordChangeModal({ open, userEmail, onOpenChange }: P
         changeForm.reset();
         setStep('verify');
         onOpenChange(false);
-        toast.success('Password changed');
       }
     })
   );
 
   const handleVerifySubmit = (data: VerifyPasswordFormData) => {
-    if (!userEmail) {
-      toast.error('No email on account');
-      return;
-    }
-    verifyCurrentPassword({ email: userEmail, password: data.currentPassword });
+    verifyCurrentPassword({ password: data.currentPassword });
   };
 
   const handleChangeSubmit = (data: ChangePasswordFormData) => {
-    const currentPassword = verifyForm.getValues('currentPassword');
-    changePassword({ currentPassword, newPassword: data.newPassword });
+    const oldPassword = verifyForm.getValues('currentPassword');
+    changePassword({
+      currentPassword: oldPassword,
+      newPassword: data.newPassword,
+      confirmNewPassword: data.confirmPassword
+    });
   };
 
   const close = (o: boolean) => {
@@ -108,25 +105,22 @@ export default function PasswordChangeModal({ open, userEmail, onOpenChange }: P
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {step === 'verify' ? 'Verify Current Password' : 'Set New Password'}
+            {step === 'verify' ? 'Verifikasi Kata Sandi Saat Ini' : 'Atur Kata Sandi Baru'}
           </DialogTitle>
           <DialogDescription>
             {step === 'verify'
-              ? 'Enter your current password to continue.'
-              : 'Choose a strong new password.'}
+              ? 'Masukkan kata sandi saat ini untuk melanjutkan.'
+              : 'Pilih kata sandi baru yang kuat.'}
           </DialogDescription>
         </DialogHeader>
         {step === 'verify' ? (
           <form onSubmit={verifyForm.handleSubmit(handleVerifySubmit)} className="space-y-4">
-            {!userEmail && (
-              <p className="text-destructive text-sm">Email is required to verify password.</p>
-            )}
             <FieldGroup>
               <Field>
-                <FieldLabel htmlFor="currentPwd">Current Password</FieldLabel>
-                <Input
+                <FieldLabel htmlFor="currentPwd">Kata Sandi Saat Ini</FieldLabel>
+                <PasswordInput
                   id="currentPwd"
-                  type="password"
+                  placeholder="Masukkan kata sandi saat ini"
                   {...verifyForm.register('currentPassword')}
                 />
                 {verifyForm.formState.errors.currentPassword && (
@@ -134,16 +128,25 @@ export default function PasswordChangeModal({ open, userEmail, onOpenChange }: P
                 )}
               </Field>
             </FieldGroup>
-            <Button type="submit" loading={isVerifying} disabled={isVerifying}>
-              Verify Password
-            </Button>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Tutup
+              </Button>
+              <Button type="submit" loading={isVerifying} disabled={isVerifying}>
+                Konfirmasi
+              </Button>
+            </DialogFooter>
           </form>
         ) : (
           <form onSubmit={changeForm.handleSubmit(handleChangeSubmit)} className="space-y-4">
             <FieldGroup>
               <Field>
-                <FieldLabel htmlFor="newPwd">New Password</FieldLabel>
-                <Input id="newPwd" type="password" {...changeForm.register('newPassword')} />
+                <FieldLabel htmlFor="newPwd">Kata Sandi Baru</FieldLabel>
+                <PasswordInput
+                  id="newPwd"
+                  placeholder="Masukkan kata sandi baru"
+                  {...changeForm.register('newPassword')}
+                />
                 {changeForm.formState.errors.newPassword && (
                   <FieldError>{changeForm.formState.errors.newPassword.message}</FieldError>
                 )}
@@ -151,10 +154,10 @@ export default function PasswordChangeModal({ open, userEmail, onOpenChange }: P
             </FieldGroup>
             <FieldGroup>
               <Field>
-                <FieldLabel htmlFor="confirmPwd">Confirm New Password</FieldLabel>
-                <Input
+                <FieldLabel htmlFor="confirmPwd">Konfirmasi Kata Sandi Baru</FieldLabel>
+                <PasswordInput
                   id="confirmPwd"
-                  type="password"
+                  placeholder="Masukkan ulang kata sandi baru Anda"
                   {...changeForm.register('confirmPassword')}
                 />
                 {changeForm.formState.errors.confirmPassword && (
@@ -162,16 +165,16 @@ export default function PasswordChangeModal({ open, userEmail, onOpenChange }: P
                 )}
               </Field>
             </FieldGroup>
-            <Button type="submit" loading={isChanging} disabled={isChanging}>
-              Change Password
-            </Button>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Tutup
+              </Button>
+              <Button type="submit" loading={isChanging} disabled={isChanging}>
+                Ubah Kata Sandi
+              </Button>
+            </DialogFooter>
           </form>
         )}
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Close
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

@@ -1,5 +1,6 @@
 'use client';
 
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -8,19 +9,21 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { sendEmailOtpMutationOptions, verifyEmailOtpMutationOptions } from '@/mutations/email';
-import { useResendCountdown } from '@/hooks/useResendCountdown';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import {
+  requestEmailChangeMutationOptions,
+  verifyEmailChangeMutationOptions
+} from '@/mutations/email';
 import { profileQueryOptions } from '@/queries/profile';
-import { updateProfileApi } from '@/api/auth';
-import { toast } from 'sonner';
-import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Mail } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { ResendOtpButton } from '../buttons/ResendOtpButton';
 
 const emailSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Invalid email address')
@@ -42,8 +45,8 @@ type Props = {
 
 export default function EmailChangeModal({ open, email, onOpenChange, onSuccess }: Props) {
   const qc = useQueryClient();
-  const [otpSent, setOtpSent] = useState(false);
-  const cooldown = useResendCountdown({ seconds: 60, persistKey: 'email-otp-cd' });
+  const [codeSent, setCodeSent] = useState(false);
+  const [requestId, setRequestId] = useState<string | null>(null);
 
   const emailForm = useForm<EmailFormData>({
     resolver: zodResolver(emailSchema),
@@ -65,35 +68,22 @@ export default function EmailChangeModal({ open, email, onOpenChange, onSuccess 
     }
   }, [email, emailForm]);
 
-  const { mutate: updateProfile, isPending: isUpdating } = useMutation({
-    mutationFn: async (payload: { email: string }) => {
-      const form = new FormData();
-      form.append('email', payload.email);
-      return updateProfileApi(form);
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: profileQueryOptions.queryKey });
-    },
-    onError: (err: any) => toast.error(err?.message || 'Failed to update email')
-  });
-
-  const { mutate: sendOtp, isPending: isSending } = useMutation(
-    sendEmailOtpMutationOptions({
-      onSuccess: () => {
-        cooldown.start();
-        setOtpSent(true);
-        toast.success('OTP sent to email');
+  const { mutate: requestChange, isPending: isRequesting } = useMutation(
+    requestEmailChangeMutationOptions({
+      onSuccess: (data) => {
+        setCodeSent(true);
+        setRequestId(data.data?.requestId || data.requestId || null);
       }
     })
   );
 
-  const { mutate: verifyOtp, isPending: isVerifying } = useMutation(
-    verifyEmailOtpMutationOptions({
+  const { mutate: verifyChange, isPending: isVerifying } = useMutation(
+    verifyEmailChangeMutationOptions({
       onSuccess: () => {
-        toast.success('Email verified');
         qc.invalidateQueries({ queryKey: profileQueryOptions.queryKey });
         otpForm.reset();
-        setOtpSent(false);
+        setCodeSent(false);
+        setRequestId(null);
         onOpenChange(false);
         onSuccess?.();
       }
@@ -101,20 +91,31 @@ export default function EmailChangeModal({ open, email, onOpenChange, onSuccess 
   );
 
   const handleEmailSubmit = (data: EmailFormData) => {
-    updateProfile({ email: data.email });
-    sendOtp({ email: data.email });
+    requestChange({ newEmail: data.email });
   };
 
-  const handleOtpSubmit = (data: OtpFormData) => {
-    const email = emailForm.getValues('email');
-    verifyOtp({ email, otp: data.otp });
+  const handleOtpSubmit = useCallback(
+    (data: OtpFormData) => {
+      if (!requestId) return;
+      verifyChange({ requestId, code: data.otp });
+    },
+    [requestId, verifyChange]
+  );
+
+  const handleResendCode = () => {
+    const newEmail = emailForm.getValues('email');
+    requestChange({ newEmail });
   };
 
-  const handleResendOtp = () => {
-    if (cooldown.isCoolingDown) return;
-    const email = emailForm.getValues('email');
-    sendOtp({ email });
-  };
+  useEffect(() => {
+    const subscription = otpForm.watch((value) => {
+      const otp = (value as { otp?: string })?.otp;
+      if (otp && otp.length === 6) {
+        otpForm.handleSubmit(handleOtpSubmit)();
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [otpForm, handleOtpSubmit]);
 
   return (
     <Dialog
@@ -123,66 +124,100 @@ export default function EmailChangeModal({ open, email, onOpenChange, onSuccess 
         if (!o) {
           emailForm.reset();
           otpForm.reset();
-          setOtpSent(false);
+          setCodeSent(false);
+          setRequestId(null);
         }
         onOpenChange(o);
       }}
     >
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Change Email</DialogTitle>
-          <DialogDescription>Update and verify your email address</DialogDescription>
-        </DialogHeader>
-        {!otpSent ? (
-          <form onSubmit={emailForm.handleSubmit(handleEmailSubmit)} className="space-y-4">
-            <FieldGroup>
-              <Field>
-                <FieldLabel htmlFor="email-input">New Email</FieldLabel>
-                <Input id="email-input" type="email" {...emailForm.register('email')} />
-                {emailForm.formState.errors.email && (
-                  <FieldError>{emailForm.formState.errors.email.message}</FieldError>
-                )}
-              </Field>
-            </FieldGroup>
-            <Button
-              type="submit"
-              loading={isUpdating || isSending}
-              disabled={isUpdating || isSending}
-            >
-              Save & Send OTP
-            </Button>
-          </form>
+        {!codeSent ? (
+          <>
+            <DialogHeader>
+              <DialogTitle>{!!email ? 'Ubah' : 'Tambah'} Email</DialogTitle>
+              <DialogDescription>
+                {!codeSent
+                  ? 'Masukkan alamat email baru Anda. Kode verifikasi akan dikirim.'
+                  : 'Masukkan kode 6 digit yang dikirim ke alamat email baru Anda.'}
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={emailForm.handleSubmit(handleEmailSubmit)} className="space-y-4">
+              <FieldSet>
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor="email-input">Alamat Email Baru</FieldLabel>
+                    <Input
+                      id="email-input"
+                      type="email"
+                      placeholder="e.g. mark@example.com"
+                      {...emailForm.register('email')}
+                    />
+                    {emailForm.formState.errors.email && (
+                      <FieldError>{emailForm.formState.errors.email.message}</FieldError>
+                    )}
+                  </Field>
+                </FieldGroup>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                    Batal
+                  </Button>
+                  <Button type="submit" loading={isRequesting} disabled={isRequesting}>
+                    Konfirmasi
+                  </Button>
+                </DialogFooter>
+              </FieldSet>
+            </form>
+          </>
         ) : (
-          <form onSubmit={otpForm.handleSubmit(handleOtpSubmit)} className="space-y-4">
-            <FieldGroup>
-              <Field>
-                <FieldLabel htmlFor="email-otp">OTP</FieldLabel>
-                <Input id="email-otp" {...otpForm.register('otp')} maxLength={6} />
-                {otpForm.formState.errors.otp && (
-                  <FieldError>{otpForm.formState.errors.otp.message}</FieldError>
-                )}
-              </Field>
-            </FieldGroup>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleResendOtp}
-                disabled={cooldown.isCoolingDown || isSending}
-              >
-                {cooldown.isCoolingDown ? `Resend (${cooldown.label})` : 'Resend OTP'}
-              </Button>
-              <Button type="submit" loading={isVerifying} disabled={isVerifying}>
-                Verify Email
-              </Button>
-            </div>
+          <form className="py-6 md:p-8" onSubmit={otpForm.handleSubmit(handleOtpSubmit)}>
+            <FieldSet>
+              <FieldGroup>
+                <Field>
+                  <div className="flex-center flex-col gap-4">
+                    <header className="flex-center flex-col gap-4">
+                      <Mail className="text-primary size-10" />
+                      <FieldLabel htmlFor="otp" className="max-w-xs text-center leading-relaxed">
+                        Masukkan OTP yang dikirim ke alamat email Anda
+                        <br /> {emailForm.getValues('email')}
+                      </FieldLabel>
+                    </header>
+                    <Controller
+                      name="otp"
+                      control={otpForm.control}
+                      defaultValue=""
+                      disabled={isVerifying}
+                      render={({ field }) => (
+                        <InputOTP
+                          maxLength={6}
+                          value={field.value}
+                          onChange={(value) => field.onChange(value)}
+                        >
+                          <InputOTPGroup>
+                            <InputOTPSlot index={0} className="size-14 md:text-xl" />
+                            <InputOTPSlot index={1} className="size-14 md:text-xl" />
+                            <InputOTPSlot index={2} className="size-14 md:text-xl" />
+                            <InputOTPSlot index={3} className="size-14 md:text-xl" />
+                            <InputOTPSlot index={4} className="size-14 md:text-xl" />
+                            <InputOTPSlot index={5} className="size-14 md:text-xl" />
+                          </InputOTPGroup>
+                        </InputOTP>
+                      )}
+                    />
+                    <FieldError>{otpForm.formState.errors.otp?.message}</FieldError>
+                    <div className="mt-2">
+                      <ResendOtpButton
+                        onSendOtp={handleResendCode}
+                        seconds={process.env.NODE_ENV === 'development' ? 5 : 60}
+                        persistKey="otp:change-email"
+                        autoStart
+                      />
+                    </div>
+                  </div>
+                </Field>
+              </FieldGroup>
+            </FieldSet>
           </form>
         )}
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Close
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
