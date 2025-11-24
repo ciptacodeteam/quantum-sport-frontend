@@ -80,7 +80,7 @@ export default function InvoiceHistoryPage() {
   // Show login if not authenticated
   if (!isUserPending && !isAuthenticated) {
     return (
-      <div className="min-h-screen">
+      <div className="mt-24 min-h-screen">
         <MainHeader />
         <div className="container mx-auto px-4 py-8 pb-24">
           <div className="mx-auto max-w-2xl text-center">

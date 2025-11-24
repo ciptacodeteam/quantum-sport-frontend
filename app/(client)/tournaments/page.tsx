@@ -26,7 +26,7 @@ const TournamentCard = ({ tournament, onClick }: { tournament: any; onClick: () 
   const imageUrl = resolveMediaUrl(tournament.image ?? undefined);
 
   return (
-    <Card className="overflow-hidden mt-3">
+    <Card className="mt-3 overflow-hidden">
       {imageUrl && (
         <div className="relative aspect-video w-full">
           <Image
@@ -48,7 +48,7 @@ const TournamentCard = ({ tournament, onClick }: { tournament: any; onClick: () 
       <CardContent className="space-y-4">
         <div className="flex items-start gap-3">
           <div className="flex-1">
-            <h3 className="text-lg font-semibold mb-2">{tournament.name}</h3>
+            <h3 className="mb-2 text-lg font-semibold">{tournament.name}</h3>
             {tournament.description && (
               <p className="text-muted-foreground line-clamp-2 text-sm">{tournament.description}</p>
             )}
@@ -57,21 +57,21 @@ const TournamentCard = ({ tournament, onClick }: { tournament: any; onClick: () 
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="flex items-center gap-3">
-            <IconCalendar className="size-5 text-primary" />
+            <IconCalendar className="text-primary size-5" />
             <span>{formatDateRange(tournament.startDate, tournament.endDate)}</span>
           </div>
           <div className="flex items-center gap-3">
-            <IconClock className="size-5 text-primary" />
+            <IconClock className="text-primary size-5" />
             <span>
               {tournament.startTime} - {tournament.endTime} WIB
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <IconMapPin className="size-5 text-primary" />
+            <IconMapPin className="text-primary size-5" />
             <span>{tournament.location}</span>
           </div>
           <div className="flex items-center gap-3">
-            <IconUsers className="size-5 text-primary" />
+            <IconUsers className="text-primary size-5" />
             <span>
               Max {tournament.maxTeams} teams • {tournament.teamSize} players / team
             </span>
@@ -81,7 +81,9 @@ const TournamentCard = ({ tournament, onClick }: { tournament: any; onClick: () 
         <div className="mt-8 flex items-center justify-between">
           <div>
             <p className="text-muted-foreground text-sm">Entry Fee</p>
-            <p className="text-xl font-semibold text-primary">Rp{formatNumber(tournament.entryFee)}</p>
+            <p className="text-primary text-xl font-semibold">
+              Rp{formatNumber(tournament.entryFee)}
+            </p>
           </div>
           <Button onClick={onClick} variant="outline">
             Lihat Detail
@@ -133,7 +135,7 @@ const TournamentsPage = () => {
 
       <main>
         <div className="sticky z-10 w-full border-b bg-white md:top-14">
-          <div className="mx-auto w-11/12 pt-24 pb-3">
+          <div className="mx-auto w-11/12 pt-24 pb-3 md:pt-10">
             <div className="relative">
               <IconSearch className="text-muted-foreground absolute top-1/2 left-3 size-5 -translate-y-1/2" />
               <Input

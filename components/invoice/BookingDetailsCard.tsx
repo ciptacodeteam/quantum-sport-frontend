@@ -40,7 +40,7 @@ export default function BookingDetailsCard({ details }: { details: Detail[] }) {
             <div className="rounded-lg bg-gray-100 p-2">
               <Calendar className="h-5 w-5 text-gray-600" />
             </div>
-            <span>Detail Pemesanan Lapangan</span>
+            <span className="text-base">Detail Pemesanan Lapangan</span>
           </CardTitle>
           <div className="flex flex-wrap gap-2">
             <Badge variant="outline">{totalSlots} Slot</Badge>
@@ -57,9 +57,7 @@ export default function BookingDetailsCard({ details }: { details: Detail[] }) {
                 <Calendar className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
               <div>
-                <p className="text-sm font-semibold sm:text-base">
-                  {dayjs(date).format('dddd, DD MMMM YYYY')}
-                </p>
+                <p className="text-sm font-semibold">{dayjs(date).format('dddd, DD MMMM YYYY')}</p>
                 <p className="text-xs text-gray-600 sm:text-sm">
                   {Object.keys(courts as Record<string, any>).length} Lapangan
                 </p>
@@ -76,7 +74,7 @@ export default function BookingDetailsCard({ details }: { details: Detail[] }) {
                   {/* Court Name */}
                   <div className="mb-3 flex items-center gap-2 border-b border-gray-100 pb-2">
                     <MapPin className="h-4 w-4 shrink-0 text-gray-600 sm:h-5 sm:w-5" />
-                    <span className="font-semibold text-gray-900">{courtName}</span>
+                    <span className="text-base font-semibold text-gray-900">{courtName}</span>
                   </div>
 
                   {/* Time Slots */}
@@ -91,7 +89,7 @@ export default function BookingDetailsCard({ details }: { details: Detail[] }) {
                             <Clock className="h-3.5 w-3.5 text-gray-600 sm:h-4 sm:w-4" />
                           </div>
                           <div>
-                            <span className="text-sm font-medium text-gray-900 sm:text-base">
+                            <span className="text-sm font-medium text-gray-900">
                               {dayjs(detail.slot?.startAt).format('HH:mm')} -{' '}
                               {dayjs(detail.slot?.endAt).format('HH:mm')}
                             </span>
@@ -100,7 +98,7 @@ export default function BookingDetailsCard({ details }: { details: Detail[] }) {
                             </p>
                           </div>
                         </div>
-                        <span className="hidden text-base font-bold sm:block">
+                        <span className="hidden text-sm font-bold sm:block">
                           {formatCurrency(detail.price)}
                         </span>
                       </div>
@@ -109,9 +107,9 @@ export default function BookingDetailsCard({ details }: { details: Detail[] }) {
 
                   {/* Court Subtotal */}
                   {items.length > 1 && (
-                    <div className="mt-3 flex items-center justify-between border-t border-gray-200 pt-2 text-sm sm:text-base">
-                      <span className="text-gray-600">Subtotal ({items.length} slot)</span>
-                      <span className="font-bold text-gray-900">
+                    <div className="mt-3 flex items-center justify-between border-t border-gray-200 pt-3 text-sm sm:text-base">
+                      <span className="text-sm text-gray-600">Subtotal ({items.length} slot)</span>
+                      <span className="text-sm font-bold text-gray-900">
                         {formatCurrency(
                           items.reduce((sum: number, d: any) => sum + (d.price || 0), 0)
                         )}

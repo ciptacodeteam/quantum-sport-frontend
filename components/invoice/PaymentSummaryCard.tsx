@@ -31,21 +31,19 @@ export default function PaymentSummaryCard({
           <div className="bg-primary/10 rounded-lg p-2">
             <Receipt className="text-primary h-5 w-5" />
           </div>
-          <span>Ringkasan Pembayaran</span>
+          <span className="text-base">Ringkasan Pembayaran</span>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4 p-4 sm:p-6">
         {/* Price Breakdown */}
         <div className="space-y-3 rounded-lg bg-gray-50 p-3 sm:p-4">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600 sm:text-base">Subtotal</span>
-            <span className="text-sm font-semibold text-gray-900 sm:text-base">
-              {formatCurrency(subtotal)}
-            </span>
+            <span className="text-sm text-gray-600">Subtotal</span>
+            <span className="text-sm font-semibold text-gray-900">{formatCurrency(subtotal)}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600 sm:text-base">Biaya Layanan</span>
-            <span className="text-sm font-semibold text-gray-900 sm:text-base">
+            <span className="text-sm text-gray-600">Biaya Layanan</span>
+            <span className="text-sm font-semibold text-gray-900">
               {processingFee > 0 ? formatCurrency(processingFee) : 'Gratis'}
             </span>
           </div>
@@ -58,11 +56,9 @@ export default function PaymentSummaryCard({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Wallet className="text-primary h-5 w-5" />
-              <span className="text-base font-bold text-gray-900 sm:text-lg">Total Pembayaran</span>
+              <span className="text-base font-bold text-gray-900">Total Pembayaran</span>
             </div>
-            <span className="text-primary text-lg font-bold sm:text-xl">
-              {formatCurrency(total)}
-            </span>
+            <span className="text-primary text-base font-bold">{formatCurrency(total)}</span>
           </div>
         </div>
 
@@ -78,7 +74,7 @@ export default function PaymentSummaryCard({
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
                 {method.logo && (
-                  <div className="flex h-10 w-16 items-center justify-center rounded border bg-white p-1">
+                  <div className="flex h-10 w-16 items-center justify-center p-1">
                     <Image
                       src={resolveMediaUrl(method.logo) || ''}
                       unoptimized
