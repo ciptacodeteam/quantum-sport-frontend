@@ -269,8 +269,15 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Court slots: array of slot IDs only
-    const courtSlots = bookingItems.filter((item) => item.slotId).map((item) => item.slotId);
+    // Court slots: array of slot IDs only (filter out constructed IDs that include time)
+    const courtSlots = bookingItems
+      .filter((item) => {
+        if (!item.slotId) return false;
+        // Filter out constructed slotIds that contain time format (e.g., "courtId-06:00")
+        const isConstructed = /-\d{2}:\d{2}$/.test(item.slotId);
+        return !isConstructed;
+      })
+      .map((item) => item.slotId);
 
     // Coach slots: array of slot IDs only
     const coachSlots = selectedCoaches.filter((coach) => coach.slotId).map((coach) => coach.slotId);
