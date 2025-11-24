@@ -168,17 +168,6 @@ export default function CheckoutPage() {
       };
     }
 
-    // If checkout only contains court bookings (no add-ons), no payment fee
-    const hasAddOns = addOnsTotal > 0;
-    if (!hasAddOns) {
-      return {
-        fixedFee: 0,
-        percentageRate: 0,
-        percentageFee: 0,
-        totalFee: 0
-      };
-    }
-
     const percentageRate = Number(selectedPaymentMethod.percentage ?? 0);
     const fixedFee = Number.isFinite(selectedPaymentMethod.fees)
       ? Number(selectedPaymentMethod.fees)
@@ -482,9 +471,7 @@ export default function CheckoutPage() {
                     {selectedPaymentMethod ? selectedPaymentMethod.name : 'Pilih Metode Pembayaran'}
                   </p>
                   <p className="text-muted-foreground text-xs">
-                    {selectedPaymentMethod
-                      ? selectedPaymentMethod.channel
-                      : 'Klik untuk memilih metode pembayaran'}
+                    {selectedPaymentMethod ? 'Konfirmasi Instan' : 'Klik untuk memilih metode pembayaran'}
                   </p>
                 </div>
               </div>
