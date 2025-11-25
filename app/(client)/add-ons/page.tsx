@@ -3,18 +3,15 @@
 import MainHeader from '@/components/headers/MainHeader';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { coachAvailabilityQueryOptions } from '@/queries/coach';
 import { inventoryAvailabilityQueryOptions } from '@/queries/inventory';
 import { useBookingStore, type BookingItem } from '@/stores/useBookingStore';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { ChevronRight, Minus, Plus, Check } from 'lucide-react';
-import Image from 'next/image';
+import { Minus, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
 
 export default function AddOnsPage() {
   const router = useRouter();
@@ -25,7 +22,7 @@ export default function AddOnsPage() {
   const selectedInventories = useBookingStore((state) => state.selectedInventories);
   const addInventoryToStore = useBookingStore((state) => state.addInventory);
   const removeInventoryFromStore = useBookingStore((state) => state.removeInventory);
-  const [activeTab, setActiveTab] = useState<'coach' | 'raket'>('coach');
+  const [activeTab, setActiveTab] = useState<'coach' | 'raket'>('raket');
   const {
     data: inventoryAvailability,
     isPending: isInventoryPending,
@@ -196,7 +193,7 @@ export default function AddOnsPage() {
 
       <div className="mx-auto w-11/12 pt-28">
         {/* Tabs utama */}
-        <div className="mb-4 flex gap-2">
+        {/* <div className="mb-4 flex gap-2">
           {['Coach', 'Raket'].map((item) => (
             <Button
               key={item}
@@ -207,10 +204,10 @@ export default function AddOnsPage() {
               {item}
             </Button>
           ))}
-        </div>
+        </div> */}
 
         {/* === COACH LIST === */}
-        {activeTab === 'coach' && (
+        {/* {activeTab === 'coach' && (
           <div className="mb-4 flex flex-col gap-3">
             {!hasBookingSelection && (
               <Card>
@@ -324,7 +321,7 @@ export default function AddOnsPage() {
                 );
               })}
           </div>
-        )}
+        )} */}
 
         {/* === RAKET === */}
         {activeTab === 'raket' && (
