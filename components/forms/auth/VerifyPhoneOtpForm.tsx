@@ -7,8 +7,8 @@ import { formatPhone } from '@/lib/utils';
 import { registerMutationOptions, verifyPhoneOtpMutationOptions } from '@/mutations/auth';
 import { sendPhoneOtpMutationOptions } from '@/mutations/phone';
 import { profileQueryOptions } from '@/queries/profile';
-import useAuthStore from '@/stores/useAuthStore';
 import useAuthRedirectStore from '@/stores/useAuthRedirectStore';
+import useAuthStore from '@/stores/useAuthStore';
 import { usePhoneStore } from '@/stores/usePhoneStore';
 import { useRegisterStore } from '@/stores/useRegisterStore';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -170,14 +170,21 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
 
   const maxLength = 4;
 
-  useEffect(() => {
-    const subscription = form.watch((value, { name }) => {
-      if (name === 'otp' && value.otp && value.otp.length === maxLength) {
+  const handleOtpChange = useCallback(
+    (value, info: { name?: string }) => {
+      if (info.name === 'otp' && value.otp && value.otp.length === maxLength && !isPending) {
         form.handleSubmit(onSubmit)();
       }
+    },
+    [maxLength, isPending, form, onSubmit]
+  );
+
+  useEffect(() => {
+    const { unsubscribe } = form.watch((value, info) => {
+      handleOtpChange(value, info);
     });
-    return () => subscription.unsubscribe();
-  }, [maxLength]);
+    return () => unsubscribe();
+  }, [form.watch, handleOtpChange]);
 
   return (
     <form className="py-6 md:p-8" onSubmit={form.handleSubmit(onSubmit)}>

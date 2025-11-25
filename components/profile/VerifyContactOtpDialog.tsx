@@ -7,7 +7,7 @@ import { profileQueryOptions } from '@/queries/profile';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Mail, Phone } from 'lucide-react';
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -65,14 +65,21 @@ export function VerifyContactOtpDialog({
     onResendOtp();
   };
 
-  useEffect(() => {
-    const subscription = form.watch((value, { name }) => {
-      if (name === 'otp' && value.otp && value.otp.length === maxLength) {
+  const handleOtpChange = useCallback(
+    (value, info: { name?: string }) => {
+      if (info.name === 'otp' && value.otp && value.otp.length === maxLength && !isPending) {
         form.handleSubmit(handleSubmit)();
       }
+    },
+    [maxLength, isPending, form, handleSubmit]
+  );
+
+  useEffect(() => {
+    const { unsubscribe } = form.watch((value, info) => {
+      handleOtpChange(value, info);
     });
-    return () => subscription.unsubscribe();
-  }, [maxLength]);
+    return () => unsubscribe();
+  }, [form.watch, handleOtpChange]);
 
   return (
     <Dialog
