@@ -110,6 +110,17 @@ export default function BookingAddOns() {
     };
   }, [bookingItems, selectedAddOnDate]);
 
+  // Generate time slots from 06:00 to 23:00
+  const availableTimeSlots = useMemo(() => {
+    const slots: string[] = [];
+    for (let hour = 6; hour < 24; hour++) {
+      const start = `${String(hour).padStart(2, '0')}:00`;
+      const end = `${String(hour + 1).padStart(2, '0')}:00`;
+      slots.push(`${start} - ${end}`);
+    }
+    return slots;
+  }, []);
+
   // Fetch coach availability
   const { data: coachAvailabilityData } = useQuery(
     adminCoachAvailabilityQueryOptions(dateRange?.startAt, dateRange?.endAt)
@@ -575,7 +586,7 @@ export default function BookingAddOns() {
                   <div>
                     <label className="text-sm font-medium mb-2 block">Time Slot</label>
                     <div className="grid grid-cols-3 gap-2">
-                      {['13:00 - 14:00', '14:00 - 15:00', '15:00 - 16:00', '16:00 - 17:00', '17:00 - 18:00', '18:00 - 19:00'].map((slot) => (
+                      {availableTimeSlots.map((slot) => (
                         <Button
                           key={slot}
                           variant={selectedAddOnTimeSlot === slot ? 'default' : 'outline'}

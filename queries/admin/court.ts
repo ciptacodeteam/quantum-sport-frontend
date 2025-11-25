@@ -52,30 +52,40 @@ export const adminCourtsWithSlotsQueryOptions = (date: string, courtId?: string)
         courts = courts.filter(c => c.id === courtId);
       }
       
-      // Then fetch slots for each court in parallel
-      const slotPromises = courts.map(async (court) => {
-        try {
-          const slotsResponse = await getCourtSlotsApi(court.id, { startAt, endAt });
-          return slotsResponse.data as Slot[];
-        } catch (error) {
-          // If a court doesn't have slots endpoint or fails, return empty array
-          return [] as Slot[];
-        }
-      });
-      
-      const slotsArrays = await Promise.all(slotPromises);
-      
-      // Flatten all slots and ensure courtId is set
-      const allSlots: Slot[] = [];
-      courts.forEach((court, index) => {
-        const slots = slotsArrays[index] || [];
-        slots.forEach((slot) => {
-          allSlots.push({
-            ...slot,
-            courtId: court.id
+      // Use the /courts/slots endpoint to get all slots at once (avoids 404s from individual court endpoints)
+      let allSlots: Slot[] = [];
+      try {
+        const slotsResponse = await getCourtsSlotsApi({ startAt, endAt });
+        allSlots = (slotsResponse.data || []) as Slot[];
+      } catch (error) {
+        // If the bulk endpoint fails, fall back to individual court endpoints
+        console.warn('Failed to fetch slots from /courts/slots, falling back to individual endpoints:', error);
+        const slotPromises = courts.map(async (court) => {
+          try {
+            const slotsResponse = await getCourtSlotsApi(court.id, { startAt, endAt });
+            return slotsResponse.data as Slot[];
+          } catch (error) {
+            // If a court doesn't have slots endpoint or fails, return empty array
+            return [] as Slot[];
+          }
+        });
+        
+        const slotsArrays = await Promise.all(slotPromises);
+        courts.forEach((court, index) => {
+          const slots = slotsArrays[index] || [];
+          slots.forEach((slot) => {
+            allSlots.push({
+              ...slot,
+              courtId: court.id
+            });
           });
         });
-      });
+      }
+      
+      // Filter slots by courtId if specified
+      if (courtId) {
+        allSlots = allSlots.filter(slot => slot.courtId === courtId);
+      }
 
       return {
         courts,

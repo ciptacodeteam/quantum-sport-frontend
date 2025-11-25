@@ -49,7 +49,7 @@ export default function MembershipPage() {
 
         {/* Membership list */}
         {!isLoading && !isError && memberships.length > 0 && (
-          <section className="grid gap-6 pt-28 pb-12 md:grid-cols-2 lg:grid-cols-3">
+          <section className="grid gap-6 pt-28 pb-12">
             {memberships.map((pack) => (
               <Card key={pack.id} className="flex flex-col">
                 <CardHeader>

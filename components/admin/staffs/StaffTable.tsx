@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import PreviewImage from '@/components/ui/preview-image';
-import { STATUS_BADGE_VARIANT, STATUS_MAP } from '@/lib/constants';
+import { ROLE_MAP, STATUS_BADGE_VARIANT, STATUS_MAP } from '@/lib/constants';
 import { formatPhone, getNameInitial, hasCreatePermission, hasEditPermission } from '@/lib/utils';
 import { adminStaffsQueryOptions } from '@/queries/admin/staff';
 import { adminProfileQueryOptions } from '@/queries/admin/auth';
@@ -46,7 +46,11 @@ const StaffTable = () => {
       }),
       colHelper.accessor('role', {
         header: 'Role',
-        cell: (info) => <Badge variant={'lightNeutral'}>{info.getValue()}</Badge>
+        cell: (info) => {
+          const value = info.getValue();
+          const label = ROLE_MAP[value as keyof typeof ROLE_MAP] ?? value;
+          return <Badge variant={'lightNeutral'}>{label}</Badge>;
+        }
       }),
       colHelper.accessor('joinedAt', {
         header: 'Bergabung Pada',

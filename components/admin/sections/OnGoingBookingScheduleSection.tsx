@@ -4,6 +4,7 @@ import { Badge, type BadgeVariant } from '@/components/ui/badge';
 import { DataTable } from '@/components/ui/data-table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatNumber } from '@/lib/utils';
+import { formatSlotTime, formatSlotTimeRange, toLocalSlotDate } from '@/lib/time-utils';
 import { ongoingBookingsQueryOptions } from '@/queries/admin/booking';
 import type { OngoingBookingItem } from '@/types/model';
 import { useQuery } from '@tanstack/react-query';
@@ -12,6 +13,43 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
 dayjs.extend(relativeTime);
+
+const getBookingTimeRange = (item: OngoingBookingItem) => {
+  const slotStarts = [
+    ...item.courts.map((court) => court.slotStart),
+    ...item.coaches.map((coach) => coach.slotStart),
+    ...item.ballboys.map((ballboy) => ballboy.slotStart)
+  ]
+    .map((value) => toLocalSlotDate(value))
+    .filter((date): date is Date => !!date);
+
+  const slotEnds = [
+    ...item.courts.map((court) => court.slotEnd),
+    ...item.coaches.map((coach) => coach.slotEnd),
+    ...item.ballboys.map((ballboy) => ballboy.slotEnd)
+  ]
+    .map((value) => toLocalSlotDate(value))
+    .filter((date): date is Date => !!date);
+
+  const fallbackStart = toLocalSlotDate(item.schedule.startAt);
+  const fallbackEnd = toLocalSlotDate(item.schedule.endAt);
+
+  const start =
+    slotStarts.length > 0
+      ? slotStarts.reduce((earliest, current) =>
+          current.getTime() < earliest.getTime() ? current : earliest
+        )
+      : fallbackStart;
+
+  const end =
+    slotEnds.length > 0
+      ? slotEnds.reduce((latest, current) =>
+          current.getTime() > latest.getTime() ? current : latest
+        )
+      : fallbackEnd;
+
+  return { start, end };
+};
 
 const OnGoingBookingScheduleSection = () => {
   const { data: bookings, isLoading, isError } = useQuery(ongoingBookingsQueryOptions());
@@ -66,8 +104,7 @@ const OnGoingBookingScheduleSection = () => {
                 <span className="text-sm font-medium">{courtName}</span>
                 {courtSlots.map((court, idx) => (
                   <span key={idx} className="text-muted-foreground text-xs">
-                    {dayjs(court.slotStart).format('HH:mm')} -{' '}
-                    {dayjs(court.slotEnd).format('HH:mm')}
+                    {formatSlotTimeRange(court.slotStart, court.slotEnd)}
                   </span>
                 ))}
               </div>
@@ -77,8 +114,7 @@ const OnGoingBookingScheduleSection = () => {
                 <div key={idx} className="flex flex-col">
                   <span className="text-sm font-medium">Coach: {coach.coachName}</span>
                   <span className="text-muted-foreground text-xs">
-                    {dayjs(coach.slotStart).format('HH:mm')} -{' '}
-                    {dayjs(coach.slotEnd).format('HH:mm')}
+                    {formatSlotTimeRange(coach.slotStart, coach.slotEnd)}
                   </span>
                 </div>
               ))}
@@ -103,12 +139,16 @@ const OnGoingBookingScheduleSection = () => {
     colHelper.accessor('schedule', {
       header: 'Schedule',
       cell: (info) => {
-        const schedule = info.getValue();
+        const row = info.row.original;
+        const { start, end } = getBookingTimeRange(row);
+
         return (
           <div className="flex flex-col">
-            <span className="text-sm">{dayjs(schedule.startAt).format('DD MMM YYYY')}</span>
+            <span className="text-sm">
+              {formatSlotTime(start ?? row.schedule.startAt, 'DD MMM YYYY')}
+            </span>
             <span className="text-muted-foreground text-xs">
-              {dayjs(schedule.startAt).format('HH:mm')} - {dayjs(schedule.endAt).format('HH:mm')}
+              {formatSlotTimeRange(start ?? row.schedule.startAt, end ?? row.schedule.endAt)}
             </span>
           </div>
         );
@@ -121,13 +161,23 @@ const OnGoingBookingScheduleSection = () => {
     colHelper.accessor('schedule.status', {
       header: 'Status',
       cell: (info) => {
+        const row = info.row.original;
         const status = info.getValue();
-        const timeDisplay = info.row.original.schedule.timeDisplay;
+        const { start, end } = getBookingTimeRange(row);
         let variant: BadgeVariant['variant'];
+        let timeDisplay = row.schedule.timeDisplay;
 
         if (status === 'ongoing') variant = 'lightInfo';
         else if (status === 'upcoming') variant = 'lightWarning';
         else if (status === 'completed') variant = 'lightSuccess';
+
+        if (status === 'upcoming' && start) {
+          timeDisplay = `Starts ${dayjs(start).fromNow()}`;
+        } else if (status === 'ongoing' && end) {
+          timeDisplay = `Ends ${dayjs(end).fromNow()}`;
+        } else if (status === 'completed' && end) {
+          timeDisplay = `Ended ${dayjs(end).fromNow()}`;
+        }
 
         return (
           <div className="flex flex-col gap-1">

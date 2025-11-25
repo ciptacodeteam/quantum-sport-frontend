@@ -110,6 +110,35 @@ export function formatSlotTime(
 }
 
 /**
+ * Converts a slot time string into a Date object treated as local time.
+ */
+export function toLocalSlotDate(value: Date | string | null | undefined): Date | null {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    if (value instanceof Date) {
+      return isNaN(value.getTime()) ? null : value;
+    }
+
+    if (typeof value === 'string') {
+      const parsed = parseISOString(value);
+      if (parsed) {
+        return new Date(parsed.year, parsed.month, parsed.day, parsed.hours, parsed.minutes);
+      }
+      const date = new Date(value);
+      return isNaN(date.getTime()) ? null : date;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error converting slot time to local date:', error);
+    return null;
+  }
+}
+
+/**
  * Formats a slot time range (startAt - endAt)
  * @param startAt - The start time value
  * @param endAt - The end time value

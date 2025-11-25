@@ -221,6 +221,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               url: '/admin/booking-lapangan'
             },
             {
+              title: 'Add-ons & Equipment',
+              url: '/admin/booking-add-ons'
+            },
+            {
               title: 'Book Membership',
               url: '/admin/booking-membership'
             },
@@ -262,9 +266,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
 
     if (isAdminViewer) {
-      // ADMIN_VIEWER can view everything except Dashboard and Master Data
+      // ADMIN_VIEWER can view everything except Dashboard, Master Data, Kelola Karyawan, and Marketing
       return data.navMain.filter(
-        (item) => item.title !== 'Dashboard' && item.title !== 'Master Data'
+        (item) => 
+          item.title !== 'Dashboard' && 
+          item.title !== 'Master Data' &&
+          item.title !== 'Kelola Karyawan' &&
+          item.title !== 'Marketing'
       );
     }
 

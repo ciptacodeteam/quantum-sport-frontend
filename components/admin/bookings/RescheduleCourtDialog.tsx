@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { rescheduleBookedCourtApi } from '@/api/admin/bookedCourt';
@@ -21,7 +21,6 @@ import {
   DialogTitle,
   DialogTrigger
 } from '@/components/ui/dialog';
-import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 export type BookingDetailWithSlot = BookingDetail & {
@@ -43,6 +42,7 @@ const formatCurrency = (value: number) =>
   }).format(value);
 
 export function RescheduleCourtDialog({ detail, canReschedule, onSuccess }: RescheduleCourtDialogProps) {
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const [selectedCourtId, setSelectedCourtId] = useState<string | null>(
@@ -122,11 +122,12 @@ export function RescheduleCourtDialog({ detail, canReschedule, onSuccess }: Resc
 
   const mutation = useMutation({
     mutationFn: (slotId: string) =>
-      rescheduleBookedCourtApi(detail.id, {
-        courtSlotId: slotId
-      }),
+      rescheduleBookedCourtApi(detail.id, slotId),
     onSuccess: () => {
       toast.success('Slot berhasil dijadwalkan ulang');
+      // Invalidate bookings queries to refresh the table
+      queryClient.invalidateQueries({ queryKey: ['admin', 'bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'bookings', 'ongoing-schedule'] });
       setOpen(false);
       resetState();
       onSuccess?.();
@@ -168,183 +169,180 @@ export function RescheduleCourtDialog({ detail, canReschedule, onSuccess }: Resc
       }}
     >
       <DialogTrigger asChild>{dialogTrigger}</DialogTrigger>
-      <DialogContent className="max-w-4xl">
-        <DialogHeader>
-          <DialogTitle>Reschedule Slot Lapangan</DialogTitle>
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+        <DialogHeader className="pb-3">
+          <DialogTitle className="text-lg">Reschedule Slot Lapangan</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-6 lg:grid-cols-[260px,1fr]">
-          <div className="space-y-4 rounded-lg border p-4">
-            <div>
-              <p className="text-xs uppercase text-muted-foreground">Jadwal Saat Ini</p>
-              <p className="text-sm font-semibold">{detail.court?.name || detail.courtId || '-'}</p>
-              <p className="text-sm text-muted-foreground">
-                {detail.slot?.startAt ? dayjs(detail.slot.startAt).format('dddd, DD MMM YYYY') : '-'}
-              </p>
-              <p className="text-sm">
-                {detail.slot
-                  ? `${formatSlotTime(detail.slot.startAt)} - ${formatSlotTime(detail.slot.endAt)}`
-                  : '-'}
-              </p>
-              <p className="text-sm font-semibold text-primary mt-2">{formatCurrency(detail.price)}</p>
+        <div className="flex-1 overflow-y-auto pr-1">
+          <div className="space-y-4">
+            {/* Current Booking Info - Compact */}
+            <div className="rounded-lg border bg-muted/30 p-3">
+              <p className="text-xs font-semibold uppercase text-muted-foreground mb-2">Jadwal Saat Ini</p>
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold truncate">{detail.court?.name || detail.courtId || '-'}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {detail.slot?.startAt ? dayjs(detail.slot.startAt).format('DD MMM YYYY') : '-'} •{' '}
+                    {detail.slot
+                      ? `${formatSlotTime(detail.slot.startAt)} - ${formatSlotTime(detail.slot.endAt)}`
+                      : '-'}
+                  </p>
+                </div>
+                <p className="text-sm font-semibold text-primary whitespace-nowrap">{formatCurrency(detail.price)}</p>
+              </div>
             </div>
-            <Separator />
-            <div>
-              <p className="text-xs uppercase text-muted-foreground mb-2">Pilih Tanggal</p>
+
+            {/* Date Selection - Compact */}
+            <div className="rounded-lg border p-3">
+              <p className="text-xs font-semibold uppercase text-muted-foreground mb-2">Pilih Tanggal</p>
               <Calendar
                 mode="single"
                 selected={selectedDate}
                 onSelect={(date) => date && setSelectedDate(date)}
                 disabled={(date) => dayjs(date).isBefore(dayjs(), 'day')}
+                className="rounded-md"
               />
             </div>
-          </div>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">
-                  Ketersediaan • {dayjs(selectedDate).format('dddd, DD MMM YYYY')}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Pilih lapangan dan slot baru untuk menggantikan jadwal saat ini
-                </p>
+            {/* Availability Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold">
+                    Ketersediaan • {dayjs(selectedDate).format('DD MMM YYYY')}
+                  </p>
+                </div>
+                {selectedSlotId && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedSlotId(null)}
+                    className="h-7 text-xs"
+                  >
+                    Reset
+                  </Button>
+                )}
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSelectedSlotId(null)}
-                disabled={!selectedSlotId}
-              >
-                Reset pilihan
-              </Button>
-            </div>
 
-            {isFetching ? (
-              <div className="rounded-md border bg-muted/30 p-4 text-center text-sm text-muted-foreground">
-                Memuat ketersediaan...
-              </div>
-            ) : slotsForSelectedDate.length === 0 ? (
-              <div className="rounded-md border bg-muted/30 p-4 text-center text-sm text-muted-foreground">
-                Tidak ada slot tersedia pada tanggal ini.
-              </div>
-            ) : (
-              <>
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase text-muted-foreground">Pilih Lapangan</p>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {data?.courts.map((court) => {
-                      const courtSlots = slotsByCourt.get(court.id) || [];
-                      const upcomingSlots = courtSlots.filter(
-                        (slot) => dayjs(slot.startAt).isAfter(dayjs()) && slot.id !== currentSlotId
-                      );
-                      const availableCount = upcomingSlots.filter((slot) => slot.isAvailable).length;
-                      const isDisabled = upcomingSlots.length === 0;
+              {isFetching ? (
+                <div className="rounded-md border bg-muted/30 p-3 text-center text-xs text-muted-foreground">
+                  Memuat ketersediaan...
+                </div>
+              ) : slotsForSelectedDate.length === 0 ? (
+                <div className="rounded-md border bg-muted/30 p-3 text-center text-xs text-muted-foreground">
+                  Tidak ada slot tersedia pada tanggal ini.
+                </div>
+              ) : (
+                <>
+                  {/* Court Selection - Compact */}
+                  <div>
+                    <p className="text-xs font-semibold uppercase text-muted-foreground mb-2">Pilih Lapangan</p>
+                    <div className="flex gap-2 overflow-x-auto pb-2">
+                      {data?.courts.map((court) => {
+                        const courtSlots = slotsByCourt.get(court.id) || [];
+                        const upcomingSlots = courtSlots.filter(
+                          (slot) => dayjs(slot.startAt).isAfter(dayjs()) && slot.id !== currentSlotId
+                        );
+                        const availableCount = upcomingSlots.filter((slot) => slot.isAvailable).length;
+                        const isDisabled = upcomingSlots.length === 0;
 
-                      return (
-                        <button
-                          key={court.id}
-                          type="button"
-                          onClick={() => !isDisabled && setSelectedCourtId(court.id)}
-                          className={cn(
-                            'rounded-lg border p-3 text-left transition',
-                            selectedCourtId === court.id
-                              ? 'border-primary bg-primary/5 shadow-sm'
-                              : 'hover:border-primary/40',
-                            isDisabled && 'cursor-not-allowed opacity-50'
-                          )}
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <div>
-                              <p className="text-sm font-semibold">{court.name}</p>
-                              {court.description && (
-                                <p className="text-xs text-muted-foreground line-clamp-2">
-                                  {court.description}
-                                </p>
-                              )}
+                        return (
+                          <button
+                            key={court.id}
+                            type="button"
+                            onClick={() => !isDisabled && setSelectedCourtId(court.id)}
+                            className={cn(
+                              'rounded-md border px-3 py-2 text-left transition whitespace-nowrap shrink-0',
+                              selectedCourtId === court.id
+                                ? 'border-primary bg-primary/5 shadow-sm'
+                                : 'hover:border-primary/40',
+                              isDisabled && 'cursor-not-allowed opacity-50'
+                            )}
+                          >
+                            <div className="flex items-center gap-2">
+                              <p className="text-xs font-semibold">{court.name}</p>
+                              <Badge variant="outline" className="text-[10px]">
+                                {availableCount}/{courtSlots.length}
+                              </Badge>
                             </div>
-                            <Badge variant="outline">
-                              {availableCount}/{courtSlots.length}
-                            </Badge>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Slot Selection - Compact with scroll */}
+                  {selectedCourtId && (
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs font-semibold uppercase text-muted-foreground">Pilih Slot</p>
+                        <span className="text-xs text-muted-foreground">
+                          {selectedCourtSlots.length} slot
+                        </span>
+                      </div>
+                      {selectedCourtSlots.length === 0 ? (
+                        <div className="rounded-md border bg-muted/20 p-3 text-center text-xs text-muted-foreground">
+                          Tidak ada slot untuk lapangan ini.
+                        </div>
+                      ) : (
+                        <div className="max-h-[200px] overflow-y-auto rounded-md border p-2">
+                          <div className="grid grid-cols-3 gap-1.5">
+                            {selectedCourtSlots.map((slot) => {
+                              const isPast = dayjs(slot.startAt).isBefore(dayjs());
+                              const isSelectable =
+                                slot.id !== currentSlotId && slot.isAvailable && !isPast;
+                              const isSelected = selectedSlotId === slot.id;
+
+                              return (
+                                <button
+                                  key={slot.id}
+                                  type="button"
+                                  onClick={() => isSelectable && setSelectedSlotId(slot.id)}
+                                  disabled={!isSelectable}
+                                  className={cn(
+                                    'flex flex-col rounded-md border p-2 text-left transition text-xs',
+                                    isSelected && 'border-primary bg-primary/5 shadow-sm',
+                                    !isSelectable && 'cursor-not-allowed opacity-50 bg-muted/40'
+                                  )}
+                                >
+                                  <span className="font-semibold text-[11px]">
+                                    {formatSlotTime(slot.startAt)}
+                                  </span>
+                                  <span className="text-[10px] text-muted-foreground mt-0.5">
+                                    {formatCurrency(slot.price || 0)}
+                                  </span>
+                                  {!slot.isAvailable && (
+                                    <span className="text-[9px] text-amber-600 mt-0.5">Booked</span>
+                                  )}
+                                  {isPast && (
+                                    <span className="text-[9px] text-amber-600 mt-0.5">Past</span>
+                                  )}
+                                </button>
+                              );
+                            })}
                           </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold uppercase text-muted-foreground">Pilih Slot</p>
-                    {selectedCourtId && (
-                      <span className="text-xs text-muted-foreground">
-                        {selectedCourtSlots.length} slot ditemukan
-                      </span>
-                    )}
-                  </div>
-
-                    {!selectedCourtId ? (
-                      <div className="rounded-md border bg-muted/20 p-4 text-center text-sm text-muted-foreground">
-                        Pilih lapangan untuk melihat slot yang tersedia.
-                      </div>
-                    ) : selectedCourtSlots.length === 0 ? (
-                      <div className="rounded-md border bg-muted/20 p-4 text-center text-sm text-muted-foreground">
-                        Tidak ada slot untuk lapangan ini pada tanggal terpilih.
-                      </div>
-                    ) : (
-                      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                        {selectedCourtSlots.map((slot) => {
-                          const isPast = dayjs(slot.startAt).isBefore(dayjs());
-                          const isSelectable =
-                            slot.id !== currentSlotId && slot.isAvailable && !isPast;
-                          const isSelected = selectedSlotId === slot.id;
-
-                          return (
-                            <button
-                              key={slot.id}
-                              type="button"
-                              onClick={() => isSelectable && setSelectedSlotId(slot.id)}
-                              disabled={!isSelectable}
-                              className={cn(
-                                'flex flex-col rounded-lg border p-3 text-left transition',
-                                isSelected && 'border-primary bg-primary/5 shadow-sm',
-                                !isSelectable && 'cursor-not-allowed opacity-50 bg-muted/40'
-                              )}
-                            >
-                              <span className="text-sm font-semibold">
-                                {formatSlotTime(slot.startAt)} - {formatSlotTime(slot.endAt)}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {formatCurrency(slot.price || 0)}
-                              </span>
-                              {!slot.isAvailable && (
-                                <span className="text-[11px] text-amber-600 mt-1">
-                                  Slot sudah dibooking
-                                </span>
-                              )}
-                              {isPast && (
-                                <span className="text-[11px] text-amber-600 mt-1">Slot sudah lewat</span>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                </div>
-              </>
-            )}
-
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setOpen(false)} disabled={mutation.isPending}>
-                Batal
-              </Button>
-              <Button
-                onClick={handleConfirm}
-                disabled={!selectedSlotId || mutation.isPending}
-                loading={mutation.isPending}
-              >
-                Simpan Perubahan
-              </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
+        </div>
+        
+        {/* Fixed Footer */}
+        <div className="flex justify-end gap-2 pt-4 border-t mt-4">
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={mutation.isPending} size="sm">
+            Batal
+          </Button>
+          <Button
+            onClick={handleConfirm}
+            disabled={!selectedSlotId || mutation.isPending}
+            loading={mutation.isPending}
+            size="sm"
+          >
+            Simpan
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

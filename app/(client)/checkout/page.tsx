@@ -453,7 +453,8 @@ export default function CheckoutPage() {
           ))}
         </section>
 
-        {selectedCoaches.length > 0 && (
+        {/* Coach section - commented out as not in use */}
+        {/* {selectedCoaches.length > 0 && (
           <section className="border-muted space-y-3 rounded-lg border bg-white p-4">
             <header className="space-y-1">
               <h3 className="text-base font-semibold">Coach</h3>
@@ -488,7 +489,7 @@ export default function CheckoutPage() {
               ))}
             </div>
           </section>
-        )}
+        )} */}
 
         {selectedInventories.length > 0 && (
           <section className="border-muted space-y-3 rounded-lg border bg-white p-4">
