@@ -59,7 +59,7 @@ const EditClassForm = ({ classId }: Props) => {
       maxBookingPax: data?.maxBookingPax || 1,
       gender: data?.gender || 0,
       ageMin: data?.ageMin || 0,
-      isActive: data?.isActive ?? true
+      isActive: data?.isActive
     }
   });
 
@@ -85,7 +85,13 @@ const EditClassForm = ({ classId }: Props) => {
   );
 
   const onSubmit: SubmitHandler<FormSchema> = (formData) => {
-    mutate({ id: data.id, data: formData });
+    mutate({
+      id: data.id,
+      data: {
+        ...formData,
+        isActive: formData.isActive ? 1 : 0
+      }
+    });
   };
 
   return (

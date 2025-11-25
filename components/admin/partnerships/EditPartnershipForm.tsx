@@ -36,7 +36,7 @@ const EditPartnershipForm = ({ data }: Props) => {
     defaultValues: {
       name: data?.name || '',
       description: data?.description || '',
-      isActive: data?.isActive ?? true,
+      isActive: data?.isActive,
       logo: undefined
     }
   });
@@ -70,7 +70,10 @@ const EditPartnershipForm = ({ data }: Props) => {
   const onSubmit: SubmitHandler<FormSchema> = (formData) => {
     mutate({
       id: data.id,
-      data: formData
+      data: {
+        ...formData,
+        isActive: formData.isActive ? 1 : 0
+      }
     });
   };
   return (
