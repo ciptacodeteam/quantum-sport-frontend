@@ -36,7 +36,7 @@ const EditCourtForm = ({ courtId }: Props) => {
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      isActive: data?.isActive ?? true,
+      isActive: data?.isActive,
       image: undefined,
       name: data?.name || '',
       description: data?.description || ''
@@ -77,7 +77,10 @@ const EditCourtForm = ({ courtId }: Props) => {
 
     mutate({
       id: courtId,
-      data: formData
+      data: {
+        ...formData,
+        isActive: formData.isActive ? 1 : 0
+      }
     });
   };
 

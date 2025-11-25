@@ -3,29 +3,25 @@
 import MainHeader from '@/components/headers/MainHeader';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { coachAvailabilityQueryOptions } from '@/queries/coach';
 import { inventoryAvailabilityQueryOptions } from '@/queries/inventory';
 import { useBookingStore, type BookingItem } from '@/stores/useBookingStore';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { ChevronRight, Minus, Plus, Check } from 'lucide-react';
-import Image from 'next/image';
+import { Minus, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
 
 export default function AddOnsPage() {
   const router = useRouter();
   const bookingItems = useBookingStore((state) => state.bookingItems) as BookingItem[];
-  const selectedCoaches = useBookingStore((state) => state.selectedCoaches);
-  const addCoachToStore = useBookingStore((state) => state.addCoach);
-  const removeCoachFromStore = useBookingStore((state) => state.removeCoach);
+  // const selectedCoaches = useBookingStore((state) => state.selectedCoaches);
+  // const addCoachToStore = useBookingStore((state) => state.addCoach);
+  // const removeCoachFromStore = useBookingStore((state) => state.removeCoach);
   const selectedInventories = useBookingStore((state) => state.selectedInventories);
   const addInventoryToStore = useBookingStore((state) => state.addInventory);
   const removeInventoryFromStore = useBookingStore((state) => state.removeInventory);
-  const [activeTab, setActiveTab] = useState<'coach' | 'raket'>('coach');
+  const [activeTab, setActiveTab] = useState<'coach' | 'raket'>('raket');
   const {
     data: inventoryAvailability,
     isPending: isInventoryPending,
@@ -85,14 +81,14 @@ export default function AddOnsPage() {
     };
   }, [bookingItems]);
 
-  const {
-    data: coachAvailability,
-    isPending: isCoachPending,
-    isError: isCoachError
-  } = useQuery(coachAvailabilityQueryOptions(bookingTimeRange.startAt, bookingTimeRange.endAt));
+  // const {
+  //   data: coachAvailability,
+  //   isPending: isCoachPending,
+  //   isError: isCoachError
+  // } = useQuery(coachAvailabilityQueryOptions(bookingTimeRange.startAt, bookingTimeRange.endAt));
 
   const hasBookingSelection = bookingItems.length > 0;
-  const coachList = coachAvailability ?? [];
+  // const coachList = coachAvailability ?? [];
 
   // 🏸 Data Raket
   const [racketQty, setRacketQty] = useState(0);
@@ -124,44 +120,44 @@ export default function AddOnsPage() {
     return bookingItems[0]?.date ?? dayjs().format('YYYY-MM-DD');
   }, [bookingItems, bookingTimeRange.startAt]);
 
-  const handleCoachToggle = (item: any) => {
-    if (!hasBookingSelection) {
-      toast.error('Tambahkan booking lapangan terlebih dahulu sebelum memilih coach.');
-      return;
-    }
+  // const handleCoachToggle = (item: any) => {
+  //   if (!hasBookingSelection) {
+  //     toast.error('Tambahkan booking lapangan terlebih dahulu sebelum memilih coach.');
+  //     return;
+  //   }
 
-    if (!item?.slotId || !item?.coach?.id) {
-      toast.error('Data coach tidak valid.');
-      return;
-    }
+  //   if (!item?.slotId || !item?.coach?.id) {
+  //     toast.error('Data coach tidak valid.');
+  //     return;
+  //   }
 
-    const isSelected = selectedCoaches.some((coach) => coach.slotId === item.slotId);
+  //   const isSelected = selectedCoaches.some((coach) => coach.slotId === item.slotId);
 
-    if (isSelected) {
-      removeCoachFromStore(item.coach.id, item.startAt ?? '', item.slotId);
-      toast.success(`${item.coach.name ?? 'Coach'} dihapus dari add-ons.`);
-      return;
-    }
+  //   if (isSelected) {
+  //     removeCoachFromStore(item.coach.id, item.startAt ?? '', item.slotId);
+  //     toast.success(`${item.coach.name ?? 'Coach'} dihapus dari add-ons.`);
+  //     return;
+  //   }
 
-    const start = item.startAt ? dayjs(item.startAt) : null;
-    const end = item.endAt ? dayjs(item.endAt) : null;
-    const timeSlot =
-      start && end ? `${start.format('HH:mm')} - ${end.format('HH:mm')}` : 'Pilih jadwal coach';
+  //   const start = item.startAt ? dayjs(item.startAt) : null;
+  //   const end = item.endAt ? dayjs(item.endAt) : null;
+  //   const timeSlot =
+  //     start && end ? `${start.format('HH:mm')} - ${end.format('HH:mm')}` : 'Pilih jadwal coach';
 
-    addCoachToStore({
-      coachId: item.coach.id,
-      coachName: item.coach.name ?? 'Coach',
-      timeSlot,
-      price: item.price ?? 0,
-      date: start ? start.format('YYYY-MM-DD') : primaryBookingDate,
-      slotId: item.slotId,
-      coachTypeId: item.coachTypeId ?? null,
-      startAt: item.startAt,
-      endAt: item.endAt
-    });
+  //   addCoachToStore({
+  //     coachId: item.coach.id,
+  //     coachName: item.coach.name ?? 'Coach',
+  //     timeSlot,
+  //     price: item.price ?? 0,
+  //     date: start ? start.format('YYYY-MM-DD') : primaryBookingDate,
+  //     slotId: item.slotId,
+  //     coachTypeId: item.coachTypeId ?? null,
+  //     startAt: item.startAt,
+  //     endAt: item.endAt
+  //   });
 
-    toast.success(`${item.coach.name ?? 'Coach'} ditambahkan ke add-ons.`);
-  };
+  //   toast.success(`${item.coach.name ?? 'Coach'} ditambahkan ke add-ons.`);
+  // };
 
   const handleInventoryQtyChange = (nextQty: number) => {
     if (!hasBookingSelection) {
@@ -198,7 +194,7 @@ export default function AddOnsPage() {
 
       <div className="mx-auto w-11/12 pt-28">
         {/* Tabs utama */}
-        <div className="mb-4 flex gap-2">
+        {/* <div className="mb-4 flex gap-2">
           {['Coach', 'Raket'].map((item) => (
             <Button
               key={item}
@@ -209,10 +205,10 @@ export default function AddOnsPage() {
               {item}
             </Button>
           ))}
-        </div>
+        </div> */}
 
         {/* === COACH LIST === */}
-        {activeTab === 'coach' && (
+        {/* {activeTab === 'coach' && (
           <div className="mb-4 flex flex-col gap-3">
             {!hasBookingSelection && (
               <Card>
@@ -326,7 +322,7 @@ export default function AddOnsPage() {
                 );
               })}
           </div>
-        )}
+        )} */}
 
         {/* === RAKET === */}
         {activeTab === 'raket' && (

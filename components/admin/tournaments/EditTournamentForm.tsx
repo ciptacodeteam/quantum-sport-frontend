@@ -59,11 +59,12 @@ type FormSchema = z.infer<typeof formSchema>;
 
 type TournamentPayload = Omit<
   Tournament,
-  'id' | 'createdAt' | 'updatedAt' | 'image' | 'startDate' | 'endDate'
+  'id' | 'createdAt' | 'updatedAt' | 'image' | 'startDate' | 'endDate' | 'isActive'
 > & {
   image?: File;
   startDate: string; // YYYY-MM-DD format
   endDate: string; // YYYY-MM-DD format
+  isActive: number;
 };
 
 type Props = {
@@ -94,7 +95,7 @@ const EditTournamentForm = ({ tournamentId }: Props) => {
       teamSize: data?.teamSize || 2,
       entryFee: data?.entryFee || 0,
       location: data?.location || '',
-      isActive: data?.isActive ?? true
+      isActive: data?.isActive
     }
   });
 
@@ -137,7 +138,7 @@ const EditTournamentForm = ({ tournamentId }: Props) => {
       teamSize: formData.teamSize || 1,
       entryFee: formData.entryFee || 0,
       location: formData.location,
-      isActive: formData.isActive
+      isActive: formData.isActive ? 1 : 0
     };
 
     mutate({
