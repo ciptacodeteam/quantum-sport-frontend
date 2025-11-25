@@ -15,7 +15,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Phone } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import { Controller, type SubmitHandler, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import z from 'zod';
@@ -168,16 +168,6 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
     resendOtp({ phone: formatPhone(phone) });
   };
 
-  useEffect(() => {
-    const subscription = form.watch((value) => {
-      const otp = (value as { otp?: string })?.otp;
-      if (otp && otp.length === 4) {
-        form.handleSubmit(onSubmit)();
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [form, onSubmit]);
-
   return (
     <form className="py-6 md:p-8" onSubmit={form.handleSubmit(onSubmit)}>
       <FieldSet>
@@ -199,7 +189,12 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
                   <InputOTP
                     maxLength={4}
                     value={field.value}
-                    onChange={(value) => field.onChange(value)}
+                    onChange={(value) => {
+                      field.onChange(value);
+                      if (value.length === 4) {
+                        form.handleSubmit(onSubmit)();
+                      }
+                    }}
                   >
                     <InputOTPGroup>
                       <InputOTPSlot index={0} className="size-14 md:text-xl" />

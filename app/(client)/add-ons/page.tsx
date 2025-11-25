@@ -185,8 +185,10 @@ export default function AddOnsPage() {
         quantity: safeQty,
         date: primaryBookingDate
       });
+      toast.success(`${racketInventory.name} ditambahkan (${safeQty} raket).`);
     } else {
       removeInventoryFromStore(racketInventory.id, 'default');
+      toast.success(`${racketInventory.name} dihapus dari add-ons.`);
     }
   };
 

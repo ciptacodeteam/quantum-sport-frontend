@@ -141,7 +141,7 @@ export default function BannerSection() {
             </div>
             <footer className="flex w-full px-6">
               <Button asChild variant="secondary" className="mt-14 w-full">
-                <Link href="/valuepack">Gabung Sekarang</Link>
+                <Link href="/membership">Gabung Sekarang</Link>
               </Button>
             </footer>
           </div>

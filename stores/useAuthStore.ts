@@ -24,11 +24,21 @@ const useAuthStore = create<Auth>()(
       loading: false,
       setLoading: (loading) => set({ loading }),
       setToken: (token) => {
+        if (typeof window !== 'undefined') {
+          if (token) {
+            window.localStorage.setItem('token', token);
+          } else {
+            window.localStorage.removeItem('token');
+          }
+        }
         set({ token, isAuth: !!token });
       },
       setUser: (user) => set({ user }),
       setAuth: (isAuth) => set({ isAuth }),
       logout: () => {
+        if (typeof window !== 'undefined') {
+          window.localStorage.removeItem('token');
+        }
         set({ isAuth: false, user: null, token: null });
       },
       login: (token, user) => {

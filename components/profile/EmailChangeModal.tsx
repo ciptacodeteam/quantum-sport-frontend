@@ -107,16 +107,6 @@ export default function EmailChangeModal({ open, email, onOpenChange, onSuccess 
     requestChange({ newEmail });
   };
 
-  useEffect(() => {
-    const subscription = otpForm.watch((value) => {
-      const otp = (value as { otp?: string })?.otp;
-      if (otp && otp.length === 6) {
-        otpForm.handleSubmit(handleOtpSubmit)();
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [otpForm, handleOtpSubmit]);
-
   return (
     <Dialog
       open={open}
@@ -190,7 +180,12 @@ export default function EmailChangeModal({ open, email, onOpenChange, onSuccess 
                         <InputOTP
                           maxLength={6}
                           value={field.value}
-                          onChange={(value) => field.onChange(value)}
+                          onChange={(value) => {
+                            field.onChange(value);
+                            if (value.length === 6) {
+                              otpForm.handleSubmit(handleOtpSubmit)();
+                            }
+                          }}
                         >
                           <InputOTPGroup>
                             <InputOTPSlot index={0} className="size-14 md:text-xl" />
