@@ -65,8 +65,6 @@ export function VerifyContactOtpDialog({
     onResendOtp();
   };
 
-<<<<<<< HEAD
-=======
   const handleOtpChange = useCallback(
     (value, info: { name?: string }) => {
       if (info.name === 'otp' && value.otp && value.otp.length === maxLength && !isPending) {
@@ -83,7 +81,6 @@ export function VerifyContactOtpDialog({
     return () => unsubscribe();
   }, [form.watch, handleOtpChange]);
 
->>>>>>> 000da44dcfc15a475fa4d709f9fbe932dbf6957e
   return (
     <Dialog
       open={open}
