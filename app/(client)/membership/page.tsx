@@ -25,22 +25,25 @@ export default function MembershipPage() {
       <main className="mx-auto flex w-11/12 max-w-7xl flex-col gap-4 pb-12">
         {/* Loading state */}
         {isLoading && (
-          <div className="text-muted-foreground py-10 text-center text-sm">
-            Memuat membership...
+          <div className="flex min-h-[40vh] flex-col items-center justify-center gap-2 text-center">
+            <p className="text-muted-foreground text-sm">Memuat membership...</p>
           </div>
         )}
 
         {/* Error state */}
         {isError && !isLoading && (
-          <div className="text-destructive py-10 text-center text-sm">
-            Gagal memuat membership. Silakan coba lagi.
+          <div className="flex min-h-[40vh] flex-col items-center justify-center gap-2 text-center">
+            <p className="text-destructive text-sm">Gagal memuat membership. Silakan coba lagi.</p>
           </div>
         )}
 
         {/* Empty state */}
         {!isLoading && !isError && memberships.length === 0 && (
-          <div className="text-muted-foreground py-10 text-center text-sm">
-            Membership belum tersedia.
+          <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-center">
+            <p className="text-lg font-semibold">Belum ada Paket Membership</p>
+            <p className="text-muted-foreground text-sm max-w-sm">
+              Kami sedang menyiapkan paket terbaik untuk kamu. Silahkan tunggu beberapa saat.
+            </p>
           </div>
         )}
 

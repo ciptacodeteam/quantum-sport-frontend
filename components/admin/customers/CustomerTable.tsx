@@ -67,14 +67,14 @@ const CustomerTable = () => {
             {info.getValue() && (
               <Tooltip>
                 <TooltipTrigger>
-                  {info.row.original.emailVerified ? (
+                  {info.row.original.phoneVerified ? (
                     <IconCircleCheckFilled className="text-green-500" />
                   ) : (
                     <IconCircleXFilled className="text-red-500" />
                   )}
                 </TooltipTrigger>
                 <TooltipContent>
-                  {info.row.original.emailVerified ? 'Terverifikasi' : 'Belum Terverifikasi'}
+                  {info.row.original.phoneVerified ? 'Terverifikasi' : 'Belum Terverifikasi'}
                 </TooltipContent>
               </Tooltip>
             )}

@@ -30,7 +30,7 @@ const MembershipCtaSection = () => {
         </div>
         <footer className="w-full px-4">
           <Button asChild variant="secondary" className="mt-4 w-full">
-            <Link prefetch href="/clubs">
+            <Link prefetch href="/membership">
               Gabung Sekarang
             </Link>
           </Button>

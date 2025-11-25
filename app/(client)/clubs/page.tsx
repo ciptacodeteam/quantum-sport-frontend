@@ -193,7 +193,7 @@ const ClubsPage = () => {
                           </div>
                           <div className="flex items-center gap-1">
                             <IconUsers className="size-4" />
-                            <span>{club._count.clubMember} Anggota</span>
+                            <span>{club._count?.clubMember ?? 0} Anggota</span>
                           </div>
                         </div>
 

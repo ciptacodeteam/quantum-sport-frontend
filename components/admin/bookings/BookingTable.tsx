@@ -25,6 +25,10 @@ import { createColumnHelper } from '@tanstack/react-table';
 import { useMemo } from 'react';
 import { toast } from 'sonner';
 import { CopyButton } from '@/components/ui/clipboard-copy';
+import {
+  RescheduleCourtDialog,
+  type BookingDetailWithSlot
+} from '@/components/admin/bookings/RescheduleCourtDialog';
 
 // Helper function to parse ISO string without timezone conversion
 const parseISOString = (
@@ -113,6 +117,21 @@ const isBefore = (date1: Date | string, date2: Date | string): boolean => {
   const d1 = date1 instanceof Date ? date1 : new Date(date1);
   const d2 = date2 instanceof Date ? date2 : new Date(date2);
   return d1.getTime() < d2.getTime();
+};
+
+const differenceInDays = (date1: Date | string, date2: Date | string = new Date()): number => {
+  const d1 = date1 instanceof Date ? new Date(date1.getTime()) : new Date(date1);
+  const d2 = date2 instanceof Date ? new Date(date2.getTime()) : new Date(date2);
+
+  if (isNaN(d1.getTime()) || isNaN(d2.getTime())) {
+    return 0;
+  }
+
+  d1.setHours(0, 0, 0, 0);
+  d2.setHours(0, 0, 0, 0);
+
+  const diff = d1.getTime() - d2.getTime();
+  return Math.floor(diff / (1000 * 60 * 60 * 24));
 };
 
 // Helper function to convert numeric status to BookingStatus enum
@@ -211,6 +230,67 @@ const BookingTable = () => {
               {details.length > 1 && (
                 <span className="text-muted-foreground text-xs">+{details.length - 1} slot</span>
               )}
+            </div>
+          );
+        }
+      }),
+      colHelper.display({
+        id: 'reschedule',
+        header: 'Reschedule',
+        cell: ({ row }) => {
+          const booking = row.original;
+          const details = booking.details || [];
+
+          if (details.length === 0) {
+            return <span className="text-muted-foreground text-xs">Tidak ada slot</span>;
+          }
+
+          return (
+            <div className="space-y-2">
+              {details.map((detail) => {
+                if (!detail.slot) {
+                  return (
+                    <div
+                      key={detail.id}
+                      className="text-muted-foreground rounded-lg border bg-muted/30 px-3 py-2 text-xs"
+                    >
+                      Slot tidak tersedia
+                    </div>
+                  );
+                }
+
+                const slotStart = detail.slot.startAt;
+                const daysUntil = differenceInDays(slotStart);
+                const canReschedule = daysUntil >= 3;
+
+                return (
+                  <div key={detail.id} className="rounded-lg border px-3 py-2 shadow-sm">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="text-xs">
+                        <p className="font-semibold">{detail.court?.name || '-'}</p>
+                        <p className="text-muted-foreground">
+                          {formatSlotDate(slotStart, 'DD MMM YYYY')} •{' '}
+                          {formatSlotTime(detail.slot.startAt)} - {formatSlotTime(detail.slot.endAt)}
+                        </p>
+                        {!canReschedule && (
+                          <p className="text-amber-600 mt-1 text-[11px]">
+                            Jadwal kurang dari 3 hari lagi
+                          </p>
+                        )}
+                      </div>
+                      <RescheduleCourtDialog
+                        detail={detail as BookingDetailWithSlot}
+                        canReschedule={canReschedule}
+                        onSuccess={() =>
+                          queryClient.invalidateQueries({
+                            queryKey: ['admin', 'bookings']
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           );
         }
@@ -352,25 +432,50 @@ const BookingTable = () => {
                       <div className="border-t pt-4">
                         <p className="mb-2 text-sm font-medium">Detail Slot</p>
                         <div className="space-y-2">
-                          {booking.details.map((detail) => (
-                            <div key={detail.id} className="bg-muted/50 rounded-lg border p-3">
-                              <div className="flex items-start justify-between">
-                                <div>
-                                  <p className="text-sm font-medium">{detail.court?.name || '-'}</p>
-                                  {detail.slot && (
-                                    <p className="text-muted-foreground text-xs">
-                                      {formatSlotDate(detail.slot.startAt, 'DD MMM YYYY')} -{' '}
-                                      {formatSlotTime(detail.slot.startAt)} -{' '}
-                                      {formatSlotTime(detail.slot.endAt)}
+                          {booking.details.map((detail) => {
+                            const slotStart = detail.slot?.startAt;
+                            const daysUntil = slotStart ? differenceInDays(slotStart) : -1;
+                            const canReschedule = !!slotStart && daysUntil >= 3;
+
+                            return (
+                              <div key={detail.id} className="bg-muted/50 rounded-lg border p-3">
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                  <div>
+                                    <p className="text-sm font-medium">{detail.court?.name || '-'}</p>
+                                    {detail.slot && (
+                                      <p className="text-muted-foreground text-xs">
+                                        {formatSlotDate(detail.slot.startAt, 'DD MMM YYYY')} -{' '}
+                                        {formatSlotTime(detail.slot.startAt)} -{' '}
+                                        {formatSlotTime(detail.slot.endAt)}
+                                      </p>
+                                    )}
+                                    {!canReschedule && slotStart && (
+                                      <p className="text-[11px] text-amber-600 mt-1">
+                                        Reschedule hanya tersedia hingga H-3 (
+                                        {Math.max(daysUntil, 0)} hari tersisa)
+                                      </p>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <p className="text-base font-medium">
+                                      Rp {new Intl.NumberFormat('id-ID').format(detail.price)}
                                     </p>
-                                  )}
+                                    {detail.slot && (
+                                      <RescheduleCourtDialog
+                                        detail={detail as BookingDetailWithSlot}
+                                        canReschedule={canReschedule}
+                                        onSuccess={() =>
+                                          queryClient.invalidateQueries({
+                                            queryKey: ['admin', 'bookings']
+                                          })
+                                        }
+                                      />
+                                    )}
+                                  </div>
                                 </div>
-                                <p className="text-base font-medium">
-                                  Rp {new Intl.NumberFormat('id-ID').format(detail.price)}
-                                </p>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     )}
@@ -524,7 +629,7 @@ const BookingTable = () => {
         }
       })
     ],
-    [colHelper, updateStatus, cancelBooking]
+    [colHelper, updateStatus, cancelBooking, queryClient]
   );
 
   const { data, isPending } = useQuery(adminBookingsQueryOptions());

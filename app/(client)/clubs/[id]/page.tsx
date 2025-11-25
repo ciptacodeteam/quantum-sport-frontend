@@ -198,7 +198,7 @@ const ClubDetailPage = () => {
                     </Badge>
                     <div className="flex items-center gap-2">
                       <IconUsers className="size-4" />
-                      <span>{club._count.clubMember} Anggota</span>
+                      <span>{club._count?.clubMember ?? 0} Anggota</span>
                     </div>
                   </div>
                 </div>
@@ -319,7 +319,9 @@ const ClubDetailPage = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between text-lg">
-                <span>Members ({club.clubMember?.length || club._count.clubMember})</span>
+                <span>
+                  Members ({club.clubMember?.length ?? club._count?.clubMember ?? 0})
+                </span>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -359,7 +361,7 @@ const ClubDetailPage = () => {
                 <div className="text-muted-foreground py-8 text-center text-sm">
                   <IconUsers className="mx-auto mb-2 size-12 opacity-50" />
                   <p>
-                    Club ini punya {club._count.clubMember}{' '} Anggota
+                    Club ini punya {club._count?.clubMember ?? 0} Anggota
                   </p>
                   <p className="mt-1 text-xs">Anggota tidak tersedia</p>
                 </div>

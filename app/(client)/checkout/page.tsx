@@ -17,9 +17,10 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import 'dayjs/locale/id';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
+import { X } from 'lucide-react';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 dayjs.locale('id');
 dayjs.extend(customParseFormat);
@@ -32,6 +33,7 @@ const currencyFormatter = new Intl.NumberFormat('id-ID', {
 
 // Override default format supaya tidak ada spasi
 const formatCurrency = (value: number) => currencyFormatter.format(value).replace(/\s/g, '');
+const PAYMENT_METHOD_STORAGE_KEY = 'checkout-selected-payment';
 
 const normalizeSlotTime = (time: string) => time?.trim().replace(/ /g, '').replace(/\t/g, '') ?? '';
 
@@ -71,6 +73,8 @@ export default function CheckoutPage() {
   const selectedCoaches = useBookingStore((state) => state.selectedCoaches);
   const selectedBallboys = useBookingStore((state) => state.selectedBallboys);
   const selectedInventories = useBookingStore((state) => state.selectedInventories);
+  const removeCoach = useBookingStore((state) => state.removeCoach);
+  const removeInventory = useBookingStore((state) => state.removeInventory);
 
   const addOnsTotal = coachTotal + inventoryTotal;
 
@@ -99,10 +103,25 @@ export default function CheckoutPage() {
   const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
 
+  const readStoredPaymentMethodId = useCallback(() => {
+    if (typeof window === 'undefined') return null;
+    return sessionStorage.getItem(PAYMENT_METHOD_STORAGE_KEY);
+  }, []);
+
+  const persistPaymentMethodId = useCallback((methodId: string | null) => {
+    if (typeof window === 'undefined') return;
+    if (methodId) {
+      sessionStorage.setItem(PAYMENT_METHOD_STORAGE_KEY, methodId);
+    } else {
+      sessionStorage.removeItem(PAYMENT_METHOD_STORAGE_KEY);
+    }
+  }, []);
+
   const checkoutMutation = useMutation(
     checkoutMutationOptions({
       onSuccess: (data) => {
         // Clear booking store after successful checkout
+        persistPaymentMethodId(null);
         useBookingStore.getState().clearAll();
 
         // Redirect to invoice page using the invoice number from response
@@ -165,16 +184,29 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (paymentMethods.length === 0) return;
 
-    if (!selectedPaymentMethod) {
-      setSelectedPaymentMethod(paymentMethods[0]);
-      return;
-    }
+    setSelectedPaymentMethod((current) => {
+      if (current) {
+        const stillExists = paymentMethods.find((method) => method.id === current.id);
+        if (stillExists) {
+          return stillExists;
+        }
+      }
 
-    const stillExists = paymentMethods.find((method) => method.id === selectedPaymentMethod.id);
-    if (!stillExists) {
-      setSelectedPaymentMethod(paymentMethods[0]);
-    }
-  }, [paymentMethods, selectedPaymentMethod]);
+      const storedId = readStoredPaymentMethodId();
+      if (storedId) {
+        const stored = paymentMethods.find((method) => method.id === storedId);
+        if (stored) {
+          return stored;
+        }
+      }
+
+      return paymentMethods[0] ?? null;
+    });
+  }, [paymentMethods, readStoredPaymentMethodId]);
+
+  useEffect(() => {
+    persistPaymentMethodId(selectedPaymentMethod?.id ?? null);
+  }, [selectedPaymentMethod, persistPaymentMethodId]);
 
   const paymentFeeBreakdown = (() => {
     if (!selectedPaymentMethod) {
@@ -439,7 +471,19 @@ export default function CheckoutPage() {
                       {dayjs(coach.date).format('DD MMM YYYY')} • {coach.timeSlot}
                     </span>
                   </div>
-                  <span className="text-sm font-semibold">{formatCurrency(coach.price)}</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-semibold">{formatCurrency(coach.price)}</span>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="text-muted-foreground hover:text-destructive h-8 w-8"
+                      aria-label="Hapus coach"
+                      onClick={() => removeCoach(coach.coachId, coach.timeSlot, coach.slotId)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -464,7 +508,21 @@ export default function CheckoutPage() {
                     <span className="text-sm font-medium">{inventory.inventoryName}</span>
                     <span className="text-muted-foreground text-xs">Qty: {inventory.quantity}</span>
                   </div>
-                  <span className="text-sm font-semibold">{formatCurrency(inventory.price)}</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-semibold">{formatCurrency(inventory.price)}</span>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="text-muted-foreground hover:text-destructive h-8 w-8"
+                      aria-label="Hapus peralatan"
+                      onClick={() =>
+                        removeInventory(inventory.inventoryId, inventory.timeSlot ?? 'default')
+                      }
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -560,7 +618,7 @@ export default function CheckoutPage() {
             </div>
           )}
 
-          <div className="border-muted rounded-lg border bg-white p-4">
+          <div className="border-muted rounded-lg border bg-white p-4 mb-5">
             <h3 className="mb-3 text-base font-semibold">Ringkasan Pembayaran</h3>
             <div className="space-y-2 text-sm">
               <div className="flex items-center justify-between">
