@@ -168,15 +168,16 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
     resendOtp({ phone: formatPhone(phone) });
   };
 
+  const maxLength = 4;
+
   useEffect(() => {
-    const subscription = form.watch((value) => {
-      const otp = (value as { otp?: string })?.otp;
-      if (otp && otp.length === 4) {
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'otp' && value.otp && value.otp.length === maxLength) {
         form.handleSubmit(onSubmit)();
       }
     });
     return () => subscription.unsubscribe();
-  }, [form, onSubmit]);
+  }, [maxLength]);
 
   return (
     <form className="py-6 md:p-8" onSubmit={form.handleSubmit(onSubmit)}>

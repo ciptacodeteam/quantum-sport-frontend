@@ -66,14 +66,13 @@ export function VerifyContactOtpDialog({
   };
 
   useEffect(() => {
-    const subscription = form.watch((value) => {
-      const otp = (value as { otp?: string })?.otp;
-      if (otp && otp.length === maxLength) {
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'otp' && value.otp && value.otp.length === maxLength) {
         form.handleSubmit(handleSubmit)();
       }
     });
     return () => subscription.unsubscribe();
-  }, [form, maxLength]);
+  }, [maxLength]);
 
   return (
     <Dialog
