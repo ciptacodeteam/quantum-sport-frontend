@@ -60,7 +60,8 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { rankItem } from '@tanstack/match-sorter-utils';
 import { Loader2, Settings2 } from 'lucide-react';
-import { Suspense, useCallback, useMemo, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Label } from './label';
 
 type TableLoadingProps = {
@@ -119,6 +120,13 @@ interface DataTableProps<TData extends RowData> {
   enableExpandAllRows?: boolean;
   enablePagination?: boolean;
   enablePageSize?: boolean;
+
+  /** Server-side pagination support */
+  serverSide?: boolean;
+  /** Total count from server (required for server-side pagination) */
+  totalCount?: number;
+  /** Callback when pagination changes (page or pageSize) */
+  onPaginationChange?: (page: number, pageSize: number) => void;
 }
 
 export function DataTable<TData extends RowData>({
@@ -139,6 +147,10 @@ export function DataTable<TData extends RowData>({
   enablePagination = true,
   enablePageSize = true,
 
+  serverSide = false,
+  totalCount,
+  onPaginationChange,
+
   /**
    * Optional: Provide a function to return sub rows for a given row.
    * If provided, enables expandable rows.
@@ -152,12 +164,30 @@ export function DataTable<TData extends RowData>({
   getSubRows?: (row: any) => TData[] | undefined;
   renderSubRow?: (row: any) => React.ReactNode;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Initialize pagination from URL params if serverSide is enabled
+  const getInitialPagination = useCallback(() => {
+    if (serverSide && searchParams) {
+      const page = searchParams.get('page');
+      const limit = searchParams.get('limit');
+      return {
+        pageIndex: page ? parseInt(page) - 1 : 0, // Convert 1-based to 0-based
+        pageSize: limit ? parseInt(limit) : 10
+      };
+    }
+    return { pageIndex: 0, pageSize: 10 };
+  }, [serverSide, searchParams]);
+
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
+  const [pagination, setPagination] = useState(getInitialPagination());
   const [expanded, setExpanded] = useState({});
+  const isInitialMount = useRef(true);
 
   const fuzzyFilter = useCallback<FilterFn<RowData>>((row, columnId, value, addMeta) => {
     const itemRank = rankItem(row.getValue(columnId), value as string);
@@ -166,8 +196,15 @@ export function DataTable<TData extends RowData>({
   }, []);
 
   const fallbackData = useMemo(() => data || [], [data]);
-  // If enablePageSize is true, show all data (no pagination)
-  const pageCount = enablePageSize ? 1 : Math.ceil(fallbackData.length / pagination.pageSize);
+
+  // Calculate page count based on pagination mode
+  const pageCount = useMemo(() => {
+    if (!enablePagination) return 1;
+    if (serverSide && totalCount !== undefined) {
+      return Math.ceil(totalCount / pagination.pageSize);
+    }
+    return Math.ceil(fallbackData.length / pagination.pageSize);
+  }, [enablePagination, serverSide, totalCount, pagination.pageSize, fallbackData.length]);
 
   // Selection column (checkboxes)
   const selectionColumn = useMemo<ColumnDef<TData>>(
@@ -208,6 +245,33 @@ export function DataTable<TData extends RowData>({
     [columns, enableRowSelection, selectionColumn]
   );
 
+  // Sync pagination changes with URL params and parent component
+  useEffect(() => {
+    if (serverSide) {
+      const page = pagination.pageIndex + 1; // Convert 0-based to 1-based
+      const limit = pagination.pageSize;
+
+      // Update URL params
+      const params = new URLSearchParams(searchParams?.toString() || '');
+      const currentPage = params.get('page');
+      const currentLimit = params.get('limit');
+
+      // Only update if values actually changed
+      if (currentPage !== page.toString() || currentLimit !== limit.toString()) {
+        params.set('page', page.toString());
+        params.set('limit', limit.toString());
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+      }
+
+      // Notify parent component (skip on initial mount)
+      if (!isInitialMount.current) {
+        onPaginationChange?.(page, limit);
+      } else {
+        isInitialMount.current = false;
+      }
+    }
+  }, [pagination.pageIndex, pagination.pageSize, serverSide, pathname]);
+
   const table = useReactTable({
     data,
     columns: columnsWithSelection,
@@ -228,6 +292,7 @@ export function DataTable<TData extends RowData>({
     globalFilterFn: 'fuzzy' as GlobalFilterTableState['globalFilter'],
     enableMultiSort: false,
     enableRowSelection,
+    manualPagination: serverSide,
     state: {
       sorting,
       pagination,
@@ -239,8 +304,8 @@ export function DataTable<TData extends RowData>({
     filterFns: { fuzzy: fuzzyFilter }
   });
 
-  // If enablePageSize is true, override the row model to show all data
-  const rowModel = !enablePageSize ? table.getPrePaginationRowModel() : table.getRowModel();
+  // If enablePagination is false, show all rows; otherwise use paginated rows
+  const rowModel = enablePagination ? table.getRowModel() : table.getPrePaginationRowModel();
 
   // expose selected ids upward
   const selectedRowIds = useMemo(
@@ -455,8 +520,8 @@ export function DataTable<TData extends RowData>({
                 Rows per page:
               </Label>
               <Select
+                value={table.getState().pagination.pageSize.toString()}
                 onValueChange={(value) => table.setPageSize(Number(value))}
-                defaultValue={table.getState().pagination.pageSize.toString()}
               >
                 <SelectTrigger className="w-20">
                   <SelectValue placeholder="Page Size" />
