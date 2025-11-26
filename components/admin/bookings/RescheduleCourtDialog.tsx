@@ -147,7 +147,7 @@ export function RescheduleCourtDialog({
   };
 
   const dialogTrigger = (
-    <Button size="sm" variant="outline" disabled={!canReschedule}>
+    <Button size="sm" variant="outline" disabled={!canReschedule} className="text-xs">
       Reschedule
     </Button>
   );

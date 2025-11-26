@@ -326,7 +326,14 @@ const BookingTable = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <p className="text-muted-foreground text-sm">ID Pemesanan</p>
-                        <p className="font-mono text-sm">{booking.id}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-mono text-sm">{booking.invoice?.number}</p>
+                          <CopyButton
+                            content={booking.invoice?.number || '-'}
+                            variant={'ghost'}
+                            size={'sm'}
+                          />
+                        </div>
                       </div>
                       <div>
                         <p className="text-muted-foreground text-sm">Status</p>
