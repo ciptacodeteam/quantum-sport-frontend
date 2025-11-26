@@ -161,6 +161,49 @@ const formatCurrency = (value: number) => {
   return `Rp ${value.toLocaleString('id-ID')}`;
 };
 
+// Calculate bundled discount for court + coach at the same time slot
+const calculateBundleDiscount = (courts: BookingItem[], coaches: SelectedCoach[]): number => {
+  if (courts.length === 0 || coaches.length === 0) return 0;
+
+  // Build a set of keys (date|timeSlot) that have at least one coach
+  const coachKeys = new Set<string>();
+  coaches.forEach((coach) => {
+    if (!coach.date || !coach.timeSlot) return;
+    coachKeys.add(`${coach.date}|${coach.timeSlot}`);
+  });
+
+  let totalDiscount = 0;
+
+  courts.forEach((booking) => {
+    const key = `${booking.date}|${booking.timeSlot}`;
+
+    // Only apply discount when there is at least one coach on the same date & timeslot
+    if (!coachKeys.has(key)) return;
+
+    // Extract hour from "HH:mm - HH:mm" format
+    const startPart = booking.timeSlot.split('-')[0]?.trim() ?? '';
+    const hourStr = startPart.split(':')[0] ?? '';
+    const hour = Number.parseInt(hourStr, 10);
+
+    if (Number.isNaN(hour)) return;
+
+    // Happy hour: 06–14, Peak hour: 15–23
+    let slotDiscount = 0;
+    if (hour >= 6 && hour <= 14) {
+      slotDiscount = 100_000;
+    } else if (hour >= 15 && hour <= 23) {
+      slotDiscount = 70_000;
+    }
+
+    if (slotDiscount <= 0) return;
+
+    // Never discount more than the court price itself
+    totalDiscount += Math.min(slotDiscount, booking.price);
+  });
+
+  return totalDiscount;
+};
+
 export default function BookingSummary({
   bookingItems,
   selectedCustomerId,
@@ -252,9 +295,17 @@ export default function BookingSummary({
     bookingItems,
     selectedCustomer ? { activeMembership: selectedCustomer.activeMembership } : null
   );
-  
+
   // Use provided membership discount details if available, otherwise use calculated
   const membershipDiscount = membershipDiscountDetails || calculatedMembershipDiscount;
+
+  // Bundled discount is only relevant when add-ons (coaches) are shown
+  const bundleDiscount =
+    showAddOns && selectedCoaches.length > 0
+      ? calculateBundleDiscount(bookingItems, selectedCoaches)
+      : 0;
+
+  const finalTotal = Math.max(0, totalAmount - bundleDiscount);
 
   const handleCustomerSelect = (customer: CustomerSearchResult) => {
     setSelectedCustomer(customer);
@@ -688,10 +739,16 @@ export default function BookingSummary({
                 )}
               </>
             )}
+            {bundleDiscount > 0 && (
+              <div className="flex justify-between items-center text-xs text-blue-600">
+                <span>Bundled Court + Coach Discount</span>
+                <span className="font-medium">- {formatCurrency(bundleDiscount)}</span>
+              </div>
+            )}
             <Separator />
             <div className="flex justify-between items-center font-bold text-lg">
               <span>Total</span>
-              <span className="text-primary">{formatCurrency(totalAmount)}</span>
+              <span className="text-primary">{formatCurrency(finalTotal)}</span>
             </div>
           </div>
 

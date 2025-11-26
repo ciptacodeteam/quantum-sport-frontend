@@ -51,19 +51,26 @@ const BookedCoachTable = () => {
 
 	const columns = useMemo(
 		() => [
-			colHelper.accessor((row) => row.coach, {
+			// Coach info (with fallbacks for different API shapes) – only show coach name
+			colHelper.accessor((row) => row, {
 				id: 'coach',
 				header: 'Coach',
 				cell: (info) => {
-					const coach = info.getValue();
-					if (!coach) return '-';
-					const coachType = (coach.coachType as any)?.name ?? coach.coachType ?? '-';
-					return (
-						<div className="flex flex-col">
-							<span className="font-medium">{coach.staff?.name || '-'}</span>
-							<span className="text-xs text-muted-foreground">{coachType}</span>
-						</div>
-					);
+					const row = info.getValue() as AdminBookedCoachListItem & { staff?: any; coachName?: string };
+
+					// Primary source: row.coach
+					const coach: any = row.coach ?? null;
+
+					// Fallbacks if API sends flattened staff/coach fields
+					const staff = coach?.staff ?? (row as any).staff ?? null;
+					const name: string =
+						staff?.name ?? coach?.name ?? (row as any).coachName ?? (row as any).name ?? '-';
+
+					if (!name || name === '-') {
+						return '-';
+					}
+
+					return <span className="font-medium">{name}</span>;
 				}
 			}),
 			colHelper.accessor((row) => row.booking?.status, {
@@ -103,20 +110,65 @@ const BookedCoachTable = () => {
 					);
 				}
 			}),
-			colHelper.accessor((row) => row.booking?.courtSlots ?? [], {
+			// Court & time info (Lapangan & Waktu) with multiple fallbacks
+			colHelper.accessor((row) => row, {
+				id: 'courtTime',
 				header: 'Lapangan & Waktu',
 				cell: (info) => {
-					const slots = (info.getValue() as any[]) || [];
-					if (slots.length === 0) return '-';
+					const row = info.getValue() as AdminBookedCoachListItem & {
+						courtSlots?: any[];
+						booking?: any;
+						slot?: any;
+					};
+
+					// Primary: court slots on the booking
+					const booking = row.booking ?? {};
+					let slots: any[] =
+						booking.courtSlots ??
+						// Fallback: some APIs may put court slots directly on the row
+						(row as any).courtSlots ??
+						[];
+
+					// Additional fallback: derive from booking.details (if present)
+					if ((!slots || slots.length === 0) && Array.isArray(booking.details)) {
+						slots = booking.details.map((d: any) => ({
+							court: d.court ?? null,
+							startAt: d.slot?.startAt ?? d.startAt,
+							endAt: d.slot?.endAt ?? d.endAt,
+							time: d.slot
+								? `${d.slot.startTime} - ${d.slot.endTime}`
+								: d.time ?? null
+						}));
+					}
+
+					// Fallback: derive from top-level slot (list API example)
+					if ((!slots || slots.length === 0) && row.slot) {
+						const s = row.slot as any;
+						slots = [
+							{
+								court: null,
+								startAt: s.startAt,
+								endAt: s.endAt,
+								time: s.startTime && s.endTime ? `${s.startTime} - ${s.endTime}` : null
+							}
+						];
+					}
+
+					if (!slots || slots.length === 0) return '-';
+
 					const first = slots[0];
-					const isExpired = dayjs(first.endAt).isBefore(dayjs());
+					const isExpired = first.endAt ? dayjs(first.endAt).isBefore(dayjs()) : false;
+					const timeDisplay =
+						first.time ||
+						`${dayjs(first.startAt).format('HH:mm')} - ${dayjs(first.endAt).format('HH:mm')}`;
+
 					return (
 						<Tooltip>
 							<TooltipTrigger>
 								<div className="flex flex-col">
 									<span className="font-medium">{first.court?.name || '-'}</span>
 									<span className={`text-xs ${isExpired ? 'text-destructive' : 'text-muted-foreground'}`}>
-										{dayjs(first.startAt).format('DD MMM YYYY')} · {first.time}
+										{dayjs(first.startAt).format('DD MMM YYYY')} · {timeDisplay}
 									</span>
 									{slots.length > 1 && (
 										<span className="text-xs text-muted-foreground">+{slots.length - 1} slot</span>
@@ -125,11 +177,16 @@ const BookedCoachTable = () => {
 							</TooltipTrigger>
 							<TooltipContent>
 								<div className="space-y-1">
-									{slots.slice(0, 4).map((s, idx) => (
-										<div key={idx} className="text-xs">
-											{dayjs(s.startAt).format('DD MMM')} — {s.court?.name || '-'} ({s.time})
-										</div>
-									))}
+									{slots.slice(0, 4).map((s, idx) => {
+										const t =
+											s.time ||
+											`${dayjs(s.startAt).format('HH:mm')} - ${dayjs(s.endAt).format('HH:mm')}`;
+										return (
+											<div key={idx} className="text-xs">
+												{dayjs(s.startAt).format('DD MMM')} — {s.court?.name || '-'} ({t})
+											</div>
+										);
+									})}
 									{slots.length > 4 && <div className="text-xs text-muted-foreground">dan lainnya...</div>}
 								</div>
 							</TooltipContent>
@@ -206,12 +263,14 @@ const CoachDetail = ({ id }: { id: string }) => {
 			<div className="grid grid-cols-2 gap-4">
 				<div>
 					<p className="text-sm text-muted-foreground">Coach</p>
-					<p className="font-medium">{detail.coach?.staff?.name || '-'}</p>
-					{detail.coach?.coachType && (
-						<p className="text-xs text-muted-foreground mt-1">
-							{(detail.coach.coachType as any)?.name ?? detail.coach.coachType}
-						</p>
-					)}
+					<p className="font-medium">
+						{/* Support both nested and top-level coach/staff structures */}
+						{detail.coach?.staff?.name ||
+							(detail as any).staff?.name ||
+							(detail as any).coachName ||
+							(detail as any).name ||
+							'-'}
+					</p>
 				</div>
 				<div>
 					<p className="text-sm text-muted-foreground">Pelanggan</p>
