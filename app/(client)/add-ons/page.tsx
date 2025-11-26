@@ -342,7 +342,7 @@ export default function AddOnsPage() {
                       {!isInventoryPending &&
                         !isInventoryError &&
                         racketInventory &&
-                        `Tersedia ${availableRacket} raket`}
+                        `Tersedia ${availableRacket} equipment`}
                     </p>
                   </div>
 
@@ -377,7 +377,7 @@ export default function AddOnsPage() {
                     <span className="text-primary font-semibold">
                       Rp{racketPrice.toLocaleString('id-ID')}{' '}
                     </span>
-                    <span className="text-muted-foreground text-sm">/raket</span>
+                    <span className="text-muted-foreground text-sm">/equipment</span>
                   </p>
                 </div>
 
