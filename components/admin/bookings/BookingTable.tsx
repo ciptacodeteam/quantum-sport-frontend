@@ -195,14 +195,14 @@ const BookingTable = () => {
           </div>
         )
       }),
-      colHelper.accessor('user', {
+      colHelper.accessor('user.name', {
         header: 'Pelanggan',
-        cell: (info) => {
-          const user = info.getValue();
+        cell: ({ row, getValue }) => {
+          const user = row.original.user;
           if (!user) return '-';
           return (
             <div className="flex flex-col">
-              <span className="font-medium">{user.name}</span>
+              <span className="font-medium">{getValue()}</span>
               {user.phone && (
                 <span className="text-muted-foreground text-xs">{formatPhone(user.phone)}</span>
               )}
@@ -230,67 +230,6 @@ const BookingTable = () => {
               {details.length > 1 && (
                 <span className="text-muted-foreground text-xs">+{details.length - 1} slot</span>
               )}
-            </div>
-          );
-        }
-      }),
-      colHelper.display({
-        id: 'reschedule',
-        header: 'Reschedule',
-        cell: ({ row }) => {
-          const booking = row.original;
-          const details = booking.details || [];
-
-          if (details.length === 0) {
-            return <span className="text-muted-foreground text-xs">Tidak ada slot</span>;
-          }
-
-          return (
-            <div className="space-y-2">
-              {details.map((detail) => {
-                if (!detail.slot) {
-                  return (
-                    <div
-                      key={detail.id}
-                      className="text-muted-foreground rounded-lg border bg-muted/30 px-3 py-2 text-xs"
-                    >
-                      Slot tidak tersedia
-                    </div>
-                  );
-                }
-
-                const slotStart = detail.slot.startAt;
-                const daysUntil = differenceInDays(slotStart);
-                const canReschedule = daysUntil >= 3;
-
-                return (
-                  <div key={detail.id} className="rounded-lg border px-3 py-2 shadow-sm">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="text-xs">
-                        <p className="font-semibold">{detail.court?.name || '-'}</p>
-                        <p className="text-muted-foreground">
-                          {formatSlotDate(slotStart, 'DD MMM YYYY')} •{' '}
-                          {formatSlotTime(detail.slot.startAt)} - {formatSlotTime(detail.slot.endAt)}
-                        </p>
-                        {!canReschedule && (
-                          <p className="text-amber-600 mt-1 text-[11px]">
-                            Jadwal kurang dari 3 hari lagi
-                          </p>
-                        )}
-                      </div>
-                      <RescheduleCourtDialog
-                        detail={detail as BookingDetailWithSlot}
-                        canReschedule={canReschedule}
-                        onSuccess={() =>
-                          queryClient.invalidateQueries({
-                            queryKey: ['admin', 'bookings']
-                          })
-                        }
-                      />
-                    </div>
-                  </div>
-                );
-              })}
             </div>
           );
         }
@@ -387,7 +326,14 @@ const BookingTable = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <p className="text-muted-foreground text-sm">ID Pemesanan</p>
-                        <p className="font-mono text-sm">{booking.id}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-mono text-sm">{booking.invoice?.number}</p>
+                          <CopyButton
+                            content={booking.invoice?.number || '-'}
+                            variant={'ghost'}
+                            size={'sm'}
+                          />
+                        </div>
                       </div>
                       <div>
                         <p className="text-muted-foreground text-sm">Status</p>
@@ -441,7 +387,9 @@ const BookingTable = () => {
                               <div key={detail.id} className="bg-muted/50 rounded-lg border p-3">
                                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                   <div>
-                                    <p className="text-sm font-medium">{detail.court?.name || '-'}</p>
+                                    <p className="text-sm font-medium">
+                                      {detail.court?.name || '-'}
+                                    </p>
                                     {detail.slot && (
                                       <p className="text-muted-foreground text-xs">
                                         {formatSlotDate(detail.slot.startAt, 'DD MMM YYYY')} -{' '}
@@ -450,7 +398,7 @@ const BookingTable = () => {
                                       </p>
                                     )}
                                     {!canReschedule && slotStart && (
-                                      <p className="text-[11px] text-amber-600 mt-1">
+                                      <p className="mt-1 text-[11px] text-amber-600">
                                         Reschedule hanya tersedia hingga H-3 (
                                         {Math.max(daysUntil, 0)} hari tersisa)
                                       </p>

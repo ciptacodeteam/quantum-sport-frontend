@@ -13,7 +13,7 @@ dayjs.locale('id');
 
 const formatCurrency = (value: number) => {
   const formatted = new Intl.NumberFormat('id-ID', {
-    minimumFractionDigits: 0,
+    minimumFractionDigits: 0
   }).format(value);
 
   // hapus semua tipe whitespace, termasuk non-breaking space
@@ -186,7 +186,13 @@ export default function PaymentPage() {
 
   return (
     <div className="bg-muted/20 min-h-screen pb-28">
-      <MainHeader title="Detail Pembayaran" backHref="/checkout" withCartBadge withLogo={false} withBorder/>
+      <MainHeader
+        title="Detail Pembayaran"
+        backHref="/checkout"
+        withCartBadge
+        withLogo={false}
+        withBorder
+      />
 
       <main className="mx-auto flex w-11/12 max-w-4xl flex-col gap-6 pt-24 pb-28">
         {/* Court Bookings */}
@@ -249,9 +255,10 @@ export default function PaymentPage() {
             )}
             <div>
               <p className="text-sm font-medium">{paymentMethod.name}</p>
-              {paymentMethod.channel && (
+              {/* {paymentMethod.channel && (
                 <p className="text-muted-foreground text-xs uppercase">{paymentMethod.channel}</p>
-              )}
+              )} */}
+              <p className="text-muted-foreground text-xs uppercase">Konfirmasi Instan</p>
             </div>
           </div>
         </section>

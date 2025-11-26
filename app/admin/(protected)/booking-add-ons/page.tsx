@@ -19,6 +19,7 @@ import { adminCustomerSearchQueryOptions, type CustomerSearchResult } from '@/qu
 import { adminCoachAvailabilityQueryOptions } from '@/queries/admin/coach';
 import { adminInventoryAvailabilityQueryOptions } from '@/queries/admin/inventory';
 import { useMembershipDiscount } from '@/hooks/useMembershipDiscount';
+import { formatSlotTime, formatSlotTimeRange } from '@/lib/time-utils';
 import BookingSummary from '@/components/admin/booking/BookingSummary';
 import { 
   IconChevronLeft,
@@ -126,20 +127,10 @@ export default function BookingAddOns() {
     adminCoachAvailabilityQueryOptions(dateRange?.startAt, dateRange?.endAt)
   );
 
-  // Helpers to avoid timezone shifts; use UTC time parts from ISO strings
+  // Helpers to avoid timezone shifts; use local time parts from ISO strings (same as court slots)
   const getISODate = (isoString: string) => (isoString ? isoString.slice(0, 10) : '');
-  const getHHmmUTC = (isoString: string) => {
-    try {
-      const d = new Date(isoString);
-      const hh = String(d.getUTCHours()).padStart(2, '0');
-      const mm = String(d.getUTCMinutes()).padStart(2, '0');
-      return `${hh}:${mm}`;
-    } catch {
-      return '';
-    }
-  };
-  const getTimeRangeUTC = (startAt: string, endAt: string) =>
-    `${getHHmmUTC(startAt)} - ${getHHmmUTC(endAt)}`;
+  const getTimeRangeLocal = (startAt: string, endAt: string) =>
+    formatSlotTimeRange(startAt, endAt);
 
   // Fetch inventory availability
   const { data: inventoryAvailabilityData } = useQuery(
@@ -197,7 +188,7 @@ export default function BookingAddOns() {
     coachAvailabilityData.forEach((slot) => {
       const dateKey = getISODate(slot.startAt);
       const dateLabel = getISODate(slot.startAt); // keep simple; avoids TZ confusion
-      const timeRange = getTimeRangeUTC(slot.startAt, slot.endAt);
+      const timeRange = getTimeRangeLocal(slot.startAt, slot.endAt);
 
       if (!map.has(dateKey)) {
         map.set(dateKey, {
@@ -285,7 +276,7 @@ export default function BookingAddOns() {
     const wantedDate = date; // already YYYY-MM-DD in store
     return coachAvailabilityData.some((slot) => {
       const slotDateStr = getISODate(slot.startAt);
-      const slotTimeRange = getTimeRangeUTC(slot.startAt, slot.endAt);
+      const slotTimeRange = getTimeRangeLocal(slot.startAt, slot.endAt);
       return slot.coach.id === coachId && slotDateStr === wantedDate && slotTimeRange === timeSlot;
     });
   };
@@ -651,7 +642,7 @@ export default function BookingAddOns() {
 
                       const count = coachAvailabilityData.reduce((acc, slot) => {
                         const d = getISODate(slot.startAt);
-                        const range = getTimeRangeUTC(slot.startAt, slot.endAt);
+                        const range = getTimeRangeLocal(slot.startAt, slot.endAt);
                         return bookedPairs.has(`${d}|${range}`) ? acc + 1 : acc;
                       }, 0);
 
@@ -737,7 +728,7 @@ export default function BookingAddOns() {
                                       // timeSlot is in format "13:00 - 14:00", so we need to extract just the start time
                                       const timeSlotStart = timeSlot.split(' - ')[0];
                                       const matchingSlot = coach.slots.find((slot) => {
-                                        const slotTime = getHHmmUTC(slot.startAt);
+                                        const slotTime = formatSlotTime(slot.startAt);
                                         const slotDate = getISODate(slot.startAt);
                                         return slotTime === timeSlotStart && slotDate === date;
                                       });

@@ -3,9 +3,7 @@
 import MainHeader from '@/components/headers/MainHeader';
 import BottomNavigationWrapper from '@/components/ui/BottomNavigationWrapper';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn, resolveMediaUrl } from '@/lib/utils';
 import { membershipCheckoutMutationOptions } from '@/mutations/membership';
@@ -185,7 +183,7 @@ export default function MembershipCheckoutPage() {
   return (
     <>
       <MainHeader title="Checkout Membership" backHref="/membership" withLogo={false} />
-      <main className="mx-auto flex w-11/12 max-w-4xl flex-col gap-6 pt-28">
+      <main className="mx-auto flex w-11/12 max-w-4xl flex-col gap-6 pt-28 pb-8">
         {/* Membership Summary */}
         <div className="border-muted space-y-4 rounded-lg border bg-white p-4">
           <header className="space-y-1">
@@ -195,7 +193,7 @@ export default function MembershipCheckoutPage() {
             )}
           </header>
 
-          <div className="flex items-center gap-6 border-muted/60 border-t border-dashed pt-3">
+          <div className="border-muted/60 flex items-center gap-6 border-t border-dashed pt-3">
             <div>
               <p className="text-muted-foreground text-xs">Jumlah Jam</p>
               <p className="text-sm font-semibold">{membership.sessions} jam</p>
@@ -207,7 +205,7 @@ export default function MembershipCheckoutPage() {
           </div>
 
           {membership.benefits && membership.benefits.length > 0 && (
-            <div className="space-y-2 border-muted/60 border-t border-dashed pt-3">
+            <div className="border-muted/60 space-y-2 border-t border-dashed pt-3">
               <p className="text-muted-foreground text-xs">Keuntungan</p>
               <ul className="space-y-1.5">
                 {membership.benefits.slice(0, 3).map((benefit) => (
@@ -217,7 +215,7 @@ export default function MembershipCheckoutPage() {
                   </li>
                 ))}
                 {membership.benefits.length > 3 && (
-                  <li className="text-muted-foreground text-xs pl-5">
+                  <li className="text-muted-foreground pl-5 text-xs">
                     +{membership.benefits.length - 3} benefit lainnya
                   </li>
                 )}
@@ -257,23 +255,21 @@ export default function MembershipCheckoutPage() {
                 </p>
               </div>
             </div>
-            <Button
-              variant="link"
-              className="text-primary px-0"
-              onClick={handlePaymentMethodClick}
-            >
+            <Button variant="link" className="text-primary px-0" onClick={handlePaymentMethodClick}>
               {selectedPaymentMethod ? 'Ganti Metode' : 'Pilih'}
             </Button>
           </div>
         </div>
 
         {/* Payment Summary */}
-        <div className="border-muted rounded-lg border bg-white p-4 mb-5">
+        <div className="border-muted mb-5 rounded-lg border bg-white p-4">
           <h3 className="mb-3 text-base font-semibold">Ringkasan Pembayaran</h3>
           <div className="space-y-2 text-sm">
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Subtotal</span>
-              <span className="text-foreground font-medium">{formatCurrency(membership.price)}</span>
+              <span className="text-foreground font-medium">
+                {formatCurrency(membership.price)}
+              </span>
             </div>
             {selectedPaymentMethod && paymentFeeBreakdown.totalFee > 0 && (
               <div className="flex items-center justify-between">
@@ -360,9 +356,7 @@ export default function MembershipCheckoutPage() {
                         <div
                           className={cn(
                             'mt-1 flex h-5 w-5 items-center justify-center rounded-full border transition-all',
-                            isSelected
-                              ? 'border-primary bg-primary'
-                              : 'border-muted bg-background'
+                            isSelected ? 'border-primary bg-primary' : 'border-muted bg-background'
                           )}
                         >
                           {isSelected && <span className="h-2.5 w-2.5 rounded-full bg-white" />}
@@ -390,9 +384,7 @@ export default function MembershipCheckoutPage() {
               size="lg"
               className="min-w-40"
               onClick={handleCheckout}
-              disabled={
-                (!selectedPaymentMethod || checkoutMutation.isPending) && isAuthenticated
-              }
+              disabled={(!selectedPaymentMethod || checkoutMutation.isPending) && isAuthenticated}
             >
               {isUserPending
                 ? 'Memuat...'
