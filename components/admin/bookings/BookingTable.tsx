@@ -234,67 +234,6 @@ const BookingTable = () => {
           );
         }
       }),
-      colHelper.display({
-        id: 'reschedule',
-        header: 'Reschedule',
-        cell: ({ row }) => {
-          const booking = row.original;
-          const details = booking.details || [];
-
-          if (details.length === 0) {
-            return <span className="text-muted-foreground text-xs">Tidak ada slot</span>;
-          }
-
-          return (
-            <div className="space-y-2">
-              {details.map((detail) => {
-                if (!detail.slot) {
-                  return (
-                    <div
-                      key={detail.id}
-                      className="text-muted-foreground rounded-lg border bg-muted/30 px-3 py-2 text-xs"
-                    >
-                      Slot tidak tersedia
-                    </div>
-                  );
-                }
-
-                const slotStart = detail.slot.startAt;
-                const daysUntil = differenceInDays(slotStart);
-                const canReschedule = daysUntil >= 3;
-
-                return (
-                  <div key={detail.id} className="rounded-lg border px-3 py-2 shadow-sm">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="text-xs">
-                        <p className="font-semibold">{detail.court?.name || '-'}</p>
-                        <p className="text-muted-foreground">
-                          {formatSlotDate(slotStart, 'DD MMM YYYY')} •{' '}
-                          {formatSlotTime(detail.slot.startAt)} - {formatSlotTime(detail.slot.endAt)}
-                        </p>
-                        {!canReschedule && (
-                          <p className="text-amber-600 mt-1 text-[11px]">
-                            Jadwal kurang dari 3 hari lagi
-                          </p>
-                        )}
-                      </div>
-                      <RescheduleCourtDialog
-                        detail={detail as BookingDetailWithSlot}
-                        canReschedule={canReschedule}
-                        onSuccess={() =>
-                          queryClient.invalidateQueries({
-                            queryKey: ['admin', 'bookings']
-                          })
-                        }
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          );
-        }
-      }),
       colHelper.accessor('status', {
         header: 'Status',
         cell: (info) => {
