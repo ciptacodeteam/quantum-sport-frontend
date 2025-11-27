@@ -619,7 +619,7 @@ export default function CheckoutPage() {
             </div>
           )}
 
-          <div className="border-muted rounded-lg border bg-white p-4 mb-5">
+          <div className="border-muted mb-5 rounded-lg border bg-white p-4">
             <h3 className="mb-3 text-base font-semibold">Ringkasan Pembayaran</h3>
             <div className="space-y-2 text-sm">
               <div className="flex items-center justify-between">
@@ -682,7 +682,7 @@ export default function CheckoutPage() {
                   : checkoutMutation.isPending
                     ? 'Memproses...'
                     : selectedPaymentMethod
-                      ? 'Lanjutkan Pembayaran'
+                      ? 'Bayar Sekarang'
                       : 'Pilih Metode'}
             </Button>
           </div>

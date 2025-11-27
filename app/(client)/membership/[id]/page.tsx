@@ -2,6 +2,7 @@
 
 import MainHeader from '@/components/headers/MainHeader';
 import { Badge } from '@/components/ui/badge';
+import BottomNavigationWrapper from '@/components/ui/BottomNavigationWrapper';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -9,7 +10,7 @@ import { STATUS_BADGE_VARIANT, STATUS_MAP } from '@/lib/constants';
 import { membershipQueryOptions } from '@/queries/membership';
 import { profileQueryOptions } from '@/queries/profile';
 import useAuthModalStore from '@/stores/useAuthModalStore';
-import { IconCheck } from '@tabler/icons-react';
+import { IconCheck, IconTrophy } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import React from 'react';
@@ -49,7 +50,7 @@ export default function MembershipDetailPage({ params }: { params: Promise<{ id:
   if (isMembershipLoading) {
     return (
       <>
-        <MainHeader title="Detail Membership" backHref="/valuepack" withLogo={false} withBorder/>
+        <MainHeader title="Detail Membership" backHref="/valuepack" withLogo={false} withBorder />
         <main className="mx-auto mt-28 w-11/12 max-w-4xl space-y-4 pb-12">
           <Skeleton className="h-48 w-full" />
           <Skeleton className="h-64 w-full" />
@@ -82,9 +83,7 @@ export default function MembershipDetailPage({ params }: { params: Promise<{ id:
                   {membership.name}
                 </CardTitle>
                 {membership.description && (
-                  <p className="text-muted-foreground text-sm sm:text-base">
-                    {membership.description}
-                  </p>
+                  <p className="text-muted-foreground text-sm">{membership.description}</p>
                 )}
               </div>
               {membership.isActive && (
@@ -98,17 +97,17 @@ export default function MembershipDetailPage({ params }: { params: Promise<{ id:
             </div>
 
             <div className="mt-4 flex flex-wrap items-baseline gap-2 sm:mt-6">
-              <span className="text-primary text-2xl font-extrabold sm:text-3xl lg:text-4xl">
+              <span className="text-primary text-2xl font-extrabold sm:text-2xl lg:text-3xl">
                 {formatCurrency(membership.price)}
               </span>
-              <span className="text-muted-foreground text-sm sm:text-base">
+              <span className="text-muted-foreground text-sm">
                 untuk {membership.duration} hari
               </span>
             </div>
           </div>
 
           <CardContent className="p-4 sm:p-6">
-            <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
+            <div className="grid grid-cols-1 gap-3 sm:gap-4">
               {/* Sessions Info */}
               <div className="bg-card flex items-center gap-3 rounded-lg border p-3 sm:p-4">
                 <div className="bg-primary/10 text-primary rounded-lg p-2 sm:p-2.5">
@@ -128,7 +127,7 @@ export default function MembershipDetailPage({ params }: { params: Promise<{ id:
                   </svg>
                 </div>
                 <div>
-                  <p className="text-xl font-bold sm:text-2xl">{membership.sessions}</p>
+                  <p className="text-base font-bold sm:text-xl">{membership.sessions}</p>
                   <p className="text-muted-foreground text-xs">Total Jam</p>
                 </div>
               </div>
@@ -152,7 +151,7 @@ export default function MembershipDetailPage({ params }: { params: Promise<{ id:
                   </svg>
                 </div>
                 <div>
-                  <p className="text-xl font-bold sm:text-2xl">{membership.duration}</p>
+                  <p className="text-base font-bold sm:text-xl">{membership.duration}</p>
                   <p className="text-muted-foreground text-xs">Hari Aktif</p>
                 </div>
               </div>
@@ -191,20 +190,11 @@ export default function MembershipDetailPage({ params }: { params: Promise<{ id:
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="text-primary h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
+                <IconTrophy className="text-primary h-6 w-6" />
                 <span>Benefit & Keuntungan</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="mt-2">
               <ul className="grid gap-2.5 sm:grid-cols-2 sm:gap-3">
                 {membership.benefits.map((benefit) => (
                   <li
@@ -240,9 +230,9 @@ export default function MembershipDetailPage({ params }: { params: Promise<{ id:
                 <span>Detail Membership</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="mt-2">
               <div
-                className="prose prose-sm max-w-none"
+                className="prose prose-sm max-w-none text-sm"
                 dangerouslySetInnerHTML={{ __html: membership?.contentHtml ?? '' }}
               ></div>
             </CardContent>
@@ -251,7 +241,7 @@ export default function MembershipDetailPage({ params }: { params: Promise<{ id:
 
         {/* Additional Info */}
         <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="p-4 sm:p-6">
+          <CardContent className="p-4 py-2 sm:px-6">
             <div className="flex items-start gap-2.5 sm:gap-3">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -283,8 +273,8 @@ export default function MembershipDetailPage({ params }: { params: Promise<{ id:
         </Card>
 
         {/* Buy Button - Fixed at bottom */}
-        <div className="fixed right-0 bottom-0 left-0 z-50 border-t bg-white p-3 shadow-lg sm:p-4">
-          <div className="mx-auto flex max-w-4xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <BottomNavigationWrapper>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <div className="flex items-center justify-between sm:block">
               <p className="text-muted-foreground text-xs">Total Pembayaran</p>
               <p className="text-primary text-lg font-bold sm:text-xl">
@@ -300,7 +290,7 @@ export default function MembershipDetailPage({ params }: { params: Promise<{ id:
               {!membership.isActive ? 'Tidak Tersedia' : 'Beli Sekarang'}
             </Button>
           </div>
-        </div>
+        </BottomNavigationWrapper>
       </main>
     </>
   );
