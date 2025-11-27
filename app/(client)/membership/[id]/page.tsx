@@ -49,7 +49,7 @@ export default function MembershipDetailPage({ params }: { params: Promise<{ id:
   if (isMembershipLoading) {
     return (
       <>
-        <MainHeader title="Detail Membership" backHref="/valuepack" withLogo={false} />
+        <MainHeader title="Detail Membership" backHref="/valuepack" withLogo={false} withBorder/>
         <main className="mx-auto mt-28 w-11/12 max-w-4xl space-y-4 pb-12">
           <Skeleton className="h-48 w-full" />
           <Skeleton className="h-64 w-full" />
