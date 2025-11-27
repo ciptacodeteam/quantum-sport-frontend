@@ -131,7 +131,7 @@ const TournamentsPage = () => {
 
   return (
     <>
-      <MainHeader backHref="/" title="Turnamen" withLogo={false} />
+      <MainHeader backHref="/" title="Turnamen" withLogo={false} withBorder/>
 
       <main>
         <div className="sticky z-10 w-full border-b bg-white md:top-14">
