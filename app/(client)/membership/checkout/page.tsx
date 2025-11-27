@@ -172,7 +172,7 @@ export default function MembershipCheckoutPage() {
     return (
       <>
         <MainHeader title="Checkout Membership" backHref="/membership" withLogo={false} />
-        <main className="mx-auto mt-28 w-11/12 max-w-4xl space-y-4 pb-12">
+        <main className="mx-auto mt-28 w-11/12 max-w-4xl space-y-4 pb-16">
           <Skeleton className="h-48 w-full" />
           <Skeleton className="h-64 w-full" />
         </main>

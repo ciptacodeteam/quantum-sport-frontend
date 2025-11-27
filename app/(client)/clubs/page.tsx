@@ -77,7 +77,7 @@ const ClubsPage = () => {
 
   return (
     <>
-      <MainHeader backHref="/" title="Clubs" withLogo={false} />
+      <MainHeader backHref="/" title="Clubs" withLogo={false} withBorder/>
 
       <main className="mt-24 flex w-full flex-col pb-20">
         <div className="z-10 w-full border-b bg-white">

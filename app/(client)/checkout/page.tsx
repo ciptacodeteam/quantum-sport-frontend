@@ -352,7 +352,7 @@ export default function CheckoutPage() {
   };
 
   return (
-    <div className="min-h-screen pb-24">
+    <div className="min-h-screen pb-16">
       <MainHeader
         title="Detail Pembayaran"
         backHref="/booking"

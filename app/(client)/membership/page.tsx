@@ -20,7 +20,7 @@ export default function MembershipPage() {
 
   return (
     <>
-      <MainHeader backHref="/" title="Value Pack" withLogo={false} />
+      <MainHeader backHref="/" title="Value Pack" withLogo={false} withBorder/>
 
       <main className="mx-auto flex w-11/12 max-w-7xl flex-col gap-4 pb-12">
         {/* Loading state */}
