@@ -359,18 +359,19 @@ export default function InvoiceHistoryPage() {
                       )}
 
                       {/* Price and Action */}
-                      <div className="flex items-center justify-between border-t pt-4">
+                      <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                           <div className="mb-1 text-sm text-gray-600">Total Pembayaran</div>
-                          <div className="text-primary text-2xl font-bold">
+                          <div className="text-primary text-lg font-bold">
                             {formatCurrency(invoice.total)}
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-3">
-                          {isPending && (
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                          {isPending ? (
                             <Button
                               size="sm"
+                              className="w-full sm:w-auto"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 router.push(`/invoice/${invoice.number}`);
@@ -379,19 +380,20 @@ export default function InvoiceHistoryPage() {
                               <CreditCard className="mr-2 h-4 w-4" />
                               Bayar
                             </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="w-full sm:w-auto"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(`/invoice/${invoice.number}`);
+                              }}
+                            >
+                              Lihat Detail
+                              <ChevronRight className="ml-1 h-4 w-4" />
+                            </Button>
                           )}
-
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              router.push(`/invoice/${invoice.number}`);
-                            }}
-                          >
-                            Lihat Detail
-                            <ChevronRight className="ml-1 h-4 w-4" />
-                          </Button>
                         </div>
                       </div>
                     </CardContent>
