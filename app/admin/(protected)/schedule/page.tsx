@@ -616,6 +616,10 @@ export default function SchedulePage() {
                                                     {/* Display BookingCoach[] with slot details */}
                                                     {bookingCoaches.map((bookingCoach) => {
                                                       const coach = bookingCoach.slot?.staff;
+                                                      const coachDescription =
+                                                        (bookingCoach as any).description ??
+                                                        (bookingCoach as any).coachDescription ??
+                                                        null;
                                                       return (
                                                         <div
                                                           key={bookingCoach.id}
@@ -652,6 +656,11 @@ export default function SchedulePage() {
                                                                 {coach?.email && (
                                                                   <p className="text-muted-foreground text-xs">
                                                                     ✉️ {coach.email}
+                                                                  </p>
+                                                                )}
+                                                                {coachDescription && (
+                                                                  <p className="text-muted-foreground text-xs whitespace-pre-line mt-1">
+                                                                    📝 {coachDescription}
                                                                   </p>
                                                                 )}
                                                                 {bookingCoach.price !== undefined && (

@@ -257,6 +257,11 @@ const CoachDetail = ({ id }: { id: string }) => {
 	const invoice = (detail as any).booking?.invoice ?? (detail as any).invoice ?? null;
 	const bookingCourtSlots =
 		((detail as any).booking?.courtSlots as any[]) ?? ((detail as any).courtSlots as any[]) ?? [];
+	const coachDescription: string | null =
+		(detail as any).description ??
+		// Fallback: some APIs might nest it under coach
+		(detail as any).coach?.description ??
+		null;
 
 	return (
 		<div className="space-y-4">
@@ -316,6 +321,15 @@ const CoachDetail = ({ id }: { id: string }) => {
 					</p>
 				</div>
 			</div>
+
+			{coachDescription && (
+				<div className="border-t pt-4">
+					<p className="text-sm font-medium mb-2">Deskripsi</p>
+					<div className="bg-muted/50 rounded-lg p-3">
+						<p className="whitespace-pre-line text-sm">{coachDescription}</p>
+					</div>
+				</div>
+			)}
 
 			{bookingCourtSlots?.length > 0 && (
 				<div>

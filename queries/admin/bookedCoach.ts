@@ -4,6 +4,7 @@ import type { SearchParamsData } from '@/types';
 
 export type AdminBookedCoachListItem = {
 	id: string;
+	description?: string | null;
 	coach: {
 		id: string;
 		staff: { id: string; name: string; phone?: string | null } | null;

@@ -9,6 +9,7 @@ export type AdminCheckoutPayload = {
   coachSlots?: string[];
   ballboySlots?: string[];
   inventories?: { inventoryId: string; quantity: number }[];
+  coachDescription?: string;
 };
 
 export async function adminCheckoutApi(payload: AdminCheckoutPayload) {
