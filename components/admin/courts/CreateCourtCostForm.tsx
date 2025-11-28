@@ -88,6 +88,9 @@ const CreateCourtCostForm = ({ courtId }: Props) => {
     });
   };
 
+  const today = dayjs().startOf('day').toDate();
+  const maxYear = dayjs().add(5, 'year').endOf('year').toDate();
+
   return (
     <form onSubmit={form.handleSubmit(onSubmit)}>
       <FieldSet>
@@ -145,7 +148,12 @@ const CreateCourtCostForm = ({ courtId }: Props) => {
                 control={form.control}
                 name="fromDate"
                 render={({ field }) => (
-                  <DatePickerInput value={field.value} onValueChange={field.onChange} />
+                  <DatePickerInput
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    minDate={today}
+                    maxDate={maxYear}
+                  />
                 )}
               />
               <FieldError>{form.formState.errors.fromDate?.message}</FieldError>
@@ -156,7 +164,12 @@ const CreateCourtCostForm = ({ courtId }: Props) => {
                 control={form.control}
                 name="toDate"
                 render={({ field }) => (
-                  <DatePickerInput value={field.value} onValueChange={field.onChange} />
+                  <DatePickerInput
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    minDate={today}
+                    maxDate={maxYear}
+                  />
                 )}
               />
               <FieldError>{form.formState.errors.toDate?.message}</FieldError>
