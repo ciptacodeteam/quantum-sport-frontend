@@ -10,9 +10,11 @@ import { CalendarIcon } from 'lucide-react';
 type Props = {
   value: Date | undefined | null;
   onValueChange: (date: Date | undefined | null) => void;
+  minDate?: Date;
+  maxDate?: Date;
 };
 
-const DatePickerInput = ({ value, onValueChange }: Props) => {
+const DatePickerInput = ({ value, onValueChange, minDate, maxDate }: Props) => {
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -27,6 +29,7 @@ const DatePickerInput = ({ value, onValueChange }: Props) => {
           </div>
         </Button>
       </PopoverTrigger>
+
       <PopoverContent className="flex w-auto items-center overflow-hidden p-0" align="start">
         <div className="sm:flex">
           <Calendar
@@ -35,10 +38,16 @@ const DatePickerInput = ({ value, onValueChange }: Props) => {
             selected={value ? dayjs(value).toDate() : undefined}
             onSelect={(date) => onValueChange(date)}
             autoFocus
+            disabled={(date) => {
+              if (minDate && date < minDate) return true;
+              if (maxDate && date > maxDate) return true;
+              return false;
+            }}
           />
         </div>
       </PopoverContent>
     </Popover>
   );
 };
+
 export default DatePickerInput;
