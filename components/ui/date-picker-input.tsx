@@ -35,6 +35,8 @@ const DatePickerInput = ({ value, onValueChange, minDate, maxDate }: Props) => {
           <Calendar
             mode="single"
             captionLayout="dropdown"
+            fromYear={minDate ? dayjs(minDate).year() : dayjs().year()}
+            toYear={maxDate ? dayjs(maxDate).year() : dayjs().add(5, 'year').year()}
             selected={value ? dayjs(value).toDate() : undefined}
             onSelect={(date) => onValueChange(date)}
             autoFocus
