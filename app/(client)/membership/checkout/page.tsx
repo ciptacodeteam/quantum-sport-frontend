@@ -171,8 +171,6 @@ export default function MembershipCheckoutPage() {
   if (isMembershipLoading || !membership) {
     return (
       <>
-        <MainHeader title="Checkout Membership" backHref="/membership" withLogo={false} />
-        <main className="mx-auto mt-24 mb-16 w-11/12 max-w-4xl space-y-4">
         <MainHeader title="Checkout Membership" backHref="/membership" withLogo={false} withBorder/>
         <main className="mx-auto mt-24 w-11/12 max-w-4xl space-y-4 mb-32">
           <Skeleton className="h-48 w-full" />
