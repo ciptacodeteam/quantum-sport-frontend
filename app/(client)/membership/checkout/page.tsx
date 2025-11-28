@@ -173,6 +173,8 @@ export default function MembershipCheckoutPage() {
       <>
         <MainHeader title="Checkout Membership" backHref="/membership" withLogo={false} />
         <main className="mx-auto mt-24 mb-16 w-11/12 max-w-4xl space-y-4">
+        <MainHeader title="Checkout Membership" backHref="/membership" withLogo={false} withBorder/>
+        <main className="mx-auto mt-24 w-11/12 max-w-4xl space-y-4 mb-32">
           <Skeleton className="h-48 w-full" />
           <Skeleton className="h-64 w-full" />
         </main>
@@ -182,8 +184,8 @@ export default function MembershipCheckoutPage() {
 
   return (
     <>
-      <MainHeader title="Checkout Membership" backHref="/membership" withLogo={false} />
-      <main className="mx-auto flex w-11/12 max-w-4xl flex-col gap-6 pt-24 pb-16">
+      <MainHeader title="Checkout Membership" backHref="/membership" withLogo={false} withBorder/>
+      <main className="mx-auto flex w-11/12 max-w-4xl flex-col gap-6 pt-24 pb-32">
         {/* Membership Summary */}
         <div className="border-muted space-y-4 rounded-lg border bg-white p-4">
           <header className="space-y-1">
