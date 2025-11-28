@@ -108,6 +108,9 @@ interface BookingState {
   inventoryTotal: number;
   membershipDiscount: number; // Discount amount from membership sessions
 
+  // Coach description for admin checkout
+  coachDescription?: string | null;
+
   // Cart Sheet
   isCartOpen: boolean;
 
@@ -129,6 +132,9 @@ interface BookingState {
   setMembershipDiscount: (discount: number) => void;
   getTotalAmount: () => number;
   setCartOpen: (open: boolean) => void;
+
+  // Coach description actions
+  setCoachDescription: (value: string | null) => void;
 }
 
 export const useBookingStore = create<BookingState>()(
@@ -148,6 +154,7 @@ export const useBookingStore = create<BookingState>()(
       coachTotal: 0,
       inventoryTotal: 0,
       membershipDiscount: 0,
+      coachDescription: null,
       isCartOpen: false,
 
       // Actions
@@ -308,10 +315,13 @@ export const useBookingStore = create<BookingState>()(
           courtTotal: 0,
           coachTotal: 0,
           inventoryTotal: 0,
-          membershipDiscount: 0
+          membershipDiscount: 0,
+          coachDescription: null
         }),
 
       setMembershipDiscount: (discount) => set({ membershipDiscount: discount }),
+
+      setCoachDescription: (value) => set({ coachDescription: value }),
 
       getTotalAmount: () => {
         const state = get();
@@ -338,7 +348,8 @@ export const useBookingStore = create<BookingState>()(
         courtTotal: state.courtTotal,
         coachTotal: state.coachTotal,
         inventoryTotal: state.inventoryTotal,
-        membershipDiscount: state.membershipDiscount
+        membershipDiscount: state.membershipDiscount,
+        coachDescription: state.coachDescription
       })
     }
   )

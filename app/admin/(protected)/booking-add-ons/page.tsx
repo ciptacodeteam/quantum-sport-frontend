@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
+import { Field, FieldLabel } from '@/components/ui/field';
+import { Textarea } from '@/components/ui/textarea';
 import AppSectionHeader from '@/components/ui/app-section-header';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -64,7 +66,9 @@ export default function BookingAddOns() {
     setMembershipDiscount,
     courtTotal,
     coachTotal,
-    inventoryTotal
+    inventoryTotal,
+    coachDescription,
+    setCoachDescription
   } = useBookingStore();
 
   const [activeTab, setActiveTab] = useState<'coaches' | 'inventory'>('coaches');
@@ -72,7 +76,7 @@ export default function BookingAddOns() {
   // Selected date and time for add-ons when no court bookings exist
   const [selectedAddOnDate, setSelectedAddOnDate] = useState<string>(dayjs().format('YYYY-MM-DD'));
   const [selectedAddOnTimeSlot, setSelectedAddOnTimeSlot] = useState<string>('');
-  
+
   // Customer selection is now handled by BookingSummary component
   // Keep selectedCustomer state for membership discount calculation
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerSearchResult | null>(null);
@@ -497,7 +501,8 @@ export default function BookingAddOns() {
       courtSlots: courtSlots.length > 0 ? courtSlots : undefined,
       coachSlots: coachSlots.length > 0 ? coachSlots : undefined,
       ballboySlots: ballboySlots.length > 0 ? ballboySlots : undefined,
-      inventories: inventories.length > 0 ? inventories : undefined
+      inventories: inventories.length > 0 ? inventories : undefined,
+      coachDescription: coachDescription || undefined
     };
 
     if (selectedCustomerId) {
@@ -787,6 +792,27 @@ export default function BookingAddOns() {
                       </Card>
                     );
                   })}
+              </div>
+
+              {/* Coach Description Field */}
+              <div className="mt-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Coach Description</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Field>
+                      <FieldLabel htmlFor="coachDescription">Deskripsi Coach</FieldLabel>
+                      <Textarea
+                        id="coachDescription"
+                        value={coachDescription ?? ''}
+                        onChange={(e) => setCoachDescription(e.target.value || null)}
+                        placeholder="Tuliskan catatan atau deskripsi untuk coach (opsional)"
+                        className="min-h-24"
+                      />
+                    </Field>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           )}
