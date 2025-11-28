@@ -22,6 +22,7 @@ const formSchema = z.object({
   name: z.string().min(1, { message: 'Nama wajib diisi' }),
   description: z.string(),
   content: z.string(),
+  contentHtml: z.string(),
   price: z.number().min(0, { message: 'Harga tidak boleh negatif' }),
   sessions: z.number().min(0, { message: 'Jumlah jam tidak boleh negatif' }),
   duration: z.number().min(1, { message: 'Durasi minimal 1 hari' }),
@@ -45,6 +46,7 @@ const EditMembershipForm = ({ membershipId }: Props) => {
       name: data?.name || '',
       description: data?.description || '',
       content: data?.content || '',
+      contentHtml: data?.contentHtml || '',
       price: data?.price || 0,
       sessions: data?.sessions || 0,
       duration: data?.duration || 30,
@@ -210,7 +212,7 @@ const EditMembershipForm = ({ membershipId }: Props) => {
                     let parsedContent;
                     try {
                       parsedContent = field.value ? JSON.parse(field.value) : undefined;
-                    } catch (error) {
+                    } catch {
                       // If content is not valid JSON, treat it as undefined
                       parsedContent = undefined;
                     }
@@ -218,6 +220,9 @@ const EditMembershipForm = ({ membershipId }: Props) => {
                       <Editor
                         editorSerializedState={parsedContent}
                         onSerializedChange={(state) => field.onChange(JSON.stringify(state))}
+                        onHtmlGenerated={(html) =>
+                          form.setValue('contentHtml', html, { shouldValidate: true })
+                        }
                       />
                     );
                   }}

@@ -180,7 +180,25 @@ export default function InvoiceDetailPage() {
   const router = useRouter();
   const invoiceNumber = params.invoiceNumber as string;
 
-  const { data: response, isPending, isError } = useQuery(invoiceQueryOptions(invoiceNumber));
+  const {
+    data: response,
+    isPending,
+    isError
+  } = useQuery({
+    ...invoiceQueryOptions(invoiceNumber),
+    // Poll every 3 seconds when status is PENDING or HOLD
+    refetchInterval: (query) => {
+      const typedData = query.state.data as InvoiceDetailApiResponse | undefined;
+      const status = typedData?.data?.status;
+      // Stop polling if payment is completed (PAID, FAILED, EXPIRED, CANCELLED)
+      if (['PAID', 'FAILED', 'EXPIRED', 'CANCELLED'].includes(status || '')) {
+        return false;
+      }
+      // Poll every 3 seconds for pending payments
+      return 3000;
+    },
+    refetchIntervalInBackground: true // Continue polling even when tab is not focused
+  });
 
   const typedResponse = response as InvoiceDetailApiResponse | undefined;
   const invoice = typedResponse?.data;

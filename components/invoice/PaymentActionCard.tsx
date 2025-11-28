@@ -126,6 +126,11 @@ export default function PaymentActionCard({
                   Bank: <span className="font-semibold">{vaDisplayName}</span>
                 </div>
               </div>
+              {paymentExpiry && (
+                <div className="mb-5 flex justify-center">
+                  <PaymentCountdown dueDate={paymentExpiry} status={invoice.status} />
+                </div>
+              )}
               <div className="space-y-2 text-left text-sm text-gray-700">
                 <p className="font-semibold">Cara Pembayaran:</p>
                 <ol className="ml-2 list-inside list-decimal space-y-1">

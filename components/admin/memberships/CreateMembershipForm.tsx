@@ -19,6 +19,7 @@ const formSchema = z.object({
   name: z.string().min(1, { message: 'Nama wajib diisi' }),
   description: z.string(),
   content: z.string(),
+  contentHtml: z.string(),
   price: z.number().min(0, { message: 'Harga tidak boleh negatif' }),
   sessions: z.number().min(0, { message: 'Jumlah jam tidak boleh negatif' }),
   duration: z.number().min(1, { message: 'Durasi minimal 1 hari' }),
@@ -36,6 +37,7 @@ const CreateMembershipForm = () => {
       name: '',
       description: '',
       content: '',
+      contentHtml: '',
       price: 0,
       sessions: 0,
       duration: 30,
@@ -193,6 +195,9 @@ const CreateMembershipForm = () => {
                     <Editor
                       editorSerializedState={field.value ? JSON.parse(field.value) : undefined}
                       onSerializedChange={(state) => field.onChange(JSON.stringify(state))}
+                      onHtmlGenerated={(html) =>
+                        form.setValue('contentHtml', html, { shouldValidate: true })
+                      }
                     />
                   )}
                 />
