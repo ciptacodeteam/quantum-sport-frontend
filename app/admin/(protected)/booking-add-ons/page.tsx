@@ -91,6 +91,17 @@ export default function BookingAddOns() {
   }, [membershipDiscount.discountAmount, setMembershipDiscount]);
 
   // Get date range from bookings or selected add-on date
+  // Helper to create ISO string for start/end of day in UTC
+  // Treats the date string as UTC date (not local timezone) to match API expectations
+  const getDateRangeISO = (dateString: string, isStart: boolean): string => {
+    // dateString is in format YYYY-MM-DD
+    // Treat it as UTC date, not local timezone date
+    // So November 30 becomes 2025-11-30T00:00:00.000Z (not 2025-11-29T17:00:00.000Z)
+    const [year, month, day] = dateString.split('-').map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day, isStart ? 0 : 23, isStart ? 0 : 59, isStart ? 0 : 59, isStart ? 0 : 999));
+    return date.toISOString();
+  };
+
   const dateRange = useMemo(() => {
     if (bookingItems.length > 0) {
       const dates = bookingItems.map(item => item.date);
@@ -99,15 +110,15 @@ export default function BookingAddOns() {
       const endDate = sortedDates[sortedDates.length - 1];
       
       return {
-        startAt: dayjs(startDate).startOf('day').toISOString(),
-        endAt: dayjs(endDate).endOf('day').toISOString()
+        startAt: getDateRangeISO(startDate, true),
+        endAt: getDateRangeISO(endDate, false)
       };
     }
     
     // If no bookings, use selected add-on date
     return {
-      startAt: dayjs(selectedAddOnDate).startOf('day').toISOString(),
-      endAt: dayjs(selectedAddOnDate).endOf('day').toISOString()
+      startAt: getDateRangeISO(selectedAddOnDate, true),
+      endAt: getDateRangeISO(selectedAddOnDate, false)
     };
   }, [bookingItems, selectedAddOnDate]);
 

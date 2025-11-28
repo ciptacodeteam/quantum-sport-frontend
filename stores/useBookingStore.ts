@@ -301,6 +301,8 @@ export const useBookingStore = create<BookingState>()(
           selectedCoaches: [],
           selectedInventories: [],
           selectedCustomerId: null,
+          selectedCustomerName: null,
+          selectedCustomerPhone: null,
           walkInName: null,
           walkInPhone: null,
           courtTotal: 0,

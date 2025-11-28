@@ -421,9 +421,10 @@ export type Booking = {
   user?: UserProfile;
   cashier?: Cashier;
   details?: BookingDetail[];
-  inventories?: Inventory[];
+  inventories?: Inventory[] | BookingInventory[];
   ballboys?: Staff[];
-  coaches?: Staff[];
+  coaches?: Staff[] | BookingCoach[];
+  bookingCoaches?: BookingCoach[];
   invoice?: Invoice;
 };
 

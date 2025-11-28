@@ -26,10 +26,10 @@ import {
 } from '@/lib/constants';
 import { formatSlotTime } from '@/lib/time-utils';
 import { formatPhone } from '@/lib/utils';
-import { adminBookingsQueryOptions } from '@/queries/admin/booking';
+import { adminScheduleQueryOptions } from '@/queries/admin/booking';
 import { adminCourtsQueryOptions, adminCourtsWithSlotsQueryOptions } from '@/queries/admin/court';
-import type { Booking, BookingDetail } from '@/types/model';
-import { IconCalendar } from '@tabler/icons-react';
+import type { Booking, BookingDetail, BookingCoach, BookingInventory, Staff, Inventory } from '@/types/model';
+import { IconCalendar, IconUser, IconShoppingCart } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { useMemo, useState } from 'react';
@@ -198,7 +198,7 @@ export default function SchedulePage() {
   // Fetch all bookings - we'll filter by slot date on client side
   // Fetch without date filters to ensure we get all bookings, then filter by slot date
   const { data: bookingsData, isLoading: isBookingsLoading } = useQuery(
-    adminBookingsQueryOptions()
+    adminScheduleQueryOptions()
   );
   const allBookings = bookingsData || [];
 
@@ -428,6 +428,79 @@ export default function SchedulePage() {
                                               <div className="text-muted-foreground text-[10px]">
                                                 {formatPhone(bookingCell.customerPhone)}
                                               </div>
+                                              {/* Show add-ons indicators */}
+                                              {(() => {
+                                                // Check if coaches is BookingCoach[] or Staff[]
+                                                const coachesArray = bookingCell.booking.coaches || [];
+                                                const isBookingCoachArray = coachesArray.length > 0 && 'slot' in coachesArray[0];
+                                                const bookingCoaches = isBookingCoachArray 
+                                                  ? (coachesArray as any[] as BookingCoach[])
+                                                  : (bookingCell.booking.bookingCoaches || []);
+                                                const staffCoaches = !isBookingCoachArray 
+                                                  ? (coachesArray as any[] as Staff[])
+                                                  : [];
+                                                
+                                                // Get coach names
+                                                const coachNames: string[] = [];
+                                                bookingCoaches.forEach((bookingCoach) => {
+                                                  const coach = bookingCoach.slot?.staff;
+                                                  if (coach?.name) {
+                                                    coachNames.push(coach.name);
+                                                  }
+                                                });
+                                                staffCoaches.forEach((coach) => {
+                                                  if (coach.name) {
+                                                    coachNames.push(coach.name);
+                                                  }
+                                                });
+                                                
+                                                // Get inventory names
+                                                const inventoriesArray = bookingCell.booking.inventories || [];
+                                                const isBookingInventoryArray = inventoriesArray.length > 0 && 'inventory' in inventoriesArray[0];
+                                                const inventoryNames: string[] = [];
+                                                
+                                                if (isBookingInventoryArray) {
+                                                  (inventoriesArray as any[] as BookingInventory[]).forEach((bookingInventory) => {
+                                                    if (bookingInventory.inventory?.name) {
+                                                      inventoryNames.push(bookingInventory.inventory.name);
+                                                    }
+                                                  });
+                                                } else {
+                                                  (inventoriesArray as any[] as Inventory[]).forEach((inventory) => {
+                                                    if (inventory.name) {
+                                                      inventoryNames.push(inventory.name);
+                                                    }
+                                                  });
+                                                }
+                                                
+                                                const hasCoaches = coachNames.length > 0;
+                                                const hasInventories = inventoryNames.length > 0;
+                                                
+                                                if (!hasCoaches && !hasInventories) return null;
+                                                
+                                                // Build display text
+                                                const parts: string[] = [];
+                                                if (hasCoaches) {
+                                                  const coachDisplay = coachNames.length === 1 
+                                                    ? coachNames[0]
+                                                    : `${coachNames[0]}${coachNames.length > 1 ? ` +${coachNames.length - 1}` : ''}`;
+                                                  parts.push(`Coach: ${coachDisplay}`);
+                                                }
+                                                if (hasInventories) {
+                                                  const inventoryDisplay = inventoryNames.length === 1
+                                                    ? inventoryNames[0]
+                                                    : `${inventoryNames[0]}${inventoryNames.length > 1 ? ` +${inventoryNames.length - 1}` : ''}`;
+                                                  parts.push(`Inventory: ${inventoryDisplay}`);
+                                                }
+                                                
+                                                return (
+                                                  <div className="flex items-center justify-center mt-1">
+                                                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-gray-50 text-gray-700 border-gray-200">
+                                                      {parts.join(', ')}
+                                                    </Badge>
+                                                  </div>
+                                                );
+                                              })()}
                                             </div>
                                           </div>
                                         </DialogTrigger>
@@ -515,6 +588,213 @@ export default function SchedulePage() {
                                                 </div>
                                               </div>
                                             )}
+                                            {/* Coaches Section */}
+                                            {(() => {
+                                              // Check if coaches is BookingCoach[] or Staff[]
+                                              const coachesArray = bookingCell.booking.coaches || [];
+                                              const isBookingCoachArray = coachesArray.length > 0 && 'slot' in coachesArray[0];
+                                              const bookingCoaches = isBookingCoachArray 
+                                                ? (coachesArray as any[] as BookingCoach[])
+                                                : (bookingCell.booking.bookingCoaches || []);
+                                              const staffCoaches = !isBookingCoachArray 
+                                                ? (coachesArray as any[] as Staff[])
+                                                : [];
+                                              
+                                              const totalCoaches = bookingCoaches.length + staffCoaches.length;
+                                              
+                                              if (totalCoaches === 0) return null;
+                                              
+                                              return (
+                                                <div className="border-t pt-4">
+                                                  <div className="mb-3 flex items-center gap-2">
+                                                    <IconUser className="h-4 w-4 text-blue-600" />
+                                                    <p className="text-sm font-medium">
+                                                      Coaches ({totalCoaches})
+                                                    </p>
+                                                  </div>
+                                                  <div className="space-y-2">
+                                                    {/* Display BookingCoach[] with slot details */}
+                                                    {bookingCoaches.map((bookingCoach) => {
+                                                      const coach = bookingCoach.slot?.staff;
+                                                      return (
+                                                        <div
+                                                          key={bookingCoach.id}
+                                                          className="bg-blue-50 rounded-lg border border-blue-200 p-3"
+                                                        >
+                                                          <div className="flex items-start justify-between gap-3">
+                                                            <div className="flex-1">
+                                                              <div className="flex items-center gap-2 mb-1">
+                                                                <p className="text-sm font-semibold">
+                                                                  {coach?.name || 'Unknown Coach'}
+                                                                </p>
+                                                                {coach?.role && (
+                                                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
+                                                                    {coach.role}
+                                                                  </Badge>
+                                                                )}
+                                                                {bookingCoach.bookingCoachType && (
+                                                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-blue-100">
+                                                                    {bookingCoach.bookingCoachType.name}
+                                                                  </Badge>
+                                                                )}
+                                                              </div>
+                                                              <div className="space-y-0.5">
+                                                                {bookingCoach.slot && (
+                                                                  <p className="text-xs font-medium text-blue-700 mb-1">
+                                                                    🕐 {formatSlotTime(bookingCoach.slot.startAt)} - {formatSlotTime(bookingCoach.slot.endAt)}
+                                                                  </p>
+                                                                )}
+                                                                {coach?.phone && (
+                                                                  <p className="text-muted-foreground text-xs">
+                                                                    📞 {formatPhone(coach.phone)}
+                                                                  </p>
+                                                                )}
+                                                                {coach?.email && (
+                                                                  <p className="text-muted-foreground text-xs">
+                                                                    ✉️ {coach.email}
+                                                                  </p>
+                                                                )}
+                                                                {bookingCoach.price !== undefined && (
+                                                                  <p className="text-xs font-medium text-blue-700 mt-1">
+                                                                    💰 Rp {new Intl.NumberFormat('id-ID').format(bookingCoach.price)}
+                                                                  </p>
+                                                                )}
+                                                              </div>
+                                                            </div>
+                                                          </div>
+                                                        </div>
+                                                      );
+                                                    })}
+                                                    {/* Fallback: Display Staff[] without bookingCoach data */}
+                                                    {staffCoaches.map((coach) => (
+                                                      <div
+                                                        key={coach.id}
+                                                        className="bg-blue-50 rounded-lg border border-blue-200 p-3"
+                                                      >
+                                                        <div className="flex items-start justify-between gap-3">
+                                                          <div className="flex-1">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                              <p className="text-sm font-semibold">{coach.name}</p>
+                                                              {coach.role && (
+                                                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
+                                                                  {coach.role}
+                                                                </Badge>
+                                                              )}
+                                                            </div>
+                                                            <div className="space-y-0.5">
+                                                              {coach.phone && (
+                                                                <p className="text-muted-foreground text-xs">
+                                                                  📞 {formatPhone(coach.phone)}
+                                                                </p>
+                                                              )}
+                                                              {coach.email && (
+                                                                <p className="text-muted-foreground text-xs">
+                                                                  ✉️ {coach.email}
+                                                                </p>
+                                                              )}
+                                                              {coach.coachType && (
+                                                                <p className="text-muted-foreground text-xs">
+                                                                  🎯 Type: {coach.coachType}
+                                                                </p>
+                                                              )}
+                                                            </div>
+                                                          </div>
+                                                        </div>
+                                                      </div>
+                                                    ))}
+                                                  </div>
+                                                </div>
+                                              );
+                                            })()}
+
+                                            {/* Inventories Section */}
+                                            {(() => {
+                                              const inventoriesArray = bookingCell.booking.inventories || [];
+                                              if (inventoriesArray.length === 0) return null;
+                                              
+                                              // Check if inventories is BookingInventory[] or Inventory[]
+                                              const isBookingInventoryArray = 'inventory' in inventoriesArray[0];
+                                              
+                                              return (
+                                                <div className="border-t pt-4">
+                                                  <div className="mb-3 flex items-center gap-2">
+                                                    <IconShoppingCart className="h-4 w-4 text-green-600" />
+                                                    <p className="text-sm font-medium">Inventories ({inventoriesArray.length})</p>
+                                                  </div>
+                                                  <div className="space-y-2">
+                                                    {isBookingInventoryArray 
+                                                      ? (inventoriesArray as any[] as BookingInventory[]).map((bookingInventory) => {
+                                                          const inventory = bookingInventory.inventory;
+                                                          if (!inventory) return null;
+                                                          
+                                                          return (
+                                                            <div
+                                                              key={bookingInventory.id}
+                                                              className="bg-green-50 rounded-lg border border-green-200 p-3"
+                                                            >
+                                                              <div className="flex items-start justify-between gap-3">
+                                                                <div className="flex-1">
+                                                                  <p className="text-sm font-semibold mb-1">{inventory.name}</p>
+                                                                  <div className="space-y-0.5">
+                                                                    {inventory.description && (
+                                                                      <p className="text-muted-foreground text-xs">
+                                                                        {inventory.description}
+                                                                      </p>
+                                                                    )}
+                                                                    <div className="flex items-center gap-3 mt-1">
+                                                                      {bookingInventory.price !== undefined && (
+                                                                        <p className="text-xs font-medium text-green-700">
+                                                                          💰 Rp {new Intl.NumberFormat('id-ID').format(bookingInventory.price)}
+                                                                        </p>
+                                                                      )}
+                                                                      {bookingInventory.quantity !== undefined && (
+                                                                        <p className="text-xs text-muted-foreground">
+                                                                          📦 Qty: {bookingInventory.quantity}
+                                                                        </p>
+                                                                      )}
+                                                                    </div>
+                                                                  </div>
+                                                                </div>
+                                                              </div>
+                                                            </div>
+                                                          );
+                                                        })
+                                                      : (inventoriesArray as any[] as Inventory[]).map((inventory) => (
+                                                          <div
+                                                            key={inventory.id}
+                                                            className="bg-green-50 rounded-lg border border-green-200 p-3"
+                                                          >
+                                                            <div className="flex items-start justify-between gap-3">
+                                                              <div className="flex-1">
+                                                                <p className="text-sm font-semibold mb-1">{inventory.name}</p>
+                                                                <div className="space-y-0.5">
+                                                                  {inventory.description && (
+                                                                    <p className="text-muted-foreground text-xs">
+                                                                      {inventory.description}
+                                                                    </p>
+                                                                  )}
+                                                                  <div className="flex items-center gap-3 mt-1">
+                                                                    {inventory.price !== undefined && (
+                                                                      <p className="text-xs font-medium text-green-700">
+                                                                        💰 Rp {new Intl.NumberFormat('id-ID').format(inventory.price)}/hr
+                                                                      </p>
+                                                                    )}
+                                                                    {inventory.quantity !== undefined && (
+                                                                      <p className="text-xs text-muted-foreground">
+                                                                        📦 Qty: {inventory.quantity}
+                                                                      </p>
+                                                                    )}
+                                                                  </div>
+                                                                </div>
+                                                              </div>
+                                                            </div>
+                                                          </div>
+                                                        ))}
+                                                  </div>
+                                                </div>
+                                              );
+                                            })()}
+
                                             {bookingCell.booking.cancellationReason && (
                                               <div className="border-t pt-4">
                                                 <p className="text-muted-foreground text-sm">Alasan Pembatalan</p>

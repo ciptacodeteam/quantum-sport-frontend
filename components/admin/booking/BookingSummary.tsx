@@ -259,6 +259,15 @@ export default function BookingSummary({
     setWalkInPhoneLocal(walkInPhone || '');
   }, [walkInName, walkInPhone]);
 
+  // Reset selectedCustomer when selectedCustomerId becomes null (e.g., after booking is cleared)
+  useEffect(() => {
+    if (!selectedCustomerId) {
+      setSelectedCustomer(null);
+      setCustomerSearch('');
+      setDebouncedSearch('');
+    }
+  }, [selectedCustomerId]);
+
   // Use search endpoint for customers
   const { data: searchResults, isLoading: isSearching } = useQuery(
     adminCustomerSearchQueryOptions({

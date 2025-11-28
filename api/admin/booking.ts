@@ -19,6 +19,13 @@ export async function getOngoingBookingsApi() {
   return data;
 }
 
+export async function getScheduleApi(queryParams: SearchParamsData = {}) {
+  const url = '/bookings/schedule';
+  const mergedUrl = mergedQueryParamUrl(url, queryParams);
+  const res = await adminApi.get(mergedUrl);
+  return res.data;
+}
+
 export async function createBookingApi(payload: CreateMutationPayload) {
   const { data } = await adminApi.post('/bookings', payload.data);
   return data;
