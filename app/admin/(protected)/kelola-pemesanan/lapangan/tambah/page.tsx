@@ -47,6 +47,7 @@ const CreateBookingPage = () => {
     adminCreateBookingMutationOptions({
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['admin', 'bookings'] });
+        queryClient.invalidateQueries({ queryKey: ['admin', 'schedule'] });
         toast.success('Pemesanan berhasil dibuat!');
         router.push('/admin/kelola-pemesanan/lapangan');
       }
