@@ -30,12 +30,12 @@ export default function OpenScheduleModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-11/12 max-w-lg">
-        <DialogHeader>
+      <DialogContent className="w-11/12 max-w-lg max-h-[90vh] flex flex-col">
+        <DialogHeader className="shrink-0">
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-y-auto flex-1 min-h-0">
           {selectedCourts.map((court) => (
             <div key={court.id} className="border rounded-lg p-3">
               <p className="font-semibold mb-1">{court.name}</p>
