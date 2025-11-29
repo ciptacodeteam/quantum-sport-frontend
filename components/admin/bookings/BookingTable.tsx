@@ -156,6 +156,7 @@ const BookingTable = () => {
       updateBookingStatusApi(id, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'schedule'] });
       toast.success('Status pemesanan berhasil diperbarui.');
     },
     onError: () => {
@@ -178,7 +179,7 @@ const BookingTable = () => {
         success: () => 'Pemesanan berhasil dibatalkan.',
         error: 'Gagal membatalkan pemesanan.'
       },
-      invalidate: ['admin', 'bookings']
+      invalidate: [['admin', 'bookings'], ['admin', 'schedule']]
     }
   );
 

@@ -250,10 +250,26 @@ export default function SchedulePage() {
   }, [slots, selectedDateString, standardTimeSlots]);
 
   // Create a map of bookings by court and time slot
+  // Prioritize non-cancelled bookings over cancelled ones
   const bookingsMap = useMemo(() => {
     const map = new Map<string, Map<string, BookingCell>>();
     
-    bookings.forEach((booking) => {
+    // Sort bookings to process non-cancelled ones first
+    // This ensures that if there are multiple bookings for the same slot,
+    // non-cancelled ones will overwrite cancelled ones
+    const sortedBookings = [...bookings].sort((a, b) => {
+      const statusA = getBookingStatus(a.status as number | BookingStatus);
+      const statusB = getBookingStatus(b.status as number | BookingStatus);
+      
+      // Cancelled bookings should come last
+      if (statusA === BookingStatus.CANCELLED && statusB !== BookingStatus.CANCELLED) return 1;
+      if (statusA !== BookingStatus.CANCELLED && statusB === BookingStatus.CANCELLED) return -1;
+      
+      // Otherwise maintain original order
+      return 0;
+    });
+    
+    sortedBookings.forEach((booking) => {
       if (!booking.details || booking.details.length === 0) return;
       
       booking.details.forEach((detail) => {
@@ -272,13 +288,18 @@ export default function SchedulePage() {
           map.set(courtId, new Map());
         }
         
-        map.get(courtId)!.set(timeSlot, {
-          booking,
-          detail,
-          customerName,
-          customerPhone,
-          status
-        });
+        const existingCell = map.get(courtId)!.get(timeSlot);
+        
+        // Only set if there's no existing booking, or if the existing one is cancelled and this one is not
+        if (!existingCell || (existingCell.status === BookingStatus.CANCELLED && status !== BookingStatus.CANCELLED)) {
+          map.get(courtId)!.set(timeSlot, {
+            booking,
+            detail,
+            customerName,
+            customerPhone,
+            status
+          });
+        }
       });
     });
     

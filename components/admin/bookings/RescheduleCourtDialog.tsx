@@ -131,6 +131,7 @@ export function RescheduleCourtDialog({
       // Invalidate bookings queries to refresh the table
       queryClient.invalidateQueries({ queryKey: ['admin', 'bookings'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'bookings', 'ongoing-schedule'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'schedule'] });
       setOpen(false);
       resetState();
       onSuccess?.();
