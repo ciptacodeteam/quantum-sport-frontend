@@ -504,11 +504,11 @@ export default function SchedulePage() {
                                             </div>
                                           </div>
                                         </DialogTrigger>
-                                        <DialogContent className="max-w-2xl">
-                                          <DialogHeader className="mb-4">
+                                        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+                                          <DialogHeader className="mb-4 shrink-0">
                                             <DialogTitle>Detail Pemesanan</DialogTitle>
                                           </DialogHeader>
-                                          <div className="space-y-4">
+                                          <div className="space-y-4 overflow-y-auto flex-1 min-h-0">
                                             <div className="grid grid-cols-2 gap-4">
                                               <div>
                                                 <p className="text-muted-foreground text-sm">ID Pemesanan</p>
