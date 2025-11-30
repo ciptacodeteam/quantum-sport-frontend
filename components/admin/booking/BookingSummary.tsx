@@ -26,11 +26,14 @@ import {
   DialogTrigger
 } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { adminCustomerSearchQueryOptions, type CustomerSearchResult } from '@/queries/admin/customer';
+import {
+  adminCustomerSearchQueryOptions,
+  type CustomerSearchResult
+} from '@/queries/admin/customer';
 import { useMembershipDiscount } from '@/hooks/useMembershipDiscount';
 import { cn } from '@/lib/utils';
 import type { BookingItem, SelectedCoach, SelectedInventory } from '@/stores/useBookingStore';
-import { IconX, IconUser } from '@tabler/icons-react';
+import { IconX } from '@tabler/icons-react';
 
 /**
  * Props for the BookingSummary component
@@ -38,7 +41,7 @@ import { IconX, IconUser } from '@tabler/icons-react';
 export interface BookingSummaryProps {
   /** Array of booking items (court bookings) */
   bookingItems: BookingItem[];
-  
+
   /** Customer selection - ID of selected customer */
   selectedCustomerId: string | null;
   /** Customer name (for display when customer is selected but data not loaded yet) */
@@ -57,7 +60,7 @@ export interface BookingSummaryProps {
   onWalkInSet: (name: string, phone: string) => void;
   /** Callback to clear walk-in customer */
   onWalkInClear: () => void;
-  
+
   /** Selected coaches (optional - for add-ons page) */
   selectedCoaches?: SelectedCoach[];
   /** Selected inventory items (optional - for add-ons page) */
@@ -66,7 +69,7 @@ export interface BookingSummaryProps {
   onCoachRemove?: (coachId: string, timeSlot: string, slotId?: string) => void;
   /** Callback to remove an inventory item (optional - for add-ons page) */
   onInventoryRemove?: (inventoryId: string, timeSlot?: string) => void;
-  
+
   /** Total price for court bookings */
   courtTotal: number;
   /** Total price for coaches (optional - for add-ons page) */
@@ -77,7 +80,7 @@ export interface BookingSummaryProps {
   membershipDiscount?: number;
   /** Grand total amount */
   totalAmount: number;
-  
+
   /** Membership discount details (optional - will be calculated if not provided) */
   membershipDiscountDetails?: {
     canUseMembership: boolean;
@@ -98,7 +101,7 @@ export interface BookingSummaryProps {
       };
     } | null;
   } | null;
-  
+
   /** Primary action button configuration */
   primaryAction?: {
     label: string;
@@ -113,7 +116,7 @@ export interface BookingSummaryProps {
     variant?: 'default' | 'outline' | 'destructive' | 'ghost' | 'link' | 'secondary';
     icon?: React.ReactNode;
   }>;
-  
+
   /** Display options */
   /** Show customer selection UI (default: true) */
   showCustomerSelection?: boolean;
@@ -125,7 +128,7 @@ export interface BookingSummaryProps {
   showCourtBookings?: boolean;
   /** Callback to remove a court booking (optional - for booking-lapangan page) */
   onBookingRemove?: (courtId: string, timeSlot: string, date: string) => void;
-  
+
   /** Additional CSS classes */
   className?: string;
   /** Make the summary sticky on desktop (default: true) */
@@ -137,7 +140,7 @@ export interface BookingSummaryProps {
 /**
  * BookingSummary - A reusable component for displaying booking summary with customer selection,
  * membership info, court bookings, add-ons, and totals.
- * 
+ *
  * @example
  * ```tsx
  * <BookingSummary
@@ -222,7 +225,7 @@ export default function BookingSummary({
   courtTotal,
   coachTotal = 0,
   inventoryTotal = 0,
-  membershipDiscount: membershipDiscountAmount = 0,
+  membershipDiscount: _membershipDiscountAmount = 0,
   totalAmount,
   membershipDiscountDetails,
   primaryAction,
@@ -277,26 +280,32 @@ export default function BookingSummary({
   );
 
   // Group bookings by date
-  const bookingsByDate = bookingItems.reduce((groups, item) => {
-    const date = item.date;
-    if (!groups[date]) {
-      groups[date] = {
-        date,
-        dayName: dayjs(date).format('dddd'),
-        formattedDate: dayjs(date).format('DD MMM YYYY'),
-        shortDate: dayjs(date).format('ddd, DD MMM'),
-        items: []
-      };
-    }
-    groups[date].items.push(item);
-    return groups;
-  }, {} as Record<string, {
-    date: string;
-    dayName: string;
-    formattedDate: string;
-    shortDate: string;
-    items: BookingItem[];
-  }>);
+  const bookingsByDate = bookingItems.reduce(
+    (groups, item) => {
+      const date = item.date;
+      if (!groups[date]) {
+        groups[date] = {
+          date,
+          dayName: dayjs(date).format('dddd'),
+          formattedDate: dayjs(date).format('DD MMM YYYY'),
+          shortDate: dayjs(date).format('ddd, DD MMM'),
+          items: []
+        };
+      }
+      groups[date].items.push(item);
+      return groups;
+    },
+    {} as Record<
+      string,
+      {
+        date: string;
+        dayName: string;
+        formattedDate: string;
+        shortDate: string;
+        items: BookingItem[];
+      }
+    >
+  );
 
   // Calculate membership discount (always call hook, but use provided data if available)
   const calculatedMembershipDiscount = useMembershipDiscount(
@@ -365,7 +374,7 @@ export default function BookingSummary({
                         className="w-full justify-between"
                       >
                         {selectedCustomer || (selectedCustomerName && selectedCustomerPhone)
-                          ? `${selectedCustomer?.name || selectedCustomerName}${(selectedCustomer?.phone || selectedCustomerPhone) ? ` (${selectedCustomer?.phone || selectedCustomerPhone})` : ''}`
+                          ? `${selectedCustomer?.name || selectedCustomerName}${selectedCustomer?.phone || selectedCustomerPhone ? ` (${selectedCustomer?.phone || selectedCustomerPhone})` : ''}`
                           : 'Pilih pelanggan...'}
                       </Button>
                     </PopoverTrigger>
@@ -378,11 +387,11 @@ export default function BookingSummary({
                         />
                         <CommandList>
                           {isSearching ? (
-                            <div className="py-6 text-center text-sm text-muted-foreground">
+                            <div className="text-muted-foreground py-6 text-center text-sm">
                               Mencari...
                             </div>
                           ) : debouncedSearch.length < 2 ? (
-                            <div className="py-6 text-center text-sm text-muted-foreground">
+                            <div className="text-muted-foreground py-6 text-center text-sm">
                               Ketik minimal 2 karakter untuk mencari
                             </div>
                           ) : !searchResults || searchResults.length === 0 ? (
@@ -463,18 +472,12 @@ export default function BookingSummary({
                 <div className="bg-muted mt-2 rounded-md border px-3 py-2 text-xs">
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="font-medium">Walk-in:</span>{' '}
-                      <span>{walkInName || '-'}</span>
+                      <span className="font-medium">Walk-in:</span> <span>{walkInName || '-'}</span>
                       {walkInPhone && (
                         <span className="text-muted-foreground ml-1">({walkInPhone})</span>
                       )}
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={onWalkInClear}
-                    >
+                    <Button type="button" variant="ghost" size="sm" onClick={onWalkInClear}>
                       Hapus
                     </Button>
                   </div>
@@ -487,7 +490,7 @@ export default function BookingSummary({
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="mb-1">
-                        <span className="font-medium text-muted-foreground">Pelanggan:</span>
+                        <span className="text-muted-foreground font-medium">Pelanggan:</span>
                       </div>
                       <div>
                         <span className="font-semibold">
@@ -522,9 +525,9 @@ export default function BookingSummary({
 
           {/* Show membership information if available */}
           {showMembershipInfo && selectedCustomerId && membershipDiscount.activeMembership && (
-            <div className="mt-2 rounded-lg bg-primary/5 border border-primary/20 p-3">
+            <div className="bg-primary/5 border-primary/20 mt-2 rounded-lg border p-3">
               <div className="mb-1 flex items-center justify-between">
-                <span className="text-xs font-medium text-primary">Membership Aktif</span>
+                <span className="text-primary text-xs font-medium">Membership Aktif</span>
                 <Badge
                   variant={
                     membershipDiscount.activeMembership.isExpired ||
@@ -564,150 +567,175 @@ export default function BookingSummary({
           )}
 
           {/* Court Bookings */}
-          {showCourtBookings && bookingItems.length > 0 && (
+          {showCourtBookings && (
             <div className="space-y-2">
-              <h4 className="font-medium text-sm text-muted-foreground">Court Bookings</h4>
-              {Object.entries(bookingsByDate).map(([date, dateInfo]) => (
-                <div key={date} className="space-y-1">
-                  <div className="text-xs font-medium text-muted-foreground">
-                    {dateInfo.shortDate}
-                  </div>
-                  {dateInfo.items.map((booking, index) => {
-                    // Check if this booking is free due to membership
-                    const sortedBookings = [...bookingItems].sort((a, b) => {
-                      const dateCompare = a.date.localeCompare(b.date);
-                      if (dateCompare !== 0) return dateCompare;
-                      return a.timeSlot.localeCompare(b.timeSlot);
-                    });
-                    const bookingIndex = sortedBookings.findIndex(
-                      (b) =>
-                        b.courtId === booking.courtId &&
-                        b.timeSlot === booking.timeSlot &&
-                        b.date === booking.date
-                    );
-                    const isFree =
-                      membershipDiscount.canUseMembership &&
-                      bookingIndex >= 0 &&
-                      bookingIndex < membershipDiscount.slotsToDeduct;
+              <h4 className="text-muted-foreground text-sm font-medium">Court Bookings</h4>
+              {bookingItems.length === 0 ? (
+                <div className="bg-muted rounded-lg p-4 text-center">
+                  <p className="text-muted-foreground text-xs">Belum ada lapangan yang dipilih</p>
+                </div>
+              ) : (
+                Object.entries(bookingsByDate).map(([date, dateInfo]) => (
+                  <div key={date} className="space-y-1">
+                    <div className="text-muted-foreground text-xs font-medium">
+                      {dateInfo.shortDate}
+                    </div>
+                    {dateInfo.items.map((booking, index) => {
+                      // Check if this booking is free due to membership
+                      const sortedBookings = [...bookingItems].sort((a, b) => {
+                        const dateCompare = a.date.localeCompare(b.date);
+                        if (dateCompare !== 0) return dateCompare;
+                        return a.timeSlot.localeCompare(b.timeSlot);
+                      });
+                      const bookingIndex = sortedBookings.findIndex(
+                        (b) =>
+                          b.courtId === booking.courtId &&
+                          b.timeSlot === booking.timeSlot &&
+                          b.date === booking.date
+                      );
+                      const isFree =
+                        membershipDiscount.canUseMembership &&
+                        bookingIndex >= 0 &&
+                        bookingIndex < membershipDiscount.slotsToDeduct;
 
-                    return (
-                      <div
-                        key={`${date}-${index}`}
-                        className={cn(
-                          'flex items-center justify-between gap-2 p-2 rounded text-xs ml-2',
-                          isFree
-                            ? 'bg-green-50 border-l-4 border-l-green-500'
-                            : 'bg-muted'
-                        )}
-                      >
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1">
-                            <p className="font-medium truncate">{booking.courtName}</p>
-                            {isFree && (
-                              <Badge
-                                variant="outline"
-                                className="border-green-500 bg-green-50 text-[10px] text-green-700"
+                      return (
+                        <div
+                          key={`${date}-${index}`}
+                          className={cn(
+                            'ml-2 flex items-center justify-between gap-2 rounded p-2 text-xs',
+                            isFree ? 'border-l-4 border-l-green-500 bg-green-50' : 'bg-muted'
+                          )}
+                        >
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1">
+                              <p className="truncate font-medium">{booking.courtName}</p>
+                              {isFree && (
+                                <Badge
+                                  variant="outline"
+                                  className="border-green-500 bg-green-50 text-[10px] text-green-700"
+                                >
+                                  Gratis
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-muted-foreground">{booking.timeSlot}</p>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-2">
+                            <span
+                              className={cn(
+                                'font-semibold',
+                                isFree ? 'text-green-600 line-through' : 'text-primary'
+                              )}
+                            >
+                              {isFree ? (
+                                <>
+                                  <span className="text-muted-foreground">
+                                    {formatCurrency(booking.price)}
+                                  </span>{' '}
+                                  <span className="ml-1">Gratis</span>
+                                </>
+                              ) : (
+                                formatCurrency(booking.price)
+                              )}
+                            </span>
+                            {onBookingRemove && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 w-6 p-0 text-red-500 hover:bg-red-50 hover:text-red-700"
+                                onClick={() =>
+                                  onBookingRemove(booking.courtId, booking.timeSlot, booking.date)
+                                }
                               >
-                                Gratis
-                              </Badge>
+                                <IconX className="h-3 w-3" />
+                              </Button>
                             )}
                           </div>
-                          <p className="text-muted-foreground">{booking.timeSlot}</p>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span
-                            className={cn(
-                              'font-semibold',
-                              isFree ? 'text-green-600 line-through' : 'text-primary'
-                            )}
-                          >
-                            {isFree ? (
-                              <>
-                                <span className="text-muted-foreground">
-                                  {formatCurrency(booking.price)}
-                                </span>{' '}
-                                <span className="ml-1">Gratis</span>
-                              </>
-                            ) : (
-                              formatCurrency(booking.price)
-                            )}
-                          </span>
-                          {onBookingRemove && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 w-6 p-0 text-red-500 hover:bg-red-50 hover:text-red-700"
-                              onClick={() => onBookingRemove(booking.courtId, booking.timeSlot, booking.date)}
-                            >
-                              <IconX className="h-3 w-3" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
+                      );
+                    })}
+                  </div>
+                ))
+              )}
             </div>
           )}
 
           {/* Selected Coaches */}
-          {showAddOns && selectedCoaches.length > 0 && onCoachRemove && (
+          {showAddOns && onCoachRemove && (
             <div className="space-y-2">
-              <h4 className="font-medium text-sm text-muted-foreground">Selected Coaches</h4>
-              {selectedCoaches.map((coach, index) => (
-                <div key={index} className="flex items-center justify-between gap-2 p-2 bg-blue-50 rounded text-xs">
-                  <div className="min-w-0">
-                    <p className="font-medium truncate">{coach.coachName}</p>
-                    <p className="text-muted-foreground">
-                      {dayjs(coach.date).format('DD MMM')} • {coach.timeSlot}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="font-semibold text-primary">
-                      {formatCurrency(coach.price)}
-                    </span>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 w-6 p-0 text-red-500 hover:bg-red-50 hover:text-red-700"
-                      onClick={() => onCoachRemove(coach.coachId, coach.timeSlot, coach.slotId)}
-                    >
-                      <IconX className="h-3 w-3" />
-                    </Button>
-                  </div>
+              <h4 className="text-muted-foreground text-sm font-medium">Selected Coaches</h4>
+              {selectedCoaches.length === 0 ? (
+                <div className="bg-muted rounded-lg p-4 text-center">
+                  <p className="text-muted-foreground text-xs">Belum ada coach yang dipilih</p>
                 </div>
-              ))}
+              ) : (
+                selectedCoaches.map((coach, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between gap-2 rounded bg-blue-50 p-2 text-xs"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{coach.coachName}</p>
+                      <p className="text-muted-foreground">
+                        {dayjs(coach.date).format('DD MMM')} • {coach.timeSlot}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="text-primary font-semibold">
+                        {formatCurrency(coach.price)}
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 w-6 p-0 text-red-500 hover:bg-red-50 hover:text-red-700"
+                        onClick={() => onCoachRemove(coach.coachId, coach.timeSlot, coach.slotId)}
+                      >
+                        <IconX className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           )}
 
           {/* Selected Equipment */}
-          {showAddOns && selectedInventories.length > 0 && onInventoryRemove && (
+          {showAddOns && onInventoryRemove && (
             <div className="space-y-2">
-              <h4 className="font-medium text-sm text-muted-foreground">Selected Equipment</h4>
-              {selectedInventories.map((inventory, index) => (
-                <div key={index} className="flex items-center justify-between gap-2 p-2 bg-green-50 rounded text-xs">
-                  <div className="min-w-0">
-                    <p className="font-medium truncate">{inventory.inventoryName}</p>
-                    <p className="text-muted-foreground">
-                      {dayjs(inventory.date).format('DD MMM')} • {inventory.timeSlot} • Qty: {inventory.quantity}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="font-semibold text-primary">
-                      {formatCurrency(inventory.price)}
-                    </span>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 w-6 p-0 text-red-500 hover:bg-red-50 hover:text-red-700"
-                      onClick={() => onInventoryRemove(inventory.inventoryId, inventory.timeSlot)}
-                    >
-                      <IconX className="h-3 w-3" />
-                    </Button>
-                  </div>
+              <h4 className="text-muted-foreground text-sm font-medium">Selected Equipment</h4>
+              {selectedInventories.length === 0 ? (
+                <div className="bg-muted rounded-lg p-4 text-center">
+                  <p className="text-muted-foreground text-xs">Belum ada equipment yang dipilih</p>
                 </div>
-              ))}
+              ) : (
+                selectedInventories.map((inventory, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between gap-2 rounded bg-green-50 p-2 text-xs"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{inventory.inventoryName}</p>
+                      <p className="text-muted-foreground">
+                        {dayjs(inventory.date).format('DD MMM')} • {inventory.timeSlot} • Qty:{' '}
+                        {inventory.quantity}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="text-primary font-semibold">
+                        {formatCurrency(inventory.price)}
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 w-6 p-0 text-red-500 hover:bg-red-50 hover:text-red-700"
+                        onClick={() => onInventoryRemove(inventory.inventoryId, inventory.timeSlot)}
+                      >
+                        <IconX className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           )}
 
@@ -716,13 +744,13 @@ export default function BookingSummary({
           {/* Totals */}
           <div className="space-y-2">
             {showCourtBookings && (
-              <div className="flex justify-between items-center text-sm">
+              <div className="flex items-center justify-between text-sm">
                 <span>Courts</span>
                 <span>{formatCurrency(courtTotal)}</span>
               </div>
             )}
             {membershipDiscount.canUseMembership && membershipDiscount.slotsToDeduct > 0 && (
-              <div className="flex justify-between items-center text-xs text-green-600">
+              <div className="flex items-center justify-between text-xs text-green-600">
                 <span>
                   Membership Discount ({membershipDiscount.slotsToDeduct} slot
                   {membershipDiscount.slotsToDeduct > 1 ? 's' : ''})
@@ -735,13 +763,13 @@ export default function BookingSummary({
             {showAddOns && (
               <>
                 {coachTotal > 0 && (
-                  <div className="flex justify-between items-center text-sm">
+                  <div className="flex items-center justify-between text-sm">
                     <span>Coaches</span>
                     <span>{formatCurrency(coachTotal)}</span>
                   </div>
                 )}
                 {inventoryTotal > 0 && (
-                  <div className="flex justify-between items-center text-sm">
+                  <div className="flex items-center justify-between text-sm">
                     <span>Equipment</span>
                     <span>{formatCurrency(inventoryTotal)}</span>
                   </div>
@@ -749,13 +777,13 @@ export default function BookingSummary({
               </>
             )}
             {bundleDiscount > 0 && (
-              <div className="flex justify-between items-center text-xs text-blue-600">
+              <div className="flex items-center justify-between text-xs text-blue-600">
                 <span>Bundled Court + Coach Discount</span>
                 <span className="font-medium">- {formatCurrency(bundleDiscount)}</span>
               </div>
             )}
             <Separator />
-            <div className="flex justify-between items-center font-bold text-lg">
+            <div className="flex items-center justify-between text-lg font-bold">
               <span>Total</span>
               <span className="text-primary">{formatCurrency(finalTotal)}</span>
             </div>
@@ -793,4 +821,3 @@ export default function BookingSummary({
     </div>
   );
 }
-
