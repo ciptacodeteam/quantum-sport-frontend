@@ -1,11 +1,13 @@
 'use client';
 
-import Logo from '@/assets/img/logo.svg';
 import { Card } from '@/components/ui/card';
 import { getWhatsappMessageUrl } from '@/lib/utils';
 import { IconBrandInstagram, IconBrandWhatsapp } from '@tabler/icons-react';
 import { Calendar, FileText, Headphones, MapPin, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
+
+import Image from 'next/image';
+import logowhite from '@/public/assets/img/logowhite.webp';
 
 export default function InformationsPage() {
   const links = [
@@ -37,7 +39,7 @@ export default function InformationsPage() {
       title: 'Pricelist',
       description: 'View our services and pricing',
       icon: FileText,
-      href: 'https://drive.google.com/file/d/1AWcLknTY3LtW4CTyUnqd72tXImbGcvea/view?usp=drive_link',
+      href: 'https://drive.google.com/file/d/1hMqrGyzdt3w0nZS4J0pac5A53roTEHEJ/view?usp=sharing',
       color: 'from-orange-500 to-red-500',
       external: true
     },
@@ -50,27 +52,22 @@ export default function InformationsPage() {
       external: true
     }
   ];
-
+  // bg-[#09331e]
   return (
-    <div className="relative min-h-screen overflow-hidden bg-linear-to-br from-purple-100 via-emerald-50 to-amber-100">
-      {/* Animated gradient orbs */}
-      <div className="absolute -top-32 -left-32 h-96 w-96 animate-pulse rounded-full bg-linear-to-r from-purple-400 to-emerald-400 opacity-20 blur-3xl"></div>
-      <div className="absolute -right-32 -bottom-32 h-96 w-96 animate-pulse rounded-full bg-linear-to-r from-amber-400 to-cyan-400 opacity-20 blur-3xl delay-1000"></div>
-      <div className="absolute top-1/2 left-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 animate-pulse rounded-full bg-linear-to-r from-emerald-300 to-purple-300 opacity-10 blur-3xl delay-500"></div>
-
-      <div className="relative z-10 container mx-auto px-4 py-12">
+    <div className="overflow-hidde relative min-h-screen bg-[url(/assets/img/bg-court.webp)] bg-cover bg-center bg-no-repeat">
+      <div className="relative z-10 container mx-auto px-4 pb-12">
         <div className="mx-auto max-w-2xl">
           {/* Logo/Header Section */}
           <div className="mb-8 text-center">
             <div className="flex justify-center">
-              <div className="relative overflow-hidden rounded-full">
+              <div className="relative overflow-hidden mt-12">
                 <div className="flex h-full w-full items-center justify-center">
-                  <Logo className="size-36 text-white" />
+                  <Image src={logowhite} alt="" className='w-42'/>
                 </div>
               </div>
             </div>
             {/* <h1 className="mb-2 text-3xl font-bold text-gray-800">Quantum Social Club</h1> */}
-            <p className="text-base text-gray-600">Your Premier Sports & Social Destination</p>
+            {/* <p className="text-base text-white">Your Premier Sports & Social Destination</p> */}
           </div>
 
           {/* Links Section */}
@@ -84,18 +81,18 @@ export default function InformationsPage() {
 
               return (
                 <LinkComponent key={index} {...linkProps} className="block">
-                  <Card className="group transform cursor-pointer border-0 bg-white/80 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl">
+                  <Card className="group transform cursor-pointer border-0 bg-[#09331e] backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl">
                     <div className="flex items-center gap-4 px-4 py-0">
                       <div
-                        className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-linear-to-br ${link.color} shadow-md transition-transform duration-300 group-hover:scale-110`}
+                        className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-white/80 transition-transform duration-300 group-hover:scale-110`}
                       >
-                        <Icon className="size-6 text-white" />
+                        <Icon className="size-6 text-[#09331e]" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="group-hover:text-primary mb-1 text-lg font-semibold text-gray-800 transition-colors">
+                        <h3 className="group-hover:text-primary text-lg font-semibold text-[#e0d5b7] transition-colors">
                           {link.title}
                         </h3>
-                        <p className="text-muted-foreground text-sm">{link.description}</p>
+                        <p className="text-sm text-white">{link.description}</p>
                       </div>
                       <svg
                         className="h-6 w-6 shrink-0 text-gray-400 transition-all duration-300 group-hover:translate-x-1 group-hover:text-purple-600"
@@ -118,8 +115,8 @@ export default function InformationsPage() {
           </div>
 
           {/* Footer Section */}
-          <div className="mt-12 text-center">
-            <p className="mb-4 text-sm text-gray-600">Follow us on social media</p>
+          <div className="mt-6 text-center">
+            <p className="mb-4 text-sm text-white">Follow us on social media</p>
             <div className="flex justify-center gap-4">
               <a
                 href="https://www.instagram.com/quantumsportsandsocialclub"
@@ -144,10 +141,8 @@ export default function InformationsPage() {
           </div>
 
           {/* Copyright */}
-          <div className="mt-8 text-center">
-            <p className="text-xs text-gray-500">
-              © 2025 Quantum Social Club. All rights reserved.
-            </p>
+          <div className="mt-6 text-center">
+            <p className="text-xs text-white">©2025 Quantum Social Club. All rights reserved.</p>
           </div>
         </div>
       </div>
