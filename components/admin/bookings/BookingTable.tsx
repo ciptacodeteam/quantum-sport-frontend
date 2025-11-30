@@ -179,7 +179,10 @@ const BookingTable = () => {
         success: () => 'Pemesanan berhasil dibatalkan.',
         error: 'Gagal membatalkan pemesanan.'
       },
-      invalidate: [['admin', 'bookings'], ['admin', 'schedule']]
+      invalidate: [
+        ['admin', 'bookings'],
+        ['admin', 'schedule']
+      ]
     }
   );
 
@@ -319,11 +322,11 @@ const BookingTable = () => {
                     <IconEye />
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+                <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col">
                   <DialogHeader className="mb-4 shrink-0">
                     <DialogTitle>Detail Pemesanan</DialogTitle>
                   </DialogHeader>
-                  <div className="space-y-4 overflow-y-auto flex-1 min-h-0">
+                  <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <p className="text-muted-foreground text-sm">ID Pemesanan</p>
@@ -409,7 +412,7 @@ const BookingTable = () => {
                                     <p className="text-base font-medium">
                                       Rp {new Intl.NumberFormat('id-ID').format(detail.price)}
                                     </p>
-                                    {detail.slot && (
+                                    {detail.slot && status !== BookingStatus.CANCELLED && (
                                       <RescheduleCourtDialog
                                         detail={detail as BookingDetailWithSlot}
                                         canReschedule={canReschedule}
@@ -445,11 +448,11 @@ const BookingTable = () => {
                       <IconPencil />
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
+                  <DialogContent className="flex max-h-[90vh] max-w-lg flex-col">
                     <DialogHeader className="mb-2 shrink-0">
                       <DialogTitle className="text-base">Ubah Status Pemesanan</DialogTitle>
                     </DialogHeader>
-                    <div className="space-y-4 overflow-y-auto flex-1 min-h-0">
+                    <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
                       {/* Booking Info Summary */}
                       <div className="bg-muted/50 space-y-3 rounded-lg border p-4">
                         <div className="flex items-start justify-between">
