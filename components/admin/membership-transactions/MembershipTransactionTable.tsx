@@ -14,7 +14,7 @@ import { PAYMENT_STATUS_BADGE_VARIANT, PAYMENT_STATUS_MAP } from '@/lib/constant
 import { formatCurrency } from '@/lib/utils';
 import { adminMembershipTransactionsQueryOptions } from '@/queries/admin/membershipTransaction';
 import type { MembershipUser } from '@/types/model';
-import { IconEye } from '@tabler/icons-react';
+import { IconEye, IconFileExcel } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
@@ -106,7 +106,7 @@ const MembershipTransactionTable = () => {
           return (
             <div className="flex items-center gap-2">
               <span className="font-mono text-sm">{invoice.number}</span>
-              <CopyButton value={invoice.number} />
+              <CopyButton variant={'ghost'} size={'lg'} value={invoice.number} />
             </div>
           );
         },
@@ -117,10 +117,11 @@ const MembershipTransactionTable = () => {
         cell: (info) => {
           const row = info.row.original;
           // Calculate end date based on start date + remaining duration
-          const calculatedEndDate = row.remainingDuration > 0
-            ? dayjs(row.startDate).add(row.remainingDuration, 'day').toDate()
-            : null;
-          
+          const calculatedEndDate =
+            row.remainingDuration > 0
+              ? dayjs(row.startDate).add(row.remainingDuration, 'day').toDate()
+              : null;
+
           return (
             <div className="text-sm">
               <p className="font-medium">{formatDate(row.startDate)}</p>
@@ -256,17 +257,29 @@ const MembershipTransactionTable = () => {
         size: 100
       })
     ],
-    []
+    [approveTx, rejectTx, suspendTx, unsuspendTx]
   );
 
   return (
     <div>
-      <div className="mb-3 flex items-center justify-end gap-2">
-        <Button variant="outline" size="sm" onClick={() => exportExcel({})} disabled={exporting}>
-          {exporting ? 'Exporting…' : 'Export Excel'}
-        </Button>
-      </div>
-      <DataTable columns={columns} data={transactions} loading={isLoading} />
+      <DataTable
+        columns={columns}
+        data={transactions}
+        loading={isLoading}
+        rightActions={
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => exportExcel({})}
+              disabled={exporting}
+            >
+              <IconFileExcel />
+              {exporting ? 'Exporting…' : 'Export Excel'}
+            </Button>
+          </div>
+        }
+      />
     </div>
   );
 };
@@ -345,7 +358,9 @@ const MembershipTransactionDetail = ({ transaction }: { transaction: MembershipU
             <p className="text-muted-foreground text-sm">End Date</p>
             <p className="font-medium">
               {transaction.remainingDuration > 0
-                ? formatDate(dayjs(transaction.startDate).add(transaction.remainingDuration, 'day').toDate())
+                ? formatDate(
+                    dayjs(transaction.startDate).add(transaction.remainingDuration, 'day').toDate()
+                  )
                 : '-'}
             </p>
           </div>
@@ -393,7 +408,7 @@ const MembershipTransactionDetail = ({ transaction }: { transaction: MembershipU
               <p className="text-muted-foreground text-sm">Invoice Number</p>
               <div className="flex items-center gap-2">
                 <p className="font-mono font-medium">{invoice.number}</p>
-                <CopyButton value={invoice.number} />
+                <CopyButton variant={'ghost'} value={invoice.number} />
               </div>
             </div>
             <div>

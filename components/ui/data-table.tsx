@@ -127,6 +127,7 @@ interface DataTableProps<TData extends RowData> {
   totalCount?: number;
   /** Callback when pagination changes (page or pageSize) */
   onPaginationChange?: (page: number, pageSize: number) => void;
+  rightActions?: React.ReactNode;
 }
 
 export function DataTable<TData extends RowData>({
@@ -136,6 +137,7 @@ export function DataTable<TData extends RowData>({
   addButton,
   enableGlobalSearch = true,
   children,
+  rightActions,
 
   enableRowSelection = true,
   getRowId,
@@ -354,38 +356,42 @@ export function DataTable<TData extends RowData>({
         <div className="flex items-center gap-2">{addButton}</div>
 
         {/* Right-side actions */}
-        {enableColumnVisibility && (
+        {(enableColumnVisibility || rightActions) && (
           <div className="flex-center ml-auto gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2" disabled={loading}>
-                  <Settings2 className="h-4 w-4" />
-                  View
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {table
-                  .getAllLeafColumns()
-                  .filter((col) => col.id !== '_select' && col.getCanHide())
-                  .map((column) => (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      className="capitalize"
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(v) => column.toggleVisibility(!!v)}
-                    >
-                      {column.id === 'id'
-                        ? 'ID'
-                        : column.id
-                            .replace(/([A-Z])/g, ' $1')
-                            .trim()
-                            .toLowerCase()}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {rightActions && <div>{rightActions}</div>}
+
+            {enableColumnVisibility && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2" disabled={loading}>
+                    <Settings2 className="h-4 w-4" />
+                    View
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {table
+                    .getAllLeafColumns()
+                    .filter((col) => col.id !== '_select' && col.getCanHide())
+                    .map((column) => (
+                      <DropdownMenuCheckboxItem
+                        key={column.id}
+                        className="capitalize"
+                        checked={column.getIsVisible()}
+                        onCheckedChange={(v) => column.toggleVisibility(!!v)}
+                      >
+                        {column.id === 'id'
+                          ? 'ID'
+                          : column.id
+                              .replace(/([A-Z])/g, ' $1')
+                              .trim()
+                              .toLowerCase()}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         )}
 
