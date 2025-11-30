@@ -106,7 +106,7 @@ const MembershipTransactionTable = () => {
           return (
             <div className="flex items-center gap-2">
               <span className="font-mono text-sm">{invoice.number}</span>
-              <CopyButton value={invoice.number} />
+              <CopyButton variant={'ghost'} size={'lg'} value={invoice.number} />
             </div>
           );
         },
@@ -117,10 +117,11 @@ const MembershipTransactionTable = () => {
         cell: (info) => {
           const row = info.row.original;
           // Calculate end date based on start date + remaining duration
-          const calculatedEndDate = row.remainingDuration > 0
-            ? dayjs(row.startDate).add(row.remainingDuration, 'day').toDate()
-            : null;
-          
+          const calculatedEndDate =
+            row.remainingDuration > 0
+              ? dayjs(row.startDate).add(row.remainingDuration, 'day').toDate()
+              : null;
+
           return (
             <div className="text-sm">
               <p className="font-medium">{formatDate(row.startDate)}</p>
@@ -256,7 +257,7 @@ const MembershipTransactionTable = () => {
         size: 100
       })
     ],
-    []
+    [approveTx, rejectTx, suspendTx, unsuspendTx]
   );
 
   return (
@@ -345,7 +346,9 @@ const MembershipTransactionDetail = ({ transaction }: { transaction: MembershipU
             <p className="text-muted-foreground text-sm">End Date</p>
             <p className="font-medium">
               {transaction.remainingDuration > 0
-                ? formatDate(dayjs(transaction.startDate).add(transaction.remainingDuration, 'day').toDate())
+                ? formatDate(
+                    dayjs(transaction.startDate).add(transaction.remainingDuration, 'day').toDate()
+                  )
                 : '-'}
             </p>
           </div>
