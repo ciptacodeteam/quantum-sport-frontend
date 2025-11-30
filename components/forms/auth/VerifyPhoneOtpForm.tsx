@@ -15,7 +15,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Phone } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import { Controller, type SubmitHandler, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import z from 'zod';
@@ -170,21 +170,21 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
 
   const maxLength = 4;
 
-  const handleOtpChange = useCallback(
-    (value, info: { name?: string }) => {
-      if (info.name === 'otp' && value.otp && value.otp.length === maxLength && !isPending) {
-        form.handleSubmit(onSubmit)();
-      }
-    },
-    [maxLength, isPending, form, onSubmit]
-  );
+  // const handleOtpChange = useCallback(
+  //   (value, info: { name?: string }) => {
+  //     if (info.name === 'otp' && value.otp && value.otp.length === maxLength && !isPending) {
+  //       form.handleSubmit(onSubmit)();
+  //     }
+  //   },
+  //   [maxLength, isPending, form, onSubmit]
+  // );
 
-  useEffect(() => {
-    const { unsubscribe } = form.watch((value, info) => {
-      handleOtpChange(value, info);
-    });
-    return () => unsubscribe();
-  }, [form.watch, handleOtpChange]);
+  // useEffect(() => {
+  //   const { unsubscribe } = form.watch((value, info) => {
+  //     handleOtpChange(value, info);
+  //   });
+  //   return () => unsubscribe();
+  // }, [form.watch, handleOtpChange]);
 
   return (
     <form className="py-6 md:p-8" onSubmit={form.handleSubmit(onSubmit)}>
@@ -205,11 +205,11 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
                 disabled={isRegisterPending || isPending || isResendOtpPending}
                 render={({ field }) => (
                   <InputOTP
-                    maxLength={4}
+                    maxLength={maxLength}
                     value={field.value}
                     onChange={(value) => {
                       field.onChange(value);
-                      if (value.length === 4) {
+                      if (value.length === maxLength && !isPending && !isRegisterPending) {
                         form.handleSubmit(onSubmit)();
                       }
                     }}
