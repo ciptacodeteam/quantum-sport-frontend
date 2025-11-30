@@ -14,7 +14,7 @@ import { PAYMENT_STATUS_BADGE_VARIANT, PAYMENT_STATUS_MAP } from '@/lib/constant
 import { formatCurrency } from '@/lib/utils';
 import { adminMembershipTransactionsQueryOptions } from '@/queries/admin/membershipTransaction';
 import type { MembershipUser } from '@/types/model';
-import { IconEye } from '@tabler/icons-react';
+import { IconEye, IconFileExcel } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
@@ -262,12 +262,24 @@ const MembershipTransactionTable = () => {
 
   return (
     <div>
-      <div className="mb-3 flex items-center justify-end gap-2">
-        <Button variant="outline" size="sm" onClick={() => exportExcel({})} disabled={exporting}>
-          {exporting ? 'Exporting…' : 'Export Excel'}
-        </Button>
-      </div>
-      <DataTable columns={columns} data={transactions} loading={isLoading} />
+      <DataTable
+        columns={columns}
+        data={transactions}
+        loading={isLoading}
+        rightActions={
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => exportExcel({})}
+              disabled={exporting}
+            >
+              <IconFileExcel />
+              {exporting ? 'Exporting…' : 'Export Excel'}
+            </Button>
+          </div>
+        }
+      />
     </div>
   );
 };
@@ -396,7 +408,7 @@ const MembershipTransactionDetail = ({ transaction }: { transaction: MembershipU
               <p className="text-muted-foreground text-sm">Invoice Number</p>
               <div className="flex items-center gap-2">
                 <p className="font-mono font-medium">{invoice.number}</p>
-                <CopyButton value={invoice.number} />
+                <CopyButton variant={'ghost'} value={invoice.number} />
               </div>
             </div>
             <div>
