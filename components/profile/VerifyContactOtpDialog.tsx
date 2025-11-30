@@ -7,7 +7,7 @@ import { profileQueryOptions } from '@/queries/profile';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Mail, Phone } from 'lucide-react';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -65,21 +65,21 @@ export function VerifyContactOtpDialog({
     onResendOtp();
   };
 
-  const handleOtpChange = useCallback(
-    (value, info: { name?: string }) => {
-      if (info.name === 'otp' && value.otp && value.otp.length === maxLength && !isPending) {
-        form.handleSubmit(handleSubmit)();
-      }
-    },
-    [maxLength, isPending, form, handleSubmit]
-  );
+  // const handleOtpChange = useCallback(
+  //   (value, info: { name?: string }) => {
+  //     if (info.name === 'otp' && value.otp && value.otp.length === maxLength && !isPending) {
+  //       form.handleSubmit(handleSubmit)();
+  //     }
+  //   },
+  //   [maxLength, isPending, form, handleSubmit]
+  // );
 
-  useEffect(() => {
-    const { unsubscribe } = form.watch((value, info) => {
-      handleOtpChange(value, info);
-    });
-    return () => unsubscribe();
-  }, [form.watch, handleOtpChange]);
+  // useEffect(() => {
+  //   const { unsubscribe } = form.watch((value, info) => {
+  //     handleOtpChange(value, info);
+  //   });
+  //   return () => unsubscribe();
+  // }, [form.watch, handleOtpChange]);
 
   return (
     <Dialog
@@ -117,7 +117,7 @@ export function VerifyContactOtpDialog({
                         value={field.value}
                         onChange={(value) => {
                           field.onChange(value);
-                          if (value.length === maxLength) {
+                          if (value.length === maxLength && !isPending) {
                             form.handleSubmit(handleSubmit)();
                           }
                         }}
