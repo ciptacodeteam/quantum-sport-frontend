@@ -47,12 +47,12 @@ dayjs.extend(isBetween);
 
 // Helper to format date as YYYY-MM-DD
 const formatDateString = (date: Date | string): string => {
-  return dayjs(date).format('YYYY-MM-DD');
+  return dayjs(date).tz('Asia/Jakarta').format('YYYY-MM-DD');
 };
 
-// Helper to extract date from ISO string or Date object
+// Helper to extract date from ISO string or Date object - converts to Asia/Jakarta timezone
 const getDateStringFromISO = (value: string | Date): string => {
-  return dayjs(value).format('YYYY-MM-DD');
+  return dayjs(value).tz('Asia/Jakarta').format('YYYY-MM-DD');
 };
 
 // Helper to format date for display
