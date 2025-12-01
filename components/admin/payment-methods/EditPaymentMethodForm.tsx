@@ -39,6 +39,7 @@ export const formSchema = z.object({
     { message: 'Percentage must be a non-negative number' }
   ),
   channel: z.string().min(2).max(50).optional(),
+  sequence: z.coerce.number().min(0),
   isActive: z.boolean().optional().default(true)
 });
 
@@ -57,7 +58,8 @@ const EditPaymentMethodForm = ({ data }: Props) => {
       isActive: data?.isActive,
       fees: data?.fees || 0,
       percentage: data?.percentage.toString() || '0',
-      channel: data?.channel || ''
+      channel: data?.channel || '',
+      sequence: data?.sequence || 0
     }
   });
 
@@ -201,6 +203,27 @@ const EditPaymentMethodForm = ({ data }: Props) => {
             <FieldLabel htmlFor="channel">Channel</FieldLabel>
             <Input id="channel" {...form.register('channel')} placeholder="e.g. VA, QRIS, etc." />
             <FieldError>{form.formState.errors.channel?.message}</FieldError>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="sequence">Urutan</FieldLabel>
+            <Controller
+              control={form.control}
+              name="sequence"
+              render={({ field }) => (
+                <NumberInput
+                  id="sequence"
+                  thousandSeparator="."
+                  decimalSeparator=","
+                  withControl={false}
+                  min={0}
+                  allowNegative={false}
+                  placeholder="e.g. 1"
+                  value={field.value as number}
+                  onValueChange={field.onChange}
+                />
+              )}
+            />
+            <FieldError>{form.formState.errors.sequence?.message}</FieldError>
           </Field>
           <Field>
             <FieldLabel htmlFor="isActive">Status</FieldLabel>

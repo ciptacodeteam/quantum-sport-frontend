@@ -80,6 +80,7 @@ export type PaymentMethod = {
   percentage: string;
   channel: string | null;
   logo: string | null;
+  sequence: number;
   createdAt: Date;
   updatedAt: Date;
 };
