@@ -45,14 +45,30 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.extend(isBetween);
 
+// Helper to parse datetime string - handles both ISO format and space-separated format
+const parseDatetime = (value: string | Date): dayjs.Dayjs => {
+  if (value instanceof Date) {
+    return dayjs(value);
+  }
+
+  // Check if it's space-separated format "YYYY-MM-DD HH:mm:ss"
+  if (typeof value === 'string' && value.includes(' ') && !value.includes('T')) {
+    // Parse as "YYYY-MM-DD HH:mm:ss" format
+    return dayjs(value, 'YYYY-MM-DD HH:mm:ss');
+  }
+
+  // Otherwise parse as ISO or standard format
+  return dayjs(value);
+};
+
 // Helper to format date as YYYY-MM-DD
 const formatDateString = (date: Date | string): string => {
-  return dayjs(date).format('YYYY-MM-DD');
+  return parseDatetime(date).format('YYYY-MM-DD');
 };
 
 // Helper to extract date from ISO string or Date object
 const getDateStringFromISO = (value: string | Date): string => {
-  return dayjs(value).format('YYYY-MM-DD');
+  return parseDatetime(value).format('YYYY-MM-DD');
 };
 
 // Helper to format date for display
@@ -155,8 +171,10 @@ export default function SchedulePage() {
 
   // Extract unique time slots with end times, or use standard time slots
   const timeSlotRanges = useMemo(() => {
+    const map = new Map<string, string>();
+
+    // Add time slots from API slots data
     if (slots.length > 0) {
-      const map = new Map<string, string>();
       slots.forEach((slot) => {
         const slotDate = getDateStringFromISO(slot.startAt);
         if (slotDate === selectedDateString) {
@@ -167,19 +185,38 @@ export default function SchedulePage() {
           }
         }
       });
-      const uniqueStarts = Array.from(map.keys()).sort((a, b) => a.localeCompare(b));
-      if (uniqueStarts.length > 0) {
-        return uniqueStarts.map((startTime) => ({
-          startTime,
-          endTime: map.get(startTime) || addOneHourToTime(startTime)
-        }));
-      }
     }
+
+    // Also add time slots from bookings to ensure booked slots are visible even if not in slots API
+    bookings.forEach((booking) => {
+      booking.details?.forEach((detail) => {
+        if (detail.slot) {
+          const slotDate = getDateStringFromISO(detail.slot.startAt);
+          if (slotDate === selectedDateString) {
+            const startTime = formatSlotTime(detail.slot.startAt);
+            const endTime = formatSlotTime(detail.slot.endAt);
+            if (!map.has(startTime) || (endTime && endTime > (map.get(startTime) || ''))) {
+              map.set(startTime, endTime);
+            }
+          }
+        }
+      });
+    });
+
+    const uniqueStarts = Array.from(map.keys()).sort((a, b) => a.localeCompare(b));
+    if (uniqueStarts.length > 0) {
+      return uniqueStarts.map((startTime) => ({
+        startTime,
+        endTime: map.get(startTime) || addOneHourToTime(startTime)
+      }));
+    }
+
+    // Fallback to standard time slots if no slots or bookings
     return standardTimeSlots.map((startTime) => ({
       startTime,
       endTime: addOneHourToTime(startTime)
     }));
-  }, [slots, selectedDateString, standardTimeSlots]);
+  }, [slots, selectedDateString, standardTimeSlots, bookings]);
 
   // Create a map of bookings by court and time slot
   // Prioritize non-cancelled bookings over cancelled ones
@@ -209,6 +246,7 @@ export default function SchedulePage() {
         if (!detail.slot || !detail.court) return;
 
         const slotDate = getDateStringFromISO(detail.slot.startAt);
+
         if (slotDate !== selectedDateString) return;
 
         const courtId = detail.court.id;
@@ -216,9 +254,9 @@ export default function SchedulePage() {
         const customerPhone = booking.user?.phone || '-';
         const status = getBookingStatus(booking.status as number | BookingStatus);
 
-        // Parse start and end times - API already returns correct local time
-        const slotStart = dayjs(detail.slot.startAt);
-        const slotEnd = dayjs(detail.slot.endAt);
+        // Parse start and end times - handles both ISO and space-separated formats
+        const slotStart = parseDatetime(detail.slot.startAt);
+        const slotEnd = parseDatetime(detail.slot.endAt);
 
         if (!map.has(courtId)) {
           map.set(courtId, new Map());
@@ -227,20 +265,16 @@ export default function SchedulePage() {
         // Generate entries for ALL hour slots within the booking's time range
         // For example, a 10:00-12:00 booking should appear in both 10:00 and 11:00 slots
         timeSlotRanges.forEach(({ startTime }) => {
-          // Parse the time slot start time for the selected date
-          const [hours, minutes] = startTime.split(':').map(Number);
-          const timeSlotStart = dayjs(selectedDateString)
-            .hour(hours)
-            .minute(minutes)
-            .second(0)
-            .millisecond(0);
-          const timeSlotEnd = timeSlotStart.add(1, 'hour');
+          // Create a datetime for this time slot on the selected date
+          const timeSlotDateTime = parseDatetime(`${selectedDateString} ${startTime}:00`);
 
-          // Check if this time slot overlaps with the booking's time range
-          // A time slot overlaps if: timeSlotStart < slotEnd AND timeSlotEnd > slotStart
-          const overlaps = timeSlotStart.isBefore(slotEnd) && timeSlotEnd.isAfter(slotStart);
+          // Check if this time slot falls within the booking's time range
+          // A slot matches if its start time is >= booking start AND < booking end
+          const isWithinRange =
+            (timeSlotDateTime.isSame(slotStart) || timeSlotDateTime.isAfter(slotStart)) &&
+            timeSlotDateTime.isBefore(slotEnd);
 
-          if (overlaps) {
+          if (isWithinRange) {
             const existingCell = map.get(courtId)!.get(startTime);
 
             // Only set if there's no existing booking, or if the existing one is cancelled and this one is not
