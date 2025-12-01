@@ -47,12 +47,12 @@ dayjs.extend(isBetween);
 
 // Helper to format date as YYYY-MM-DD
 const formatDateString = (date: Date | string): string => {
-  return dayjs(date).tz('Asia/Jakarta').format('YYYY-MM-DD');
+  return dayjs(date).format('YYYY-MM-DD');
 };
 
-// Helper to extract date from ISO string or Date object - converts to Asia/Jakarta timezone
+// Helper to extract date from ISO string or Date object
 const getDateStringFromISO = (value: string | Date): string => {
-  return dayjs(value).tz('Asia/Jakarta').format('YYYY-MM-DD');
+  return dayjs(value).format('YYYY-MM-DD');
 };
 
 // Helper to format date for display
@@ -216,11 +216,9 @@ export default function SchedulePage() {
         const customerPhone = booking.user?.phone || '-';
         const status = getBookingStatus(booking.status as number | BookingStatus);
 
-        // Parse start and end times - convert from UTC to local time
-        // The API returns UTC times (e.g., "2025-12-01T20:00:00.000Z")
-        // We need to convert to local time (Asia/Jakarta = UTC+7)
-        const slotStart = dayjs(detail.slot.startAt).tz('Asia/Jakarta');
-        const slotEnd = dayjs(detail.slot.endAt).tz('Asia/Jakarta');
+        // Parse start and end times - API already returns correct local time
+        const slotStart = dayjs(detail.slot.startAt);
+        const slotEnd = dayjs(detail.slot.endAt);
 
         if (!map.has(courtId)) {
           map.set(courtId, new Map());
@@ -229,10 +227,9 @@ export default function SchedulePage() {
         // Generate entries for ALL hour slots within the booking's time range
         // For example, a 10:00-12:00 booking should appear in both 10:00 and 11:00 slots
         timeSlotRanges.forEach(({ startTime }) => {
-          // Parse the time slot start time for the selected date (in local timezone)
+          // Parse the time slot start time for the selected date
           const [hours, minutes] = startTime.split(':').map(Number);
-          const timeSlotStart = dayjs
-            .tz(selectedDateString, 'Asia/Jakarta')
+          const timeSlotStart = dayjs(selectedDateString)
             .hour(hours)
             .minute(minutes)
             .second(0)
