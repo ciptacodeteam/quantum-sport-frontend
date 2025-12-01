@@ -36,65 +36,32 @@ import { IconCalendar, IconUser, IconShoppingCart } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { useMemo, useState } from 'react';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+import isBetween from 'dayjs/plugin/isBetween';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.extend(isBetween);
 
 // Helper to format date as YYYY-MM-DD
 const formatDateString = (date: Date | string): string => {
-  const dateObj = date instanceof Date ? date : new Date(date);
-  if (isNaN(dateObj.getTime())) {
-    return '';
-  }
-  const year = dateObj.getFullYear();
-  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-  const day = String(dateObj.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  return dayjs(date).format('YYYY-MM-DD');
 };
 
 // Helper to extract date from ISO string or Date object
 const getDateStringFromISO = (value: string | Date): string => {
-  if (value instanceof Date) {
-    return formatDateString(value);
-  }
-  const isoRegex = /^(\d{4})-(\d{2})-(\d{2})T/;
-  const match = value.match(isoRegex);
-  if (match) {
-    return `${match[1]}-${match[2]}-${match[3]}`;
-  }
-  return formatDateString(new Date(value));
+  return dayjs(value).format('YYYY-MM-DD');
 };
 
 // Helper to format date for display
 const formatDate = (date: Date | string, format: string): string => {
-  const dateObj = date instanceof Date ? date : new Date(date);
-  if (isNaN(dateObj.getTime())) {
+  const dayjsDate = dayjs(date);
+  if (!dayjsDate.isValid()) {
     return '-';
   }
-
-  const year = dateObj.getFullYear();
-  const month = dateObj.getMonth();
-  const day = dateObj.getDate();
-
-  const pad = (n: number) => n.toString().padStart(2, '0');
-
-  const monthNames = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec'
-  ];
-
-  return format
-    .replace('YYYY', year.toString())
-    .replace('MMM', monthNames[month])
-    .replace('MM', pad(month + 1))
-    .replace('DD', pad(day));
+  return dayjsDate.format(format);
 };
 
 // Helper to convert numeric status to BookingStatus enum
@@ -113,51 +80,18 @@ const getBookingStatus = (status: number | BookingStatus): BookingStatus => {
 
 // Helper to format date with time
 const formatDateTime = (date: Date | string, format: string): string => {
-  const dateObj = date instanceof Date ? date : new Date(date);
-  if (isNaN(dateObj.getTime())) {
+  const dayjsDate = dayjs(date);
+  if (!dayjsDate.isValid()) {
     return '-';
   }
-
-  const year = dateObj.getFullYear();
-  const month = dateObj.getMonth();
-  const day = dateObj.getDate();
-  const hours = dateObj.getHours();
-  const minutes = dateObj.getMinutes();
-
-  const pad = (n: number) => n.toString().padStart(2, '0');
-
-  const monthNames = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec'
-  ];
-
-  return format
-    .replace('YYYY', year.toString())
-    .replace('MMM', monthNames[month])
-    .replace('MM', pad(month + 1))
-    .replace('DD', pad(day))
-    .replace('HH', pad(hours))
-    .replace('mm', pad(minutes));
+  return dayjsDate.format(format);
 };
 
 const addOneHourToTime = (time: string): string => {
   const [hoursStr, minutesStr] = time.split(':');
   const hours = parseInt(hoursStr || '0', 10);
   const minutes = parseInt(minutesStr || '0', 10);
-  const totalMinutes = hours * 60 + minutes + 60;
-  const endHours = Math.floor(totalMinutes / 60) % 24;
-  const endMinutes = totalMinutes % 60;
-  return `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
+  return dayjs().hour(hours).minute(minutes).add(1, 'hour').format('HH:mm');
 };
 
 interface BookingCell {
@@ -249,6 +183,7 @@ export default function SchedulePage() {
 
   // Create a map of bookings by court and time slot
   // Prioritize non-cancelled bookings over cancelled ones
+  // For multi-hour bookings, show them in ALL time slots they span
   const bookingsMap = useMemo(() => {
     const map = new Map<string, Map<string, BookingCell>>();
 
@@ -277,35 +212,58 @@ export default function SchedulePage() {
         if (slotDate !== selectedDateString) return;
 
         const courtId = detail.court.id;
-        const timeSlot = formatSlotTime(detail.slot.startAt);
         const customerName = booking.user?.name || 'Walk-in Customer';
         const customerPhone = booking.user?.phone || '-';
         const status = getBookingStatus(booking.status as number | BookingStatus);
+
+        // Parse start and end times using dayjs
+        const slotStart = dayjs(detail.slot.startAt);
+        const slotEnd = dayjs(detail.slot.endAt);
 
         if (!map.has(courtId)) {
           map.set(courtId, new Map());
         }
 
-        const existingCell = map.get(courtId)!.get(timeSlot);
+        // Generate entries for ALL hour slots within the booking's time range
+        // For example, a 10:00-12:00 booking should appear in both 10:00 and 11:00 slots
+        timeSlotRanges.forEach(({ startTime }) => {
+          // Parse the time slot start time for the selected date
+          const [hours, minutes] = startTime.split(':').map(Number);
+          const timeSlotStart = dayjs(selectedDateString)
+            .hour(hours)
+            .minute(minutes)
+            .second(0)
+            .millisecond(0);
+          const timeSlotEnd = timeSlotStart.add(1, 'hour');
 
-        // Only set if there's no existing booking, or if the existing one is cancelled and this one is not
-        if (
-          !existingCell ||
-          (existingCell.status === BookingStatus.CANCELLED && status !== BookingStatus.CANCELLED)
-        ) {
-          map.get(courtId)!.set(timeSlot, {
-            booking,
-            detail,
-            customerName,
-            customerPhone,
-            status
-          });
-        }
+          // Check if this time slot overlaps with the booking's time range
+          // A time slot overlaps if: timeSlotStart < slotEnd AND timeSlotEnd > slotStart
+          const overlaps = timeSlotStart.isBefore(slotEnd) && timeSlotEnd.isAfter(slotStart);
+
+          if (overlaps) {
+            const existingCell = map.get(courtId)!.get(startTime);
+
+            // Only set if there's no existing booking, or if the existing one is cancelled and this one is not
+            if (
+              !existingCell ||
+              (existingCell.status === BookingStatus.CANCELLED &&
+                status !== BookingStatus.CANCELLED)
+            ) {
+              map.get(courtId)!.set(startTime, {
+                booking,
+                detail,
+                customerName,
+                customerPhone,
+                status
+              });
+            }
+          }
+        });
       });
     });
 
     return map;
-  }, [bookings, selectedDateString]);
+  }, [bookings, selectedDateString, timeSlotRanges]);
 
   const isLoading = isCourtsLoading || isBookingsLoading || isSlotsLoading;
 
