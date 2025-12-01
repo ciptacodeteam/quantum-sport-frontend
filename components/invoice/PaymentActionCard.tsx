@@ -12,11 +12,13 @@ import PaymentCountdown from './PaymentCountdown';
 export default function PaymentActionCard({
   invoice,
   canPay,
-  onChooseMethod
+  onChooseMethod,
+  onExpired
 }: {
   invoice: any;
   canPay: boolean;
   onChooseMethod: () => void;
+  onExpired?: () => void;
 }) {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   if (!canPay) return null;
@@ -99,7 +101,12 @@ export default function PaymentActionCard({
 
               {paymentExpiry && (
                 <div className="mb-5 flex justify-center">
-                  <PaymentCountdown dueDate={paymentExpiry} status={invoice.status} />
+                  <PaymentCountdown
+                    dueDate={paymentExpiry}
+                    status={invoice.status}
+                    invoiceId={invoice.id}
+                    onExpired={onExpired}
+                  />
                 </div>
               )}
               <p className="text-xs text-gray-600">
@@ -128,7 +135,12 @@ export default function PaymentActionCard({
               </div>
               {paymentExpiry && (
                 <div className="mb-5 flex justify-center">
-                  <PaymentCountdown dueDate={paymentExpiry} status={invoice.status} />
+                  <PaymentCountdown
+                    dueDate={paymentExpiry}
+                    status={invoice.status}
+                    invoiceId={invoice.id}
+                    onExpired={onExpired}
+                  />
                 </div>
               )}
               <div className="space-y-2 text-left text-sm text-gray-700">

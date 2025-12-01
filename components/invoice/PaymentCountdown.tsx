@@ -5,21 +5,42 @@ import { Badge } from '@/components/ui/badge';
 import { Clock } from 'lucide-react';
 import dayjs from 'dayjs';
 import duration from 'dayjs/plugin/duration';
+import { useMutation } from '@tanstack/react-query';
+import { expireInvoiceApi } from '@/api/booking';
 
 dayjs.extend(duration);
 
 type PaymentCountdownProps = {
   dueDate: string | Date;
   status: string;
+  invoiceId: string;
+  onExpired?: () => void;
 };
 
-export default function PaymentCountdown({ dueDate, status }: PaymentCountdownProps) {
+export default function PaymentCountdown({
+  dueDate,
+  status,
+  invoiceId,
+  onExpired
+}: PaymentCountdownProps) {
   const [timeLeft, setTimeLeft] = useState<{
     hours: number;
     minutes: number;
     seconds: number;
     isExpired: boolean;
   }>({ hours: 0, minutes: 0, seconds: 0, isExpired: false });
+
+  const { mutate: expireInvoice } = useMutation({
+    mutationFn: () => expireInvoiceApi(invoiceId),
+    onSuccess: () => {
+      onExpired?.();
+    },
+    onError: (error: any) => {
+      console.error('Failed to expire invoice:', error);
+      // Still call onExpired to refresh the UI even if API fails
+      onExpired?.();
+    }
+  });
 
   useEffect(() => {
     const calculateTimeLeft = () => {
@@ -28,7 +49,13 @@ export default function PaymentCountdown({ dueDate, status }: PaymentCountdownPr
       const diff = due.diff(now);
 
       if (diff <= 0) {
-        setTimeLeft({ hours: 0, minutes: 0, seconds: 0, isExpired: true });
+        setTimeLeft((prev) => {
+          // Only trigger expiration once when transitioning to expired
+          if (!prev.isExpired) {
+            expireInvoice();
+          }
+          return { hours: 0, minutes: 0, seconds: 0, isExpired: true };
+        });
         return;
       }
 
@@ -45,7 +72,7 @@ export default function PaymentCountdown({ dueDate, status }: PaymentCountdownPr
     const interval = setInterval(calculateTimeLeft, 1000);
 
     return () => clearInterval(interval);
-  }, [dueDate]);
+  }, [dueDate, expireInvoice]);
 
   // Don't show if not pending
   if (!['PENDING', 'HOLD'].includes(status)) {

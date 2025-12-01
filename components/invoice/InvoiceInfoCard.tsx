@@ -9,7 +9,7 @@ type Props = {
   issuedAt: string | Date;
   dueDate?: string | Date | null;
   paidAt?: string | Date | null;
-  bookingStatus?: string;
+  invoiceStatus?: string;
 };
 
 export default function InvoiceInfoCard({
@@ -17,7 +17,7 @@ export default function InvoiceInfoCard({
   issuedAt,
   dueDate,
   paidAt,
-  bookingStatus
+  invoiceStatus
 }: Props) {
   return (
     <Card className="my-6">
@@ -52,11 +52,11 @@ export default function InvoiceInfoCard({
               </p>
             </div>
           )}
-          {bookingStatus && (
+          {invoiceStatus && (
             <div>
-              <p className="text-sm text-gray-600">Status Booking</p>
-              <Badge className={getStatusColor(bookingStatus)} variant="outline">
-                {getStatusLabel(bookingStatus)}
+              <p className="text-sm text-gray-600">Status</p>
+              <Badge className={getStatusColor(invoiceStatus)} variant="outline">
+                {getStatusLabel(invoiceStatus)}
               </Badge>
             </div>
           )}

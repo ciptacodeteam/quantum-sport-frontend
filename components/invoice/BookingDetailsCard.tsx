@@ -1,5 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatSlotTime } from '@/lib/time-utils';
 import { Calendar, Clock, MapPin } from 'lucide-react';
 
@@ -45,15 +45,7 @@ const formatDateDisplay = (dateString: string): string => {
     return dateString;
   }
 
-  const dayNames = [
-    'Minggu',
-    'Senin',
-    'Selasa',
-    'Rabu',
-    'Kamis',
-    'Jumat',
-    'Sabtu'
-  ];
+  const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
   const monthNames = [
     'Januari',
     'Februari',
@@ -113,7 +105,7 @@ export default function BookingDetailsCard({ details }: { details: Detail[] }) {
           </CardTitle>
           <div className="flex flex-wrap gap-2">
             <Badge variant="outline">{totalSlots} Slot</Badge>
-            <Badge variant="outline">{formatCurrency(totalPrice)}</Badge>
+            {/* <Badge variant="outline">{formatCurrency(totalPrice)}</Badge> */}
           </div>
         </div>
       </CardHeader>

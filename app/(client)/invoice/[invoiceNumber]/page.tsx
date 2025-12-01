@@ -183,7 +183,9 @@ export default function InvoiceDetailPage() {
   const {
     data: response,
     isPending,
-    isError
+    isError,
+    isLoading,
+    refetch
   } = useQuery({
     ...invoiceQueryOptions(invoiceNumber),
     // Poll every 3 seconds when status is PENDING or HOLD
@@ -200,21 +202,91 @@ export default function InvoiceDetailPage() {
     refetchIntervalInBackground: true // Continue polling even when tab is not focused
   });
 
+  const handleExpired = () => {
+    // Refetch invoice data when countdown expires
+    refetch();
+  };
+
   const typedResponse = response as InvoiceDetailApiResponse | undefined;
   const invoice = typedResponse?.data;
   const booking = invoice?.booking ?? undefined;
   const membershipUser = invoice?.membershipUser ?? undefined;
 
-  if (isPending) {
+  // Show loading state while fetching initial data
+  if (isLoading || (isPending && !response)) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <MainHeader />
-        <div className="container mx-auto px-4 py-8 pb-24">
-          <div className="mx-auto max-w-4xl">
+      <div className="min-h-screen">
+        <MainHeader title="Detail Transaksi" withLogo={false} backHref="/invoice" />
+        <div className="container mx-auto mt-28 pb-10">
+          <div className="mx-auto w-11/12 max-w-7xl">
             <div className="animate-pulse space-y-4">
-              <div className="h-8 w-1/3 rounded bg-gray-200"></div>
-              <div className="h-64 rounded bg-gray-200"></div>
-              <div className="h-48 rounded bg-gray-200"></div>
+              {/* Payment Action Card Skeleton */}
+              <Card className="bg-primary/5 border-primary/20">
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    <div className="mx-auto h-6 w-32 rounded bg-gray-200"></div>
+                    <div className="mx-auto h-10 w-48 rounded bg-gray-200"></div>
+                    <div className="mx-auto h-32 w-32 rounded-lg bg-gray-200"></div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Invoice Info Card Skeleton */}
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="space-y-3">
+                    <div className="h-5 w-32 rounded bg-gray-200"></div>
+                    <div className="h-4 w-48 rounded bg-gray-200"></div>
+                    <div className="h-4 w-40 rounded bg-gray-200"></div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Customer Info Card Skeleton */}
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="space-y-3">
+                    <div className="h-5 w-40 rounded bg-gray-200"></div>
+                    <div className="h-4 w-56 rounded bg-gray-200"></div>
+                    <div className="h-4 w-44 rounded bg-gray-200"></div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Booking Details Card Skeleton */}
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="space-y-3">
+                    <div className="h-5 w-36 rounded bg-gray-200"></div>
+                    <div className="space-y-2">
+                      <div className="h-20 w-full rounded bg-gray-200"></div>
+                      <div className="h-20 w-full rounded bg-gray-200"></div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Payment Summary Card Skeleton */}
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <div className="h-4 w-24 rounded bg-gray-200"></div>
+                      <div className="h-4 w-32 rounded bg-gray-200"></div>
+                    </div>
+                    <div className="flex justify-between">
+                      <div className="h-4 w-28 rounded bg-gray-200"></div>
+                      <div className="h-4 w-28 rounded bg-gray-200"></div>
+                    </div>
+                    <div className="border-t pt-3">
+                      <div className="flex justify-between">
+                        <div className="h-6 w-20 rounded bg-gray-200"></div>
+                        <div className="h-6 w-36 rounded bg-gray-200"></div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>
@@ -266,6 +338,7 @@ export default function InvoiceDetailPage() {
             invoice={invoice as any}
             canPay={canPay}
             onChooseMethod={() => router.push(`/payment/${invoice.id}`)}
+            onExpired={handleExpired}
           />
 
           {/* Success Message */}
@@ -285,7 +358,7 @@ export default function InvoiceDetailPage() {
             issuedAt={invoice.issuedAt}
             dueDate={invoice.dueDate}
             paidAt={invoice.paidAt}
-            bookingStatus={booking?.status}
+            invoiceStatus={invoice.status}
           />
 
           {/* Customer Information */}

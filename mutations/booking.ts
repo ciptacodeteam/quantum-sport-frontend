@@ -1,4 +1,4 @@
-import { createBookingApi, checkoutApi } from '@/api/booking';
+import { createBookingApi, checkoutApi, expireInvoiceApi } from '@/api/booking';
 import type { MutationFuncProps } from '@/types';
 import { mutationOptions } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -27,6 +27,18 @@ export const checkoutMutationOptions = ({ onSuccess, onError }: MutationFuncProp
     onError: (error) => {
       console.error('Error:', error);
       toast.error(error.msg || 'Gagal melakukan checkout. Silakan coba lagi.');
+      onError?.(error);
+    }
+  });
+
+export const expireInvoiceMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
+  mutationOptions({
+    mutationFn: expireInvoiceApi,
+    onSuccess: (data) => {
+      onSuccess?.(data);
+    },
+    onError: (error) => {
+      console.error('Error expiring invoice:', error);
       onError?.(error);
     }
   });

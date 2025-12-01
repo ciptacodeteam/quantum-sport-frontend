@@ -334,7 +334,34 @@ export const useBookingStore = create<BookingState>()(
     }),
     {
       name: 'booking-storage',
-      storage: typeof window !== 'undefined' ? createJSONStorage(() => sessionStorage) : undefined,
+      storage:
+        typeof window !== 'undefined'
+          ? createJSONStorage(() => ({
+              getItem: (name) => {
+                // Clear storage on page refresh/reload
+                // Check if this is a fresh page load (not navigation)
+                const isPageRefresh =
+                  window.performance?.navigation?.type === 1 || // Legacy
+                  window.performance
+                    ?.getEntriesByType('navigation')
+                    ?.some((nav: any) => nav.type === 'reload'); // Modern
+
+                if (isPageRefresh) {
+                  sessionStorage.removeItem(name);
+                  return null;
+                }
+
+                const value = sessionStorage.getItem(name);
+                return value;
+              },
+              setItem: (name, value) => {
+                sessionStorage.setItem(name, value);
+              },
+              removeItem: (name) => {
+                sessionStorage.removeItem(name);
+              }
+            }))
+          : undefined,
       partialize: (state) => ({
         bookingItems: state.bookingItems,
         selectedDate: state.selectedDate,
