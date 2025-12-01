@@ -14,125 +14,64 @@ import type { CustomerSearchResult } from '@/queries/admin/customer';
 import { useBookingStore } from '@/stores/useBookingStore';
 import type { Court, Slot } from '@/types/model';
 import { IconCalendar, IconCheck, IconClock, IconMapPin } from '@tabler/icons-react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
+import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
-// Helper functions to replace dayjs
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.extend(customParseFormat);
+
+// Helper functions using dayjs
 const formatDate = (date: Date | string, format: string): string => {
-  // Ensure we have a Date object
-  const dateObj = date instanceof Date ? date : new Date(date);
-
-  // Check if date is valid
-  if (isNaN(dateObj.getTime())) {
-    console.error('Invalid date:', date);
-    return '-';
-  }
-
-  const year = dateObj.getFullYear();
-  const month = dateObj.getMonth();
-  const day = dateObj.getDate();
-  const hours = dateObj.getHours();
-  const minutes = dateObj.getMinutes();
-
-  const pad = (n: number) => n.toString().padStart(2, '0');
-
-  const monthNames = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec'
-  ];
-
-  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const dayNamesShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-  return format
-    .replace('YYYY', year.toString())
-    .replace('MMM', monthNames[month])
-    .replace('MM', pad(month + 1))
-    .replace('DD', pad(day))
-    .replace('dddd', dayNames[dateObj.getDay()])
-    .replace('ddd', dayNamesShort[dateObj.getDay()])
-    .replace('HH', pad(hours))
-    .replace('mm', pad(minutes));
+  return dayjs(date).format(format);
 };
 
 const formatDateString = (date: Date | string): string => {
-  const dateObj = date instanceof Date ? date : new Date(date);
-  return formatDate(dateObj, 'YYYY-MM-DD');
+  return dayjs(date).format('YYYY-MM-DD');
 };
 
 // Helper to extract date string from ISO string without timezone conversion
 const getDateStringFromISO = (isoString: string): string => {
-  // Use the same parsing logic as formatSlotTime to avoid timezone conversion
-  const isoRegex =
-    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?$/;
-  const match = isoString.match(isoRegex);
-
-  if (match) {
-    const year = match[1];
-    const month = match[2];
-    const day = match[3];
-    return `${year}-${month}-${day}`;
+  // Handle both ISO format and space-separated format
+  if (isoString.includes('T')) {
+    return dayjs(isoString).format('YYYY-MM-DD');
   }
-
-  // Fallback to Date parsing if regex doesn't match
-  return formatDateString(new Date(isoString));
+  // Space-separated format "YYYY-MM-DD HH:mm:ss"
+  return isoString.split(' ')[0];
 };
 
 const startOfDay = (date: Date | string): Date => {
-  const d = date instanceof Date ? new Date(date.getTime()) : new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
+  return dayjs(date).startOf('day').toDate();
 };
 
 const isSameDay = (date1: Date | string, date2: Date | string): boolean => {
-  const d1 = date1 instanceof Date ? date1 : new Date(date1);
-  const d2 = date2 instanceof Date ? date2 : new Date(date2);
-  return (
-    d1.getFullYear() === d2.getFullYear() &&
-    d1.getMonth() === d2.getMonth() &&
-    d1.getDate() === d2.getDate()
-  );
+  return dayjs(date1).isSame(dayjs(date2), 'day');
 };
 
 const isSameMonth = (date1: Date | string, date2: Date | string): boolean => {
-  const d1 = date1 instanceof Date ? date1 : new Date(date1);
-  const d2 = date2 instanceof Date ? date2 : new Date(date2);
-  return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth();
+  return dayjs(date1).isSame(dayjs(date2), 'month');
 };
 
 const isBefore = (date1: Date | string, date2: Date | string, unit?: string): boolean => {
-  const d1 = date1 instanceof Date ? date1 : new Date(date1);
-  const d2 = date2 instanceof Date ? date2 : new Date(date2);
   if (unit === 'day') {
-    return startOfDay(d1).getTime() < startOfDay(d2).getTime();
+    return dayjs(date1).startOf('day').isBefore(dayjs(date2).startOf('day'));
   }
-  return d1.getTime() < d2.getTime();
+  return dayjs(date1).isBefore(dayjs(date2));
 };
 
 const addDays = (date: Date | string, days: number): Date => {
-  const d = date instanceof Date ? new Date(date.getTime()) : new Date(date);
-  d.setDate(d.getDate() + days);
-  return d;
+  return dayjs(date).add(days, 'day').toDate();
 };
 
 const startOfWeek = (date: Date | string): Date => {
-  const d = date instanceof Date ? new Date(date.getTime()) : new Date(date);
-  const day = d.getDay();
-  const diff = d.getDate() - day;
-  return startOfDay(new Date(d.setDate(diff)));
+  return dayjs(date).startOf('week').toDate();
 };
 
 // Time slots will be generated from actual API data
@@ -149,7 +88,6 @@ type SelectedBooking = {
 
 export default function BookingLapangan() {
   const router = useRouter();
-  const queryClient = useQueryClient();
   const {
     bookingItems,
     selectedDate,
@@ -340,21 +278,6 @@ export default function BookingLapangan() {
     // Convert to array and sort
     return Array.from(timeSet).sort((a, b) => a.localeCompare(b));
   }, [slots, selectedDateString, selectedCourt]);
-
-  // Debug: Log fetched data
-  useEffect(() => {
-    // Debug slots for selected date
-    const slotsForDate = slots.filter((slot) => {
-      const slotDate =
-        typeof slot.startAt === 'string'
-          ? getDateStringFromISO(slot.startAt)
-          : formatDateString(slot.startAt);
-      return slotDate === selectedDateString;
-    });
-    slotsForDate.forEach((slot, index) => {
-      const startTime = formatSlotTime(slot.startAt);
-    });
-  }, [slotsData, slots, courts, slotQueryParams, selectedDateString, availableTimeSlots]);
 
   // Sync with store when component mounts
   useEffect(() => {
@@ -610,19 +533,52 @@ export default function BookingLapangan() {
     });
 
     // If no matching slot found, it's not shown (not booked, just doesn't exist)
-    if (!matchingSlot) return false;
+    if (!matchingSlot) {
+      return false;
+    }
 
-    // Check if slot is not available
-    if (!matchingSlot.isAvailable) {
+    // Check if slot is not available (isAvailable: false means it's booked)
+    if (matchingSlot.isAvailable === false) {
       return true;
     }
 
-    // Check if the slot's start time is in the past (with 15-minute grace period)
-    const slotStartDateTime = new Date(matchingSlot.startAt);
-    const now = new Date();
+    // Check if the slot's start time is in the past
+    // Parse the datetime string properly to avoid timezone issues
+    // The API returns format like "2025-12-02 06:00:00" which should be treated as local time
+    const startAtStr =
+      typeof matchingSlot.startAt === 'string'
+        ? matchingSlot.startAt
+        : matchingSlot.startAt.toISOString();
+
+    // Parse as local time using dayjs
+    let slotStartDateTime: dayjs.Dayjs;
+
+    if (startAtStr.includes('T')) {
+      // ISO format - parse directly
+      slotStartDateTime = dayjs(startAtStr);
+    } else {
+      // Space-separated format "YYYY-MM-DD HH:mm:ss" - parse as local time
+      // Important: Parse without timezone to treat it as local time
+      const [datePart, timePart] = startAtStr.split(' ');
+      const [year, month, day] = datePart.split('-').map(Number);
+      const [hours, minutes, seconds = 0] = timePart.split(':').map(Number);
+
+      // Create dayjs object with explicit local time components
+      slotStartDateTime = dayjs()
+        .year(year)
+        .month(month - 1)
+        .date(day)
+        .hour(hours)
+        .minute(minutes)
+        .second(seconds)
+        .millisecond(0);
+    }
+
+    const now = dayjs();
     const gracePeriodMinutes = 15;
-    const gracePeriodEnd = slotStartDateTime.getTime() + gracePeriodMinutes * 60 * 1000;
-    if (gracePeriodEnd < now.getTime()) {
+    const gracePeriodEnd = slotStartDateTime.add(gracePeriodMinutes, 'minute');
+
+    if (gracePeriodEnd.isBefore(now)) {
       return true;
     }
 

@@ -30,3 +30,8 @@ export async function getAllInvoicesApi(queryParams: SearchParamsData = {}) {
   const res = await api.get(mergedUrl);
   return res.data;
 }
+
+export async function expireInvoiceApi(invoiceId: string) {
+  const { data } = await api.post(`/invoices/${invoiceId}/expire`);
+  return data;
+}
