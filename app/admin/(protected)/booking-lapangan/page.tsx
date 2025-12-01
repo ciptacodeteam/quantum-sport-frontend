@@ -545,9 +545,10 @@ export default function BookingLapangan() {
       return slotStartTime === timeSlot;
     });
 
-    // If no matching slot found, it's not shown (not booked, just doesn't exist)
+    // If no matching slot found in API response, assume it's booked
+    // (API typically doesn't return slots that are already booked)
     if (!matchingSlot) {
-      return false;
+      return true;
     }
 
     // Check if slot is not available (isAvailable: false means it's booked)
