@@ -216,9 +216,11 @@ export default function SchedulePage() {
         const customerPhone = booking.user?.phone || '-';
         const status = getBookingStatus(booking.status as number | BookingStatus);
 
-        // Parse start and end times using dayjs
-        const slotStart = dayjs(detail.slot.startAt);
-        const slotEnd = dayjs(detail.slot.endAt);
+        // Parse start and end times - convert from UTC to local time
+        // The API returns UTC times (e.g., "2025-12-01T20:00:00.000Z")
+        // We need to convert to local time (Asia/Jakarta = UTC+7)
+        const slotStart = dayjs(detail.slot.startAt).tz('Asia/Jakarta');
+        const slotEnd = dayjs(detail.slot.endAt).tz('Asia/Jakarta');
 
         if (!map.has(courtId)) {
           map.set(courtId, new Map());
@@ -227,9 +229,10 @@ export default function SchedulePage() {
         // Generate entries for ALL hour slots within the booking's time range
         // For example, a 10:00-12:00 booking should appear in both 10:00 and 11:00 slots
         timeSlotRanges.forEach(({ startTime }) => {
-          // Parse the time slot start time for the selected date
+          // Parse the time slot start time for the selected date (in local timezone)
           const [hours, minutes] = startTime.split(':').map(Number);
-          const timeSlotStart = dayjs(selectedDateString)
+          const timeSlotStart = dayjs
+            .tz(selectedDateString, 'Asia/Jakarta')
             .hour(hours)
             .minute(minutes)
             .second(0)
