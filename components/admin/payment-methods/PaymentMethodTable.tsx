@@ -70,8 +70,12 @@ const PaymentMethodTable = () => {
         cell: (info) => 'Rp ' + info.getValue().toLocaleString('id-ID')
       }),
       colHelper.accessor('percentage', {
-        header: "Biaya Persentase",
+        header: 'Biaya Persentase',
         cell: (info) => info.getValue() + '%'
+      }),
+      colHelper.accessor('sequence', {
+        header: 'Urutan',
+        cell: (info) => info.getValue()
       }),
       colHelper.accessor('isActive', {
         header: 'Status',
@@ -90,7 +94,9 @@ const PaymentMethodTable = () => {
         header: 'Aksi',
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
-            <ManagedDialog id={`${hasEditPermission(me?.role) ? 'edit' : 'view'}-payment-method-${row.original.id}`}>
+            <ManagedDialog
+              id={`${hasEditPermission(me?.role) ? 'edit' : 'view'}-payment-method-${row.original.id}`}
+            >
               <DialogTrigger asChild>
                 <Button size="icon" variant="lightInfo">
                   {hasEditPermission(me?.role) ? <IconPencil /> : <IconEye />}
@@ -98,7 +104,9 @@ const PaymentMethodTable = () => {
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader className="mb-4">
-                  <DialogTitle>{hasEditPermission(me?.role) ? 'Edit' : 'View'} Metode Pembayaran</DialogTitle>
+                  <DialogTitle>
+                    {hasEditPermission(me?.role) ? 'Edit' : 'View'} Metode Pembayaran
+                  </DialogTitle>
                 </DialogHeader>
                 <EditPaymentMethodForm data={row.original} />
               </DialogContent>

@@ -35,6 +35,7 @@ export const formSchema = z.object({
     { message: 'Percentage must be a non-negative number' }
   ),
   channel: z.string().min(2).max(50).optional(),
+  sequence: z.coerce.number().min(0),
   isActive: z.boolean().optional().default(true)
 });
 
@@ -49,6 +50,7 @@ const CreatePaymentMethodForm = () => {
       fees: 0,
       percentage: '0',
       channel: '',
+      sequence: 0,
       isActive: true
     }
   });
@@ -183,6 +185,27 @@ const CreatePaymentMethodForm = () => {
             <FieldLabel htmlFor="channel">Channel</FieldLabel>
             <Input id="channel" {...form.register('channel')} placeholder="e.g. VA, QRIS, etc." />
             <FieldError>{form.formState.errors.channel?.message}</FieldError>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="sequence">Urutan</FieldLabel>
+            <Controller
+              control={form.control}
+              name="sequence"
+              render={({ field }) => (
+                <NumberInput
+                  id="sequence"
+                  thousandSeparator="."
+                  decimalSeparator=","
+                  withControl={false}
+                  min={0}
+                  allowNegative={false}
+                  placeholder="e.g. 1"
+                  value={field.value as number}
+                  onValueChange={field.onChange}
+                />
+              )}
+            />
+            <FieldError>{form.formState.errors.sequence?.message}</FieldError>
           </Field>
           <Field>
             <FieldLabel htmlFor="isActive">Status</FieldLabel>
