@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import dayjs from 'dayjs';
+import { formatSlotTime } from '@/lib/time-utils';
 import { Calendar, Clock, MapPin } from 'lucide-react';
 
 type Detail = any;
@@ -14,10 +14,79 @@ const formatCurrency = (value: number) =>
     .format(value)
     .replace(/\s/g, '');
 
+// Helper to extract date string from ISO string without timezone conversion
+const getDateStringFromISO = (isoString: string): string => {
+  const isoRegex =
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?$/;
+  const match = isoString.match(isoRegex);
+
+  if (match) {
+    const year = match[1];
+    const month = match[2];
+    const day = match[3];
+    return `${year}-${month}-${day}`;
+  }
+
+  // Fallback to Date parsing if regex doesn't match
+  const date = new Date(isoString);
+  if (isNaN(date.getTime())) {
+    return '';
+  }
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+// Helper to format date for display
+const formatDateDisplay = (dateString: string): string => {
+  const date = new Date(dateString + 'T00:00:00');
+  if (isNaN(date.getTime())) {
+    return dateString;
+  }
+
+  const dayNames = [
+    'Minggu',
+    'Senin',
+    'Selasa',
+    'Rabu',
+    'Kamis',
+    'Jumat',
+    'Sabtu'
+  ];
+  const monthNames = [
+    'Januari',
+    'Februari',
+    'Maret',
+    'April',
+    'Mei',
+    'Juni',
+    'Juli',
+    'Agustus',
+    'September',
+    'Oktober',
+    'November',
+    'Desember'
+  ];
+
+  const dayName = dayNames[date.getDay()];
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = monthNames[date.getMonth()];
+  const year = date.getFullYear();
+
+  return `${dayName}, ${day} ${month} ${year}`;
+};
+
 export default function BookingDetailsCard({ details }: { details: Detail[] }) {
   const grouped = (details || []).reduce(
     (acc: any, detail: any) => {
-      const date = dayjs(detail.slot?.startAt).format('YYYY-MM-DD');
+      const slotStartAt = detail.slot?.startAt;
+      if (!slotStartAt) return acc;
+
+      const date =
+        typeof slotStartAt === 'string'
+          ? getDateStringFromISO(slotStartAt)
+          : getDateStringFromISO(slotStartAt.toISOString());
       const courtName = detail.court?.name || detail.slot?.court?.name || 'Unknown Court';
 
       if (!acc[date]) acc[date] = {};
@@ -57,7 +126,7 @@ export default function BookingDetailsCard({ details }: { details: Detail[] }) {
                 <Calendar className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
               <div>
-                <p className="text-sm font-semibold">{dayjs(date).format('dddd, DD MMMM YYYY')}</p>
+                <p className="text-sm font-semibold">{formatDateDisplay(date)}</p>
                 <p className="text-xs text-gray-600 sm:text-sm">
                   {Object.keys(courts as Record<string, any>).length} Lapangan
                 </p>
@@ -90,8 +159,8 @@ export default function BookingDetailsCard({ details }: { details: Detail[] }) {
                           </div>
                           <div>
                             <span className="text-sm font-medium text-gray-900">
-                              {dayjs(detail.slot?.startAt).format('HH:mm')} -{' '}
-                              {dayjs(detail.slot?.endAt).format('HH:mm')}
+                              {formatSlotTime(detail.slot?.startAt, 'HH:mm')} -{' '}
+                              {formatSlotTime(detail.slot?.endAt, 'HH:mm')}
                             </span>
                             <p className="text-xs text-gray-500 sm:hidden">
                               {formatCurrency(detail.price)}
