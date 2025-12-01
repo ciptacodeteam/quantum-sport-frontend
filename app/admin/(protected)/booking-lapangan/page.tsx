@@ -242,6 +242,16 @@ export default function BookingLapangan() {
     return map;
   }, [slots, selectedDateString]);
 
+  // Generate standard time slots (06:00 to 23:00) to ensure all possible slots are shown
+  // even if they're not in the API response (e.g., fully booked)
+  const standardTimeSlots = useMemo(() => {
+    const slots: string[] = [];
+    for (let hour = 6; hour <= 23; hour++) {
+      slots.push(`${String(hour).padStart(2, '0')}:00`);
+    }
+    return slots;
+  }, []);
+
   // Get time slots filtered by selected court (if a court is selected)
   // IMPORTANT: We include ALL time slots regardless of isAvailable status
   // Slots with isAvailable: false will be shown but marked as "booked" status
@@ -249,7 +259,10 @@ export default function BookingLapangan() {
   const availableTimeSlots = useMemo(() => {
     const timeSet = new Set<string>();
 
-    // Iterate through slots and collect unique start times
+    // First, add all standard time slots as base
+    standardTimeSlots.forEach((time) => timeSet.add(time));
+
+    // Then, add any additional slots from API (in case there are slots outside standard hours)
     // If a court is selected, only show slots for that court
     // If no court is selected, show all slots from all courts
     slots.forEach((slot) => {
@@ -277,7 +290,7 @@ export default function BookingLapangan() {
 
     // Convert to array and sort
     return Array.from(timeSet).sort((a, b) => a.localeCompare(b));
-  }, [slots, selectedDateString, selectedCourt]);
+  }, [slots, selectedDateString, selectedCourt, standardTimeSlots]);
 
   // Sync with store when component mounts
   useEffect(() => {
