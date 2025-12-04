@@ -106,7 +106,7 @@ const MembershipTransactionTable = () => {
           return (
             <div className="flex items-center gap-2">
               <span className="font-mono text-sm">{invoice.number}</span>
-              <CopyButton variant={'ghost'} size={'lg'} value={invoice.number} />
+              <CopyButton variant={'ghost'} size={'sm'} value={invoice.number} />
             </div>
           );
         },
@@ -408,7 +408,7 @@ const MembershipTransactionDetail = ({ transaction }: { transaction: MembershipU
               <p className="text-muted-foreground text-sm">Invoice Number</p>
               <div className="flex items-center gap-2">
                 <p className="font-mono font-medium">{invoice.number}</p>
-                <CopyButton variant={'ghost'} value={invoice.number} />
+                <CopyButton variant={'ghost'} size={'sm'} value={invoice.number} />
               </div>
             </div>
             <div>

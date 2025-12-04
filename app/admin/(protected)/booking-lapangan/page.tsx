@@ -14,7 +14,7 @@ import type { CustomerSearchResult } from '@/queries/admin/customer';
 import { useBookingStore } from '@/stores/useBookingStore';
 import type { Court, Slot } from '@/types/model';
 import { IconCalendar, IconCheck, IconClock, IconMapPin } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import timezone from 'dayjs/plugin/timezone';
@@ -88,6 +88,7 @@ type SelectedBooking = {
 
 export default function BookingLapangan() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const {
     bookingItems,
     selectedDate,
@@ -470,6 +471,9 @@ export default function BookingLapangan() {
       return bookingDate.getTime() > latestDateObj.getTime() ? booking.date : latest;
     }, bookings[0].date);
     setStoreDate(new Date(latestDate));
+
+    // Invalidate slots query to refresh available slots
+    queryClient.invalidateQueries({ queryKey: ['admin', 'court-costing'] });
 
     toast.success('Proceeding to add-ons...');
     router.push('/admin/booking-add-ons');
