@@ -1,8 +1,23 @@
+'use client';
+
 import PushNotificationForm from '@/components/admin/notifications/PushNotificationForm';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { IconBell } from '@tabler/icons-react';
+import { useRoleAccess } from '@/hooks/useRoleAccess';
+import { ROLE } from '@/lib/constants';
 
 export default function PushNotificationsPage() {
+  const { hasAccess, isLoading } = useRoleAccess({
+    allowedRoles: [ROLE.ADMIN]
+  });
+
+  if (isLoading || !hasAccess) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
   return (
     <div className="container mx-auto space-y-6 py-6">
       <div className="flex items-center gap-3">
