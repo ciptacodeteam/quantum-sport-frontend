@@ -701,33 +701,15 @@ export default function BookingLapangan() {
                 ) : (
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:gap-4">
                     {courts.map((court) => {
-                      // Count slots directly from the slots array for this specific court
-                      const courtSlots = slots.filter((slot) => {
-                        const slotCourtId = slot.courtId || slot.court?.id;
-                        if (slotCourtId !== court.id) return false;
-                        const slotDate =
-                          typeof slot.startAt === 'string'
-                            ? getDateStringFromISO(slot.startAt)
-                            : formatDateString(slot.startAt);
-                        return slotDate === selectedDateString;
-                      });
+                      // Total slots is based on standard time slots (06:00-23:00)
+                      const totalSlotsCount = standardTimeSlots.length;
 
-                      // Total slots for this court (all slots regardless of availability)
-                      const totalSlotsCount = courtSlots.length;
-
-                      // Available slots (not booked) for this court
-                      const availableSlotsCount = courtSlots.filter((slot) => {
-                        // Check if slot is available (not booked and not in the past with 15-minute grace period)
-                        if (!slot.isAvailable) return false;
-                        const slotStartDateTime = new Date(slot.startAt);
-                        const now = new Date();
-                        const gracePeriodMinutes = 15;
-                        const gracePeriodEnd =
-                          slotStartDateTime.getTime() + gracePeriodMinutes * 60 * 1000;
-                        return gracePeriodEnd >= now.getTime();
+                      // Available slots - count how many slots are NOT booked
+                      const availableSlotsCount = standardTimeSlots.filter((timeSlot) => {
+                        return !isTimeSlotBooked(timeSlot, court.id);
                       }).length;
 
-                      const isDisabled = false;
+                      const isDisabled = availableSlotsCount === 0;
 
                       return (
                         <div

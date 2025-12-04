@@ -192,13 +192,18 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   const isDashboardActive = pathname === '/admin/dashboard' || pathname === '/admin/dashboard/';
-  const { data: me } = useQuery(adminProfileQueryOptions);
+  const { data: me, isLoading } = useQuery(adminProfileQueryOptions);
   const isCoach = me?.role?.toUpperCase?.() === ROLE.COACH;
   const isCashier = me?.role?.toUpperCase?.() === ROLE.CASHIER;
-
   const isAdminViewer = me?.role?.toUpperCase?.() === ROLE.ADMIN_VIEWER;
+  const isAdmin = me?.role?.toUpperCase?.() === ROLE.ADMIN;
 
   const navMainItems = React.useMemo<AppSidebarItem[]>(() => {
+    // If still loading user data, return empty array to avoid menu flash
+    if (isLoading || !me) {
+      return [];
+    }
+
     if (isCoach) {
       return [
         {
@@ -268,8 +273,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     if (isAdminViewer) {
       // ADMIN_VIEWER can view everything except Dashboard, Master Data, Kelola Karyawan, and Marketing
       return data.navMain.filter(
-        (item) => 
-          item.title !== 'Dashboard' && 
+        (item) =>
+          item.title !== 'Dashboard' &&
           item.title !== 'Master Data' &&
           item.title !== 'Kelola Karyawan' &&
           item.title !== 'Marketing'
@@ -277,7 +282,23 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
 
     return data.navMain;
-  }, [isCoach, isCashier, isAdminViewer]);
+  }, [isCoach, isCashier, isAdminViewer, isLoading, me]);
+
+  // Get appropriate dashboard link based on role
+  const dashboardLink = React.useMemo(() => {
+    if (isLoading || !me) return '/admin/dashboard';
+    if (isCoach) return '/admin/kelola-karyawan';
+    if (isCashier) return '/admin/booking-lapangan';
+    if (isAdminViewer) return '/admin/booking-lapangan';
+    return '/admin/dashboard';
+  }, [isCoach, isCashier, isAdminViewer, isLoading, me]);
+
+  // Get appropriate subtitle based on role
+  const subtitle = React.useMemo(() => {
+    if (isLoading || !me) return 'Dashboard Admin';
+    if (isAdmin) return 'Dashboard Admin';
+    return 'Admin Panel';
+  }, [isAdmin, isLoading, me]);
 
   return (
     <Sidebar variant="inset" {...props}>
@@ -285,13 +306,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild isActive={isDashboardActive}>
-              <Link href={isAdminViewer ? "/admin/booking-lapangan" : "/admin/dashboard"} prefetch>
+              <Link href={dashboardLink} prefetch>
                 <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
                   <Command className="size-4" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">Quantum Sport</span>
-                  <span className="truncate text-xs">{isAdminViewer ? "Admin Panel" : "Dashboard Admin"}</span>
+                  <span className="truncate text-xs">{subtitle}</span>
                 </div>
               </Link>
             </SidebarMenuButton>
