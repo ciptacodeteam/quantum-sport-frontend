@@ -1,3 +1,5 @@
+'use client';
+
 import ClubTable from '@/components/admin/clubs/ClubTable';
 import {
   Section,
@@ -6,8 +8,22 @@ import {
   SectionHeader,
   SectionTitle
 } from '@/components/ui/section';
+import { useRoleAccess } from '@/hooks/useRoleAccess';
+import { ROLE } from '@/lib/constants';
 
 const ManageClubPage = () => {
+  const { hasAccess, isLoading } = useRoleAccess({
+    allowedRoles: [ROLE.ADMIN]
+  });
+
+  if (isLoading || !hasAccess) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
   return (
     <main>
       <Section>
@@ -24,4 +40,3 @@ const ManageClubPage = () => {
 };
 
 export default ManageClubPage;
-

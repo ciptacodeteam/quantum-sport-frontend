@@ -6,9 +6,9 @@ import OnGoingBookingScheduleSection from '@/components/admin/sections/OnGoingBo
 import AppSectionHeader from '@/components/ui/app-section-header';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ROLE } from '@/lib/constants';
 import { dashboardStatsQueryOptions } from '@/queries/admin/analytics';
 import { adminProfileQueryOptions } from '@/queries/admin/auth';
-import { canAccessDashboard } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
@@ -17,6 +17,36 @@ export default function DashboardPage() {
   const router = useRouter();
   const { data: me } = useQuery(adminProfileQueryOptions);
   const { data: stats, isLoading, isError } = useQuery(dashboardStatsQueryOptions());
+
+  // Role-based access control - only ADMIN (super admin) can view dashboard
+  useEffect(() => {
+    if (!me) return;
+
+    const userRole = me.role?.toUpperCase?.();
+
+    // Redirect based on role
+    if (userRole === ROLE.COACH) {
+      router.replace('/admin/kelola-karyawan');
+    } else if (userRole === ROLE.CASHIER) {
+      router.replace('/admin/booking-lapangan');
+    } else if (userRole === ROLE.ADMIN_VIEWER) {
+      router.replace('/admin/booking-lapangan');
+    } else if (userRole === ROLE.BALLBOY) {
+      router.replace('/admin/kelola-karyawan');
+    } else if (userRole !== ROLE.ADMIN) {
+      // Any other role that's not ADMIN should be redirected
+      router.replace('/admin/booking-lapangan');
+    }
+  }, [me, router]);
+
+  // Only ADMIN role can view dashboard - show loading for others during redirect
+  if (!me || me.role?.toUpperCase?.() !== ROLE.ADMIN) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-muted-foreground">Redirecting...</div>
+      </div>
+    );
+  }
 
   return (
     <main>

@@ -15,7 +15,7 @@ const AdminDashboardLayout = ({ children }: PropsWithChildren) => {
   const queryClient = useQueryClient();
   const [isHydrated, setIsHydrated] = useState(false);
   const hasRedirected = useRef(false);
-  
+
   // Read directly from store during render (after hydration)
   const token = useAuthStore((state) => state.token);
   const persistedUser = useAuthStore((state) => state.user);
@@ -25,7 +25,12 @@ const AdminDashboardLayout = ({ children }: PropsWithChildren) => {
     setIsHydrated(true);
   }, []);
 
-  const { data: user, isPending, isError, error } = useQuery({
+  const {
+    data: user,
+    isPending,
+    isError,
+    error
+  } = useQuery({
     ...adminProfileQueryOptions,
     enabled: isHydrated && !!token && !persistedUser, // Only fetch if we don't have user in store
     retry: false,
@@ -33,7 +38,7 @@ const AdminDashboardLayout = ({ children }: PropsWithChildren) => {
     gcTime: Infinity, // Don't garbage collect
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    refetchOnReconnect: false,
+    refetchOnReconnect: false
   });
 
   // Sync fetched user to Zustand store
@@ -44,6 +49,9 @@ const AdminDashboardLayout = ({ children }: PropsWithChildren) => {
       useAuthStore.getState().setUser(user as any);
     }
   }, [user, persistedUser]);
+
+  // Get current user (prefer persisted, fallback to fetched)
+  const currentUser = persistedUser || user;
 
   // Debug logging
   // useEffect(() => {
