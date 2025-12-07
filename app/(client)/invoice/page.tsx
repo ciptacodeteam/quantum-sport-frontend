@@ -345,7 +345,7 @@ export default function InvoiceHistoryPage() {
                                   {detail.court?.name || detail.slot?.court?.name || 'Court'}
                                 </span>
                                 <span className="text-gray-600">
-                                  - {dayjs(detail.slot?.startAt).format('DD MMM')}
+                                  - {dayjs(detail.slot?.startAt).tz('UTC').format('DD MMM HH:mm')}
                                 </span>
                               </div>
                             ))}
