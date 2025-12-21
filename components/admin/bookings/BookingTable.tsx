@@ -1,8 +1,18 @@
 'use client';
 
-import { cancelBookingApi, updateBookingStatusApi } from '@/api/admin/booking';
+import {
+  approveBookingApi,
+  cancelBookingApi,
+  exportBookingsApi,
+  updateBookingStatusApi
+} from '@/api/admin/booking';
+import {
+  RescheduleCourtDialog,
+  type BookingDetailWithSlot
+} from '@/components/admin/bookings/RescheduleCourtDialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { CopyButton } from '@/components/ui/clipboard-copy';
 import { DataTable } from '@/components/ui/data-table';
 import {
   DialogContent,
@@ -11,7 +21,13 @@ import {
   DialogTrigger,
   ManagedDialog
 } from '@/components/ui/dialog';
-import Link from 'next/link';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useConfirmMutation } from '@/hooks/useConfirmDialog';
 import { BOOKING_STATUS_BADGE_VARIANT, BOOKING_STATUS_MAP, BookingStatus } from '@/lib/constants';
@@ -19,16 +35,14 @@ import { formatSlotTime } from '@/lib/time-utils';
 import { formatPhone, getTwoWordName } from '@/lib/utils';
 import { adminBookingsQueryOptions } from '@/queries/admin/booking';
 import type { Booking } from '@/types/model';
-import { IconEye, IconPencil, IconPlus, IconX } from '@tabler/icons-react';
+import { IconEye, IconFileExcel, IconPencil, IconPlus, IconX } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
-import { useMemo } from 'react';
+import { format, subDays } from 'date-fns';
+import Link from 'next/link';
+import { useMemo, useState } from 'react';
+import type { DateRange } from 'react-day-picker';
 import { toast } from 'sonner';
-import { CopyButton } from '@/components/ui/clipboard-copy';
-import {
-  RescheduleCourtDialog,
-  type BookingDetailWithSlot
-} from '@/components/admin/bookings/RescheduleCourtDialog';
 
 // Helper function to parse ISO string without timezone conversion
 const parseISOString = (
@@ -150,6 +164,11 @@ const getBookingStatus = (status: number | BookingStatus): BookingStatus => {
 
 const BookingTable = () => {
   const queryClient = useQueryClient();
+  const [source, setSource] = useState<string>('');
+  const [range, setRange] = useState<DateRange | undefined>({
+    from: subDays(new Date(), 30),
+    to: new Date()
+  });
 
   const { mutate: updateStatus } = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
@@ -161,6 +180,18 @@ const BookingTable = () => {
     },
     onError: () => {
       toast.error('Gagal memperbarui status pemesanan.');
+    }
+  });
+
+  const { mutate: approveBooking } = useMutation({
+    mutationFn: (id: string) => approveBookingApi(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'schedule'] });
+      toast.success('Pemesanan berhasil dikonfirmasi.');
+    },
+    onError: () => {
+      toast.error('Gagal mengkonfirmasi pemesanan.');
     }
   });
 
@@ -539,12 +570,7 @@ const BookingTable = () => {
                         <div className="flex flex-col gap-2">
                           {status === BookingStatus.HOLD && (
                             <Button
-                              onClick={() =>
-                                updateStatus({
-                                  id: booking.id,
-                                  status: BookingStatus.CONFIRMED
-                                })
-                              }
+                              onClick={() => approveBooking(booking.id)}
                               className="w-full justify-start py-7"
                               variant="default"
                             >
@@ -581,26 +607,93 @@ const BookingTable = () => {
         }
       })
     ],
-    [colHelper, updateStatus, cancelBooking, queryClient]
+    [colHelper, updateStatus, approveBooking, cancelBooking, queryClient]
   );
 
-  const { data, isPending } = useQuery(adminBookingsQueryOptions());
+  const { data, isPending } = useQuery(
+    adminBookingsQueryOptions(source && source !== 'all' ? { source } : {})
+  );
 
   return (
-    <DataTable
-      loading={isPending}
-      data={data || []}
-      columns={columns}
-      enableRowSelection={false}
-      addButton={
-        <Link href="/admin/booking-lapangan" prefetch>
-          <Button>
-            <IconPlus />
-            Tambah
-          </Button>
-        </Link>
-      }
-    />
+    <div className="space-y-4">
+      <DataTable
+        loading={isPending}
+        data={data || []}
+        columns={columns}
+        enableRowSelection={false}
+        rightActions={
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <label htmlFor="source-filter" className="text-sm font-medium">
+                Filter Sumber:
+              </label>
+              <Select value={source || 'all'} onValueChange={setSource}>
+                <SelectTrigger id="source-filter" className="w-[180px]">
+                  <SelectValue placeholder="Semua" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua</SelectItem>
+                  <SelectItem value="cashier">Cashier</SelectItem>
+                  <SelectItem value="online">Online</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* <DateRangeInput value={range} onValueChange={(r) => setRange(r ?? undefined)} /> */}
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                try {
+                  const startDate = range?.from
+                    ? format(range.from, "yyyy-MM-dd'T'00:00:00'Z'")
+                    : undefined;
+                  const endDate = range?.to
+                    ? format(range.to, "yyyy-MM-dd'T'23:59:59'Z'")
+                    : undefined;
+
+                  const params: any = {};
+                  if (source && source !== 'all') params.source = source;
+                  if (startDate) params.startDate = startDate;
+                  if (endDate) params.endDate = endDate;
+
+                  const blob = await exportBookingsApi(params);
+                  const url = window.URL.createObjectURL(new Blob([blob]));
+                  const link = document.createElement('a');
+                  link.href = url;
+                  const filename = `bookings-export-${new Date().toISOString().split('T')[0]}.xlsx`;
+                  link.setAttribute('download', filename);
+                  document.body.appendChild(link);
+                  link.click();
+                  link.remove();
+                  toast.success('Export Successful', {
+                    description: 'Bookings data has been exported successfully.'
+                  });
+                } catch (error) {
+                  console.error('Bookings export failed:', error);
+                  toast.error('Export Failed', {
+                    description: 'Failed to export bookings. Please try again.'
+                  });
+                }
+              }}
+              className="justify-start"
+            >
+              <IconFileExcel className="mr-2 h-4 w-4" />
+              Export
+            </Button>
+          </div>
+        }
+        addButton={
+          <Link href="/admin/booking-lapangan" prefetch>
+            <Button>
+              <IconPlus />
+              Tambah
+            </Button>
+          </Link>
+        }
+      />
+    </div>
   );
 };
 export default BookingTable;

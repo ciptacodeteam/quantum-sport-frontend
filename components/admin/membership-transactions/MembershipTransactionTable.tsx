@@ -4,6 +4,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
+import {
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -20,6 +27,7 @@ import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
 import { useMemo } from 'react';
 import * as React from 'react';
+import { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { CopyButton } from '@/components/ui/clipboard-copy';
 import {
@@ -39,8 +47,9 @@ const formatDate = (date: Date | string): string => {
 };
 
 const MembershipTransactionTable = () => {
+  const [source, setSource] = useState<string>('');
   const { data: transactions = [], isLoading } = useQuery(
-    adminMembershipTransactionsQueryOptions({})
+    adminMembershipTransactionsQueryOptions(source && source !== 'all' ? { source } : {})
   );
 
   const { confirmAndMutate: approveTx } = useApproveMembershipTransactionMutation();
@@ -261,13 +270,28 @@ const MembershipTransactionTable = () => {
   );
 
   return (
-    <div>
+    <div className="space-y-4">
       <DataTable
         columns={columns}
         data={transactions}
         loading={isLoading}
         rightActions={
           <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              <label htmlFor="source-filter" className="text-sm font-medium">
+                Filter Sumber:
+              </label>
+              <Select value={source || 'all'} onValueChange={setSource}>
+                <SelectTrigger id="source-filter" className="w-[180px]">
+                  <SelectValue placeholder="Semua" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua</SelectItem>
+                  <SelectItem value="cashier">Cashier</SelectItem>
+                  <SelectItem value="online">Online</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <Button
               variant="outline"
               size="sm"

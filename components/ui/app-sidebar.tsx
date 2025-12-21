@@ -22,6 +22,7 @@ import type { AppSidebarItem } from '@/types';
 import {
   IconAd2,
   IconCategory,
+  IconChartBar,
   IconDatabase,
   IconLaurelWreath1,
   IconScan,
@@ -42,6 +43,24 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
       url: '/admin/dashboard',
       icon: IconCategory,
       items: []
+    },
+    {
+      title: 'Analytics',
+      icon: IconChartBar,
+      items: [
+        {
+          title: 'Income by Source',
+          url: '/admin/analytics/income-by-source'
+        },
+        {
+          title: 'Payment Methods',
+          url: '/admin/analytics/payment-methods'
+        },
+        {
+          title: 'Business Insights',
+          url: '/admin/analytics/business-insights'
+        }
+      ]
     },
 
     {

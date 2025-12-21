@@ -7,7 +7,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import { useMarkNotificationReadMutation } from '@/mutations/admin/notification';
+import {
+  useMarkNotificationReadMutation,
+  useMarkAllNotificationsReadMutation
+} from '@/mutations/admin/notification';
 import { adminNotificationsQueryOptions } from '@/queries/admin/notification';
 import { cn } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
@@ -27,6 +30,8 @@ const AppNotificationDropdown = () => {
   );
 
   const { mutate: markAsRead } = useMarkNotificationReadMutation();
+  const { mutate: markAllAsRead, isPending: isMarkAllPending } =
+    useMarkAllNotificationsReadMutation();
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
   const hasUnread = unreadCount > 0;
@@ -52,16 +57,27 @@ const AppNotificationDropdown = () => {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80">
-        <DropdownMenuLabel className="flex items-center gap-2 px-4 py-2 font-medium">
-          Notifications
-          {hasUnread && (
-            <Badge
-              className="h-5 min-w-5 rounded-full px-1 font-mono font-semibold tabular-nums"
-              variant="secondary"
-            >
-              {unreadCount}
-            </Badge>
-          )}
+        <DropdownMenuLabel className="flex items-center justify-between px-4 py-2 font-medium">
+          <span className="flex items-center gap-2">
+            Notifications
+            {hasUnread && (
+              <Badge
+                className="h-5 min-w-5 rounded-full px-1 font-mono font-semibold tabular-nums"
+                variant="secondary"
+              >
+                {unreadCount}
+              </Badge>
+            )}
+          </span>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-xs"
+            disabled={!hasUnread || isMarkAllPending}
+            onClick={() => markAllAsRead()}
+          >
+            Mark all read
+          </Button>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <div className="max-h-72 overflow-y-auto">

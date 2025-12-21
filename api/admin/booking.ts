@@ -36,7 +36,19 @@ export async function updateBookingStatusApi(id: string, status: string) {
   return data;
 }
 
+export async function approveBookingApi(id: string) {
+  const { data } = await adminApi.put(`/bookings/${id}/approve`);
+  return data;
+}
+
 export async function cancelBookingApi(id: string, reason?: string) {
   const { data } = await adminApi.put(`/bookings/${id}/cancel`, { reason });
   return data;
+}
+
+export async function exportBookingsApi(queryParams: SearchParamsData = {}) {
+  const url = '/bookings/export';
+  const mergedUrl = mergedQueryParamUrl(url, queryParams);
+  const res = await adminApi.get(mergedUrl, { responseType: 'blob' });
+  return res.data;
 }
