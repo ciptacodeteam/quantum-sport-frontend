@@ -75,3 +75,8 @@ export async function overrideCourtCostApi(payload: UpdateMutationPayload) {
   const { data } = await adminApi.put(`/court-costs/${payload.id}/override`, payload.data);
   return data;
 }
+
+export async function updateSlotAvailabilityApi(slotId: string, isAvailable: boolean) {
+  const { data } = await adminApi.put(`/courts/slots/${slotId}/availability`, { isAvailable });
+  return data;
+}

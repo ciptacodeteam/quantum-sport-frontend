@@ -3,13 +3,14 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
-import { DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ManagedDialog } from '@/components/ui/dialog-context';
+import { DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ManagedDialog, useDialog } from '@/components/ui/dialog-context';
 import { formatSlotTimeRange } from '@/lib/time-utils';
 import { adminCourtCostingQueryOptionsById } from '@/queries/admin/court';
+import { adminUpdateSlotAvailabilityMutationOptions } from '@/mutations/admin/court';
 import type { Slot } from '@/types/model';
-import { IconPlus } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import { IconPlus, IconPower } from '@tabler/icons-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
 import { ChevronDown, ChevronRight } from 'lucide-react';
@@ -18,6 +19,54 @@ import CreateCourtCostForm from './CreateCourtCostForm';
 
 type Props = {
   courtId: string;
+};
+
+type ToggleSlotModalProps = {
+  slot: Slot;
+  courtId: string;
+  dialogId: string;
+};
+
+const ToggleSlotModal = ({ slot, courtId, dialogId }: ToggleSlotModalProps) => {
+  const { closeDialog } = useDialog();
+  const queryClient = useQueryClient();
+  const isAvailable = slot.isAvailable;
+
+  const { mutate: updateSlotAvailability, isPending: isUpdating } = useMutation(
+    adminUpdateSlotAvailabilityMutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: adminCourtCostingQueryOptionsById(courtId).queryKey });
+        closeDialog(dialogId);
+      }
+    })
+  );
+
+  return (
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Ubah Status Slot</DialogTitle>
+        <DialogDescription>
+          Slot: {formatSlotTimeRange(slot.startAt, slot.endAt)}
+          <br />
+          Status saat ini: <strong>{isAvailable ? 'Tersedia' : 'Tidak Tersedia'}</strong>
+        </DialogDescription>
+      </DialogHeader>
+      <DialogFooter>
+        <Button variant="outline" onClick={() => closeDialog(dialogId)}>
+          Batal
+        </Button>
+        <Button
+          variant={isAvailable ? 'destructive' : 'default'}
+          onClick={() => {
+            updateSlotAvailability({ slotId: slot.id, isAvailable: !isAvailable });
+          }}
+          disabled={isUpdating}
+        >
+          {isUpdating ? 'Memproses...' : isAvailable ? 'Nonaktifkan' : 'Aktifkan'}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  );
 };
 
 const CourtCostingTable = ({ courtId }: Props) => {
@@ -105,11 +154,15 @@ const CourtCostingTable = ({ courtId }: Props) => {
               {
                 accessorKey: 'isAvailable',
                 header: 'Status',
-                cell: (info) => (
-                  <Badge variant={info.getValue() ? 'lightSuccess' : 'lightDestructive'}>
-                    {info.getValue() ? 'Tersedia' : 'Tidak Tersedia'}
-                  </Badge>
-                )
+                cell: (info) => {
+                  const slot = info.row.original as Slot;
+                  const isAvailable = info.getValue() as boolean;
+                  return (
+                    <Badge variant={isAvailable ? 'lightSuccess' : 'lightDestructive'}>
+                      {isAvailable ? 'Tersedia' : 'Tidak Tersedia'}
+                    </Badge>
+                  );
+                }
               },
               {
                 accessorKey: 'price',
@@ -120,6 +173,26 @@ const CourtCostingTable = ({ courtId }: Props) => {
                     currency: 'IDR',
                     minimumFractionDigits: 0
                   })
+              },
+              {
+                id: 'actions',
+                header: 'Aksi',
+                cell: (info) => {
+                  const slot = info.row.original as Slot;
+                  const dialogId = `toggle-slot-${slot.id}`;
+                  return (
+                    <div className="flex justify-end">
+                      <ManagedDialog id={dialogId}>
+                        <DialogTrigger asChild>
+                          <Button size="icon" variant="lightInfo">
+                            <IconPower />
+                          </Button>
+                        </DialogTrigger>
+                        <ToggleSlotModal slot={slot} courtId={courtId} dialogId={dialogId} />
+                      </ManagedDialog>
+                    </div>
+                  );
+                }
               }
             ]}
             enableRowSelection={false}

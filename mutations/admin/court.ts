@@ -1,4 +1,4 @@
-import { createCourtApi, createCourtCostApi, updateCourtApi } from '@/api/admin/court';
+import { createCourtApi, createCourtCostApi, updateCourtApi, updateSlotAvailabilityApi } from '@/api/admin/court';
 import type { MutationFuncProps } from '@/types';
 import { mutationOptions } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -61,6 +61,24 @@ export const adminUpdateCourtCostMutationOptions = ({
     onError: (error) => {
       console.error('Error:', error);
       toast.error(error.msg || 'Gagal memperbarui data. Silakan coba lagi.');
+      onError?.(error);
+    }
+  });
+
+export const adminUpdateSlotAvailabilityMutationOptions = ({
+  onSuccess,
+  onError
+}: MutationFuncProps = {}) =>
+  mutationOptions({
+    mutationFn: ({ slotId, isAvailable }: { slotId: string; isAvailable: boolean }) =>
+      updateSlotAvailabilityApi(slotId, isAvailable),
+    onSuccess: (data) => {
+      toast.success('Status slot berhasil diperbarui!');
+      onSuccess?.(data);
+    },
+    onError: (error) => {
+      console.error('Error:', error);
+      toast.error(error.msg || 'Gagal memperbarui status slot. Silakan coba lagi.');
       onError?.(error);
     }
   });
