@@ -17,4 +17,3 @@ const useAuthRedirectStore = create<AuthRedirectState>((set, get) => ({
 }));
 
 export default useAuthRedirectStore;
-

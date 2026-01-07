@@ -1,7 +1,7 @@
 'use client';
 
 import { Command as CommandPrimitive, useCommandState } from 'cmdk';
-import { X, ChevronDownIcon } from 'lucide-react';
+import { ChevronDownIcon, X } from 'lucide-react';
 import * as React from 'react';
 import { forwardRef, useEffect } from 'react';
 
@@ -315,7 +315,6 @@ const MultiSelectInput = React.forwardRef<MultiSelectInputRef, MultiSelectInputP
       };
 
       void exec();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [debouncedSearchTerm, groupBy, open, triggerSearchOnFocus]);
 
     useEffect(() => {
@@ -341,7 +340,6 @@ const MultiSelectInput = React.forwardRef<MultiSelectInputRef, MultiSelectInputP
       };
 
       void exec();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [debouncedSearchTerm, groupBy, open, triggerSearchOnFocus]);
 
     const CreatableItem = () => {
@@ -410,6 +408,7 @@ const MultiSelectInput = React.forwardRef<MultiSelectInputRef, MultiSelectInputP
     );
 
     /** Avoid Creatable Selector freezing or lagging when paste a long string. */
+    /** eslint-disable-next-line react-hooks/exhaustive-deps */
     const commandFilter = React.useCallback(() => {
       if (commandProps?.filter) {
         return commandProps.filter;

@@ -57,7 +57,7 @@ function DatePickerModal({
             classNames={{
               root: 'w-full'
             }}
-            fromYear={new Date().getFullYear()}        
+            fromYear={new Date().getFullYear()}
             toYear={new Date().getFullYear() + 5}
             captionLayout="dropdown"
             selected={internalValue ?? undefined}

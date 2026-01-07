@@ -6,9 +6,19 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { clubRequestsQueryOptions } from '@/queries/club';
-import { approveClubRequestMutationOptions, rejectClubRequestMutationOptions } from '@/mutations/club';
+import {
+  approveClubRequestMutationOptions,
+  rejectClubRequestMutationOptions
+} from '@/mutations/club';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { IconUserPlus, IconX, IconCheck, IconClock, IconMail, IconCalendar } from '@tabler/icons-react';
+import {
+  IconUserPlus,
+  IconX,
+  IconCheck,
+  IconClock,
+  IconMail,
+  IconCalendar
+} from '@tabler/icons-react';
 import type { ClubJoinRequest } from '@/types/model';
 import { useState } from 'react';
 
@@ -21,9 +31,13 @@ export default function ClubJoinRequests({ clubId, isLeader }: ClubJoinRequestsP
   const queryClient = useQueryClient();
   const [processingId, setProcessingId] = useState<string | null>(null);
 
-  const { data: requests, isLoading, isError } = useQuery({
+  const {
+    data: requests,
+    isLoading,
+    isError
+  } = useQuery({
     ...clubRequestsQueryOptions(clubId),
-    enabled: isLeader, // Only fetch if user is the leader
+    enabled: isLeader // Only fetch if user is the leader
   });
 
   const { mutate: approveRequest, isPending: isApproving } = useMutation(
@@ -70,15 +84,13 @@ export default function ClubJoinRequests({ clubId, isLeader }: ClubJoinRequestsP
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-lg">
             <IconUserPlus className="size-5" />
             Join Requests
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-4 text-sm text-muted-foreground">
-            Loading requests...
-          </div>
+          <div className="text-muted-foreground py-4 text-center text-sm">Loading requests...</div>
         </CardContent>
       </Card>
     );
@@ -89,21 +101,19 @@ export default function ClubJoinRequests({ clubId, isLeader }: ClubJoinRequestsP
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-lg">
             <IconUserPlus className="size-5" />
             Join Requests
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-4 text-sm text-destructive">
-            Failed to load requests
-          </div>
+          <div className="text-destructive py-4 text-center text-sm">Failed to load requests</div>
         </CardContent>
       </Card>
     );
   }
 
-  const pendingRequests = requests?.filter(req => req.status === 'PENDING') || [];
+  const pendingRequests = requests?.filter((req) => req.status === 'PENDING') || [];
 
   // Format relative time
   const getRelativeTime = (date: string) => {
@@ -128,22 +138,23 @@ export default function ClubJoinRequests({ clubId, isLeader }: ClubJoinRequestsP
   return (
     <Card className="border-2">
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center justify-between">
+        <CardTitle className="flex items-center justify-between text-lg">
           <span className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <IconUserPlus className="size-5 text-primary" />
+            <div className="bg-primary/10 rounded-lg p-2">
+              <IconUserPlus className="text-primary size-5" />
             </div>
             <div>
               <div>Join Requests</div>
               {pendingRequests.length > 0 && (
-                <p className="text-xs font-normal text-muted-foreground mt-0.5">
-                  {pendingRequests.length} {pendingRequests.length === 1 ? 'person' : 'people'} waiting for approval
+                <p className="text-muted-foreground mt-0.5 text-xs font-normal">
+                  {pendingRequests.length} {pendingRequests.length === 1 ? 'person' : 'people'}{' '}
+                  waiting for approval
                 </p>
               )}
             </div>
           </span>
           {pendingRequests.length > 0 && (
-            <Badge variant="default" className="text-sm px-3 py-1">
+            <Badge variant="default" className="px-3 py-1 text-sm">
               {pendingRequests.length}
             </Badge>
           )}
@@ -151,14 +162,12 @@ export default function ClubJoinRequests({ clubId, isLeader }: ClubJoinRequestsP
       </CardHeader>
       <CardContent>
         {pendingRequests.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-              <IconClock className="size-8 text-muted-foreground" />
+          <div className="py-12 text-center">
+            <div className="bg-muted mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
+              <IconClock className="text-muted-foreground size-8" />
             </div>
-            <p className="font-medium text-sm mb-1">No pending requests</p>
-            <p className="text-xs text-muted-foreground">
-              New join requests will appear here
-            </p>
+            <p className="mb-1 text-sm font-medium">No pending requests</p>
+            <p className="text-muted-foreground text-xs">New join requests will appear here</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -168,22 +177,27 @@ export default function ClubJoinRequests({ clubId, isLeader }: ClubJoinRequestsP
                 <div key={request.id}>
                   {index > 0 && <Separator className="my-3" />}
                   <div className="flex items-start gap-4">
-                    <Avatar className="size-14 ring-2 ring-muted">
-                      <AvatarImage src={request.user?.image || undefined} alt={request.user?.name} />
-                      <AvatarFallback className="bg-linear-to-br from-primary/20 to-primary/10 text-primary font-bold text-base">
+                    <Avatar className="ring-muted size-14 ring-2">
+                      <AvatarImage
+                        src={request.user?.image || undefined}
+                        alt={request.user?.name}
+                      />
+                      <AvatarFallback className="from-primary/20 to-primary/10 text-primary bg-linear-to-br text-base font-bold">
                         {request.user?.name?.substring(0, 2).toUpperCase() || 'U'}
                       </AvatarFallback>
                     </Avatar>
-                    
-                    <div className="flex-1 min-w-0 space-y-2">
+
+                    <div className="min-w-0 flex-1 space-y-2">
                       <div>
-                        <p className="font-semibold text-base leading-tight">{request.user?.name}</p>
-                        <div className="flex flex-col gap-1 mt-1.5">
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <p className="text-base leading-tight font-semibold">
+                          {request.user?.name}
+                        </p>
+                        <div className="mt-1.5 flex flex-col gap-1">
+                          <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
                             <IconMail className="size-3.5" />
                             <span className="truncate">{request.user?.email}</span>
                           </div>
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
                             <IconCalendar className="size-3.5" />
                             <span>Requested {getRelativeTime(request.createdAt)}</span>
                           </div>
@@ -197,7 +211,7 @@ export default function ClubJoinRequests({ clubId, isLeader }: ClubJoinRequestsP
                           onClick={() => handleApprove(request.userId)}
                           disabled={isProcessing}
                           loading={isProcessing && isApproving}
-                          className="flex-1 gap-1.5 h-9"
+                          className="h-9 flex-1 gap-1.5"
                         >
                           <IconCheck className="size-4" />
                           Approve
@@ -208,7 +222,7 @@ export default function ClubJoinRequests({ clubId, isLeader }: ClubJoinRequestsP
                           onClick={() => handleReject(request.userId)}
                           disabled={isProcessing}
                           loading={isProcessing && isRejecting}
-                          className="flex-1 gap-1.5 h-9 border-destructive/20 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                          className="border-destructive/20 text-destructive hover:bg-destructive hover:text-destructive-foreground h-9 flex-1 gap-1.5"
                         >
                           <IconX className="size-4" />
                           Reject

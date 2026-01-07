@@ -16,4 +16,3 @@ export const adminTournamentQueryOptions = (id: string) =>
     queryFn: () => getTournamentApi(id),
     select: (res) => res.data as Tournament
   });
-

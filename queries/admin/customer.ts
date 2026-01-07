@@ -1,4 +1,9 @@
-import { getCustomerApi, getCustomerMembershipApi, getCustomersApi, searchCustomersApi } from '@/api/admin/customer';
+import {
+  getCustomerApi,
+  getCustomerMembershipApi,
+  getCustomersApi,
+  searchCustomersApi
+} from '@/api/admin/customer';
 import type { Customer } from '@/types/model';
 import { queryOptions } from '@tanstack/react-query';
 

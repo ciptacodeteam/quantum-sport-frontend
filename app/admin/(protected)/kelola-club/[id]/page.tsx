@@ -14,7 +14,15 @@ import {
 } from '@/components/ui/section';
 import { adminClubQueryOptions } from '@/queries/admin/club';
 import { useQuery } from '@tanstack/react-query';
-import { IconArrowLeft, IconUsers, IconLock, IconWorld, IconCrown, IconCalendar, IconMail } from '@tabler/icons-react';
+import {
+  IconArrowLeft,
+  IconUsers,
+  IconLock,
+  IconWorld,
+  IconCrown,
+  IconCalendar,
+  IconMail
+} from '@tabler/icons-react';
 import { useParams, useRouter } from 'next/navigation';
 import dayjs from 'dayjs';
 
@@ -31,14 +39,12 @@ const AdminClubDetailPage = () => {
         <Section>
           <SectionHeader>
             <Button variant="ghost" onClick={() => router.back()}>
-              <IconArrowLeft className="size-4 mr-2" />
+              <IconArrowLeft className="mr-2 size-4" />
               Back
             </Button>
           </SectionHeader>
           <SectionContent>
-            <div className="text-center py-12 text-muted-foreground">
-              Loading club details...
-            </div>
+            <div className="text-muted-foreground py-12 text-center">Loading club details...</div>
           </SectionContent>
         </Section>
       </main>
@@ -51,12 +57,12 @@ const AdminClubDetailPage = () => {
         <Section>
           <SectionHeader>
             <Button variant="ghost" onClick={() => router.back()}>
-              <IconArrowLeft className="size-4 mr-2" />
+              <IconArrowLeft className="mr-2 size-4" />
               Back
             </Button>
           </SectionHeader>
           <SectionContent>
-            <div className="text-center py-12 text-destructive">
+            <div className="text-destructive py-12 text-center">
               Failed to load club details. Please try again.
             </div>
           </SectionContent>
@@ -69,13 +75,13 @@ const AdminClubDetailPage = () => {
     <main>
       <Section>
         <SectionHeader>
-          <div className="flex items-center justify-between w-full">
+          <div className="flex w-full items-center justify-between">
             <div>
               <SectionTitle title="Club Details" />
               <SectionDescription description="View and manage club information" />
             </div>
             <Button variant="ghost" onClick={() => router.back()}>
-              <IconArrowLeft className="size-4 mr-2" />
+              <IconArrowLeft className="mr-2 size-4" />
               Back
             </Button>
           </div>
@@ -91,28 +97,32 @@ const AdminClubDetailPage = () => {
               <div className="flex items-start gap-6">
                 <Avatar className="size-24 rounded-lg">
                   <AvatarImage src={club.logo || undefined} alt={club.name} />
-                  <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-bold text-2xl">
+                  <AvatarFallback className="bg-primary/10 text-primary rounded-lg text-2xl font-bold">
                     {(club.name || 'CL').substring(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
 
                 <div className="flex-1 space-y-4">
                   <div>
-                    <div className="flex items-center gap-3 mb-2">
+                    <div className="mb-2 flex items-center gap-3">
                       <h2 className="text-2xl font-bold">{club.name}</h2>
                       <Badge variant={club.visibility === 'PUBLIC' ? 'default' : 'secondary'}>
                         {club.visibility === 'PUBLIC' ? (
-                          <><IconWorld className="size-3 mr-1" /> Public</>
+                          <>
+                            <IconWorld className="mr-1 size-3" /> Public
+                          </>
                         ) : (
-                          <><IconLock className="size-3 mr-1" /> Private</>
+                          <>
+                            <IconLock className="mr-1 size-3" /> Private
+                          </>
                         )}
                       </Badge>
                       <Badge variant={club.isActive ? 'default' : 'secondary'}>
                         {club.isActive ? 'Active' : 'Inactive'}
                       </Badge>
                     </div>
-                    
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+
+                    <div className="text-muted-foreground flex items-center gap-4 text-sm">
                       <div className="flex items-center gap-1">
                         <IconUsers className="size-4" />
                         <span>{club._count?.clubMember || 0} members</span>
@@ -126,8 +136,8 @@ const AdminClubDetailPage = () => {
 
                   {club.description && (
                     <div>
-                      <h3 className="font-semibold mb-1">Description</h3>
-                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                      <h3 className="mb-1 font-semibold">Description</h3>
+                      <p className="text-muted-foreground text-sm whitespace-pre-wrap">
                         {club.description}
                       </p>
                     </div>
@@ -144,9 +154,7 @@ const AdminClubDetailPage = () => {
                 <CardTitle>Club Rules</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                  {club.rules}
-                </p>
+                <p className="text-muted-foreground text-sm whitespace-pre-wrap">{club.rules}</p>
               </CardContent>
             </Card>
           )}
@@ -164,22 +172,20 @@ const AdminClubDetailPage = () => {
                 <div className="flex items-center gap-4">
                   <Avatar className="size-16">
                     <AvatarImage src={club.leader.image || undefined} alt={club.leader.name} />
-                    <AvatarFallback className="bg-primary/10 text-primary font-semibold text-lg">
+                    <AvatarFallback className="bg-primary/10 text-primary text-lg font-semibold">
                       {(club.leader.name || 'LD').substring(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
-                    <p className="font-semibold text-lg">{club.leader.name}</p>
+                    <p className="text-lg font-semibold">{club.leader.name}</p>
                     {club.leader.email && (
-                      <p className="text-sm text-muted-foreground flex items-center gap-1">
+                      <p className="text-muted-foreground flex items-center gap-1 text-sm">
                         <IconMail className="size-4" />
                         {club.leader.email}
                       </p>
                     )}
                     {club.leader.phone && (
-                      <p className="text-sm text-muted-foreground">
-                        {club.leader.phone}
-                      </p>
+                      <p className="text-muted-foreground text-sm">{club.leader.phone}</p>
                     )}
                   </div>
                 </div>
@@ -201,7 +207,10 @@ const AdminClubDetailPage = () => {
                     <div key={member.user?.id || index}>
                       <div className="flex items-center gap-3 py-2">
                         <Avatar className="size-12">
-                          <AvatarImage src={member.user?.image || undefined} alt={member.user?.name || 'Member'} />
+                          <AvatarImage
+                            src={member.user?.image || undefined}
+                            alt={member.user?.name || 'Member'}
+                          />
                           <AvatarFallback className="bg-muted">
                             {(member.user?.name || 'M').substring(0, 2).toUpperCase()}
                           </AvatarFallback>
@@ -209,7 +218,7 @@ const AdminClubDetailPage = () => {
                         <div className="flex-1">
                           <p className="font-medium">{member.user?.name || 'Unknown Member'}</p>
                           {member.user?.email && (
-                            <p className="text-sm text-muted-foreground">{member.user.email}</p>
+                            <p className="text-muted-foreground text-sm">{member.user.email}</p>
                           )}
                         </div>
                       </div>
@@ -218,10 +227,10 @@ const AdminClubDetailPage = () => {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <IconUsers className="size-12 mx-auto mb-2 opacity-50" />
+                <div className="text-muted-foreground py-8 text-center">
+                  <IconUsers className="mx-auto mb-2 size-12 opacity-50" />
                   <p>This club has {club._count?.clubMember || 0} members</p>
-                  <p className="text-xs mt-1">Member list not available</p>
+                  <p className="mt-1 text-xs">Member list not available</p>
                 </div>
               )}
             </CardContent>

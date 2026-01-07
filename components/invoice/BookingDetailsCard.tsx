@@ -90,7 +90,7 @@ export default function BookingDetailsCard({ details }: { details: Detail[] }) {
   );
 
   // Calculate total price
-  const totalPrice = (details || []).reduce((sum, detail) => sum + (detail.price || 0), 0);
+  // const totalPrice = (details || []).reduce((sum, detail) => sum + (detail.price || 0), 0);
   const totalSlots = (details || []).length;
 
   return (

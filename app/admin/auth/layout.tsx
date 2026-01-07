@@ -23,13 +23,13 @@ const AdminAuthLayout = ({ children }: PropsWithChildren) => {
 
   const { data: user, isPending } = useQuery({
     ...adminProfileQueryOptions,
-    enabled: isHydrated && !!token,
+    enabled: isHydrated && !!token
   });
 
   // Redirect to dashboard if already logged in
   useEffect(() => {
     if (hasRedirected.current || !isHydrated) return;
-    
+
     if (token && !isPending && !!user?.id) {
       console.log('✅ Auth Layout: Already logged in, redirecting to dashboard');
       hasRedirected.current = true;

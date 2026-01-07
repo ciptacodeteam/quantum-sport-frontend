@@ -47,8 +47,7 @@ export const adminMembershipCheckoutMutationOptions = ({
   onError
 }: MutationFuncProps = {}) =>
   mutationOptions({
-    mutationFn: (payload: AdminMembershipCheckoutPayload) =>
-      adminMembershipCheckoutApi(payload),
+    mutationFn: (payload: AdminMembershipCheckoutPayload) => adminMembershipCheckoutApi(payload),
     onSuccess: (data) => {
       toast.success('Membership berhasil dipesan!');
       onSuccess?.(data);

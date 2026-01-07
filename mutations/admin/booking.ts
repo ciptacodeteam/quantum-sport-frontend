@@ -16,4 +16,3 @@ export const adminCreateBookingMutationOptions = ({ onSuccess, onError }: Mutati
       onError?.(error);
     }
   });
-

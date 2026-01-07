@@ -7,4 +7,3 @@ export const inventoryAvailabilityQueryOptions = queryOptions({
   queryFn: getInventoryAvailabilityApi,
   select: (res) => res.data as InventoryAvailability[]
 });
-

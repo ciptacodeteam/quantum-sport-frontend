@@ -1,4 +1,8 @@
-import { createTournamentApi, updateTournamentApi, deleteTournamentApi } from '@/api/admin/tournament';
+import {
+  createTournamentApi,
+  updateTournamentApi,
+  deleteTournamentApi
+} from '@/api/admin/tournament';
 import type { MutationFuncProps } from '@/types';
 import { mutationOptions } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -39,10 +43,7 @@ export const adminUpdateTournamentMutationOptions = ({
     }
   });
 
-export const deleteTournamentMutationOptions = ({
-  onSuccess,
-  onError
-}: MutationFuncProps = {}) =>
+export const deleteTournamentMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
   mutationOptions({
     mutationFn: deleteTournamentApi,
     onSuccess: (data) => {

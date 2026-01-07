@@ -15,4 +15,3 @@ export const coachAvailabilityQueryOptions = (startAt?: string, endAt?: string) 
     },
     select: (res) => res.data as CoachAvailability[]
   });
-

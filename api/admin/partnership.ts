@@ -32,4 +32,3 @@ export async function deletePartnershipApi(id: string) {
   const { data } = await adminApi.delete(`/partnerships/${id}`);
   return data;
 }
-

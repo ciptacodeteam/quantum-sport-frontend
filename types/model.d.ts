@@ -675,3 +675,94 @@ export type CreateNotificationPayload = {
   type?: NotificationType;
   data?: Record<string, any>;
 };
+
+// Credit Card Types
+export type CreditCard = {
+  id: string;
+  cardBrand: 'VISA' | 'MASTERCARD' | 'AMEX' | 'DISCOVER';
+  last4: string;
+  expMonth: number;
+  expYear: number;
+  isDefault: boolean;
+  createdAt: Date;
+  updatedAt?: Date;
+};
+
+export type CardPaymentNewCard = {
+  cardNumber: string;
+  cardholderName: string;
+  expiryMonth: number;
+  expiryYear: number;
+  newCardCvv: string;
+  saveCard?: boolean;
+};
+
+export type CardPaymentSavedCard = {
+  savedCardId: string;
+  cvv: string;
+};
+
+export type CardPayment = CardPaymentNewCard | CardPaymentSavedCard;
+
+export type ThreeDSChallenge = {
+  type: 'REDIRECT_CUSTOMER';
+  value: string;
+  descriptor: 'WEB_URL';
+};
+
+export type CheckoutResponse = {
+  bookingId?: string;
+  invoiceId?: string;
+  invoiceNumber?: string;
+  membershipUserId?: string;
+  totalPrice?: number;
+  processingFee?: number;
+  total?: number;
+  subtotal?: number;
+  status?: string;
+  paymentStatus: 'PENDING' | 'REQUIRES_ACTION' | 'SUCCEEDED' | 'FAILED';
+  paymentActions?: ThreeDSChallenge[];
+  paymentUrl?: string;
+};
+
+export type SaveCreditCardPayload = {
+  cardNumber: string;
+  cardholderName: string;
+  expiryMonth: number;
+  expiryYear: number;
+  cvv: string;
+  isDefault?: boolean;
+};
+
+export type SaveCreditCardResponse = {
+  success: boolean;
+  message: string;
+  data: CreditCard | null;
+};
+
+export type ListCreditCardsResponse = {
+  success: boolean;
+  message: string;
+  data: {
+    cards: CreditCard[];
+    total: number;
+  };
+};
+
+export type CardCheckoutPayload = {
+  paymentMethodId: string;
+  courtSlots?: string[];
+  coachSlots?: string[];
+  ballboySlots?: string[];
+  inventories?: Array<{
+    inventoryId: string;
+    quantity: number;
+  }>;
+  cardPayment: CardPayment;
+};
+
+export type MembershipCardCheckoutPayload = {
+  membershipId: string;
+  paymentMethodId: string;
+  cardPayment: CardPayment;
+};

@@ -38,7 +38,7 @@ export default function BookingAddOns() {
   const router = useRouter();
   const {
     bookingItems,
-    selectedDate,
+    // selectedDate,
     selectedCustomerId,
     selectedCustomerName: storeCustomerName,
     selectedCustomerPhone: storeCustomerPhone,
@@ -55,7 +55,7 @@ export default function BookingAddOns() {
     addInventory,
     removeInventory,
     removeBookingItem,
-    updateInventoryQuantity,
+    // updateInventoryQuantity,
     getTotalAmount,
     setMembershipDiscount,
     courtTotal,
@@ -68,7 +68,7 @@ export default function BookingAddOns() {
   const queryClient = useQueryClient();
 
   const [activeTab, setActiveTab] = useState<'coaches' | 'inventory'>('coaches');
-  const [inventoryQuantities, setInventoryQuantities] = useState<Record<string, number>>({});
+  // const [inventoryQuantities, setInventoryQuantities] = useState<Record<string, number>>({});
   // Selected date and time for add-ons when no court bookings exist
   const [selectedAddOnDate, setSelectedAddOnDate] = useState<string>(dayjs().format('YYYY-MM-DD'));
   const [selectedAddOnTimeSlot, setSelectedAddOnTimeSlot] = useState<string>('');
@@ -187,62 +187,62 @@ export default function BookingAddOns() {
     return Array.from(coachMap.values());
   }, [coachAvailabilityData]);
 
-  type AdminCoachSlot = {
-    id: string;
-    coachId: string;
-    coachName: string;
-    timeRange: string;
-    price: number;
-    startAt: string;
-    endAt: string;
-  };
+  // type AdminCoachSlot = {
+  //   id: string;
+  //   coachId: string;
+  //   coachName: string;
+  //   timeRange: string;
+  //   price: number;
+  //   startAt: string;
+  //   endAt: string;
+  // };
 
-  const coachAvailabilityByDate = useMemo(() => {
-    if (!coachAvailabilityData || coachAvailabilityData.length === 0) return [];
+  // const coachAvailabilityByDate = useMemo(() => {
+  //   if (!coachAvailabilityData || coachAvailabilityData.length === 0) return [];
 
-    const map = new Map<
-      string,
-      {
-        dateLabel: string;
-        slots: AdminCoachSlot[];
-      }
-    >();
+  //   const map = new Map<
+  //     string,
+  //     {
+  //       dateLabel: string;
+  //       slots: AdminCoachSlot[];
+  //     }
+  //   >();
 
-    coachAvailabilityData.forEach((slot) => {
-      const dateKey = getISODate(slot.startAt);
-      const dateLabel = getISODate(slot.startAt); // keep simple; avoids TZ confusion
-      const timeRange = getTimeRangeLocal(slot.startAt, slot.endAt);
+  //   coachAvailabilityData.forEach((slot) => {
+  //     const dateKey = getISODate(slot.startAt);
+  //     const dateLabel = getISODate(slot.startAt); // keep simple; avoids TZ confusion
+  //     const timeRange = getTimeRangeLocal(slot.startAt, slot.endAt);
 
-      if (!map.has(dateKey)) {
-        map.set(dateKey, {
-          dateLabel,
-          slots: []
-        });
-      }
+  //     if (!map.has(dateKey)) {
+  //       map.set(dateKey, {
+  //         dateLabel,
+  //         slots: []
+  //       });
+  //     }
 
-      map.get(dateKey)!.slots.push({
-        id: slot.slotId,
-        coachId: slot.coach.id,
-        timeRange,
-        coachName: slot.coach.name,
-        price: slot.price,
-        startAt: slot.startAt,
-        endAt: slot.endAt
-      });
-    });
+  //     map.get(dateKey)!.slots.push({
+  //       id: slot.slotId,
+  //       coachId: slot.coach.id,
+  //       timeRange,
+  //       coachName: slot.coach.name,
+  //       price: slot.price,
+  //       startAt: slot.startAt,
+  //       endAt: slot.endAt
+  //     });
+  //   });
 
-    return Array.from(map.entries())
-      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-      .map(([date, info]) => ({
-        date,
-        dateLabel: info.dateLabel,
-        slots: info.slots.sort((slotA, slotB) => {
-          const [a] = slotA.timeRange.split(' - ');
-          const [b] = slotB.timeRange.split(' - ');
-          return a.localeCompare(b);
-        })
-      }));
-  }, [coachAvailabilityData]);
+  //   return Array.from(map.entries())
+  //     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+  //     .map(([date, info]) => ({
+  //       date,
+  //       dateLabel: info.dateLabel,
+  //       slots: info.slots.sort((slotA, slotB) => {
+  //         const [a] = slotA.timeRange.split(' - ');
+  //         const [b] = slotB.timeRange.split(' - ');
+  //         return a.localeCompare(b);
+  //       })
+  //     }));
+  // }, [coachAvailabilityData]);
 
   // Transform inventory availability data
   const inventoryItems = useMemo(() => {
@@ -294,7 +294,7 @@ export default function BookingAddOns() {
   );
 
   // Get all unique time slots across all dates
-  const bookedTimeSlots = Array.from(new Set(bookingItems.map((item) => item.timeSlot)));
+  // const bookedTimeSlots = Array.from(new Set(bookingItems.map((item) => item.timeSlot)));
 
   // Get all unique dates
   const bookedDates = Object.keys(bookingsByDate).sort();
@@ -312,9 +312,9 @@ export default function BookingAddOns() {
 
   // Check if inventory is available for specific time slot and date
   const isInventoryAvailable = (
-    inventoryId: string,
-    timeSlot: string,
-    date: string
+    inventoryId: string
+    // timeSlot: string,
+    // date: string
   ): { available: boolean; quantity: number } => {
     if (!inventoryAvailabilityData) return { available: false, quantity: 0 };
 
@@ -345,45 +345,45 @@ export default function BookingAddOns() {
     return true;
   };
 
-  const handleAddCoachFromAvailability = (slot: AdminCoachSlot) => {
-    const date = dayjs(slot.startAt).format('YYYY-MM-DD');
-    const timeSlot = slot.timeRange;
-    const dateInfo = bookingsByDate[date];
+  // const handleAddCoachFromAvailability = (slot: AdminCoachSlot) => {
+  //   const date = dayjs(slot.startAt).format('YYYY-MM-DD');
+  //   const timeSlot = slot.timeRange;
+  //   const dateInfo = bookingsByDate[date];
 
-    if (!dateInfo) {
-      toast.error('Tidak ada booking untuk tanggal ini. Tambahkan court terlebih dahulu.');
-      return;
-    }
+  //   if (!dateInfo) {
+  //     toast.error('Tidak ada booking untuk tanggal ini. Tambahkan court terlebih dahulu.');
+  //     return;
+  //   }
 
-    if (!dateInfo.timeSlots.includes(timeSlot)) {
-      toast.error('Slot coach tidak cocok dengan jadwal booking yang ada.');
-      return;
-    }
+  //   if (!dateInfo.timeSlots.includes(timeSlot)) {
+  //     toast.error('Slot coach tidak cocok dengan jadwal booking yang ada.');
+  //     return;
+  //   }
 
-    const alreadySelected = selectedCoaches.some(
-      (coach) =>
-        coach.coachId === slot.coachId && coach.timeSlot === timeSlot && coach.date === date
-    );
-    if (alreadySelected) {
-      toast.info('Coach sudah ditambahkan untuk jadwal ini.');
-      return;
-    }
+  //   const alreadySelected = selectedCoaches.some(
+  //     (coach) =>
+  //       coach.coachId === slot.coachId && coach.timeSlot === timeSlot && coach.date === date
+  //   );
+  //   if (alreadySelected) {
+  //     toast.info('Coach sudah ditambahkan untuk jadwal ini.');
+  //     return;
+  //   }
 
-    addCoach({
-      coachId: slot.coachId,
-      coachName: slot.coachName,
-      timeSlot,
-      price: slot.price,
-      date,
-      startAt: slot.startAt,
-      endAt: slot.endAt,
-      slotId: slot.id
-    });
+  //   addCoach({
+  //     coachId: slot.coachId,
+  //     coachName: slot.coachName,
+  //     timeSlot,
+  //     price: slot.price,
+  //     date,
+  //     startAt: slot.startAt,
+  //     endAt: slot.endAt,
+  //     slotId: slot.id
+  //   });
 
-    toast.success(
-      `Coach ${slot.coachName} ditambahkan untuk ${dayjs(date).format('DD MMM')} ${timeSlot}`
-    );
-  };
+  //   toast.success(
+  //     `Coach ${slot.coachName} ditambahkan untuk ${dayjs(date).format('DD MMM')} ${timeSlot}`
+  //   );
+  // };
 
   // Handle coach selection - now uses real API data
   const handleCoachSelect = (
@@ -429,8 +429,8 @@ export default function BookingAddOns() {
     quantity: number,
     pricePerHour: number
   ) => {
-    const key = `${inventoryId}-${timeSlot}-${date}`;
-    setInventoryQuantities((prev) => ({ ...prev, [key]: quantity }));
+    // const key = `${inventoryId}-${timeSlot}-${date}`;
+    // setInventoryQuantities((prev) => ({ ...prev, [key]: quantity }));
 
     if (quantity > 0) {
       addInventory({
@@ -932,7 +932,10 @@ export default function BookingAddOns() {
                       ? Object.entries(bookingsByDate).reduce(
                           (acc, [date, dateInfo]) => {
                             const availableForDate = dateInfo.timeSlots.map((timeSlot) => {
-                              const availability = isInventoryAvailable(item.id, timeSlot, date);
+                              const availability = isInventoryAvailable(
+                                item.id
+                                //timeSlot, date
+                              );
                               return {
                                 timeSlot,
                                 availability
@@ -965,9 +968,9 @@ export default function BookingAddOns() {
                                 {
                                   timeSlot: selectedAddOnTimeSlot,
                                   availability: isInventoryAvailable(
-                                    item.id,
-                                    selectedAddOnTimeSlot,
-                                    selectedAddOnDate
+                                    item.id
+                                    // selectedAddOnTimeSlot,
+                                    // selectedAddOnDate
                                   )
                                 }
                               ]
@@ -975,9 +978,9 @@ export default function BookingAddOns() {
                           ]
                         : [];
 
-                  const hasAnyAvailability = availableSlots.some(({ slots }) =>
-                    slots.some(({ availability }) => availability.available)
-                  );
+                  // const hasAnyAvailability = availableSlots.some(({ slots }) =>
+                  //   slots.some(({ availability }) => availability.available)
+                  // );
 
                   return (
                     <Card key={item.id} className="overflow-hidden">

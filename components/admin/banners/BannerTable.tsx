@@ -85,7 +85,9 @@ const BannerTable = () => {
         header: 'Aksi',
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
-            <ManagedDialog id={`${hasEditPermission(me?.role) ? 'edit' : 'view'}-banner-${row.original.id}`}>
+            <ManagedDialog
+              id={`${hasEditPermission(me?.role) ? 'edit' : 'view'}-banner-${row.original.id}`}
+            >
               <DialogTrigger asChild>
                 <Button size="icon" variant="lightInfo">
                   {hasEditPermission(me?.role) ? <IconPencil /> : <IconEye />}

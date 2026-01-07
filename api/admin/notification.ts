@@ -1,7 +1,7 @@
 import { adminApi } from '@/lib/adminApi';
 import { mergedQueryParamUrl } from '@/lib/utils';
 import type { SearchParamsData } from '@/types';
-import type { AdminNotification, CreateNotificationPayload } from '@/types/model';
+import type { CreateNotificationPayload } from '@/types/model';
 
 export async function getAdminNotificationsApi(queryParams: SearchParamsData = {}) {
   const url = '/notifications';

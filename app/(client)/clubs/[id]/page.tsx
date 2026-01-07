@@ -1,11 +1,12 @@
 'use client';
 
 import MainHeader from '@/components/headers/MainHeader';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
+import ClubJoinRequests from '@/components/clubs/ClubJoinRequests';
 import {
   Dialog,
   DialogContent,
@@ -14,29 +15,27 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog';
-import { clubQueryOptions, clubMembershipsQueryOptions } from '@/queries/club';
-import { profileQueryOptions } from '@/queries/profile';
 import {
-  requestJoinClubMutationOptions,
-  leaveClubMutationOptions,
   deleteClubMutationOptions,
-  removeMemberMutationOptions
+  leaveClubMutationOptions,
+  removeMemberMutationOptions,
+  requestJoinClubMutationOptions
 } from '@/mutations/club';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { clubMembershipsQueryOptions, clubQueryOptions } from '@/queries/club';
+import { profileQueryOptions } from '@/queries/profile';
+import useAuthStore from '@/stores/useAuthStore';
 import {
-  IconUsers,
-  IconLock,
-  IconWorld,
   IconCrown,
+  IconLock,
   IconLogout,
   IconTrash,
-  IconUserMinus
+  IconUserMinus,
+  IconUsers,
+  IconWorld
 } from '@tabler/icons-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
-import useAuthStore from '@/stores/useAuthStore';
-import useAuthModalStore from '@/stores/useAuthModalStore';
-import { useEffect, useState, useMemo } from 'react';
-import ClubJoinRequests from '@/components/clubs/ClubJoinRequests';
+import { useEffect, useMemo, useState } from 'react';
 
 const ClubDetailPage = () => {
   const params = useParams();
@@ -63,9 +62,9 @@ const ClubDetailPage = () => {
 
   // Fetch user profile from backend to validate real user data
   const {
-    data: user,
-    isLoading: isUserLoading,
-    isError: isUserError
+    data: user
+    // isLoading: isUserLoading,
+    // isError: isUserError
   } = useQuery({
     ...profileQueryOptions,
     enabled: isAuth && isHydrated, // Only fetch if authenticated and hydrated
@@ -319,9 +318,7 @@ const ClubDetailPage = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between text-lg">
-                <span>
-                  Members ({club.clubMember?.length ?? club._count?.clubMember ?? 0})
-                </span>
+                <span>Members ({club.clubMember?.length ?? club._count?.clubMember ?? 0})</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -360,9 +357,7 @@ const ClubDetailPage = () => {
               ) : (
                 <div className="text-muted-foreground py-8 text-center text-sm">
                   <IconUsers className="mx-auto mb-2 size-12 opacity-50" />
-                  <p>
-                    Club ini punya {club._count?.clubMember ?? 0} Anggota
-                  </p>
+                  <p>Club ini punya {club._count?.clubMember ?? 0} Anggota</p>
                   <p className="mt-1 text-xs">Anggota tidak tersedia</p>
                 </div>
               )}
@@ -376,11 +371,12 @@ const ClubDetailPage = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Hapus Club</DialogTitle>
-            <DialogDescription className='mt-4 text-black'>
+            <DialogDescription className="mt-4 text-black">
               Apakah Anda yakin ingin menghapus <span className="font-medium">{club.name}</span>?
               <br />
               <p className="text-destructive mx-4 mt-3">
-                Tindakan ini tidak dapat dibatalkan. Semua anggota akan dihapus dan semua data klub akan dihapus secara permanen.
+                Tindakan ini tidak dapat dibatalkan. Semua anggota akan dihapus dan semua data klub
+                akan dihapus secara permanen.
               </p>
             </DialogDescription>
           </DialogHeader>

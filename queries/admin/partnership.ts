@@ -14,4 +14,3 @@ export const adminPartnershipQueryOptions = (id: string) =>
     queryFn: () => getPartnershipApi(id),
     select: (res) => res.data as Partnership
   });
-

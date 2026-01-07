@@ -21,7 +21,7 @@ export default function AddOnsPage() {
   const selectedInventories = useBookingStore((state) => state.selectedInventories);
   const addInventoryToStore = useBookingStore((state) => state.addInventory);
   const removeInventoryFromStore = useBookingStore((state) => state.removeInventory);
-  const [activeTab, setActiveTab] = useState<'coach' | 'raket'>('raket');
+  const [activeTab] = useState<'coach' | 'raket'>('raket');
   const {
     data: inventoryAvailability,
     isPending: isInventoryPending,

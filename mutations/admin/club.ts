@@ -13,7 +13,11 @@ export const deleteAdminClubMutationOptions = ({ onSuccess, onError }: MutationF
     },
     onError: (error: any) => {
       console.error('Error:', error);
-      const errorMsg = error?.response?.data?.msg || error?.msg || error?.message || 'Failed to delete club. Please try again.';
+      const errorMsg =
+        error?.response?.data?.msg ||
+        error?.msg ||
+        error?.message ||
+        'Failed to delete club. Please try again.';
       toast.error(errorMsg);
       onError?.(error);
     }
@@ -29,7 +33,11 @@ export const approveAdminClubMutationOptions = ({ onSuccess, onError }: Mutation
     },
     onError: (error: any) => {
       console.error('Error:', error);
-      const errorMsg = error?.response?.data?.msg || error?.msg || error?.message || 'Failed to approve club. Please try again.';
+      const errorMsg =
+        error?.response?.data?.msg ||
+        error?.msg ||
+        error?.message ||
+        'Failed to approve club. Please try again.';
       toast.error(errorMsg);
       onError?.(error);
     }

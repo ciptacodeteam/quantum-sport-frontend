@@ -6,7 +6,12 @@ import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import { useConfirmMutation } from '@/hooks/useConfirmDialog';
 import { STATUS_BADGE_VARIANT, STATUS_MAP } from '@/lib/constants';
-import { formatNumber, hasCreatePermission, hasEditPermission, hasDeletePermission } from '@/lib/utils';
+import {
+  formatNumber,
+  hasCreatePermission,
+  hasEditPermission,
+  hasDeletePermission
+} from '@/lib/utils';
 import { adminTournamentsQueryOptions } from '@/queries/admin/tournament';
 import { adminProfileQueryOptions } from '@/queries/admin/auth';
 import type { Tournament } from '@/types/model';

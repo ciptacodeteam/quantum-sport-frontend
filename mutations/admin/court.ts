@@ -1,4 +1,9 @@
-import { createCourtApi, createCourtCostApi, updateCourtApi, updateSlotAvailabilityApi } from '@/api/admin/court';
+import {
+  createCourtApi,
+  createCourtCostApi,
+  updateCourtApi,
+  updateSlotAvailabilityApi
+} from '@/api/admin/court';
 import type { MutationFuncProps } from '@/types';
 import { mutationOptions } from '@tanstack/react-query';
 import { toast } from 'sonner';

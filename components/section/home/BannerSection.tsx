@@ -1,23 +1,15 @@
 'use client';
 
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  Carousel,
-  CarouselContent,
-  CarouselDots,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious
-} from '@/components/ui/carousel';
+import { Carousel, CarouselContent, CarouselDots, CarouselItem } from '@/components/ui/carousel';
 import { bannersQueryOptions } from '@/queries/banner';
 import type { Banner } from '@/types/model';
+import { useQuery } from '@tanstack/react-query';
 import Autoplay from 'embla-carousel-autoplay';
 import Image from 'next/image';
-import { useRef, useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import MembershipCtaSection from './MembershipCtaSection';
-import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { useEffect, useRef, useState } from 'react';
 
 const DEFAULT_IMAGE = 'assets/img/banner.webp';
 const DEFAULT_BANNERS = [

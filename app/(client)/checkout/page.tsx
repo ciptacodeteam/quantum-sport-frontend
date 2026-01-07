@@ -4,6 +4,8 @@ import MainHeader from '@/components/headers/MainHeader';
 import BottomNavigationWrapper from '@/components/ui/BottomNavigationWrapper';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import SavedCardSelector from '@/components/forms/payment/SavedCardSelector';
+import CreditCardForm, { type CreditCardFormData } from '@/components/forms/payment/CreditCardForm';
 import { useMembershipDiscount } from '@/hooks/useMembershipDiscount';
 import { cn, resolveMediaUrl } from '@/lib/utils';
 import { checkoutMutationOptions } from '@/mutations/booking';
@@ -12,14 +14,14 @@ import { profileQueryOptions } from '@/queries/profile';
 import useAuthModalStore from '@/stores/useAuthModalStore';
 import useAuthRedirectStore from '@/stores/useAuthRedirectStore';
 import { useBookingStore } from '@/stores/useBookingStore';
-import type { PaymentMethod } from '@/types/model';
+import type { PaymentMethod, CreditCard } from '@/types/model';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import 'dayjs/locale/id';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { X } from 'lucide-react';
 import Image from 'next/image';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 dayjs.locale('id');
@@ -64,7 +66,7 @@ const getSlotDisplayRange = (timeSlot: string) => {
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const pathname = usePathname();
+  // const pathname = usePathname();
   // const searchParams = useSearchParams();
   const bookingItems = useBookingStore((state) => state.bookingItems);
   const courtTotal = useBookingStore((state) => state.courtTotal);
@@ -73,7 +75,7 @@ export default function CheckoutPage() {
   const selectedCoaches = useBookingStore((state) => state.selectedCoaches);
   const selectedBallboys = useBookingStore((state) => state.selectedBallboys);
   const selectedInventories = useBookingStore((state) => state.selectedInventories);
-  const removeCoach = useBookingStore((state) => state.removeCoach);
+  // const removeCoach = useBookingStore((state) => state.removeCoach);
   const removeInventory = useBookingStore((state) => state.removeInventory);
 
   const addOnsTotal = coachTotal + inventoryTotal;
@@ -102,6 +104,10 @@ export default function CheckoutPage() {
 
   const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
+  const [selectedCard, setSelectedCard] = useState<CreditCard | null>(null);
+  const [selectedCardCvv, setSelectedCardCvv] = useState<string>('');
+  const [isAddCardModalOpen, setAddCardModalOpen] = useState(false);
+  const [newCardData, setNewCardData] = useState<CreditCardFormData | null>(null);
 
   const readStoredPaymentMethodId = useCallback(() => {
     if (typeof window === 'undefined') return null;
@@ -289,6 +295,24 @@ export default function CheckoutPage() {
   const handleSelectPaymentMethod = (method: PaymentMethod) => {
     setSelectedPaymentMethod(method);
     setPaymentModalOpen(false);
+    // Reset card selection when changing payment method
+    if (method.channel !== 'CARDS') {
+      setSelectedCard(null);
+      setSelectedCardCvv('');
+      setNewCardData(null);
+    }
+  };
+
+  const handleAddNewCard = () => {
+    setAddCardModalOpen(true);
+  };
+
+  const handleNewCardSubmit = (data: CreditCardFormData) => {
+    // Store new card data for checkout
+    setNewCardData(data);
+    setSelectedCard(null); // Clear saved card selection
+    setSelectedCardCvv('');
+    setAddCardModalOpen(false);
   };
 
   const handleCheckout = () => {
@@ -299,6 +323,15 @@ export default function CheckoutPage() {
     }
 
     if (!selectedPaymentMethod) {
+      return;
+    }
+
+    // For CARDS channel, check if card is selected or new card data is provided
+    if (selectedPaymentMethod.channel === 'CARDS' && !selectedCard && !newCardData) {
+      return;
+    }
+
+    if (selectedPaymentMethod.channel === 'CARDS' && selectedCard && !selectedCardCvv) {
       return;
     }
 
@@ -346,6 +379,27 @@ export default function CheckoutPage() {
 
     if (inventories.length > 0) {
       payload.inventories = inventories;
+    }
+
+    // Add card payment data if CARDS channel
+    if (selectedPaymentMethod.channel === 'CARDS') {
+      if (selectedCard) {
+        // Use saved card
+        payload.cardPayment = {
+          savedCardId: selectedCard.id,
+          cvv: selectedCardCvv
+        };
+      } else if (newCardData) {
+        // Use new card
+        payload.cardPayment = {
+          cardNumber: newCardData.cardNumber,
+          cardholderName: newCardData.cardholderName,
+          expiryMonth: newCardData.expiryMonth,
+          expiryYear: newCardData.expiryYear,
+          newCardCvv: newCardData.cvv,
+          saveCard: newCardData.saveCard
+        };
+      }
     }
 
     checkoutMutation.mutate(payload);
@@ -579,6 +633,42 @@ export default function CheckoutPage() {
             </div>
           </div>
 
+          {/* Card Payment Selection - Show only if CARDS channel is selected */}
+          {selectedPaymentMethod?.channel === 'CARDS' && (
+            <div className="border-muted rounded-lg border bg-white p-4">
+              {!newCardData ? (
+                <SavedCardSelector
+                  onCardSelect={(card, cvv) => {
+                    setSelectedCard(card);
+                    setSelectedCardCvv(cvv);
+                  }}
+                  onAddNewCard={handleAddNewCard}
+                  isLoading={checkoutMutation.isPending}
+                />
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">Kartu Baru</p>
+                      <p className="text-muted-foreground text-xs">{newCardData.cardholderName}</p>
+                      <p className="text-muted-foreground text-xs">
+                        •••• •••• •••• {newCardData.cardNumber.slice(-4)}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setNewCardData(null)}
+                    >
+                      Ganti Kartu
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Membership Information */}
           {isAuthenticated && membershipDiscount.activeMembership && (
             <div className="border-muted bg-primary/5 rounded-lg border p-4">
@@ -673,7 +763,16 @@ export default function CheckoutPage() {
               size="lg"
               className="min-w-40"
               onClick={handleCheckout}
-              disabled={(!selectedPaymentMethod || checkoutMutation.isPending) && isAuthenticated}
+              disabled={
+                ((!selectedPaymentMethod ||
+                  checkoutMutation.isPending ||
+                  (selectedPaymentMethod?.channel === 'CARDS' && !selectedCard && !newCardData) ||
+                  (selectedPaymentMethod?.channel === 'CARDS' &&
+                    !!selectedCard &&
+                    !selectedCardCvv)) &&
+                  isAuthenticated) ||
+                false
+              }
             >
               {isUserPending
                 ? 'Memuat...'
@@ -681,9 +780,11 @@ export default function CheckoutPage() {
                   ? 'Login untuk Checkout'
                   : checkoutMutation.isPending
                     ? 'Memproses...'
-                    : selectedPaymentMethod
-                      ? 'Bayar Sekarang'
-                      : 'Pilih Metode'}
+                    : selectedPaymentMethod?.channel === 'CARDS' && !selectedCard && !newCardData
+                      ? 'Pilih Kartu'
+                      : selectedPaymentMethod
+                        ? 'Bayar Sekarang'
+                        : 'Pilih Metode'}
             </Button>
           </div>
         </div>
@@ -767,6 +868,24 @@ export default function CheckoutPage() {
               })
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add New Card Dialog */}
+      <Dialog open={isAddCardModalOpen} onOpenChange={setAddCardModalOpen}>
+        <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-center text-lg font-semibold">
+              Tambah Kartu Baru
+            </DialogTitle>
+          </DialogHeader>
+
+          <CreditCardForm
+            onSubmit={handleNewCardSubmit}
+            isLoading={checkoutMutation.isPending}
+            showSaveOption={true}
+            submitButtonText="Gunakan Kartu Ini"
+          />
         </DialogContent>
       </Dialog>
     </div>

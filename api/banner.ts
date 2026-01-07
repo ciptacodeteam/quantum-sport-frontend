@@ -13,4 +13,3 @@ export async function getBannerApi(id: string) {
   const { data } = await api.get(`/banners/${id}`);
   return data;
 }
-

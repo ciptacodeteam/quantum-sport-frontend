@@ -260,10 +260,7 @@ const EditStaffForm = ({ staffId }: Props) => {
                 control={form.control}
                 name="coachType"
                 render={({ field }) => (
-                  <Select 
-                    onValueChange={field.onChange} 
-                    value={field.value}
-                  >
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <SelectTrigger className="w-[180px]">
                       <SelectValue placeholder="Select coach type" />
                     </SelectTrigger>

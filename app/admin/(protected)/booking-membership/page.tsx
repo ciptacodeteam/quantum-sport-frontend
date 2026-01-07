@@ -39,7 +39,10 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { adminMembershipsQueryOptions } from '@/queries/admin/membership';
 import type { AdminMembershipCheckoutPayload } from '@/api/admin/membership';
-import { adminCustomerSearchQueryOptions, type CustomerSearchResult } from '@/queries/admin/customer';
+import {
+  adminCustomerSearchQueryOptions,
+  type CustomerSearchResult
+} from '@/queries/admin/customer';
 import { adminMembershipCheckoutMutationOptions } from '@/mutations/admin/membership';
 import type { Membership } from '@/types/model';
 
@@ -132,16 +135,19 @@ const BookingMembershipPage = () => {
 
   const canSubmit = Boolean(
     selectedMembershipId &&
-      (customerId || (walkInName.trim().length > 0 && walkInPhone.trim().length >= 5))
+    (customerId || (walkInName.trim().length > 0 && walkInPhone.trim().length >= 5))
   );
 
   return (
     <main className="space-y-6">
       <header className="space-y-1">
-        <p className="text-sm font-semibold text-primary/70">Membership</p>
+        <p className="text-primary/70 text-sm font-semibold">Membership</p>
         <div className="flex flex-wrap items-baseline justify-between gap-3">
-          <h1 className="text-2xl font-semibold leading-tight">Booking Membership</h1>
-          <Badge variant="outline" className="rounded-full px-3 py-1 text-xs font-semibold tracking-wide">
+          <h1 className="text-2xl leading-tight font-semibold">Booking Membership</h1>
+          <Badge
+            variant="outline"
+            className="rounded-full px-3 py-1 text-xs font-semibold tracking-wide"
+          >
             Admin Tools
           </Badge>
         </div>
@@ -152,9 +158,9 @@ const BookingMembershipPage = () => {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <section className="min-w-0 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-card/60 px-4 py-3 shadow-sm">
+          <div className="bg-card/60 flex flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-3 shadow-sm">
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Katalog paket aktif</p>
+              <p className="text-muted-foreground text-sm font-medium">Katalog paket aktif</p>
               <p className="text-lg font-semibold">
                 {isMembershipsLoading ? 'Memuat data...' : `${memberships.length} opsi membership`}
               </p>
@@ -166,11 +172,11 @@ const BookingMembershipPage = () => {
 
           <div className="grid gap-4 md:grid-cols-2">
             {isMembershipsLoading ? (
-              <div className="rounded-2xl border bg-white p-8 text-center text-sm text-muted-foreground shadow-sm">
+              <div className="text-muted-foreground rounded-2xl border bg-white p-8 text-center text-sm shadow-sm">
                 Memuat paket membership...
               </div>
             ) : memberships.length === 0 ? (
-              <div className="rounded-2xl border bg-white p-8 text-center text-sm text-muted-foreground shadow-sm">
+              <div className="text-muted-foreground rounded-2xl border bg-white p-8 text-center text-sm shadow-sm">
                 Belum ada paket membership yang aktif.
               </div>
             ) : (
@@ -183,22 +189,24 @@ const BookingMembershipPage = () => {
                     key={membership.id}
                     type="button"
                     className={cn(
-                      'group h-full min-w-0 rounded-2xl border bg-card/80 text-left transition-all hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2',
-                      isSelected ? 'border-primary shadow-lg ring-1 ring-primary/20' : 'border-border'
+                      'group bg-card/80 h-full min-w-0 rounded-2xl border text-left transition-all hover:-translate-y-0.5 hover:shadow-lg focus-visible:ring-2 focus-visible:outline-none',
+                      isSelected
+                        ? 'border-primary ring-primary/20 shadow-lg ring-1'
+                        : 'border-border'
                     )}
                     onClick={() => setSelectedMembershipId(isSelected ? null : membership.id)}
                   >
                     <div className="flex h-full flex-col gap-4 p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 space-y-1">
-                          <p className="text-[11px] font-semibold uppercase tracking-wide text-primary">
+                          <p className="text-primary text-[11px] font-semibold tracking-wide uppercase">
                             {membership.sessions} sesi
                           </p>
-                          <div className="flex items-center gap-2 text-lg font-semibold leading-tight">
-                            <IconCrown className="text-yellow-500 h-4 w-4" />
+                          <div className="flex items-center gap-2 text-lg leading-tight font-semibold">
+                            <IconCrown className="h-4 w-4 text-yellow-500" />
                             <span className="truncate">{membership.name}</span>
                           </div>
-                          <p className="text-muted-foreground text-sm line-clamp-2">
+                          <p className="text-muted-foreground line-clamp-2 text-sm">
                             {membership.description || 'Membership unggulan Quantum Sport'}
                           </p>
                         </div>
@@ -210,12 +218,16 @@ const BookingMembershipPage = () => {
                       </div>
 
                       <div>
-                        <p className="text-2xl font-bold text-primary">{formatCurrency(membership.price)}</p>
-                        <p className="text-muted-foreground text-xs">Durasi {membership.duration} hari</p>
+                        <p className="text-primary text-2xl font-bold">
+                          {formatCurrency(membership.price)}
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          Durasi {membership.duration} hari
+                        </p>
                       </div>
 
                       {benefits.length > 0 && (
-                        <div className="space-y-1 rounded-xl bg-muted/60 p-3 text-xs">
+                        <div className="bg-muted/60 space-y-1 rounded-xl p-3 text-xs">
                           {(isSelected ? benefits : benefits.slice(0, 3)).map((benefit) => (
                             <div key={benefit} className="flex items-center gap-2">
                               <IconCheck className="text-primary h-3.5 w-3.5 shrink-0" />
@@ -223,7 +235,9 @@ const BookingMembershipPage = () => {
                             </div>
                           ))}
                           {!isSelected && benefits.length > 3 && (
-                            <p className="text-muted-foreground mt-1">+{benefits.length - 3} benefit lainnya</p>
+                            <p className="text-muted-foreground mt-1">
+                              +{benefits.length - 3} benefit lainnya
+                            </p>
                           )}
                         </div>
                       )}
@@ -236,9 +250,9 @@ const BookingMembershipPage = () => {
         </section>
 
         <aside className="min-w-0 space-y-4">
-          <Card className="min-w-0 rounded-2xl border bg-card/80 shadow-sm lg:sticky lg:top-4">
+          <Card className="bg-card/80 min-w-0 rounded-2xl border shadow-sm lg:sticky lg:top-4">
             <CardHeader className="space-y-1 pb-4">
-              <div className="flex items-center gap-2 text-sm font-medium text-primary/70">
+              <div className="text-primary/70 flex items-center gap-2 text-sm font-medium">
                 <IconSparkles className="h-4 w-4" />
                 Detail Pemesanan
               </div>
@@ -251,7 +265,7 @@ const BookingMembershipPage = () => {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-3">
-                <p className="text-sm font-medium text-muted-foreground">Pelanggan</p>
+                <p className="text-muted-foreground text-sm font-medium">Pelanggan</p>
                 <div className="flex flex-wrap gap-2 sm:flex-nowrap">
                   <Popover open={isCustomerOpen} onOpenChange={setIsCustomerOpen}>
                     <PopoverTrigger asChild>
@@ -277,11 +291,11 @@ const BookingMembershipPage = () => {
                         />
                         <CommandList>
                           {isSearching ? (
-                            <div className="py-6 text-center text-sm text-muted-foreground">
+                            <div className="text-muted-foreground py-6 text-center text-sm">
                               Mencari pelanggan...
                             </div>
                           ) : !debouncedSearch || debouncedSearch.length < 2 ? (
-                            <div className="py-6 text-center text-sm text-muted-foreground">
+                            <div className="text-muted-foreground py-6 text-center text-sm">
                               Ketik minimal 2 karakter untuk mencari
                             </div>
                           ) : !searchResults || searchResults.length === 0 ? (
@@ -305,7 +319,9 @@ const BookingMembershipPage = () => {
                                   <div className="flex flex-col">
                                     <span className="font-medium">{customer.name}</span>
                                     {customer.phone && (
-                                      <span className="text-muted-foreground text-xs">{customer.phone}</span>
+                                      <span className="text-muted-foreground text-xs">
+                                        {customer.phone}
+                                      </span>
                                     )}
                                   </div>
                                 </CommandItem>
@@ -319,11 +335,7 @@ const BookingMembershipPage = () => {
 
                   <Dialog open={isWalkInOpen} onOpenChange={setIsWalkInOpen}>
                     <DialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2 w-full sm:w-auto"
-                      >
+                      <Button variant="outline" size="sm" className="w-full gap-2 sm:w-auto">
                         <IconUserPlus className="h-4 w-4" />
                         Walk-in
                       </Button>
@@ -464,20 +476,18 @@ const BookingMembershipPage = () => {
                   </span>
                 </div>
                 {selectedMembership && (
-                  <div className="rounded-md border bg-muted/50 p-3 text-xs">
+                  <div className="bg-muted/50 rounded-md border p-3 text-xs">
                     <div className="flex items-center gap-2 font-medium">
                       <IconSparkles className="text-primary h-3.5 w-3.5" />
                       Benefit singkat
                     </div>
                     <ul className="mt-2 space-y-1">
-                      {(selectedMembership.benefits ?? [])
-                        .slice(0, 3)
-                        .map((benefit) => (
-                          <li key={benefit.id} className="flex items-center gap-2">
-                            <IconCheck className="text-primary h-3 w-3" />
-                            <span>{benefit.benefit}</span>
-                          </li>
-                        ))}
+                      {(selectedMembership.benefits ?? []).slice(0, 3).map((benefit) => (
+                        <li key={benefit.id} className="flex items-center gap-2">
+                          <IconCheck className="text-primary h-3 w-3" />
+                          <span>{benefit.benefit}</span>
+                        </li>
+                      ))}
                     </ul>
                   </div>
                 )}
@@ -499,4 +509,3 @@ const BookingMembershipPage = () => {
 };
 
 export default BookingMembershipPage;
-

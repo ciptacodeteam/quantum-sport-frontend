@@ -18,4 +18,3 @@ export async function getTournamentDetailApi(id: string) {
   const { data } = await api.get(`/tournaments/${id}`);
   return data;
 }
-

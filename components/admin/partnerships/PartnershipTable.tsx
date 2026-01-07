@@ -90,7 +90,9 @@ const PartnershipTable = () => {
         header: 'Aksi',
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
-            <ManagedDialog id={`${hasEditPermission(me?.role) ? 'edit' : 'view'}-partnership-${row.original.id}`}>
+            <ManagedDialog
+              id={`${hasEditPermission(me?.role) ? 'edit' : 'view'}-partnership-${row.original.id}`}
+            >
               <DialogTrigger asChild>
                 <Button size="icon" variant="lightInfo">
                   {hasEditPermission(me?.role) ? <IconPencil /> : <IconEye />}
@@ -98,7 +100,9 @@ const PartnershipTable = () => {
               </DialogTrigger>
               <DialogContent className="lg:min-w-xl">
                 <DialogHeader className="mb-4">
-                  <DialogTitle>{hasEditPermission(me?.role) ? 'Edit' : 'View'} Partnership</DialogTitle>
+                  <DialogTitle>
+                    {hasEditPermission(me?.role) ? 'Edit' : 'View'} Partnership
+                  </DialogTitle>
                 </DialogHeader>
                 <EditPartnershipForm data={row.original} />
               </DialogContent>

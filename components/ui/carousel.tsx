@@ -190,7 +190,7 @@ function CarouselPrevious({
   );
 }
 
-function CarouselDots({ className, ...props }: React.ComponentProps<'div'>) {
+function CarouselDots({ className }: React.ComponentProps<'div'>) {
   const { api } = useCarousel();
   const [selectedIndex, setSelectedIndex] = React.useState(0);
   const [scrollSnaps, setScrollSnaps] = React.useState<number[]>([]);
@@ -217,7 +217,7 @@ function CarouselDots({ className, ...props }: React.ComponentProps<'div'>) {
         <button
           key={index}
           className={cn(
-            'bg-gray-500 size-2 rounded-full transition-colors lg:size-2.5',
+            'size-2 rounded-full bg-gray-500 transition-colors lg:size-2.5',
             index === selectedIndex ? 'bg-white' : 'hover:bg-muted'
           )}
           onClick={() => api?.scrollTo(index)}

@@ -198,12 +198,12 @@ export default function BookingPage() {
         if (!hydratedSelections[dateKey]) {
           hydratedSelections[dateKey] = [];
         }
-        
+
         // Use the actual slot ID from slotMap if available, otherwise use item.slotId if it exists and is valid
         // Check if item.slotId looks like a constructed one (contains time format like "06:00")
         const isConstructedSlotId = item.slotId && /-\d{2}:\d{2}$/.test(item.slotId);
         let actualSlotId = item.slotId;
-        
+
         // If slotId is constructed or missing, look it up from slotMap
         if (isConstructedSlotId || !actualSlotId) {
           const slot = slotMap.get(`${item.courtId}-${item.timeSlot}`);
@@ -214,7 +214,7 @@ export default function BookingPage() {
             actualSlotId = `${item.courtId}-${item.timeSlot}`;
           }
         }
-        
+
         hydratedSelections[dateKey].push({
           slotId: actualSlotId,
           courtId: item.courtId,

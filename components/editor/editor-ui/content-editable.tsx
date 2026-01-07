@@ -1,16 +1,16 @@
-import { type JSX } from "react"
-import { ContentEditable as LexicalContentEditable } from "@lexical/react/LexicalContentEditable"
+import { type JSX } from 'react';
+import { ContentEditable as LexicalContentEditable } from '@lexical/react/LexicalContentEditable';
 
 type Props = {
-  placeholder: string
-  className?: string
-  placeholderClassName?: string
-}
+  placeholder: string;
+  className?: string;
+  placeholderClassName?: string;
+};
 
 export function ContentEditable({
   placeholder,
   className,
-  placeholderClassName,
+  placeholderClassName
 }: Props): JSX.Element {
   return (
     <LexicalContentEditable
@@ -30,5 +30,5 @@ export function ContentEditable({
         </div>
       }
     />
-  )
+  );
 }

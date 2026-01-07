@@ -144,5 +144,3 @@ const ResetPasswordWithTokenForm = ({ token }: Props) => {
 };
 
 export default ResetPasswordWithTokenForm;
-
-

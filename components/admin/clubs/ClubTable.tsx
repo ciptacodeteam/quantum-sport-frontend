@@ -28,7 +28,8 @@ const ClubTable = () => {
     },
     {
       title: 'Delete Club',
-      description: 'Are you sure you want to delete this club? This action cannot be undone and all members will be removed.',
+      description:
+        'Are you sure you want to delete this club? This action cannot be undone and all members will be removed.',
       confirmText: 'Delete',
       cancelText: 'Cancel',
       destructive: true,
@@ -58,7 +59,7 @@ const ClubTable = () => {
         cell: (info) => (
           <Avatar className="size-10 rounded-lg">
             <AvatarImage src={info.getValue() || undefined} />
-            <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-semibold">
+            <AvatarFallback className="bg-primary/10 text-primary rounded-lg font-semibold">
               {info.row.original.name.substring(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
@@ -66,9 +67,7 @@ const ClubTable = () => {
       }),
       colHelper.accessor('name', {
         header: 'Club Name',
-        cell: (info) => (
-          <div className="font-medium">{info.getValue()}</div>
-        )
+        cell: (info) => <div className="font-medium">{info.getValue()}</div>
       }),
       colHelper.accessor('leader', {
         header: 'Leader',
@@ -77,7 +76,7 @@ const ClubTable = () => {
           return (
             <div>
               <p className="font-medium">{leader?.name || 'N/A'}</p>
-              <p className="text-xs text-muted-foreground">{leader?.email || ''}</p>
+              <p className="text-muted-foreground text-xs">{leader?.email || ''}</p>
             </div>
           );
         }
@@ -87,9 +86,13 @@ const ClubTable = () => {
         cell: (info) => (
           <Badge variant={info.getValue() === 'PUBLIC' ? 'default' : 'secondary'}>
             {info.getValue() === 'PUBLIC' ? (
-              <><IconWorld className="size-3 mr-1" /> Public</>
+              <>
+                <IconWorld className="mr-1 size-3" /> Public
+              </>
             ) : (
-              <><IconLock className="size-3 mr-1" /> Private</>
+              <>
+                <IconLock className="mr-1 size-3" /> Private
+              </>
             )}
           </Badge>
         )
@@ -118,7 +121,7 @@ const ClubTable = () => {
                 variant="outline"
                 onClick={() => router.push(`/admin/kelola-club/${club.id}`)}
               >
-                <IconEye className="size-4 mr-1" />
+                <IconEye className="mr-1 size-4" />
                 View
               </Button>
               {!club.isActive && (
@@ -129,16 +132,12 @@ const ClubTable = () => {
                   disabled={isApproving}
                   loading={isApproving}
                 >
-                  <IconCheck className="size-4 mr-1" />
+                  <IconCheck className="mr-1 size-4" />
                   Approve
                 </Button>
               )}
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={() => confirmAndMutate(club.id)}
-              >
-                <IconTrash className="size-4 mr-1" />
+              <Button size="sm" variant="destructive" onClick={() => confirmAndMutate(club.id)}>
+                <IconTrash className="mr-1 size-4" />
                 Delete
               </Button>
             </div>

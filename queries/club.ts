@@ -1,4 +1,10 @@
-import { getClubsApi, getClubApi, getUserClubsApi, getClubMembershipsApi, getClubRequestsApi } from '@/api/club';
+import {
+  getClubsApi,
+  getClubApi,
+  getUserClubsApi,
+  getClubMembershipsApi,
+  getClubRequestsApi
+} from '@/api/club';
 import type { Club, ClubJoinRequest } from '@/types/model';
 import { queryOptions } from '@tanstack/react-query';
 import type { SearchParamsData } from '@/types';
@@ -38,7 +44,7 @@ export const clubMembershipsQueryOptions = () =>
       console.log('🔍 Raw membership response:', res);
       // Handle different response structures
       let clubs: Club[] = [];
-      
+
       if (res?.data) {
         // If there's a data property, check if it's an array or has a data property inside
         if (Array.isArray(res.data)) {
@@ -52,7 +58,7 @@ export const clubMembershipsQueryOptions = () =>
       } else if (Array.isArray(res)) {
         clubs = res;
       }
-      
+
       console.log('🔍 Processed membership clubs:', clubs);
       return clubs;
     }

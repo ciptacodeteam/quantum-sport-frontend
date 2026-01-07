@@ -11,7 +11,12 @@ import {
   ManagedDialog
 } from '@/components/ui/dialog';
 import { useConfirmMutation } from '@/hooks/useConfirmDialog';
-import { formatNumber, hasCreatePermission, hasEditPermission, hasDeletePermission } from '@/lib/utils';
+import {
+  formatNumber,
+  hasCreatePermission,
+  hasEditPermission,
+  hasDeletePermission
+} from '@/lib/utils';
 import { adminInventoriesQueryOptions } from '@/queries/admin/inventory';
 import { adminProfileQueryOptions } from '@/queries/admin/auth';
 import type { Inventory } from '@/types/model';
@@ -73,7 +78,9 @@ const InventoryTable = () => {
         header: 'Aksi',
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
-            <ManagedDialog id={`${hasEditPermission(me?.role) ? 'edit' : 'view'}-inventory-${row.original.id}`}>
+            <ManagedDialog
+              id={`${hasEditPermission(me?.role) ? 'edit' : 'view'}-inventory-${row.original.id}`}
+            >
               <DialogTrigger asChild>
                 <Button size="icon" variant="lightInfo">
                   {hasEditPermission(me?.role) ? <IconPencil /> : <IconEye />}
@@ -81,7 +88,9 @@ const InventoryTable = () => {
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader className="mb-4">
-                  <DialogTitle>{hasEditPermission(me?.role) ? 'Edit' : 'View'} Inventory</DialogTitle>
+                  <DialogTitle>
+                    {hasEditPermission(me?.role) ? 'Edit' : 'View'} Inventory
+                  </DialogTitle>
                 </DialogHeader>
                 <EditInventoryForm data={row.original} />
               </DialogContent>

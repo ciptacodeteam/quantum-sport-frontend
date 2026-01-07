@@ -62,7 +62,7 @@ export default function MembershipDetailPage({ params }: { params: Promise<{ id:
   if (!membership) {
     return (
       <>
-        <MainHeader title="Detail Membership" backHref="/membership" withLogo={false} withBorder/>
+        <MainHeader title="Detail Membership" backHref="/membership" withLogo={false} withBorder />
         <main className="mx-auto mt-28 w-11/12 max-w-4xl pb-12">
           <div className="text-muted-foreground py-10 text-center">Membership tidak ditemukan</div>
         </main>
@@ -72,7 +72,7 @@ export default function MembershipDetailPage({ params }: { params: Promise<{ id:
 
   return (
     <>
-      <MainHeader title="Detail Membership" backHref="/membership" withLogo={false} withBorder/>
+      <MainHeader title="Detail Membership" backHref="/membership" withLogo={false} withBorder />
       <main className="mx-auto mt-24 w-11/12 max-w-4xl space-y-4 pb-32 sm:space-y-6">
         {/* Membership Header Card */}
         <Card className="overflow-hidden py-0">

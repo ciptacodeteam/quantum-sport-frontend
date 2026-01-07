@@ -24,4 +24,3 @@ export async function getMyCoachScheduleApi(params: AdminCoachMyScheduleParams =
   });
   return data;
 }
-

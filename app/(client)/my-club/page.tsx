@@ -290,8 +290,9 @@ const MyClubPage = () => {
               <IconAlertTriangle />
               <AlertTitle>Club Menunggu Persetujuan Admin</AlertTitle>
               <AlertDescription>
-                Club Anda sedang menunggu persetujuan dari admin. Anda tidak dapat menggunakan fitur club
-                hingga club Anda disetujui. Harap tunggu notifikasi atau hubungi admin untuk informasi lebih lanjut.
+                Club Anda sedang menunggu persetujuan dari admin. Anda tidak dapat menggunakan fitur
+                club hingga club Anda disetujui. Harap tunggu notifikasi atau hubungi admin untuk
+                informasi lebih lanjut.
               </AlertDescription>
             </Alert>
           )}
@@ -402,7 +403,9 @@ const MyClubPage = () => {
               ) : (
                 <div className="text-muted-foreground py-8 text-center text-sm">
                   <IconUsers className="mx-auto mb-2 size-12 opacity-50" />
-                  <p>Club ini punya {club._count?.clubMember || club.clubMember?.length || 0} Anggota</p>
+                  <p>
+                    Club ini punya {club._count?.clubMember || club.clubMember?.length || 0} Anggota
+                  </p>
                   <p className="mt-1 text-xs">Anggota tidak tersedia</p>
                 </div>
               )}

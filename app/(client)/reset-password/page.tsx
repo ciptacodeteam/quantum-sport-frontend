@@ -13,8 +13,8 @@ export default async function ResetPasswordPage({ searchParams }: ResetPasswordP
   const token = Array.isArray(rawToken) ? rawToken[0] : rawToken;
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4 py-12">
-      <Card className="w-full max-w-xl border-border/80 shadow-lg">
+    <main className="bg-muted/30 flex min-h-screen items-center justify-center px-4 py-12">
+      <Card className="border-border/80 w-full max-w-xl shadow-lg">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-semibold">Reset your password</CardTitle>
           <CardDescription>
@@ -28,5 +28,3 @@ export default async function ResetPasswordPage({ searchParams }: ResetPasswordP
     </main>
   );
 }
-
-

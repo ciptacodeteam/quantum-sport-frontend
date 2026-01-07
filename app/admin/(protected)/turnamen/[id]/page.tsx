@@ -6,7 +6,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { adminTournamentQueryOptions } from '@/queries/admin/tournament';
-import { IconArrowLeft, IconTrophy, IconCalendar, IconClock, IconMapPin, IconUsers, IconCurrencyDollar } from '@tabler/icons-react';
+import {
+  IconArrowLeft,
+  IconTrophy,
+  IconCalendar,
+  IconClock,
+  IconMapPin,
+  IconUsers,
+  IconCurrencyDollar
+} from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { useRouter } from 'next/navigation';
@@ -27,7 +35,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     <div className="space-y-6 p-6">
       <div className="flex items-center gap-4">
         <Button variant="outline" onClick={() => router.back()}>
-          <IconArrowLeft className="size-4 mr-2" />
+          <IconArrowLeft className="mr-2 size-4" />
           Back
         </Button>
       </div>
@@ -41,7 +49,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
           <div className="flex items-start gap-4">
             <Avatar className="size-24 rounded-lg">
               <AvatarImage src={tournament.image || undefined} />
-              <AvatarFallback className="rounded-lg bg-primary/10 text-primary">
+              <AvatarFallback className="bg-primary/10 text-primary rounded-lg">
                 <IconTrophy className="size-12" />
               </AvatarFallback>
             </Avatar>
@@ -62,58 +70,58 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
           <div className="grid grid-cols-2 gap-4">
             <div className="flex items-start gap-3">
-              <IconCalendar className="size-5 text-muted-foreground mt-0.5" />
+              <IconCalendar className="text-muted-foreground mt-0.5 size-5" />
               <div>
-                <p className="text-sm text-muted-foreground">Start Date</p>
+                <p className="text-muted-foreground text-sm">Start Date</p>
                 <p className="font-medium">{dayjs(tournament.startDate).format('DD MMMM YYYY')}</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <IconCalendar className="size-5 text-muted-foreground mt-0.5" />
+              <IconCalendar className="text-muted-foreground mt-0.5 size-5" />
               <div>
-                <p className="text-sm text-muted-foreground">End Date</p>
+                <p className="text-muted-foreground text-sm">End Date</p>
                 <p className="font-medium">{dayjs(tournament.endDate).format('DD MMMM YYYY')}</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <IconClock className="size-5 text-muted-foreground mt-0.5" />
+              <IconClock className="text-muted-foreground mt-0.5 size-5" />
               <div>
-                <p className="text-sm text-muted-foreground">Start Time</p>
+                <p className="text-muted-foreground text-sm">Start Time</p>
                 <p className="font-medium">{tournament.startTime}</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <IconClock className="size-5 text-muted-foreground mt-0.5" />
+              <IconClock className="text-muted-foreground mt-0.5 size-5" />
               <div>
-                <p className="text-sm text-muted-foreground">End Time</p>
+                <p className="text-muted-foreground text-sm">End Time</p>
                 <p className="font-medium">{tournament.endTime}</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <IconMapPin className="size-5 text-muted-foreground mt-0.5" />
+              <IconMapPin className="text-muted-foreground mt-0.5 size-5" />
               <div>
-                <p className="text-sm text-muted-foreground">Location</p>
+                <p className="text-muted-foreground text-sm">Location</p>
                 <p className="font-medium">{tournament.location}</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <IconUsers className="size-5 text-muted-foreground mt-0.5" />
+              <IconUsers className="text-muted-foreground mt-0.5 size-5" />
               <div>
-                <p className="text-sm text-muted-foreground">Max Teams</p>
+                <p className="text-muted-foreground text-sm">Max Teams</p>
                 <p className="font-medium">{tournament.maxTeams} teams</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <IconUsers className="size-5 text-muted-foreground mt-0.5" />
+              <IconUsers className="text-muted-foreground mt-0.5 size-5" />
               <div>
-                <p className="text-sm text-muted-foreground">Team Size</p>
+                <p className="text-muted-foreground text-sm">Team Size</p>
                 <p className="font-medium">{tournament.teamSize} players</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <IconCurrencyDollar className="size-5 text-muted-foreground mt-0.5" />
+              <IconCurrencyDollar className="text-muted-foreground mt-0.5 size-5" />
               <div>
-                <p className="text-sm text-muted-foreground">Entry Fee</p>
+                <p className="text-muted-foreground text-sm">Entry Fee</p>
                 <p className="font-medium">Rp {tournament.entryFee.toLocaleString('id-ID')}</p>
               </div>
             </div>
@@ -128,7 +136,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
             <CardTitle>Tournament Rules</CardTitle>
           </CardHeader>
           <CardContent>
-            <div 
+            <div
               className="prose prose-sm max-w-none"
               dangerouslySetInnerHTML={{ __html: tournament.rules }}
             />

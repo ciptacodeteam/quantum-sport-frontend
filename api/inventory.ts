@@ -4,4 +4,3 @@ export async function getInventoryAvailabilityApi() {
   const { data } = await api.get('/inventories/availability');
   return data;
 }
-

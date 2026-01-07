@@ -1,4 +1,8 @@
-import { getInventoriesApi, getInventoryApi, getAdminInventoryAvailabilityApi } from '@/api/admin/inventory';
+import {
+  getInventoriesApi,
+  getInventoryApi,
+  getAdminInventoryAvailabilityApi
+} from '@/api/admin/inventory';
 import type { Inventory, InventoryAvailability } from '@/types/model';
 import { queryOptions } from '@tanstack/react-query';
 

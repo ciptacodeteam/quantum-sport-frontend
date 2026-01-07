@@ -60,9 +60,9 @@ export default function InformationsPage() {
           {/* Logo/Header Section */}
           <div className="mb-8 text-center">
             <div className="flex justify-center">
-              <div className="relative overflow-hidden mt-12">
+              <div className="relative mt-12 overflow-hidden">
                 <div className="flex h-full w-full items-center justify-center">
-                  <Image src={logowhite} alt="" className='w-42'/>
+                  <Image src={logowhite} alt="" className="w-42" />
                 </div>
               </div>
             </div>

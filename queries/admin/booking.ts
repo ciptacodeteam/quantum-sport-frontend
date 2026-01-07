@@ -1,4 +1,9 @@
-import { getBookingApi, getBookingsApi, getOngoingBookingsApi, getScheduleApi } from '@/api/admin/booking';
+import {
+  getBookingApi,
+  getBookingsApi,
+  getOngoingBookingsApi,
+  getScheduleApi
+} from '@/api/admin/booking';
 import type { Booking, OngoingBookingItem } from '@/types/model';
 import { queryOptions } from '@tanstack/react-query';
 import type { SearchParamsData } from '@/types';

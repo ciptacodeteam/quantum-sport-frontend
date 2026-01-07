@@ -1,6 +1,6 @@
 import { api } from '@/lib/api';
 import { mergedQueryParamUrl } from '@/lib/utils';
-import type { SearchParamsData, CreateMutationPayload } from '@/types';
+import type { SearchParamsData } from '@/types';
 
 export async function getClubsApi(queryParams: SearchParamsData = {}) {
   const url = '/clubs';

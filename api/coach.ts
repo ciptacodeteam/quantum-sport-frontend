@@ -12,4 +12,3 @@ export async function getCoachAvailabilityApi(params: CoachAvailabilityParams) {
 
   return data;
 }
-

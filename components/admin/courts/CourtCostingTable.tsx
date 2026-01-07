@@ -3,7 +3,14 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
-import { DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from '@/components/ui/dialog';
 import { ManagedDialog, useDialog } from '@/components/ui/dialog-context';
 import { formatSlotTimeRange } from '@/lib/time-utils';
 import { adminCourtCostingQueryOptionsById } from '@/queries/admin/court';
@@ -35,7 +42,9 @@ const ToggleSlotModal = ({ slot, courtId, dialogId }: ToggleSlotModalProps) => {
   const { mutate: updateSlotAvailability, isPending: isUpdating } = useMutation(
     adminUpdateSlotAvailabilityMutationOptions({
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: adminCourtCostingQueryOptionsById(courtId).queryKey });
+        queryClient.invalidateQueries({
+          queryKey: adminCourtCostingQueryOptionsById(courtId).queryKey
+        });
         closeDialog(dialogId);
       }
     })

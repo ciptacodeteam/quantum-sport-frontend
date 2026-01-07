@@ -64,7 +64,7 @@ const CoachSelfView = () => {
 
           <Separator className="my-2" />
           <div className="space-y-2">
-            <p className="text-xs font-medium text-muted-foreground">Rentang Waktu</p>
+            <p className="text-muted-foreground text-xs font-medium">Rentang Waktu</p>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <Input
                 type="datetime-local"
@@ -100,11 +100,11 @@ const CoachSelfView = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           {slotsByDate.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Tidak ada jadwal tersedia.</p>
+            <p className="text-muted-foreground text-sm">Tidak ada jadwal tersedia.</p>
           ) : (
             slotsByDate.map(({ date, label, items }) => (
               <div key={date} className="space-y-2">
-                <div className="text-xs font-medium text-muted-foreground">{label}</div>
+                <div className="text-muted-foreground text-xs font-medium">{label}</div>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {items
                     .sort(
@@ -127,17 +127,17 @@ const CoachSelfView = () => {
                               className={
                                 'rounded px-2 py-0.5 text-[10px] ' +
                                 (isBooked
-                                  ? 'bg-red-50 text-red-700 border border-red-200'
+                                  ? 'border border-red-200 bg-red-50 text-red-700'
                                   : s.isAvailable
-                                  ? 'bg-green-50 text-green-700 border border-green-200'
-                                  : 'bg-gray-50 text-gray-700 border border-gray-200')
+                                    ? 'border border-green-200 bg-green-50 text-green-700'
+                                    : 'border border-gray-200 bg-gray-50 text-gray-700')
                               }
                             >
                               {isBooked ? 'Booked' : s.isAvailable ? 'Available' : 'Unavailable'}
                             </span>
                           </div>
                           {isBooked && userName && (
-                            <div className="mt-1 text-[11px] text-muted-foreground truncate">
+                            <div className="text-muted-foreground mt-1 truncate text-[11px]">
                               {userName}
                             </div>
                           )}
@@ -156,4 +156,3 @@ const CoachSelfView = () => {
 };
 
 export default CoachSelfView;
-

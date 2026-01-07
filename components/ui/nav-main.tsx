@@ -41,7 +41,7 @@ export function NavMain({ items }: { items: AppSidebarItem[] }) {
       <SidebarMenu>
         {items.map((item) => {
           const itemIsActive = isActive(item.url) || hasActiveSubItem(item.items);
-          
+
           return (
             <Collapsible key={item.title} asChild defaultOpen={itemIsActive}>
               <SidebarMenuItem>
@@ -65,7 +65,7 @@ export function NavMain({ items }: { items: AppSidebarItem[] }) {
                       <SidebarMenuSub>
                         {item.items.map((subItem) => {
                           const subItemIsActive = isActive(subItem.url);
-                          
+
                           return (
                             <SidebarMenuSubItem key={subItem.url}>
                               <SidebarMenuSubButton asChild isActive={subItemIsActive}>

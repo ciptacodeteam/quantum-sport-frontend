@@ -1,4 +1,10 @@
-import { getCourtApi, getCourtsApi, getCourtSlotsApi, getCourtsSlotsApi, getCourtCostingApi } from '@/api/admin/court';
+import {
+  getCourtApi,
+  getCourtsApi,
+  getCourtSlotsApi,
+  getCourtsSlotsApi,
+  getCourtCostingApi
+} from '@/api/admin/court';
 import type { Court, Slot } from '@/types/model';
 import { queryOptions } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -25,7 +31,6 @@ export const adminCourtCostingQueryOptions = (queryParams: SearchParamsData) =>
     select: (res) => res.data as (Slot & { court?: Court })[]
   });
 
-
 export const adminCourtCostingQueryOptionsById = (id: string, queryParams?: SearchParamsData) =>
   queryOptions({
     queryKey: ['admin', 'courts', id, 'costing', queryParams],
@@ -42,16 +47,16 @@ export const adminCourtsWithSlotsQueryOptions = (date: string, courtId?: string)
       // API expects ISO format: 2025-01-20T08:00:00
       const startAt = dayjs(date).startOf('day').add(6, 'hour').toISOString();
       const endAt = dayjs(date).startOf('day').add(23, 'hour').toISOString();
-      
+
       // First, fetch all courts (don't filter by availability)
       const courtsResponse = await getCourtsApi();
       let courts = courtsResponse.data as Court[];
-      
+
       // Filter by courtId if specified
       if (courtId) {
-        courts = courts.filter(c => c.id === courtId);
+        courts = courts.filter((c) => c.id === courtId);
       }
-      
+
       // Use the /courts/slots endpoint to get all slots at once (avoids 404s from individual court endpoints)
       let allSlots: Slot[] = [];
       try {
@@ -59,17 +64,20 @@ export const adminCourtsWithSlotsQueryOptions = (date: string, courtId?: string)
         allSlots = (slotsResponse.data || []) as Slot[];
       } catch (error) {
         // If the bulk endpoint fails, fall back to individual court endpoints
-        console.warn('Failed to fetch slots from /courts/slots, falling back to individual endpoints:', error);
+        console.warn(
+          'Failed to fetch slots from /courts/slots, falling back to individual endpoints:',
+          error
+        );
         const slotPromises = courts.map(async (court) => {
           try {
             const slotsResponse = await getCourtSlotsApi(court.id, { startAt, endAt });
             return slotsResponse.data as Slot[];
-          } catch (error) {
+          } catch {
             // If a court doesn't have slots endpoint or fails, return empty array
             return [] as Slot[];
           }
         });
-        
+
         const slotsArrays = await Promise.all(slotPromises);
         courts.forEach((court, index) => {
           const slots = slotsArrays[index] || [];
@@ -81,10 +89,10 @@ export const adminCourtsWithSlotsQueryOptions = (date: string, courtId?: string)
           });
         });
       }
-      
+
       // Filter slots by courtId if specified
       if (courtId) {
-        allSlots = allSlots.filter(slot => slot.courtId === courtId);
+        allSlots = allSlots.filter((slot) => slot.courtId === courtId);
       }
 
       return {

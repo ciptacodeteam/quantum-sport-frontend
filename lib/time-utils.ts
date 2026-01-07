@@ -46,11 +46,14 @@ function formatDate(date: Date, format: string): string {
  * Parses an ISO string and extracts date/time components without timezone conversion
  * Treats the time as if it's already in the correct timezone (Asia/Jakarta)
  */
-function parseISOString(value: string): { year: number; month: number; day: number; hours: number; minutes: number } | null {
+function parseISOString(
+  value: string
+): { year: number; month: number; day: number; hours: number; minutes: number } | null {
   // Handle ISO format: "2024-01-15T07:00:00Z" or "2024-01-15T07:00:00+07:00" or "2024-01-15T07:00:00.000Z"
-  const isoRegex = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?$/;
+  const isoRegex =
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?$/;
   const match = value.match(isoRegex);
-  
+
   if (match) {
     return {
       year: parseInt(match[1], 10),
@@ -60,7 +63,7 @@ function parseISOString(value: string): { year: number; month: number; day: numb
       minutes: parseInt(match[5], 10)
     };
   }
-  
+
   return null;
 }
 
@@ -95,7 +98,7 @@ export function formatSlotTime(
       }
       return formatDate(date, format);
     }
-    
+
     // If it's already a Date object, use it directly
     const date = value;
     if (isNaN(date.getTime())) {

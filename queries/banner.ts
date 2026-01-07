@@ -8,4 +8,3 @@ export const bannersQueryOptions = () =>
     queryFn: getBannersApi,
     select: (res) => res.data as Banner[]
   });
-

@@ -8,10 +8,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { profileQueryOptions } from '@/queries/profile';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
+import { ChevronRightIcon } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import Link from 'next/link';
-import { ChevronRightIcon } from 'lucide-react';
 
 const mockUpcomingBookings = [
   {
@@ -46,11 +46,11 @@ const mockUpcomingBookings = [
   }
 ];
 
-const statusVariants: Record<string, string> = {
-  confirmed: 'bg-emerald-100 text-emerald-700',
-  'pending payment': 'bg-amber-100 text-amber-700',
-  cancelled: 'bg-rose-100 text-rose-700'
-};
+// const statusVariants: Record<string, string> = {
+//   confirmed: 'bg-emerald-100 text-emerald-700',
+//   'pending payment': 'bg-amber-100 text-amber-700',
+//   cancelled: 'bg-rose-100 text-rose-700'
+// };
 
 export default function ActivitiesPage() {
   const router = useRouter();
@@ -119,14 +119,14 @@ export default function ActivitiesPage() {
                     </div>
 
                     <div className="border-muted-foreground/40 border-b border-dashed"></div>
-                    <div className='flex items-center justify-end'>
+                    <div className="flex items-center justify-end">
                       <Link
                         href={'/'}
-                        className="text-primary flex cursor-pointer text-sm font-medium me-1"
+                        className="text-primary me-1 flex cursor-pointer text-sm font-medium"
                       >
                         Lihat Detail
                       </Link>
-                      <ChevronRightIcon size={18}/>
+                      <ChevronRightIcon size={18} />
                     </div>
                   </CardContent>
                 </Card>

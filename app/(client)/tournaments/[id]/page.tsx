@@ -29,8 +29,8 @@ const TournamentDetailPage = () => {
 
   return (
     <>
-      <MainHeader backHref="/tournaments" title="Detail Turnamen" withLogo={false} withBorder/>
-      <main className="mx-auto w-11/12 mt-24 flex max-w-7xl flex-col pb-16 lg:px-4">
+      <MainHeader backHref="/tournaments" title="Detail Turnamen" withLogo={false} withBorder />
+      <main className="mx-auto mt-24 flex w-11/12 max-w-7xl flex-col pb-16 lg:px-4">
         {isLoading && (
           <div className="text-muted-foreground py-20 text-center text-sm">
             Memuat detail turnamen...

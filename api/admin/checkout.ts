@@ -16,5 +16,3 @@ export async function adminCheckoutApi(payload: AdminCheckoutPayload) {
   const { data } = await adminApi.post('/checkout', payload);
   return data;
 }
-
-

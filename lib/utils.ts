@@ -158,7 +158,12 @@ export function hasCreatePermission(userRole: string | null | undefined): boolea
   if (!userRole) return false;
   const role = String(userRole).toUpperCase();
   // ADMIN_VIEWER, COACH, BALLBOY, and CASHIER cannot create
-  return role !== ROLE.ADMIN_VIEWER && role !== ROLE.COACH && role !== ROLE.BALLBOY && role !== ROLE.CASHIER;
+  return (
+    role !== ROLE.ADMIN_VIEWER &&
+    role !== ROLE.COACH &&
+    role !== ROLE.BALLBOY &&
+    role !== ROLE.CASHIER
+  );
 }
 
 export function hasEditPermission(userRole: string | null | undefined): boolean {
@@ -172,7 +177,12 @@ export function hasDeletePermission(userRole: string | null | undefined): boolea
   if (!userRole) return false;
   const role = String(userRole).toUpperCase();
   // ADMIN_VIEWER, COACH, BALLBOY, and CASHIER cannot delete
-  return role !== ROLE.ADMIN_VIEWER && role !== ROLE.COACH && role !== ROLE.BALLBOY && role !== ROLE.CASHIER;
+  return (
+    role !== ROLE.ADMIN_VIEWER &&
+    role !== ROLE.COACH &&
+    role !== ROLE.BALLBOY &&
+    role !== ROLE.CASHIER
+  );
 }
 
 export function hasViewPermission(userRole: string | null | undefined): boolean {

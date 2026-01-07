@@ -1,6 +1,6 @@
 import { api } from '@/lib/api';
 import { mergedQueryParamUrl } from '@/lib/utils';
-import type { CreateMutationPayload, SearchParamsData } from '@/types';
+import type { SearchParamsData } from '@/types';
 
 export async function getCourtsApi(queryParams: SearchParamsData = {}) {
   const url = '/courts';
@@ -34,4 +34,3 @@ export async function getAllCourtsSlotsApi(date: string) {
   });
   return data;
 }
-

@@ -3,7 +3,10 @@ import type { MutationFuncProps } from '@/types';
 import { mutationOptions } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-export const adminCreatePartnershipMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
+export const adminCreatePartnershipMutationOptions = ({
+  onSuccess,
+  onError
+}: MutationFuncProps = {}) =>
   mutationOptions({
     mutationFn: createPartnershipApi,
     onSuccess: (data) => {
@@ -17,7 +20,10 @@ export const adminCreatePartnershipMutationOptions = ({ onSuccess, onError }: Mu
     }
   });
 
-export const adminUpdatePartnershipMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
+export const adminUpdatePartnershipMutationOptions = ({
+  onSuccess,
+  onError
+}: MutationFuncProps = {}) =>
   mutationOptions({
     mutationFn: updatePartnershipApi,
     onSuccess: (data) => {
@@ -30,5 +36,3 @@ export const adminUpdatePartnershipMutationOptions = ({ onSuccess, onError }: Mu
       onError?.(error);
     }
   });
-
-

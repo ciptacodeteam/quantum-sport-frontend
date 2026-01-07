@@ -38,10 +38,15 @@ const CreateBookingPage = () => {
   const slots = courtsData?.slots || [];
 
   // Format slots for BookingCalendar component
-  const slotsData = slots.length > 0 ? [{
-    date: selectedDate,
-    slots: slots
-  }] : [];
+  const slotsData =
+    slots.length > 0
+      ? [
+          {
+            date: selectedDate,
+            slots: slots
+          }
+        ]
+      : [];
 
   const { mutate: createBooking, isPending } = useMutation(
     adminCreateBookingMutationOptions({
@@ -61,17 +66,20 @@ const CreateBookingPage = () => {
     }
 
     // Group slots by court
-    const slotsByCourt = selectedSlots.reduce((acc, slot) => {
-      if (!acc[slot.courtId]) {
-        acc[slot.courtId] = [];
-      }
-      acc[slot.courtId].push(slot);
-      return acc;
-    }, {} as Record<string, SelectedSlot[]>);
+    const slotsByCourt = selectedSlots.reduce(
+      (acc, slot) => {
+        if (!acc[slot.courtId]) {
+          acc[slot.courtId] = [];
+        }
+        acc[slot.courtId].push(slot);
+        return acc;
+      },
+      {} as Record<string, SelectedSlot[]>
+    );
 
     // Create booking details
     const details = Object.entries(slotsByCourt).flatMap(([courtId, slots]) => {
-      return slots.map(slot => ({
+      return slots.map((slot) => ({
         slotId: slot.slotId,
         courtId
       }));
@@ -96,7 +104,7 @@ const CreateBookingPage = () => {
         </SectionHeader>
         <SectionContent>
           <div className="space-y-4">
-            <div className="mt-4 -mx-4 sm:mx-0">
+            <div className="-mx-4 mt-4 sm:mx-0">
               <BookingCalendar
                 courts={courts}
                 slots={slotsData}
@@ -109,8 +117,8 @@ const CreateBookingPage = () => {
             </div>
 
             {selectedSlots.length > 0 && (
-              <div className="sticky bottom-0 z-10 bg-white border-t p-4 mt-4 shadow-lg -mx-4 sm:mx-0 rounded-t-lg">
-                <div className="flex justify-between items-end mb-4">
+              <div className="sticky bottom-0 z-10 -mx-4 mt-4 rounded-t-lg border-t bg-white p-4 shadow-lg sm:mx-0">
+                <div className="mb-4 flex items-end justify-between">
                   <div>
                     <span className="text-muted-foreground text-xs">Subtotal</span>
                     <h2 className="text-lg font-semibold">

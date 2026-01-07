@@ -1,18 +1,18 @@
-'use client'
+'use client';
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import dayjs from 'dayjs'
-import 'dayjs/locale/id'
-dayjs.locale('id')
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import dayjs from 'dayjs';
+import 'dayjs/locale/id';
+dayjs.locale('id');
 
 interface OpenScheduleModalProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  title: string
-  selectedCourts: { id: number; name: string; date: string }[]
-  schedules: { time: string; available: boolean }[]
-  onSelectSchedule: (court: { id: number; name: string; date: string }, time: string) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  selectedCourts: { id: number; name: string; date: string }[];
+  schedules: { time: string; available: boolean }[];
+  onSelectSchedule: (court: { id: number; name: string; date: string }, time: string) => void;
 }
 
 export default function OpenScheduleModal({
@@ -21,25 +21,25 @@ export default function OpenScheduleModal({
   title,
   selectedCourts,
   schedules,
-  onSelectSchedule,
+  onSelectSchedule
 }: OpenScheduleModalProps) {
   const handleSelect = (court: { id: number; name: string; date: string }, time: string) => {
-    onSelectSchedule(court, time)
-    onOpenChange(false) // tutup modal setelah memilih
-  }
+    onSelectSchedule(court, time);
+    onOpenChange(false); // tutup modal setelah memilih
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-11/12 max-w-lg max-h-[90vh] flex flex-col">
+      <DialogContent className="flex max-h-[90vh] w-11/12 max-w-lg flex-col">
         <DialogHeader className="shrink-0">
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 overflow-y-auto flex-1 min-h-0">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
           {selectedCourts.map((court) => (
-            <div key={court.id} className="border rounded-lg p-3">
-              <p className="font-semibold mb-1">{court.name}</p>
-              <p className="text-xs text-muted-foreground mb-3">
+            <div key={court.id} className="rounded-lg border p-3">
+              <p className="mb-1 font-semibold">{court.name}</p>
+              <p className="text-muted-foreground mb-3 text-xs">
                 {dayjs(court.date).format('dddd, D MMMM YYYY')}
               </p>
 
@@ -60,5 +60,5 @@ export default function OpenScheduleModal({
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

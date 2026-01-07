@@ -38,7 +38,7 @@ export function NavSecondary({
         <SidebarMenu>
           {items.map((item) => {
             const itemIsActive = isActive(item.url);
-            
+
             return (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton asChild size="sm" isActive={itemIsActive}>

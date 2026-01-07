@@ -1,4 +1,8 @@
-import { getActiveTournamentsApi, getTournamentDetailApi, getTournamentsApi } from '@/api/tournament';
+import {
+  getActiveTournamentsApi,
+  getTournamentDetailApi,
+  getTournamentsApi
+} from '@/api/tournament';
 import { queryOptions } from '@tanstack/react-query';
 
 const normalizeListResponse = (res: any) => {
@@ -37,4 +41,3 @@ export const tournamentDetailQueryOptions = (id: string) =>
     select: normalizeDetailResponse,
     enabled: !!id
   });
-
