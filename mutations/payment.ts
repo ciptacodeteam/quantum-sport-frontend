@@ -7,15 +7,16 @@ import {
   deleteCreditCardApi
 } from '@/api/credit-cards';
 import type { MutationFuncProps } from '@/types';
-import { mutationOptions } from '@tanstack/react-query';
+import { mutationOptions, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { queryClient } from '@/lib/query-client';
 
 /**
  * Save a new credit card
  */
-export const saveCreditCardMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
-  mutationOptions({
+export const saveCreditCardMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) => {
+  const queryClient = useQueryClient();
+
+  return mutationOptions({
     mutationFn: saveCreditCardApi,
     onSuccess: (data) => {
       if (data.success) {
@@ -37,6 +38,7 @@ export const saveCreditCardMutationOptions = ({ onSuccess, onError }: MutationFu
       onError?.(error);
     }
   });
+};
 
 /**
  * List saved credit cards
@@ -57,8 +59,10 @@ export const listCreditCardsMutationOptions = ({ onSuccess, onError }: MutationF
 /**
  * Update a credit card (mark as default, etc.)
  */
-export const updateCreditCardMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
-  mutationOptions({
+export const updateCreditCardMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) => {
+  const queryClient = useQueryClient();
+
+  return mutationOptions({
     mutationFn: ({ id, payload }: { id: string; payload: { isDefault?: boolean } }) =>
       updateCreditCardApi(id, payload),
     onSuccess: (data) => {
@@ -76,12 +80,15 @@ export const updateCreditCardMutationOptions = ({ onSuccess, onError }: Mutation
       onError?.(error);
     }
   });
+};
 
 /**
  * Delete a credit card
  */
-export const deleteCreditCardMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
-  mutationOptions({
+export const deleteCreditCardMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) => {
+  const queryClient = useQueryClient();
+
+  return mutationOptions({
     mutationFn: deleteCreditCardApi,
     onSuccess: (data) => {
       toast.success('Card deleted successfully');
@@ -94,6 +101,7 @@ export const deleteCreditCardMutationOptions = ({ onSuccess, onError }: Mutation
       onError?.(error);
     }
   });
+};
 
 /**
  * Checkout with credit card for booking (court slots, coaches, etc.)
