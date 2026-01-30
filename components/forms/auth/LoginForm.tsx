@@ -119,9 +119,13 @@ const LoginForm = ({ onRegisterClick, openVerifyPhoneOtpModal, onLoginSuccess }:
     loginMutationOptions({
       queryClient: queryClient,
       onSuccess: (res) => {
-        const token = res?.data?.token;
+        // Robust token extraction: check data.token first, then fallback to root token property
+        const token = res?.data?.token || (res as any)?.token;
+
+        console.log('Login response:', res); // Debug log
 
         if (!token) {
+          console.error('Login successful but no token found in response:', res);
           toast.error('Login failed. Please try again.');
           return;
         }
@@ -137,6 +141,7 @@ const LoginForm = ({ onRegisterClick, openVerifyPhoneOtpModal, onLoginSuccess }:
         onLoginSuccess?.();
       },
       onError: (err) => {
+        console.error('Login error:', err);
         if (err.errors?.name === 'ZodError') {
           const fieldErrors = err.errors.fields as Record<string, string>;
           Object.entries(fieldErrors).forEach(([fieldName, message]) => {

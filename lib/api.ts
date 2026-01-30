@@ -56,10 +56,12 @@ api.interceptors.request.use(
       const { isJwt } = await isJwtAndDecode(token);
 
       if (!isJwt) {
-        // If token is not a valid JWT, remove it from storage and state
-        storage.remove('token');
-        useAuthStore.getState().logout();
-        return config;
+        // Relaxed validation: Don't remove token if it's not a JWT.
+        // The backend might be using opaque tokens or the client decoder might be failing.
+        // Just proceed to send it.
+        // if (process.env.NODE_ENV === 'development') {
+        //   console.warn('Token failed client-side JWT check, but sending anyway:', token);
+        // }
       }
       (config.headers as Record<string, string>).Authorization = bearerToken;
     }
