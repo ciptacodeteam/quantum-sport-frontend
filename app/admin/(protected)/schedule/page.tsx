@@ -32,10 +32,16 @@ import type {
   Staff,
   Inventory
 } from '@/types/model';
-import { IconCalendar, IconUser, IconShoppingCart } from '@tabler/icons-react';
+import {
+  IconCalendar,
+  IconUser,
+  IconShoppingCart,
+  IconMaximize,
+  IconMinimize
+} from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -124,8 +130,27 @@ export default function SchedulePage() {
 
   const [selectedDate, setSelectedDate] = useState<Date>(today);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
   const selectedDateString = formatDateString(selectedDate);
+
+  // Handle escape key to exit full screen
+  useEffect(() => {
+    const handleEsc = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsFullScreen(false);
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+
+    return () => {
+      window.removeEventListener('keydown', handleEsc);
+    };
+  }, []);
+
+  const toggleFullScreen = () => {
+    setIsFullScreen(!isFullScreen);
+  };
 
   // Generate standard time slots (06:00 to 23:00)
   const standardTimeSlots = useMemo(() => {
@@ -341,9 +366,26 @@ export default function SchedulePage() {
             </Card>
 
             {/* Schedule Table */}
-            <Card>
-              <CardHeader>
+            <Card
+              className={cn(
+                isFullScreen &&
+                  'fade-in-0 zoom-in-95 animate-in fixed inset-0 z-50 h-screen w-screen overflow-auto rounded-none p-4 shadow-none duration-200'
+              )}
+            >
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
                 <CardTitle>Jadwal {formatDate(selectedDate, 'DD MMM YYYY')}</CardTitle>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleFullScreen}
+                  title={isFullScreen ? 'Keluar Layar Penuh' : 'Layar Penuh'}
+                >
+                  {isFullScreen ? (
+                    <IconMinimize className="h-4 w-4" />
+                  ) : (
+                    <IconMaximize className="h-4 w-4" />
+                  )}
+                </Button>
               </CardHeader>
               <CardContent>
                 {isLoading ? (
