@@ -766,3 +766,65 @@ export type MembershipCardCheckoutPayload = {
   paymentMethodId: string;
   cardPayment: CardPayment;
 };
+export type TopCourt = {
+  court: { id: string; name: string };
+  bookings: number;
+};
+
+export type TopHour = {
+  hour: string;
+  count: number;
+};
+
+export type TopDay = {
+  day: string;
+  count: number;
+};
+
+export type TopCoach = {
+  coach: { id: string; name: string };
+  sessions: number;
+};
+
+export type BusinessInsightsResponse = {
+  courts: {
+    total: number;
+    booked: number;
+    utilization: string;
+    topCourts: TopCourt[];
+    topHours: TopHour[];
+    topDays: TopDay[];
+  };
+  coaches: {
+    total: number;
+    active: number;
+    totalSessions: number;
+    topCoaches: TopCoach[];
+  };
+  inventory: {
+    totalItems: number;
+    itemsUsed: number;
+    totalValue: number;
+    utilizationRate: string;
+  };
+  memberships: {
+    total: number;
+    active: number;
+    newInPeriod: number;
+    activePercentage: string;
+  };
+  bookings: {
+    total: number;
+    confirmed: number;
+    confirmationRate: string;
+  };
+  revenue: {
+    total: number;
+    transactions: number;
+    avgPerTransaction: string;
+  };
+  dateRange: {
+    startDate: string;
+    endDate: string;
+  };
+};

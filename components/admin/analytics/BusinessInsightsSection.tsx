@@ -1,21 +1,40 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { formatCurrency } from '@/lib/utils';
 import {
-  IconTournament,
-  IconUsers,
-  IconShoppingCart,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig
+} from '@/components/ui/chart';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn, formatCurrency } from '@/lib/utils';
+import type { BusinessInsightsResponse } from '@/types/model';
+import {
+  IconCash,
   IconCreditCard,
   IconReceipt,
-  IconCash
+  IconShoppingCart,
+  IconTournament,
+  IconUsers
 } from '@tabler/icons-react';
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 
 interface BusinessInsightsSectionProps {
-  data: any;
+  data: BusinessInsightsResponse | undefined;
   isLoading: boolean;
 }
+
+const chartConfig = {
+  hours: {
+    label: 'Bookings',
+    color: 'hsl(var(--primary))'
+  },
+  days: {
+    label: 'Bookings',
+    color: 'hsl(var(--primary))'
+  }
+} satisfies ChartConfig;
 
 export default function BusinessInsightsSection({ data, isLoading }: BusinessInsightsSectionProps) {
   if (isLoading) {
@@ -47,14 +66,7 @@ export default function BusinessInsightsSection({ data, isLoading }: BusinessIns
     );
   }
 
-  const {
-    courts = {},
-    coaches = {},
-    inventory = {},
-    memberships = {},
-    bookings = {},
-    revenue = {}
-  } = data;
+  const { courts, coaches, inventory, memberships, bookings, revenue } = data;
 
   const insightCards = [
     {
@@ -109,7 +121,10 @@ export default function BusinessInsightsSection({ data, isLoading }: BusinessIns
       stats: [
         { label: 'Total Bookings', value: bookings.total || 0 },
         { label: 'Confirmed', value: bookings.confirmed || 0 },
-        { label: 'Confirmation Rate', value: bookings.confirmationRate || '0%' }
+        {
+          label: 'Confirmation Rate',
+          value: bookings.confirmationRate || '0%'
+        }
       ]
     },
     {
@@ -120,7 +135,10 @@ export default function BusinessInsightsSection({ data, isLoading }: BusinessIns
       stats: [
         { label: 'Total Revenue', value: formatCurrency(revenue.total || 0) },
         { label: 'Transactions', value: revenue.transactions || 0 },
-        { label: 'Avg/Transaction', value: formatCurrency(Number(revenue.avgPerTransaction) || 0) }
+        {
+          label: 'Avg/Transaction',
+          value: formatCurrency(Number(revenue.avgPerTransaction) || 0)
+        }
       ]
     }
   ];
@@ -167,9 +185,60 @@ export default function BusinessInsightsSection({ data, isLoading }: BusinessIns
         })}
       </div>
 
+      {/* Charts Section */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Top Hours Chart */}
+        {courts.topHours && courts.topHours.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Peak Hours</CardTitle>
+              <CardDescription>Busiest hours for court bookings</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={chartConfig} className="min-h-50 w-full">
+                <BarChart accessibilityLayer data={courts.topHours}>
+                  <CartesianGrid vertical={false} />
+                  <XAxis dataKey="hour" tickLine={false} tickMargin={10} axisLine={false} />
+                  <YAxis tickLine={false} axisLine={false} tickMargin={10} />
+                  <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+                  <Bar dataKey="count" fill="var(--color-hours)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Top Days Chart */}
+        {courts.topDays && courts.topDays.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Popular Days</CardTitle>
+              <CardDescription>Busiest days of the week</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={chartConfig} className="min-h-50 w-full">
+                <BarChart accessibilityLayer data={courts.topDays}>
+                  <CartesianGrid vertical={false} />
+                  <XAxis
+                    dataKey="day"
+                    tickLine={false}
+                    tickMargin={10}
+                    axisLine={false}
+                    tickFormatter={(value) => value.slice(0, 3)}
+                  />
+                  <YAxis tickLine={false} axisLine={false} tickMargin={10} />
+                  <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+                  <Bar dataKey="count" fill="var(--color-days)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
       {/* Top Performers */}
       <div className="grid gap-4 md:grid-cols-2">
-        {/* Top Courts */}
+        {/* Top Courts (List) */}
         {courts.topCourts && courts.topCourts.length > 0 && (
           <Card>
             <CardHeader>
@@ -178,7 +247,7 @@ export default function BusinessInsightsSection({ data, isLoading }: BusinessIns
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {courts.topCourts.map((court: any, idx: number) => (
+                {courts.topCourts.map((court, idx) => (
                   <div key={idx} className="flex items-center justify-between">
                     <div>
                       <div className="font-medium">{court.court?.name}</div>
@@ -194,7 +263,7 @@ export default function BusinessInsightsSection({ data, isLoading }: BusinessIns
           </Card>
         )}
 
-        {/* Top Coaches */}
+        {/* Top Coaches (List) */}
         {coaches.topCoaches && coaches.topCoaches.length > 0 && (
           <Card>
             <CardHeader>
@@ -203,7 +272,7 @@ export default function BusinessInsightsSection({ data, isLoading }: BusinessIns
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {coaches.topCoaches.map((coach: any, idx: number) => (
+                {coaches.topCoaches.map((coach, idx) => (
                   <div key={idx} className="flex items-center justify-between">
                     <div>
                       <div className="font-medium">{coach.coach?.name}</div>
@@ -221,8 +290,4 @@ export default function BusinessInsightsSection({ data, isLoading }: BusinessIns
       </div>
     </div>
   );
-}
-
-function cn(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(' ');
 }

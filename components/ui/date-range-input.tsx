@@ -66,7 +66,7 @@ const DateRangeInput = ({
           onSelect={(range) => onValueChange(range)}
           numberOfMonths={numberOfMonths}
           autoFocus
-          fromYear={minDate ? dayjs(minDate).year() : dayjs().year()}
+          fromYear={minDate ? dayjs(minDate).year() : dayjs().subtract(1, 'year').year()}
           toYear={maxDate ? dayjs(maxDate).year() : dayjs().add(5, 'year').year()}
           disabled={(date) => {
             if (minDate && date < minDate) return true;
