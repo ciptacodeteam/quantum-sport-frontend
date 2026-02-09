@@ -92,6 +92,12 @@ export default function BookingDetailsCard({ details }: { details: Detail[] }) {
   // Calculate total price
   // const totalPrice = (details || []).reduce((sum, detail) => sum + (detail.price || 0), 0);
   const totalSlots = (details || []).length;
+  const resolvePrices = (detail: any) => {
+    const normalPrice = detail.price || detail.slot?.price || 0;
+    const discountPrice = detail.discountPrice ?? detail.slot?.discountPrice ?? 0;
+    const effectivePrice = discountPrice > 0 ? discountPrice : normalPrice;
+    return { normalPrice, discountPrice, effectivePrice };
+  };
 
   return (
     <Card className="mb-6">
@@ -155,12 +161,44 @@ export default function BookingDetailsCard({ details }: { details: Detail[] }) {
                               {formatSlotTime(detail.slot?.endAt, 'HH:mm')}
                             </span>
                             <p className="text-xs text-gray-500 sm:hidden">
-                              {formatCurrency(detail.price)}
+                              {(() => {
+                                const { normalPrice, discountPrice, effectivePrice } =
+                                  resolvePrices(detail);
+                                if (discountPrice > 0 && discountPrice < normalPrice) {
+                                  return (
+                                    <span className="flex flex-col">
+                                      <span className="line-through">
+                                        {formatCurrency(normalPrice)}
+                                      </span>
+                                      <span className="text-green-700">
+                                        {formatCurrency(effectivePrice)}
+                                      </span>
+                                    </span>
+                                  );
+                                }
+                                return formatCurrency(effectivePrice);
+                              })()}
                             </p>
                           </div>
                         </div>
                         <span className="hidden text-sm font-bold sm:block">
-                          {formatCurrency(detail.price)}
+                          {(() => {
+                            const { normalPrice, discountPrice, effectivePrice } =
+                              resolvePrices(detail);
+                            if (discountPrice > 0 && discountPrice < normalPrice) {
+                              return (
+                                <span className="flex flex-col items-end">
+                                  <span className="text-xs text-gray-400 line-through">
+                                    {formatCurrency(normalPrice)}
+                                  </span>
+                                  <span className="text-green-700">
+                                    {formatCurrency(effectivePrice)}
+                                  </span>
+                                </span>
+                              );
+                            }
+                            return formatCurrency(effectivePrice);
+                          })()}
                         </span>
                       </div>
                     ))}
@@ -172,7 +210,10 @@ export default function BookingDetailsCard({ details }: { details: Detail[] }) {
                       <span className="text-sm text-gray-600">Subtotal ({items.length} slot)</span>
                       <span className="text-sm font-bold text-gray-900">
                         {formatCurrency(
-                          items.reduce((sum: number, d: any) => sum + (d.price || 0), 0)
+                          items.reduce((sum: number, d: any) => {
+                            const { effectivePrice } = resolvePrices(d);
+                            return sum + effectivePrice;
+                          }, 0)
                         )}
                       </span>
                     </div>

@@ -69,7 +69,6 @@ export default function CheckoutPage() {
   // const pathname = usePathname();
   // const searchParams = useSearchParams();
   const bookingItems = useBookingStore((state) => state.bookingItems);
-  const courtTotal = useBookingStore((state) => state.courtTotal);
   const coachTotal = useBookingStore((state) => state.coachTotal);
   const inventoryTotal = useBookingStore((state) => state.inventoryTotal);
   const selectedCoaches = useBookingStore((state) => state.selectedCoaches);
@@ -95,6 +94,7 @@ export default function CheckoutPage() {
   );
 
   // Apply membership discount to court total
+  const courtSubtotal = membershipDiscount.originalTotal;
   const discountedCourtTotal = membershipDiscount.discountedTotal;
   const grandTotal = discountedCourtTotal + addOnsTotal;
 
@@ -154,7 +154,7 @@ export default function CheckoutPage() {
               price: item.price
             })),
             breakdown: data.breakdown || {
-              courtTotal,
+              courtTotal: courtSubtotal,
               addOnsTotal,
               processingFee: paymentFeeBreakdown.totalFee,
               total: totalWithPaymentFee
@@ -714,7 +714,7 @@ export default function CheckoutPage() {
             <div className="space-y-2 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span className="text-foreground font-medium">{formatCurrency(courtTotal)}</span>
+                <span className="text-foreground font-medium">{formatCurrency(courtSubtotal)}</span>
               </div>
               {membershipDiscount.canUseMembership && membershipDiscount.slotsToDeduct > 0 && (
                 <div className="flex items-center justify-between text-green-600">

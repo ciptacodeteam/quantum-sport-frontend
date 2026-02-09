@@ -156,13 +156,15 @@ const BookingCalendar = ({
       onSlotSelect(selectedSlots.filter((_, i) => i !== existingIndex));
     } else {
       // Add slot
+      const discountPrice = slot.discountPrice || 0;
+      const effectivePrice = discountPrice > 0 ? discountPrice : slot.price;
       onSlotSelect([
         ...selectedSlots,
         {
           courtId,
           slotId: slot.id,
           time,
-          price: slot.price
+          price: effectivePrice
         }
       ]);
     }
@@ -187,9 +189,12 @@ const BookingCalendar = ({
     return selectedSlots.some((s) => s.courtId === courtId && s.time === time);
   };
 
-  const getSlotPrice = (courtId: string, time: string) => {
+  const getSlotPrices = (courtId: string, time: string) => {
     const slot = getSlot(courtId, time);
-    return slot?.price || 0;
+    const normalPrice = slot?.price || 0;
+    const discountPrice = slot?.discountPrice || 0;
+    const effectivePrice = discountPrice > 0 ? discountPrice : normalPrice;
+    return { normalPrice, discountPrice, effectivePrice };
   };
 
   return (
@@ -279,7 +284,10 @@ const BookingCalendar = ({
                     const booked = isSlotBooked(court.id, time);
                     const selected = isSlotSelected(court.id, time);
                     const available = isSlotAvailable(court.id, time);
-                    const price = getSlotPrice(court.id, time);
+                    const { normalPrice, discountPrice, effectivePrice } = getSlotPrices(
+                      court.id,
+                      time
+                    );
 
                     return (
                       <td key={court.id} className="min-w-[120px] border border-gray-200 p-1">
@@ -300,9 +308,18 @@ const BookingCalendar = ({
                             }
                           }}
                         >
-                          {available && !booked && price > 0 && (
+                          {available && !booked && effectivePrice > 0 && (
                             <span className="text-xs font-medium">
-                              Rp {price.toLocaleString('id-ID')}
+                              {discountPrice > 0 && discountPrice < normalPrice ? (
+                                <span className="flex flex-col items-center">
+                                  <span className="text-[10px] text-gray-400 line-through">
+                                    Rp {normalPrice.toLocaleString('id-ID')}
+                                  </span>
+                                  <span>Rp {effectivePrice.toLocaleString('id-ID')}</span>
+                                </span>
+                              ) : (
+                                <>Rp {effectivePrice.toLocaleString('id-ID')}</>
+                              )}
                             </span>
                           )}
                           {booked && <span className="text-xs">Terisi</span>}

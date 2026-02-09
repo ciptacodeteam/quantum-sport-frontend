@@ -81,6 +81,8 @@ type SelectedBooking = {
   courtName: string;
   timeSlot: string;
   price: number;
+  normalPrice?: number;
+  discountPrice?: number;
   date: string;
   slotId: string;
   endTime?: string;
@@ -115,6 +117,8 @@ export default function BookingLapangan() {
       courtName: item.courtName,
       timeSlot: item.timeSlot,
       price: item.price,
+      normalPrice: item.normalPrice,
+      discountPrice: item.discountPrice,
       date: item.date,
       slotId: item.slotId || '',
       endTime: item.endTime
@@ -150,6 +154,8 @@ export default function BookingLapangan() {
         courtName: booking.courtName,
         timeSlot: booking.timeSlot,
         price: booking.price,
+        normalPrice: booking.normalPrice,
+        discountPrice: booking.discountPrice,
         date: booking.date,
         endTime: booking.endTime || booking.timeSlot.split(' - ')[1] || ''
       })),
@@ -192,14 +198,17 @@ export default function BookingLapangan() {
           name: court?.name || `Court ${map.size + 1}`,
           image:
             court?.image || getPlaceholderImageUrl({ width: 160, height: 90, text: 'No Image' }),
-          pricePerHour: slot.price || 0,
+          pricePerHour:
+            slot.discountPrice && slot.discountPrice > 0 ? slot.discountPrice : slot.price || 0,
           description: court?.description || undefined
         });
       } else {
         // Update price if this slot has a higher price (for peak hours)
         const existing = map.get(courtId)!;
-        if (slot.price && slot.price > existing.pricePerHour) {
-          existing.pricePerHour = slot.price;
+        const effectivePrice =
+          slot.discountPrice && slot.discountPrice > 0 ? slot.discountPrice : slot.price || 0;
+        if (effectivePrice > existing.pricePerHour) {
+          existing.pricePerHour = effectivePrice;
         }
       }
     });
@@ -371,7 +380,9 @@ export default function BookingLapangan() {
         courtId: selectedCourt,
         courtName: court.name,
         timeSlot: timeRange,
-        price: slot.price || 0,
+        price: slot.discountPrice && slot.discountPrice > 0 ? slot.discountPrice : slot.price || 0,
+        normalPrice: slot.price || 0,
+        discountPrice: slot.discountPrice || 0,
         date: currentDateFormatted,
         slotId: slot.id,
         endTime: endTime
@@ -393,6 +404,8 @@ export default function BookingLapangan() {
       courtName: booking.courtName,
       timeSlot: booking.timeSlot,
       price: booking.price,
+      normalPrice: booking.normalPrice,
+      discountPrice: booking.discountPrice,
       date: booking.date,
       slotId: booking.slotId,
       endTime: booking.endTime
@@ -425,6 +438,8 @@ export default function BookingLapangan() {
         courtName: booking.courtName,
         timeSlot: booking.timeSlot,
         price: booking.price,
+        normalPrice: booking.normalPrice,
+        discountPrice: booking.discountPrice,
         date: booking.date,
         slotId: booking.slotId,
         endTime: endTime
@@ -458,6 +473,8 @@ export default function BookingLapangan() {
       courtName: booking.courtName,
       timeSlot: booking.timeSlot,
       price: booking.price,
+      normalPrice: booking.normalPrice,
+      discountPrice: booking.discountPrice,
       date: booking.date,
       slotId: booking.slotId,
       endTime: booking.endTime || booking.timeSlot.split(' - ')[1] || ''
@@ -813,7 +830,10 @@ export default function BookingLapangan() {
                                   >();
 
                                   courtSlotsForDate.forEach((slot) => {
-                                    const slotPrice = slot.price || 0;
+                                    const slotPrice =
+                                      slot.discountPrice && slot.discountPrice > 0
+                                        ? slot.discountPrice
+                                        : slot.price || 0;
                                     const slotStartTime = formatSlotTime(slot.startAt);
                                     const slotEndTime = formatSlotTime(slot.endAt);
 
@@ -1087,7 +1107,7 @@ export default function BookingLapangan() {
             onWalkInClear={() => {
               setWalkInCustomer(null, null);
             }}
-            courtTotal={bookings.reduce((sum, booking) => sum + booking.price, 0)}
+            courtTotal={membershipDiscount.originalTotal}
             totalAmount={totalPrice}
             membershipDiscountDetails={membershipDiscount}
             onBookingRemove={(courtId, timeSlot, date) => {

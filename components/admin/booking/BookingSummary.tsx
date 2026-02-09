@@ -317,12 +317,21 @@ export default function BookingSummary({
   // Use provided membership discount details if available, otherwise use calculated
   const membershipDiscount = membershipDiscountDetails || calculatedMembershipDiscount;
 
+  const getPricing = (booking: BookingItem) => {
+    const normalPrice = booking.normalPrice ?? booking.price;
+    const discountPrice = booking.discountPrice ?? 0;
+    const effectivePrice = discountPrice > 0 ? discountPrice : booking.price;
+    const displayPrice = membershipDiscount.canUseMembership ? normalPrice : effectivePrice;
+    return { normalPrice, discountPrice, effectivePrice, displayPrice };
+  };
+
   // Bundled discount is only relevant when add-ons (coaches) are shown
   const bundleDiscount =
     showAddOns && selectedCoaches.length > 0
       ? calculateBundleDiscount(bookingItems, selectedCoaches)
       : 0;
 
+  const courtSubtotal = membershipDiscount.originalTotal || courtTotal;
   const finalTotal = Math.max(0, totalAmount - bundleDiscount);
 
   const handleCustomerSelect = (customer: CustomerSearchResult) => {
@@ -598,6 +607,8 @@ export default function BookingSummary({
                         bookingIndex >= 0 &&
                         bookingIndex < membershipDiscount.slotsToDeduct;
 
+                      const { normalPrice, discountPrice, displayPrice } = getPricing(booking);
+
                       return (
                         <div
                           key={`${date}-${index}`}
@@ -630,12 +641,19 @@ export default function BookingSummary({
                               {isFree ? (
                                 <>
                                   <span className="text-muted-foreground">
-                                    {formatCurrency(booking.price)}
+                                    {formatCurrency(normalPrice)}
                                   </span>{' '}
                                   <span className="ml-1">Gratis</span>
                                 </>
+                              ) : discountPrice > 0 && discountPrice < normalPrice ? (
+                                <span className="flex flex-col items-end">
+                                  <span className="text-muted-foreground text-[10px] line-through">
+                                    {formatCurrency(normalPrice)}
+                                  </span>
+                                  <span>{formatCurrency(displayPrice)}</span>
+                                </span>
                               ) : (
-                                formatCurrency(booking.price)
+                                formatCurrency(displayPrice)
                               )}
                             </span>
                             {onBookingRemove && (
@@ -746,7 +764,7 @@ export default function BookingSummary({
             {showCourtBookings && (
               <div className="flex items-center justify-between text-sm">
                 <span>Courts</span>
-                <span>{formatCurrency(courtTotal)}</span>
+                <span>{formatCurrency(courtSubtotal)}</span>
               </div>
             )}
             {membershipDiscount.canUseMembership && membershipDiscount.slotsToDeduct > 0 && (

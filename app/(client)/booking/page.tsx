@@ -53,6 +53,8 @@ type SelectedCell = {
   courtName: string;
   time: string;
   price: number;
+  normalPrice?: number;
+  discountPrice?: number;
   dateKey: string;
 };
 
@@ -221,6 +223,8 @@ export default function BookingPage() {
           courtName: item.courtName,
           time: item.timeSlot,
           price: item.price,
+          normalPrice: item.normalPrice,
+          discountPrice: item.discountPrice,
           dateKey
         });
       });
@@ -348,6 +352,8 @@ export default function BookingPage() {
           courtName: cell.courtName,
           timeSlot: cell.time,
           price: cell.price,
+          normalPrice: cell.normalPrice,
+          discountPrice: cell.discountPrice,
           date,
           endTime: dayjs(cell.time, 'HH:mm').add(1, 'hour').format('HH:mm')
         });
@@ -650,6 +656,9 @@ export default function BookingPage() {
                       const selected = selectedCells.some(
                         (cell) => cell.courtId === court.id && cell.time === time
                       );
+                      const normalPrice = slot?.price ?? 0;
+                      const discountPrice = slot?.discountPrice ?? 0;
+                      const effectivePrice = discountPrice > 0 ? discountPrice : normalPrice;
                       return (
                         <td key={court.name} className="border border-gray-200 p-1">
                           <button
@@ -686,7 +695,9 @@ export default function BookingPage() {
                                       courtId: court.id,
                                       courtName: court.name,
                                       time,
-                                      price: slot.price ?? 0,
+                                      price: effectivePrice,
+                                      normalPrice,
+                                      discountPrice,
                                       dateKey
                                     }
                                   ];
@@ -705,7 +716,25 @@ export default function BookingPage() {
                           >
                             {hasSlot ? (
                               <>
-                                <span className="text-sm">{`Rp${(slot.price ?? 0).toLocaleString('id-ID')}`}</span>
+                                {discountPrice > 0 && discountPrice < normalPrice ? (
+                                  <span className="flex flex-col items-start text-xs">
+                                    <span className="text-[10px] text-gray-400 line-through">
+                                      Rp{normalPrice.toLocaleString('id-ID')}
+                                    </span>
+                                    <span
+                                      className={cn(
+                                        'text-sm font-semibold',
+                                        selected ? 'text-white' : 'text-primary'
+                                      )}
+                                    >
+                                      Rp{effectivePrice.toLocaleString('id-ID')}
+                                    </span>
+                                  </span>
+                                ) : (
+                                  <span className="text-sm">
+                                    {`Rp${effectivePrice.toLocaleString('id-ID')}`}
+                                  </span>
+                                )}
                                 {!isAvailable && <span className="text-xs">Booked</span>}
                               </>
                             ) : (

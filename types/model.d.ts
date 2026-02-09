@@ -392,6 +392,8 @@ export type Slot = {
   startAt: Date;
   endAt: Date;
   price: number;
+  discountPrice?: number | null;
+  normalPrice?: number | null;
   isAvailable: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -413,6 +415,8 @@ export type Booking = {
   status: BookingStatus;
   totalPrice: number;
   processingFee: number;
+  courtNormalPrice?: number;
+  courtDiscountPrice?: number;
   createdAt: Date;
   updatedAt: Date;
   holdExpiresAt: Date | null;
@@ -435,6 +439,7 @@ export type BookingDetail = {
   slotId: string;
   courtId: string | null;
   price: number;
+  discountPrice?: number | null;
   createdAt: Date;
   updatedAt: Date;
 
@@ -505,6 +510,11 @@ export type CourtCostSchedule = {
   startAt: string;
   endAt: string;
   price: number;
+  happyHourPrice?: number;
+  happyHourDiscountPrice?: number | null;
+  peakHourPrice?: number;
+  peakHourDiscountPrice?: number | null;
+  closedHours?: number[];
   isAvailable: boolean;
   createdAt: Date;
   updatedAt: Date;

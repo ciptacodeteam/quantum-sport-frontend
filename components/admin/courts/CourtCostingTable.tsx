@@ -176,12 +176,34 @@ const CourtCostingTable = ({ courtId }: Props) => {
               {
                 accessorKey: 'price',
                 header: 'Harga (IDR)',
-                cell: (info) =>
-                  info.getValue().toLocaleString('id-ID', {
+                cell: (info) => {
+                  const slot = info.row.original as Slot;
+                  const normalPrice = slot.price || 0;
+                  const discountPrice = slot.discountPrice || 0;
+                  const formattedNormal = normalPrice.toLocaleString('id-ID', {
                     style: 'currency',
                     currency: 'IDR',
                     minimumFractionDigits: 0
-                  })
+                  });
+                  const formattedDiscount = discountPrice.toLocaleString('id-ID', {
+                    style: 'currency',
+                    currency: 'IDR',
+                    minimumFractionDigits: 0
+                  });
+
+                  if (discountPrice > 0 && discountPrice < normalPrice) {
+                    return (
+                      <div className="flex flex-col text-xs">
+                        <span className="text-muted-foreground line-through">
+                          {formattedNormal}
+                        </span>
+                        <span className="font-semibold text-green-700">{formattedDiscount}</span>
+                      </div>
+                    );
+                  }
+
+                  return formattedNormal;
+                }
               },
               {
                 id: 'actions',

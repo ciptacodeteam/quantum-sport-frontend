@@ -23,7 +23,9 @@ export const formSchema = z.object({
   toDate: z.date(),
   days: z.array(z.number().min(0).max(7)),
   happyHourPrice: z.number().min(0),
+  happyHourDiscountPrice: z.number().min(0),
   peakHourPrice: z.number().min(0),
+  peakHourDiscountPrice: z.number().min(0),
   closedHours: z.array(z.number()).optional()
 });
 
@@ -44,7 +46,9 @@ const CreateCourtCostForm = ({ courtId }: Props) => {
       toDate: dayjs().add(7, 'day').toDate(),
       days: [],
       happyHourPrice: 0,
+      happyHourDiscountPrice: 0,
       peakHourPrice: 0,
+      peakHourDiscountPrice: 0,
       closedHours: []
     }
   });
@@ -139,6 +143,52 @@ const CreateCourtCostForm = ({ courtId }: Props) => {
                 )}
               />
               <FieldError>{form.formState.errors.peakHourPrice?.message}</FieldError>
+            </Field>
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <Field>
+              <FieldLabel htmlFor="happyHourDiscountPrice">Happy Hour Discount Price</FieldLabel>
+              <Controller
+                control={form.control}
+                name="happyHourDiscountPrice"
+                render={({ field }) => (
+                  <NumberInput
+                    id="happyHourDiscountPrice"
+                    thousandSeparator="."
+                    decimalSeparator=","
+                    prefix="Rp "
+                    min={0}
+                    allowNegative={false}
+                    placeholder="e.g. Rp 80.000"
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    withControl={false}
+                  />
+                )}
+              />
+              <FieldError>{form.formState.errors.happyHourDiscountPrice?.message}</FieldError>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="peakHourDiscountPrice">Peak Hour Discount Price</FieldLabel>
+              <Controller
+                control={form.control}
+                name="peakHourDiscountPrice"
+                render={({ field }) => (
+                  <NumberInput
+                    id="peakHourDiscountPrice"
+                    thousandSeparator="."
+                    decimalSeparator=","
+                    prefix="Rp "
+                    min={0}
+                    allowNegative={false}
+                    placeholder="e.g. Rp 150.000"
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    withControl={false}
+                  />
+                )}
+              />
+              <FieldError>{form.formState.errors.peakHourDiscountPrice?.message}</FieldError>
             </Field>
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

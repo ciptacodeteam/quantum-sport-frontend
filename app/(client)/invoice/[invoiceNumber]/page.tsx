@@ -69,6 +69,7 @@ type ApiPayment = {
 type ApiBookingDetail = {
   id: string;
   price: number;
+  discountPrice?: number | null;
   slot?: {
     id: string;
     type: 'COURT' | 'COACH' | 'BALLBOY' | string;
@@ -77,6 +78,7 @@ type ApiBookingDetail = {
     startAt?: string;
     endAt?: string;
     price?: number;
+    discountPrice?: number | null;
     isAvailable?: boolean;
     createdAt?: string;
     updatedAt?: string;
@@ -91,6 +93,8 @@ type ApiBooking = {
   status: 'HOLD' | 'CONFIRMED' | 'CANCELLED' | string;
   totalPrice: number;
   processingFee: number;
+  courtNormalPrice?: number;
+  courtDiscountPrice?: number;
   createdAt: string;
   details?: ApiBookingDetail[];
   inventories?: Array<{
@@ -323,6 +327,26 @@ export default function InvoiceDetailPage() {
   const bookingInventories = booking?.inventories || [];
   const bookingCoaches = booking?.coaches || [];
   const bookingBallboys = booking?.ballboys || [];
+  const bookingCourtDiscountTotal = booking
+    ? (booking.courtDiscountPrice ??
+      bookingDetails.reduce((sum, detail) => {
+        const normalPrice = detail.price || detail.slot?.price || 0;
+        const discountPrice = detail.discountPrice ?? detail.slot?.discountPrice ?? 0;
+        const effectivePrice = discountPrice > 0 ? discountPrice : normalPrice;
+        return sum + effectivePrice;
+      }, 0))
+    : 0;
+  const bookingAddOnsTotal = booking
+    ? bookingCoaches.reduce((sum, item: any) => sum + (item.price || 0), 0) +
+      bookingBallboys.reduce((sum, item: any) => sum + (item.price || 0), 0) +
+      bookingInventories.reduce(
+        (sum, item: any) => sum + (item.price || 0) * (item.quantity || 0),
+        0
+      )
+    : 0;
+  const subtotalForDisplay = booking
+    ? bookingCourtDiscountTotal + bookingAddOnsTotal
+    : invoice.subtotal;
   const canPay =
     ['PENDING', 'HOLD'].includes(invoice.status) &&
     (!invoice.dueDate || dayjs().isBefore(dayjs(invoice.dueDate)));
@@ -385,7 +409,7 @@ export default function InvoiceDetailPage() {
 
           {/* Payment Summary */}
           <PaymentSummaryCard
-            subtotal={invoice.subtotal}
+            subtotal={subtotalForDisplay}
             processingFee={invoice.processingFee}
             total={invoice.total}
             method={

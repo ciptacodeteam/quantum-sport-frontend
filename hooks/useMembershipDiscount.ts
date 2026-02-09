@@ -71,7 +71,12 @@ export function useMembershipDiscount(
     const slotsToDeduct = Math.min(bookingItems.length, remainingSessions);
 
     // Calculate original total
-    const originalTotal = bookingItems.reduce((sum, booking) => sum + booking.price, 0);
+    const originalTotal = bookingItems.reduce((sum, booking) => {
+      const normalPrice = booking.normalPrice ?? booking.price;
+      const discountPrice = booking.discountPrice ?? 0;
+      const effectivePrice = discountPrice > 0 ? discountPrice : booking.price;
+      return sum + (canUseMembership ? normalPrice : effectivePrice);
+    }, 0);
 
     // Calculate discount amount
     let discountAmount = 0;
@@ -85,7 +90,10 @@ export function useMembershipDiscount(
 
       // Calculate the price of the first N slots (where N = slotsToDeduct)
       const slotsToFree = sortedBookings.slice(0, slotsToDeduct);
-      discountAmount = slotsToFree.reduce((sum, booking) => sum + booking.price, 0);
+      discountAmount = slotsToFree.reduce((sum, booking) => {
+        const normalPrice = booking.normalPrice ?? booking.price;
+        return sum + normalPrice;
+      }, 0);
     }
 
     const discountedTotal = originalTotal - discountAmount;

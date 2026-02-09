@@ -2,6 +2,7 @@ import {
   createCourtApi,
   createCourtCostApi,
   updateCourtApi,
+  updateCourtCostApi,
   updateSlotAvailabilityApi
 } from '@/api/admin/court';
 import type { MutationFuncProps } from '@/types';
@@ -58,7 +59,7 @@ export const adminUpdateCourtCostMutationOptions = ({
   onError
 }: MutationFuncProps = {}) =>
   mutationOptions({
-    mutationFn: updateCourtApi,
+    mutationFn: updateCourtCostApi,
     onSuccess: (data) => {
       toast.success('Data berhasil diperbarui!');
       onSuccess?.(data);

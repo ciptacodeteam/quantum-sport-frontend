@@ -9,6 +9,8 @@ export interface BookingItem {
   courtName: string;
   timeSlot: string;
   price: number;
+  normalPrice?: number;
+  discountPrice?: number;
   date: string;
   endTime: string;
 }

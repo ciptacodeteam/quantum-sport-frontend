@@ -116,7 +116,10 @@ export default function InvoiceDetailPage() {
                   <div>
                     <p className="text-muted-foreground text-xs">Total Harga</p>
                     <p className="font-medium">
-                      Rp {formatNumber(invoice.booking.totalPrice || 0)}
+                      Rp{' '}
+                      {formatNumber(
+                        (invoice.booking.courtDiscountPrice ?? invoice.booking.totalPrice) || 0
+                      )}
                     </p>
                   </div>
                 </div>
@@ -132,7 +135,24 @@ export default function InvoiceDetailPage() {
                             {dayjs(item.slot?.startAt).format('DD/MM/YYYY HH:mm')} -{' '}
                             {dayjs(item.slot?.endAt).format('HH:mm')}
                           </p>
-                          <p className="text-sm">Rp {formatNumber(item.price || 0)}</p>
+                          {(() => {
+                            const normalPrice = item.price || item.slot?.price || 0;
+                            const discountPrice =
+                              item.discountPrice ?? item.slot?.discountPrice ?? 0;
+                            if (discountPrice > 0 && discountPrice < normalPrice) {
+                              return (
+                                <div className="text-sm">
+                                  <span className="text-muted-foreground line-through">
+                                    Rp {formatNumber(normalPrice)}
+                                  </span>
+                                  <span className="ml-2 text-green-700">
+                                    Rp {formatNumber(discountPrice)}
+                                  </span>
+                                </div>
+                              );
+                            }
+                            return <p className="text-sm">Rp {formatNumber(normalPrice)}</p>;
+                          })()}
                         </div>
                       ))}
                     </div>
