@@ -7,7 +7,7 @@ import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from '@/component
 import { Input } from '@/components/ui/input';
 import { NumberInput } from '@/components/ui/number-input';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import z from 'zod';
 import CardDisplay from './CardDisplay';
@@ -106,6 +106,12 @@ export default function CreditCardForm({
   const expiryMonth = form.watch('expiryMonth');
   const expiryYear = form.watch('expiryYear');
   const cardholderName = form.watch('cardholderName');
+  const [expiryMonthInput, setExpiryMonthInput] = useState(() =>
+    String(form.getValues('expiryMonth')).padStart(2, '0')
+  );
+  const [expiryYearInput, setExpiryYearInput] = useState(() =>
+    String(form.getValues('expiryYear') % 100).padStart(2, '0')
+  );
 
   // Format card number with spaces every 4 digits
   const handleCardNumberChange = useCallback(
@@ -135,6 +141,40 @@ export default function CreditCardForm({
         ?.join(' ') || ''
     );
   }, [cardNumber]);
+
+  const handleExpiryMonthChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const digits = e.target.value.replace(/\D/g, '').slice(0, 2);
+      if (digits.length === 0) {
+        setExpiryMonthInput('');
+        form.setValue('expiryMonth', 0, { shouldValidate: true });
+        return;
+      }
+      if (digits.length === 2) {
+        const parsed = Math.min(parseInt(digits, 10), 12);
+        const nextValue = parsed < 10 ? `0${parsed}` : String(parsed);
+        setExpiryMonthInput(nextValue);
+        form.setValue('expiryMonth', parsed, { shouldValidate: true });
+        return;
+      }
+      setExpiryMonthInput(digits);
+      form.setValue('expiryMonth', parseInt(digits, 10), { shouldValidate: true });
+    },
+    [form]
+  );
+
+  const handleExpiryYearChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const digits = e.target.value.replace(/\D/g, '').slice(0, 2);
+      setExpiryYearInput(digits);
+      if (digits.length > 0) {
+        form.setValue('expiryYear', 2000 + parseInt(digits, 10), { shouldValidate: true });
+      } else {
+        form.setValue('expiryYear', 0, { shouldValidate: true });
+      }
+    },
+    [form]
+  );
 
   const handleSubmit = form.handleSubmit(async (data) => {
     await onSubmit(data);
@@ -193,40 +233,42 @@ export default function CreditCardForm({
               <FieldLabel htmlFor="expiryMonth">Expiry Date</FieldLabel>
               <div className="flex gap-2">
                 <div className="flex-1">
-                  <NumberInput
+                  <Input
                     placeholder="MM"
-                    min={1}
-                    max={12}
-                    value={expiryMonth}
-                    onValueChange={(val) => {
-                      if (val !== undefined) {
-                        form.setValue('expiryMonth', val, { shouldValidate: true });
+                    value={expiryMonthInput}
+                    onChange={handleExpiryMonthChange}
+                    onBlur={() => {
+                      if (!expiryMonthInput) return;
+                      const parsed = Math.min(parseInt(expiryMonthInput, 10), 12);
+                      const padded = parsed.toString().padStart(2, '0');
+                      if (padded !== expiryMonthInput) {
+                        setExpiryMonthInput(padded);
+                        form.setValue('expiryMonth', parsed, { shouldValidate: true });
                       }
                     }}
                     disabled={isLoading}
                     className="text-center"
-                    withControl={false}
-                    allowNegative={false}
-                    decimalScale={0}
+                    inputMode="numeric"
+                    maxLength={2}
+                    autoComplete="cc-exp-month"
                   />
                 </div>
                 <div className="text-muted-foreground flex items-center">/</div>
                 <div className="flex-1">
-                  <NumberInput
-                    placeholder="YYYY"
-                    min={new Date().getFullYear()}
-                    max={new Date().getFullYear() + 20}
-                    value={expiryYear}
-                    onValueChange={(val) => {
-                      if (val !== undefined) {
-                        form.setValue('expiryYear', val, { shouldValidate: true });
+                  <Input
+                    placeholder="YY"
+                    value={expiryYearInput}
+                    onChange={handleExpiryYearChange}
+                    onBlur={() => {
+                      if (expiryYearInput.length === 1) {
+                        setExpiryYearInput(expiryYearInput.padStart(2, '0'));
                       }
                     }}
                     disabled={isLoading}
                     className="text-center"
-                    withControl={false}
-                    allowNegative={false}
-                    decimalScale={0}
+                    inputMode="numeric"
+                    maxLength={2}
+                    autoComplete="cc-exp-year"
                   />
                 </div>
               </div>
