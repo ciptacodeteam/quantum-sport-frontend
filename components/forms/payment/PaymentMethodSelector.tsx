@@ -20,6 +20,8 @@ interface PaymentMethodSelectorProps {
   ballboySlots?: string[];
   inventories?: Array<{ inventoryId: string; quantity: number }>;
   totalAmount?: number;
+  userEmail?: string;
+  userPhoneNumber?: string;
 }
 
 /**
@@ -36,7 +38,9 @@ export default function PaymentMethodSelector({
   coachSlots,
   ballboySlots,
   inventories,
-  totalAmount
+  totalAmount,
+  userEmail,
+  userPhoneNumber
 }: PaymentMethodSelectorProps) {
   const [showCreditCardForm, setShowCreditCardForm] = useState(false);
   const creditCardMethod = paymentMethods.find((m) => m.channel === 'CARDS');
@@ -143,6 +147,8 @@ export default function PaymentMethodSelector({
               courtSlots={courtSlots}
               coachSlots={coachSlots}
               ballboySlots={ballboySlots}
+              userEmail={userEmail}
+              userPhoneNumber={userPhoneNumber}
               inventories={inventories}
               totalAmount={totalAmount}
               onSuccess={handleCreditCardSuccess}

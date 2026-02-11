@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import SavedCardSelector from '@/components/forms/payment/SavedCardSelector';
 import CreditCardForm, { type CreditCardFormData } from '@/components/forms/payment/CreditCardForm';
 import { useMembershipDiscount } from '@/hooks/useMembershipDiscount';
+import { useXenditCardCollection } from '@/hooks/useXenditTokenization';
 import { cn, resolveMediaUrl } from '@/lib/utils';
 import { checkoutMutationOptions } from '@/mutations/booking';
 import { paymentMethodsQueryOptions } from '@/queries/paymentMethod';
@@ -23,6 +24,7 @@ import { X } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 
 dayjs.locale('id');
 dayjs.extend(customParseFormat);
@@ -123,10 +125,18 @@ export default function CheckoutPage() {
     }
   }, []);
 
+  const { collectCard, isLoading: isCollectingCard } = useXenditCardCollection();
+
   const checkoutMutation = useMutation(
     checkoutMutationOptions({
       onSuccess: (data) => {
-        // Clear booking store after successful checkout
+        // For card payments, don't redirect to invoice yet
+        // Redirect will happen after 3DS authentication completes
+        if (selectedPaymentMethod?.channel === 'CARDS') {
+          return; // Skip invoice redirect for card payments
+        }
+
+        // Clear booking store after successful checkout (non-card payments only)
         persistPaymentMethodId(null);
         useBookingStore.getState().clearAll();
 
@@ -315,7 +325,7 @@ export default function CheckoutPage() {
     setAddCardModalOpen(false);
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     // Check authentication first
     if (!isAuthenticated) {
       openAuthModal();
@@ -390,19 +400,90 @@ export default function CheckoutPage() {
           cvv: selectedCardCvv
         };
       } else if (newCardData) {
-        // Use new card
+        // Use new card - just send saveCard flag
         payload.cardPayment = {
-          cardNumber: newCardData.cardNumber,
-          cardholderName: newCardData.cardholderName,
-          expiryMonth: newCardData.expiryMonth,
-          expiryYear: newCardData.expiryYear,
-          newCardCvv: newCardData.cvv,
-          saveCard: newCardData.saveCard
+          saveCard: newCardData.saveCard || false
         };
       }
     }
 
-    checkoutMutation.mutate(payload);
+    // Send to backend to create Payment Session
+    checkoutMutation.mutate(payload, {
+      onSuccess: (response) => {
+        // If card payment and payment session created, collect card data
+        if (
+          selectedPaymentMethod.channel === 'CARDS' &&
+          newCardData &&
+          response.data.paymentSessionId
+        ) {
+          void (async () => {
+            try {
+              console.log('Payment Session created:', response.data.paymentSessionId);
+              toast.info('Processing card payment...');
+
+              // Collect card data using card_session.js
+              const cardResult = await collectCard({
+                paymentSessionId: response.data.paymentSessionId,
+                cardNumber: newCardData.cardNumber.trim().replace(/\s+/g, ''),
+                expiryMonth: newCardData.expiryMonth,
+                expiryYear: newCardData.expiryYear,
+                cvv: newCardData.cvv,
+                cardholderFirstName: user?.name?.split(' ')[0] || 'Cardholder',
+                cardholderLastName: user?.name?.split(' ').slice(1).join(' ') || 'User',
+                cardholderEmail: user?.email,
+                cardholderPhoneNumber: user?.phone || undefined
+              });
+
+              console.log('Payment Request created:', cardResult.paymentRequestId);
+              console.log('Redirecting to 3DS:', cardResult.actionUrl);
+
+              // Redirect to 3DS authentication
+              router.push(cardResult.actionUrl);
+            } catch (err: any) {
+              console.error('Card collection failed:', err);
+
+              // Show error to user
+              toast.error(err.message || 'Card processing failed. Please try again.');
+
+              // Cancel booking and payment session
+              void (async () => {
+                try {
+                  const invoiceId = response.data?.invoiceNumber || response.data?.invoiceId;
+                  const sessionId = response.data?.paymentSessionId;
+
+                  // Cancel booking if invoice was created
+                  if (invoiceId) {
+                    console.log('Cancelling booking:', invoiceId);
+                    const { cancelBookingApi } = await import('@/api/booking');
+                    await cancelBookingApi(invoiceId, {
+                      reason: 'Card payment processing failed'
+                    });
+                    console.log('Booking cancelled successfully');
+                  }
+
+                  // Cancel payment session
+                  if (sessionId) {
+                    console.log('Cancelling payment session:', sessionId);
+                    const { cancelPaymentSession } = await import('@/api/payment-session');
+                    await cancelPaymentSession({ sessionId });
+                    console.log('Payment session cancelled successfully');
+                  }
+                } catch (cancelErr) {
+                  console.error('Failed to cancel booking/session:', cancelErr);
+                  // Don't show error to user - the main error is already shown
+                }
+              })();
+
+              // Reset checkout mutation state to allow retry
+              checkoutMutation.reset();
+            }
+          })();
+        } else if (selectedPaymentMethod.channel !== 'CARDS') {
+          // Non-card payment success - proceed normally
+          toast.success('Checkout berhasil!');
+        }
+      }
+    });
   };
 
   return (
@@ -766,6 +847,7 @@ export default function CheckoutPage() {
               disabled={
                 ((!selectedPaymentMethod ||
                   checkoutMutation.isPending ||
+                  isCollectingCard ||
                   (selectedPaymentMethod?.channel === 'CARDS' && !selectedCard && !newCardData) ||
                   (selectedPaymentMethod?.channel === 'CARDS' &&
                     !!selectedCard &&
@@ -778,13 +860,15 @@ export default function CheckoutPage() {
                 ? 'Memuat...'
                 : !isAuthenticated
                   ? 'Login untuk Checkout'
-                  : checkoutMutation.isPending
-                    ? 'Memproses...'
-                    : selectedPaymentMethod?.channel === 'CARDS' && !selectedCard && !newCardData
-                      ? 'Pilih Kartu'
-                      : selectedPaymentMethod
-                        ? 'Bayar Sekarang'
-                        : 'Pilih Metode'}
+                  : isCollectingCard
+                    ? 'Memproses Kartu...'
+                    : checkoutMutation.isPending
+                      ? 'Memproses...'
+                      : selectedPaymentMethod?.channel === 'CARDS' && !selectedCard && !newCardData
+                        ? 'Pilih Kartu'
+                        : selectedPaymentMethod
+                          ? 'Bayar Sekarang'
+                          : 'Pilih Metode'}
             </Button>
           </div>
         </div>

@@ -699,12 +699,7 @@ export type CreditCard = {
 };
 
 export type CardPaymentNewCard = {
-  cardNumber: string;
-  cardholderName: string;
-  expiryMonth: number;
-  expiryYear: number;
-  newCardCvv: string;
-  saveCard?: boolean;
+  saveCard?: boolean; // true for PAY_AND_SAVE, false/undefined for PAY
 };
 
 export type CardPaymentSavedCard = {
@@ -733,15 +728,6 @@ export type CheckoutResponse = {
   paymentStatus: 'PENDING' | 'REQUIRES_ACTION' | 'SUCCEEDED' | 'FAILED';
   paymentActions?: ThreeDSChallenge[];
   paymentUrl?: string;
-};
-
-export type SaveCreditCardPayload = {
-  cardNumber: string;
-  cardholderName: string;
-  expiryMonth: number;
-  expiryYear: number;
-  cvv: string;
-  isDefault?: boolean;
 };
 
 export type SaveCreditCardResponse = {

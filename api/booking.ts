@@ -35,3 +35,42 @@ export async function expireInvoiceApi(invoiceId: string) {
   const { data } = await api.post(`/invoices/${invoiceId}/expire`);
   return data;
 }
+
+export interface CancelBookingPayload {
+  reason: string;
+}
+
+export interface CancelBookingResponse {
+  success: boolean;
+  data: {
+    bookingId: string;
+    invoiceNumber: string;
+    status: string;
+    releasedSlots: {
+      courtSlots: number;
+      coachSlots: number;
+      ballboySlots: number;
+    };
+    restoredInventories: number;
+    refund?: {
+      refundPending: boolean;
+      amount: number;
+      message: string;
+    };
+  };
+  message: string;
+}
+
+/**
+ * Cancel a booking and release all resources
+ */
+export async function cancelBookingApi(
+  invoiceId: string,
+  payload: CancelBookingPayload
+): Promise<CancelBookingResponse> {
+  const { data } = await api.post<CancelBookingResponse>(
+    `/invoices/${invoiceId}/cancel-booking`,
+    payload
+  );
+  return data;
+}

@@ -4,12 +4,20 @@ import type {
   CheckoutResponse,
   ListCreditCardsResponse,
   MembershipCardCheckoutPayload,
-  SaveCreditCardPayload,
   SaveCreditCardResponse
 } from '@/types/model';
 
+export type SaveCreditCardPayload = {
+  cardToken: string; // payment_method_id from Xendit JS
+  cardBrand: string;
+  last4: string;
+  expMonth: number;
+  expYear: number;
+  isDefault?: boolean;
+};
+
 /**
- * Save a new credit card
+ * Save a new credit card using Xendit payment_method_id
  * POST /credit-cards
  */
 export const saveCreditCardApi = async (

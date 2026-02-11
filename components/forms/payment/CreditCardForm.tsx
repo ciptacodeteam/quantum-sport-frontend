@@ -72,11 +72,22 @@ const creditCardSchema = z.object({
 
 export type CreditCardFormData = z.infer<typeof creditCardSchema>;
 
+export type TokenizedCardData = {
+  cardToken: string;
+  cardLast4: string;
+  cardExpMonth: number;
+  cardExpYear: number;
+  cardBrand?: string;
+  saveCard: boolean;
+};
+
 interface CreditCardFormProps {
   onSubmit: (data: CreditCardFormData) => Promise<void> | void;
   isLoading?: boolean;
   showSaveOption?: boolean;
   submitButtonText?: string;
+  initialEmail?: string;
+  initialPhoneNumber?: string;
 }
 
 /**
