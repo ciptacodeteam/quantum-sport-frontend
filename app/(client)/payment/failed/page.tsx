@@ -4,8 +4,9 @@ import MainHeader from '@/components/headers/MainHeader';
 import { Button } from '@/components/ui/button';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { XCircle, AlertTriangle } from 'lucide-react';
+import { Suspense } from 'react';
 
-export default function PaymentFailedPage() {
+function PaymentFailedContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const bookingId = searchParams.get('booking_id');
@@ -122,5 +123,36 @@ export default function PaymentFailedPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function PaymentFailedPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 pb-16">
+          <MainHeader
+            title="Payment Failed"
+            backHref="/checkout"
+            withCartBadge={false}
+            withLogo={false}
+            withBorder
+          />
+          <main className="mx-auto flex w-11/12 max-w-2xl flex-col items-center gap-6 pt-32">
+            <div className="w-full space-y-6 rounded-2xl bg-white p-8 shadow-lg">
+              <div className="flex flex-col items-center gap-4">
+                <div className="rounded-full bg-red-100 p-4">
+                  <XCircle className="h-16 w-16 text-red-600" />
+                </div>
+                <h1 className="text-center text-3xl font-bold text-gray-800">Payment Failed</h1>
+                <p className="text-center text-lg text-gray-600">Loading...</p>
+              </div>
+            </div>
+          </main>
+        </div>
+      }
+    >
+      <PaymentFailedContent />
+    </Suspense>
   );
 }

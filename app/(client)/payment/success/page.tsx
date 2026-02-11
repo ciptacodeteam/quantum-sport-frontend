@@ -3,10 +3,10 @@
 import MainHeader from '@/components/headers/MainHeader';
 import { Button } from '@/components/ui/button';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { CheckCircle, Loader2 } from 'lucide-react';
 
-export default function PaymentSuccessPage() {
+function PaymentSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const bookingId = searchParams.get('booking_id');
@@ -122,5 +122,33 @@ export default function PaymentSuccessPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function PaymentSuccessPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 pb-16">
+          <MainHeader
+            title="Payment Success"
+            backHref="/booking"
+            withCartBadge={false}
+            withLogo={false}
+            withBorder
+          />
+          <main className="mx-auto flex w-11/12 max-w-2xl flex-col items-center gap-6 pt-32">
+            <div className="w-full space-y-6 rounded-2xl bg-white p-8 shadow-lg">
+              <div className="flex flex-col items-center gap-4">
+                <Loader2 className="text-primary h-16 w-16 animate-spin" />
+                <h1 className="text-center text-2xl font-bold text-gray-800">Loading...</h1>
+              </div>
+            </div>
+          </main>
+        </div>
+      }
+    >
+      <PaymentSuccessContent />
+    </Suspense>
   );
 }
