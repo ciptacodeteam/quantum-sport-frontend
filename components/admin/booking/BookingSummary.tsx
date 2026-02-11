@@ -86,6 +86,8 @@ export interface BookingSummaryProps {
     canUseMembership: boolean;
     slotsToDeduct: number;
     discountAmount: number;
+    originalTotal?: number;
+    discountedTotal?: number;
     activeMembership: {
       id: string;
       startDate: string;
@@ -331,7 +333,7 @@ export default function BookingSummary({
       ? calculateBundleDiscount(bookingItems, selectedCoaches)
       : 0;
 
-  const courtSubtotal = membershipDiscount.originalTotal || courtTotal;
+  const courtSubtotal = membershipDiscount.originalTotal ?? courtTotal;
   const finalTotal = Math.max(0, totalAmount - bundleDiscount);
 
   const handleCustomerSelect = (customer: CustomerSearchResult) => {
