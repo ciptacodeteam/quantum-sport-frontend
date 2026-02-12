@@ -19,6 +19,11 @@ export async function checkoutApi(payload: any) {
   return data;
 }
 
+export async function applyPromoApi(payload: any) {
+  const { data } = await api.post('/checkout/apply-promo', payload);
+  return data;
+}
+
 export async function getInvoiceApi(invoiceId: string) {
   const { data } = await api.get(`/invoices/${invoiceId}`);
   return data;

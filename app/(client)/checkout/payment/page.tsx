@@ -57,6 +57,7 @@ type CourtSlot = {
 type CheckoutData = {
   bookingId?: string;
   invoiceId?: string;
+  promoCode?: string;
   paymentMethod?: {
     id: string;
     name: string;
@@ -68,6 +69,7 @@ type CheckoutData = {
     courtTotal?: number;
     addOnsTotal?: number;
     processingFee?: number;
+    promoDiscount?: number;
     total?: number;
   };
   // Alternative naming conventions from backend
@@ -165,6 +167,9 @@ export default function PaymentPage() {
     processingFee: checkoutData.processingFee || 0,
     total: checkoutData.totalAmount || checkoutData.subtotal || 0
   };
+
+  const promoDiscount = Number(breakdown.promoDiscount || 0);
+  const promoCode = checkoutData.promoCode;
 
   // Get payment method info
   const paymentMethod = checkoutData.paymentMethod || {
@@ -287,6 +292,12 @@ export default function PaymentPage() {
                 {formatCurrency(breakdown.processingFee || 0)}
               </span>
             </div>
+            {promoDiscount > 0 && promoCode && (
+              <div className="flex items-center justify-between text-green-600">
+                <span>Promo {promoCode}</span>
+                <span className="font-medium">- {formatCurrency(promoDiscount)}</span>
+              </div>
+            )}
             <div className="border-muted flex items-center justify-between border-t border-dashed pt-2 text-base font-semibold">
               <span>Total</span>
               <span className="text-primary">{formatCurrency(breakdown.total || 0)}</span>

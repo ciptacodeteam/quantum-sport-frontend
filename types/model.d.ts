@@ -97,6 +97,23 @@ export type Banner = {
   updatedAt: Date;
 };
 
+export type PromoCodeStatus = 'ACTIVE' | 'INACTIVE';
+
+export type PromoCode = {
+  id: string;
+  name: string;
+  code: string;
+  discountAmount: number | null;
+  discountPercent: number | null;
+  startAt: Date;
+  endAt: Date;
+  status: PromoCodeStatus;
+  maxUsage: number;
+  usedCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 export type Partnership = {
   id: string;
   name: string;

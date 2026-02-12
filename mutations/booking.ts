@@ -1,4 +1,4 @@
-import { createBookingApi, checkoutApi, expireInvoiceApi } from '@/api/booking';
+import { applyPromoApi, createBookingApi, checkoutApi, expireInvoiceApi } from '@/api/booking';
 import type { MutationFuncProps } from '@/types';
 import { mutationOptions } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -27,6 +27,19 @@ export const checkoutMutationOptions = ({ onSuccess, onError }: MutationFuncProp
     onError: (error) => {
       console.error('Error:', error);
       toast.error(error.msg || 'Gagal melakukan checkout. Silakan coba lagi.');
+      onError?.(error);
+    }
+  });
+
+export const applyPromoMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
+  mutationOptions({
+    mutationFn: applyPromoApi,
+    onSuccess: (data) => {
+      onSuccess?.(data);
+    },
+    onError: (error) => {
+      console.error('Error:', error);
+      toast.error(error.msg || 'Gagal menerapkan kode promo. Silakan coba lagi.');
       onError?.(error);
     }
   });

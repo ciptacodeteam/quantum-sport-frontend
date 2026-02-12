@@ -5,15 +5,16 @@ import dayjs from 'dayjs';
 import { CalendarIcon } from 'lucide-react';
 import { Button } from './button';
 import { Calendar } from './calendar';
-import { ScrollArea, ScrollBar } from './scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
+import { ScrollArea, ScrollBar } from './scroll-area';
 
 type Props = {
   value: Date | undefined | null;
   onValueChange: (date: Date | undefined | null) => void;
+  disabled?: boolean;
 };
 
-const DatetimePicker = ({ value, onValueChange }: Props) => {
+const DatetimePicker = ({ value, onValueChange, disabled }: Props) => {
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -21,6 +22,7 @@ const DatetimePicker = ({ value, onValueChange }: Props) => {
           variant="outline"
           type="button"
           className={cn('w-full pl-3 text-left font-normal', !value && 'text-muted-foreground')}
+          disabled={disabled}
         >
           <div className="flex-between w-full">
             {value ? dayjs(value).format('DD/MM/YYYY HH:mm') : <span>dd/MM/YYYY HH:mm</span>}

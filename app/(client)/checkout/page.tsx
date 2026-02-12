@@ -9,7 +9,7 @@ import CreditCardForm, { type CreditCardFormData } from '@/components/forms/paym
 import { useMembershipDiscount } from '@/hooks/useMembershipDiscount';
 import { useXenditCardCollection } from '@/hooks/useXenditTokenization';
 import { cn, resolveMediaUrl } from '@/lib/utils';
-import { checkoutMutationOptions } from '@/mutations/booking';
+import { applyPromoMutationOptions, checkoutMutationOptions } from '@/mutations/booking';
 import { paymentMethodsQueryOptions } from '@/queries/paymentMethod';
 import { profileQueryOptions } from '@/queries/profile';
 import useAuthModalStore from '@/stores/useAuthModalStore';
@@ -110,6 +110,10 @@ export default function CheckoutPage() {
   const [selectedCardCvv, setSelectedCardCvv] = useState<string>('');
   const [isAddCardModalOpen, setAddCardModalOpen] = useState(false);
   const [newCardData, setNewCardData] = useState<CreditCardFormData | null>(null);
+  const [promoCode, setPromoCode] = useState('');
+  const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null);
+  const [promoDiscountAmount, setPromoDiscountAmount] = useState(0);
+  const [promoError, setPromoError] = useState<string | null>(null);
 
   const readStoredPaymentMethodId = useCallback(() => {
     if (typeof window === 'undefined') return null;
@@ -163,11 +167,13 @@ export default function CheckoutPage() {
               date: item.date,
               price: item.price
             })),
+            promoCode: appliedPromoCode || undefined,
             breakdown: data.breakdown || {
               courtTotal: courtSubtotal,
               addOnsTotal,
               processingFee: paymentFeeBreakdown.totalFee,
-              total: totalWithPaymentFee
+              promoDiscount: promoDiscountAmount,
+              total: totalAfterPromo
             }
           };
           sessionStorage.setItem('checkoutData', JSON.stringify(enhancedData));
@@ -176,6 +182,8 @@ export default function CheckoutPage() {
       }
     })
   );
+
+  const applyPromoMutation = useMutation(applyPromoMutationOptions());
 
   // Show login modal if user is not authenticated and has items in cart
   // const currentPath = useMemo(() => {
@@ -249,6 +257,32 @@ export default function CheckoutPage() {
   })();
 
   const totalWithPaymentFee = grandTotal + paymentFeeBreakdown.totalFee;
+  const totalAfterPromo = Math.max(0, totalWithPaymentFee - promoDiscountAmount);
+
+  const buildCheckoutSelections = useCallback(() => {
+    const courtSlots = bookingItems
+      .filter((item) => {
+        if (!item.slotId) return false;
+        const isConstructed = /-\d{2}:\d{2}$/.test(item.slotId);
+        return !isConstructed;
+      })
+      .map((item) => item.slotId);
+
+    const coachSlots = selectedCoaches.filter((coach) => coach.slotId).map((coach) => coach.slotId);
+
+    const ballboySlots = selectedBallboys
+      .filter((ballboy) => ballboy.slotId)
+      .map((ballboy) => ballboy.slotId);
+
+    const inventories = selectedInventories
+      .filter((inventory) => inventory.inventoryId && inventory.quantity > 0)
+      .map((inventory) => ({
+        inventoryId: inventory.inventoryId,
+        quantity: inventory.quantity
+      }));
+
+    return { courtSlots, coachSlots, ballboySlots, inventories };
+  }, [bookingItems, selectedBallboys, selectedCoaches, selectedInventories]);
 
   const groupedCourts = useMemo(() => {
     const map = new Map<
@@ -325,6 +359,56 @@ export default function CheckoutPage() {
     setAddCardModalOpen(false);
   };
 
+  const handleApplyPromo = () => {
+    if (!selectedPaymentMethod) return;
+
+    const trimmedCode = promoCode.trim();
+    if (!trimmedCode) {
+      setPromoError('Masukkan kode promo terlebih dahulu.');
+      return;
+    }
+
+    const selections = buildCheckoutSelections();
+
+    applyPromoMutation.mutate(
+      {
+        promoCode: trimmedCode,
+        courtSlots: selections.courtSlots,
+        coachSlots: selections.coachSlots,
+        ballboySlots: selections.ballboySlots,
+        inventories: selections.inventories
+      },
+      {
+        onSuccess: (response) => {
+          const isValid = response?.data?.isValid;
+          const discountAmount = Number(response?.data?.discountAmount ?? 0);
+
+          if (isValid) {
+            setAppliedPromoCode(trimmedCode);
+            setPromoDiscountAmount(Math.max(0, discountAmount));
+            setPromoError(null);
+            toast.success(response?.msg || 'Promo berhasil diterapkan.');
+          } else {
+            setAppliedPromoCode(null);
+            setPromoDiscountAmount(0);
+            setPromoError(response?.msg || 'Kode promo tidak valid.');
+          }
+        }
+      }
+    );
+  };
+
+  const handlePromoInputChange = (value: string) => {
+    setPromoCode(value);
+    if (appliedPromoCode && value.trim() !== appliedPromoCode) {
+      setAppliedPromoCode(null);
+      setPromoDiscountAmount(0);
+    }
+    if (promoError) {
+      setPromoError(null);
+    }
+  };
+
   const handleCheckout = async () => {
     // Check authentication first
     if (!isAuthenticated) {
@@ -345,35 +429,15 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Court slots: array of slot IDs only (filter out constructed IDs that include time)
-    const courtSlots = bookingItems
-      .filter((item) => {
-        if (!item.slotId) return false;
-        // Filter out constructed slotIds that contain time format (e.g., "courtId-06:00")
-        const isConstructed = /-\d{2}:\d{2}$/.test(item.slotId);
-        return !isConstructed;
-      })
-      .map((item) => item.slotId);
-
-    // Coach slots: array of slot IDs only
-    const coachSlots = selectedCoaches.filter((coach) => coach.slotId).map((coach) => coach.slotId);
-
-    // Ballboy slots: array of slot IDs only
-    const ballboySlots = selectedBallboys
-      .filter((ballboy) => ballboy.slotId)
-      .map((ballboy) => ballboy.slotId);
-
-    // Inventories: array of objects with inventoryId and quantity
-    const inventories = selectedInventories
-      .filter((inventory) => inventory.inventoryId && inventory.quantity > 0)
-      .map((inventory) => ({
-        inventoryId: inventory.inventoryId,
-        quantity: inventory.quantity
-      }));
+    const { courtSlots, coachSlots, ballboySlots, inventories } = buildCheckoutSelections();
 
     const payload: any = {
       paymentMethodId: selectedPaymentMethod.id
     };
+
+    if (appliedPromoCode) {
+      payload.promoCode = appliedPromoCode;
+    }
 
     if (courtSlots.length > 0) {
       payload.courtSlots = courtSlots;
@@ -750,6 +814,45 @@ export default function CheckoutPage() {
             </div>
           )}
 
+          <div className="border-muted space-y-3 rounded-lg border bg-white p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Kode Promo</p>
+                <p className="text-muted-foreground text-xs">
+                  Masukkan kode promo untuk mendapatkan diskon
+                </p>
+              </div>
+              {appliedPromoCode && promoDiscountAmount > 0 && (
+                <span className="text-xs font-semibold text-green-600">Terpasang</span>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                type="text"
+                placeholder="Contoh: HEMAT10"
+                value={promoCode}
+                onChange={(event) => handlePromoInputChange(event.target.value)}
+                className="border-muted/70 focus:border-primary focus:ring-primary/20 h-11 flex-1 rounded-md border bg-white px-3 text-sm transition outline-none"
+              />
+              <Button
+                type="button"
+                className="h-11 px-5"
+                onClick={handleApplyPromo}
+                disabled={
+                  !selectedPaymentMethod || applyPromoMutation.isPending || !promoCode.trim()
+                }
+              >
+                {applyPromoMutation.isPending ? 'Memproses...' : 'Gunakan'}
+              </Button>
+            </div>
+            {promoError && <p className="text-xs text-red-600">{promoError}</p>}
+            {!promoError && appliedPromoCode && promoDiscountAmount > 0 && (
+              <p className="text-xs text-green-600">
+                Diskon {formatCurrency(promoDiscountAmount)} diterapkan
+              </p>
+            )}
+          </div>
+
           {/* Membership Information */}
           {isAuthenticated && membershipDiscount.activeMembership && (
             <div className="border-muted bg-primary/5 rounded-lg border p-4">
@@ -822,9 +925,15 @@ export default function CheckoutPage() {
                   </span>
                 </div>
               )}
+              {promoDiscountAmount > 0 && (
+                <div className="flex items-center justify-between text-green-600">
+                  <span>Promo {appliedPromoCode}</span>
+                  <span className="font-medium">- {formatCurrency(promoDiscountAmount)}</span>
+                </div>
+              )}
               <div className="border-muted flex items-center justify-between border-t border-dashed pt-2 text-base font-semibold">
                 <span>Total Pembayaran</span>
-                <span className="text-primary">{formatCurrency(totalWithPaymentFee)}</span>
+                <span className="text-primary">{formatCurrency(totalAfterPromo)}</span>
               </div>
             </div>
           </div>
@@ -837,7 +946,7 @@ export default function CheckoutPage() {
             <div>
               <p className="text-muted-foreground text-xs">Total Pembayaran</p>
               <p className="text-primary text-lg font-semibold">
-                {formatCurrency(totalWithPaymentFee)}
+                {formatCurrency(totalAfterPromo)}
               </p>
             </div>
             <Button

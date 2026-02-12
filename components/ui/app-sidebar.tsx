@@ -190,6 +190,10 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
           url: '/admin/kelola-inventori'
         },
         {
+          title: 'Kelola Promo Code',
+          url: '/admin/kelola-promo-code'
+        },
+        {
           title: 'Metode Pembayaran',
           url: '/admin/kelola-metode-pembayaran'
         }
