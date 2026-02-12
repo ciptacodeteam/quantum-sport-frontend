@@ -72,9 +72,9 @@ export default function PaymentSummaryCard({
               </h4>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
+              <div className="mt-2 flex items-center gap-3">
                 {method.logo && (
-                  <div className="flex h-10 w-16 items-center justify-center p-1">
+                  <div className="flex h-10 w-16 items-center justify-center p-2">
                     <Image
                       src={resolveMediaUrl(method.logo) || ''}
                       unoptimized
