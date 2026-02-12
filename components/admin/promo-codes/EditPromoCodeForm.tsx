@@ -90,7 +90,7 @@ const EditPromoCodeForm = ({ data, readOnly = false }: Props) => {
     defaultValues: {
       name: data?.name || '',
       code: data?.code || '',
-      discountType: data?.discountPercent != null ? 'PERCENT' : 'AMOUNT',
+      discountType: data?.discountPercent && data.discountPercent > 0 ? 'PERCENT' : 'AMOUNT',
       discountPercent: data?.discountPercent ?? undefined,
       discountAmount: data?.discountAmount ?? undefined,
       startAt: data?.startAt ? dayjs(data.startAt).toDate() : dayjs().toDate(),

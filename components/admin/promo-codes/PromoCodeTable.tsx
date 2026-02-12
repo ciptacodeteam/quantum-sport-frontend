@@ -54,10 +54,10 @@ const PromoCodeTable = () => {
         cell: ({ row }) => {
           const percent = row.original.discountPercent;
           const amount = row.original.discountAmount;
-          if (percent != null) {
+          if (percent && percent > 0) {
             return `${formatNumber(percent)}%`;
           }
-          if (amount != null) {
+          if (amount && amount > 0) {
             return formatCurrency(amount);
           }
           return '-';
@@ -73,11 +73,7 @@ const PromoCodeTable = () => {
       }),
       colHelper.accessor('usedCount', {
         header: 'Digunakan',
-        cell: (info) => info.getValue()
-      }),
-      colHelper.accessor('maxUsage', {
-        header: 'Maks. Pakai',
-        cell: (info) => info.getValue()
+        cell: (info) => `${info.getValue()} / ${info.row.original.maxUsage}`
       }),
       colHelper.accessor('status', {
         header: 'Status',
