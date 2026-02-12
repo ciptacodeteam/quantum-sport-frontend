@@ -2,9 +2,9 @@
 
 import MainHeader from '@/components/headers/MainHeader';
 import { Button } from '@/components/ui/button';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState, Suspense } from 'react';
 import { CheckCircle, Loader2 } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
 
 function PaymentSuccessContent() {
   const router = useRouter();
