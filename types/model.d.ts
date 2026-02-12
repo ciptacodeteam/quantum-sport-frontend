@@ -364,6 +364,7 @@ export type Invoice = {
   paymentId: string | null;
   subtotal: number;
   processingFee: number;
+  promoDiscountAmount: number;
   total: number;
   status: PaymentStatus;
 

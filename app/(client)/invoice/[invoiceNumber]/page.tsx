@@ -147,6 +147,7 @@ type InvoiceDetail = {
   status: 'PENDING' | 'PAID' | 'FAILED' | 'EXPIRED' | 'CANCELLED' | string;
   subtotal: number;
   processingFee: number;
+  promoDiscountAmount?: number;
   total: number;
   issuedAt: string;
   dueDate: string | null;
@@ -411,6 +412,7 @@ export default function InvoiceDetailPage() {
           <PaymentSummaryCard
             subtotal={subtotalForDisplay}
             processingFee={invoice.processingFee}
+            promoDiscountAmount={invoice.promoDiscountAmount}
             total={invoice.total}
             method={
               invoice.payment?.method

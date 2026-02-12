@@ -16,11 +16,13 @@ type Method = { name?: string; logo?: string; channel?: string } | undefined;
 export default function PaymentSummaryCard({
   subtotal,
   processingFee,
+  promoDiscountAmount,
   total,
   method
 }: {
   subtotal: number;
   processingFee: number;
+  promoDiscountAmount?: number;
   total: number;
   method?: Method;
 }) {
@@ -41,6 +43,12 @@ export default function PaymentSummaryCard({
             <span className="text-sm text-gray-600">Subtotal</span>
             <span className="text-sm font-semibold text-gray-900">{formatCurrency(subtotal)}</span>
           </div>
+          {promoDiscountAmount && promoDiscountAmount > 0 && (
+            <div className="flex items-center justify-between text-green-600">
+              <span className="text-sm font-medium">Diskon Promo</span>
+              <span className="text-sm font-semibold">- {formatCurrency(promoDiscountAmount)}</span>
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-600">Biaya Layanan</span>
             <span className="text-sm font-semibold text-gray-900">
