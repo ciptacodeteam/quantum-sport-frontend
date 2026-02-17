@@ -940,7 +940,7 @@ export default function CheckoutPage() {
         </section>
       </main>
 
-      <BottomNavigationWrapper className="pb-4">
+      <BottomNavigationWrapper className="pb-8">
         <div className="mx-auto w-11/12 py-4 lg:max-w-lg">
           <div className="flex items-center justify-between">
             <div>
