@@ -560,7 +560,7 @@ export default function CheckoutPage() {
         withBorder
       />
 
-      <main className="mx-auto flex w-11/12 max-w-4xl flex-col gap-6 pt-28">
+      <main className="mx-auto flex w-11/12 max-w-4xl flex-col gap-6 pt-28 pb-10">
         <section className="border-muted space-y-4 rounded-lg border bg-white p-4">
           {groupedCourts.map((group, index) => (
             <div
@@ -940,7 +940,7 @@ export default function CheckoutPage() {
         </section>
       </main>
 
-      <BottomNavigationWrapper className="pb-8">
+      <BottomNavigationWrapper className="pb-4">
         <div className="mx-auto w-11/12 py-4 lg:max-w-lg">
           <div className="flex items-center justify-between">
             <div>
