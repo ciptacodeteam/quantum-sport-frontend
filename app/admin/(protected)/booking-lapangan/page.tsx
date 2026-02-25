@@ -74,6 +74,27 @@ const startOfWeek = (date: Date | string): Date => {
   return dayjs(date).startOf('week').toDate();
 };
 
+const parseSlotDateTime = (value: string | Date): dayjs.Dayjs => {
+  const dateTimeString = typeof value === 'string' ? value : value.toISOString();
+
+  if (dateTimeString.includes('T')) {
+    return dayjs(dateTimeString);
+  }
+
+  const [datePart, timePart] = dateTimeString.split(' ');
+  const [year, month, day] = datePart.split('-').map(Number);
+  const [hours, minutes, seconds = 0] = timePart.split(':').map(Number);
+
+  return dayjs()
+    .year(year)
+    .month(month - 1)
+    .date(day)
+    .hour(hours)
+    .minute(minutes)
+    .second(seconds)
+    .millisecond(0);
+};
+
 // Time slots will be generated from actual API data
 
 type SelectedBooking = {
@@ -577,43 +598,12 @@ export default function BookingLapangan() {
       return true;
     }
 
-    // Check if the slot's start time is in the past
-    // Parse the datetime string properly to avoid timezone issues
-    // The API returns format like "2025-12-02 06:00:00" which should be treated as local time
-    const startAtStr =
-      typeof matchingSlot.startAt === 'string'
-        ? matchingSlot.startAt
-        : matchingSlot.startAt.toISOString();
-
-    // Parse as local time using dayjs
-    let slotStartDateTime: dayjs.Dayjs;
-
-    if (startAtStr.includes('T')) {
-      // ISO format - parse directly
-      slotStartDateTime = dayjs(startAtStr);
-    } else {
-      // Space-separated format "YYYY-MM-DD HH:mm:ss" - parse as local time
-      // Important: Parse without timezone to treat it as local time
-      const [datePart, timePart] = startAtStr.split(' ');
-      const [year, month, day] = datePart.split('-').map(Number);
-      const [hours, minutes, seconds = 0] = timePart.split(':').map(Number);
-
-      // Create dayjs object with explicit local time components
-      slotStartDateTime = dayjs()
-        .year(year)
-        .month(month - 1)
-        .date(day)
-        .hour(hours)
-        .minute(minutes)
-        .second(seconds)
-        .millisecond(0);
-    }
-
+    // Ongoing slots should remain selectable for admin.
+    // Mark as past only after the slot end time has passed.
+    const slotEndDateTime = parseSlotDateTime(matchingSlot.endAt);
     const now = dayjs();
-    const gracePeriodMinutes = 15;
-    const gracePeriodEnd = slotStartDateTime.add(gracePeriodMinutes, 'minute');
 
-    if (gracePeriodEnd.isBefore(now)) {
+    if (slotEndDateTime.isBefore(now) || slotEndDateTime.isSame(now)) {
       return true;
     }
 

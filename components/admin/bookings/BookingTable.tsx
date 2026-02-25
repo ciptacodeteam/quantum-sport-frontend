@@ -414,9 +414,9 @@ const BookingTable = () => {
                         <p className="mb-2 text-sm font-medium">Detail Slot</p>
                         <div className="space-y-2">
                           {booking.details.map((detail) => {
-                            const slotStart = detail.slot?.startAt;
-                            const daysUntil = slotStart ? differenceInDays(slotStart) : -1;
-                            const canReschedule = !!slotStart && daysUntil >= 3;
+                            // const slotStart = detail.slot?.startAt;
+                            // const daysUntil = slotStart ? differenceInDays(slotStart) : -1;
+                            // const canReschedule = !!slotStart && daysUntil >= 3;
 
                             return (
                               <div key={detail.id} className="bg-muted/50 rounded-lg border p-3">
@@ -432,12 +432,12 @@ const BookingTable = () => {
                                         {formatSlotTime(detail.slot.endAt)}
                                       </p>
                                     )}
-                                    {!canReschedule && slotStart && (
+                                    {/* {!canReschedule && slotStart && (
                                       <p className="mt-1 text-[11px] text-amber-600">
                                         Reschedule hanya tersedia hingga H-3 (
                                         {Math.max(daysUntil, 0)} hari tersisa)
                                       </p>
-                                    )}
+                                    )} */}
                                   </div>
                                   <div className="flex items-center gap-3">
                                     <p className="text-base font-medium">
@@ -446,7 +446,8 @@ const BookingTable = () => {
                                     {detail.slot && status !== BookingStatus.CANCELLED && (
                                       <RescheduleCourtDialog
                                         detail={detail as BookingDetailWithSlot}
-                                        canReschedule={canReschedule}
+                                        // canReschedule={canReschedule}
+                                        canReschedule
                                         onSuccess={() =>
                                           queryClient.invalidateQueries({
                                             queryKey: ['admin', 'bookings']
