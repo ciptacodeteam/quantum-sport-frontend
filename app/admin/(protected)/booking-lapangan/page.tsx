@@ -39,12 +39,9 @@ const formatDateString = (date: Date | string): string => {
 
 // Helper to extract date string from ISO string without timezone conversion
 const getDateStringFromISO = (isoString: string): string => {
-  // Handle both ISO format and space-separated format
-  if (isoString.includes('T')) {
-    return dayjs(isoString).format('YYYY-MM-DD');
-  }
-  // Space-separated format "YYYY-MM-DD HH:mm:ss"
-  return isoString.split(' ')[0];
+  // Always extract the raw calendar date part to avoid implicit timezone conversion.
+  // Supports: "YYYY-MM-DDTHH:mm:ss..." and "YYYY-MM-DD HH:mm:ss".
+  return isoString.slice(0, 10);
 };
 
 const startOfDay = (date: Date | string): Date => {
@@ -549,8 +546,8 @@ export default function BookingLapangan() {
       return true;
     }
 
-    // Find the slot for this court and time
-    const matchingSlot = slots.find((slot) => {
+    // Find candidate slots for this court and time (can be >1 in some data conditions)
+    const candidateSlots = slots.filter((slot) => {
       const slotCourtId = slot.courtId || slot.court?.id;
       if (slotCourtId !== courtId) return false;
 
@@ -568,48 +565,59 @@ export default function BookingLapangan() {
 
     // If no matching slot found in API response, assume it's booked
     // (API typically doesn't return slots that are already booked)
-    if (!matchingSlot) {
+    if (candidateSlots.length === 0) {
       return true;
-    }
-
-    const slotStartTime = formatSlotTime(matchingSlot.startAt);
-    const slotEndTime = formatSlotTime(matchingSlot.endAt);
-
-    const slotStartDateTime = dayjs(
-      `${selectedDateString} ${slotStartTime}`,
-      'YYYY-MM-DD HH:mm',
-      true
-    );
-    let slotEndDateTime = dayjs(`${selectedDateString} ${slotEndTime}`, 'YYYY-MM-DD HH:mm', true);
-
-    if (slotEndDateTime.isSame(slotStartDateTime) || slotEndDateTime.isBefore(slotStartDateTime)) {
-      slotEndDateTime = slotEndDateTime.add(1, 'day');
     }
 
     const now = dayjs();
 
-    // Ongoing slots should remain selectable for admin.
-    // Example: now 21:20 and slot 21:00-22:00 must still be selectable.
-    const isOngoing =
-      (slotStartDateTime.isBefore(now) || slotStartDateTime.isSame(now)) &&
-      slotEndDateTime.isAfter(now);
+    const evaluatedCandidates = candidateSlots.map((slot) => {
+      const slotStartTime = formatSlotTime(slot.startAt);
+      const slotEndTime = formatSlotTime(slot.endAt);
 
-    if (isOngoing) {
+      const slotStartDateTime = dayjs(
+        `${selectedDateString} ${slotStartTime}`,
+        'YYYY-MM-DD HH:mm',
+        true
+      );
+      let slotEndDateTime = dayjs(`${selectedDateString} ${slotEndTime}`, 'YYYY-MM-DD HH:mm', true);
+
+      if (
+        slotEndDateTime.isSame(slotStartDateTime) ||
+        slotEndDateTime.isBefore(slotStartDateTime)
+      ) {
+        slotEndDateTime = slotEndDateTime.add(1, 'day');
+      }
+
+      const isOngoing =
+        (slotStartDateTime.isBefore(now) || slotStartDateTime.isSame(now)) &&
+        slotEndDateTime.isAfter(now);
+      const isEnded = slotEndDateTime.isBefore(now) || slotEndDateTime.isSame(now);
+
+      return {
+        isAvailable: slot.isAvailable !== false,
+        isOngoing,
+        isEnded
+      };
+    });
+
+    // Ongoing slots should always be selectable for admin.
+    if (evaluatedCandidates.some((candidate) => candidate.isOngoing)) {
       return false;
     }
 
-    // Mark as past only after the slot end time has passed.
-    if (slotEndDateTime.isBefore(now) || slotEndDateTime.isSame(now)) {
+    // If every candidate has ended, mark booked.
+    if (evaluatedCandidates.every((candidate) => candidate.isEnded)) {
       return true;
     }
 
-    // For upcoming slots, still respect API availability flag.
-    if (matchingSlot.isAvailable === false) {
-      return true;
+    // For upcoming slots, any available candidate means selectable.
+    if (evaluatedCandidates.some((candidate) => !candidate.isEnded && candidate.isAvailable)) {
+      return false;
     }
 
-    // Otherwise, it's available
-    return false;
+    // Otherwise treat as booked.
+    return true;
   };
 
   // const handleClearBookings = () => {
