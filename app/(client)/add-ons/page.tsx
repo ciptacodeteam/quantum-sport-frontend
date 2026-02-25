@@ -176,7 +176,7 @@ export default function AddOnsPage() {
     <>
       <MainHeader onBack={() => router.back()} title="Produk Tambahan" withLogo={false} />
 
-      <div className="mx-auto w-11/12 pt-28">
+      <div className="mx-auto w-11/12 pt-16">
         {/* Tabs utama */}
         {/* <div className="mb-4 flex gap-2">
           {['Coach', 'Raket'].map((item) => (
