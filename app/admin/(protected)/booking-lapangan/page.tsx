@@ -593,17 +593,27 @@ export default function BookingLapangan() {
       return true;
     }
 
-    // Check if slot is not available (isAvailable: false means it's booked)
-    if (matchingSlot.isAvailable === false) {
-      return true;
-    }
-
-    // Ongoing slots should remain selectable for admin.
-    // Mark as past only after the slot end time has passed.
+    const slotStartDateTime = parseSlotDateTime(matchingSlot.startAt);
     const slotEndDateTime = parseSlotDateTime(matchingSlot.endAt);
     const now = dayjs();
 
+    // Ongoing slots should remain selectable for admin.
+    // Example: now 21:20 and slot 21:00-22:00 must still be selectable.
+    const isOngoing =
+      (slotStartDateTime.isBefore(now) || slotStartDateTime.isSame(now)) &&
+      slotEndDateTime.isAfter(now);
+
+    if (isOngoing) {
+      return false;
+    }
+
+    // Mark as past only after the slot end time has passed.
     if (slotEndDateTime.isBefore(now) || slotEndDateTime.isSame(now)) {
+      return true;
+    }
+
+    // For upcoming slots, still respect API availability flag.
+    if (matchingSlot.isAvailable === false) {
       return true;
     }
 
