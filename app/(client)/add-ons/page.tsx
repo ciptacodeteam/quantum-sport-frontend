@@ -9,7 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { Minus, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 export default function AddOnsPage() {
@@ -90,27 +90,7 @@ export default function AddOnsPage() {
   const hasBookingSelection = bookingItems.length > 0;
   // const coachList = coachAvailability ?? [];
 
-  // 🏸 Data Raket
-  const [racketQty, setRacketQty] = useState(0);
-  const racketInventory = inventoryAvailability?.[0];
-  const availableRacket = racketInventory?.availableQuantity ?? 0;
-  const racketPrice = racketInventory?.price ?? 0;
-  const racketName = racketInventory?.name ?? 'Sewa Raket';
-  const inventorySelection = useMemo(() => {
-    if (!racketInventory) {
-      return undefined;
-    }
-
-    return selectedInventories.find(
-      (item) =>
-        item.inventoryId === racketInventory.id && (item.timeSlot ?? 'default') === 'default'
-    );
-  }, [racketInventory, selectedInventories]);
-
-  useEffect(() => {
-    const qty = inventorySelection?.quantity ?? 0;
-    setRacketQty((prev) => (prev === qty ? prev : qty));
-  }, [inventorySelection?.quantity]);
+  const inventoryList = inventoryAvailability ?? [];
 
   const primaryBookingDate = useMemo(() => {
     if (bookingTimeRange.startAt) {
@@ -159,32 +139,36 @@ export default function AddOnsPage() {
   //   toast.success(`${item.coach.name ?? 'Coach'} ditambahkan ke add-ons.`);
   // };
 
-  const handleInventoryQtyChange = (nextQty: number) => {
+  const handleInventoryQtyChange = (inventoryId: string, nextQty: number) => {
     if (!hasBookingSelection) {
       toast.error('Tambahkan booking lapangan terlebih dahulu sebelum memilih peralatan.');
       return;
     }
 
-    const safeQty = Math.max(0, Math.min(nextQty, availableRacket));
-    setRacketQty(safeQty);
-
-    if (!racketInventory || racketPrice <= 0) {
+    const selectedInventory = inventoryList.find((item) => item.id === inventoryId);
+    if (!selectedInventory) {
+      toast.error('Data inventori tidak valid.');
       return;
     }
 
+    const availableQuantity = selectedInventory.availableQuantity ?? 0;
+    const safeQty = Math.max(0, Math.min(nextQty, availableQuantity));
+
+    const unitPrice = selectedInventory.price ?? 0;
+
     if (safeQty > 0) {
       addInventoryToStore({
-        inventoryId: racketInventory.id,
-        inventoryName: racketInventory.name,
+        inventoryId: selectedInventory.id,
+        inventoryName: selectedInventory.name,
         timeSlot: 'default',
-        price: safeQty * racketPrice,
+        price: safeQty * unitPrice,
         quantity: safeQty,
         date: primaryBookingDate
       });
-      toast.success(`${racketInventory.name} ditambahkan (${safeQty} raket).`);
+      toast.success(`${selectedInventory.name} ditambahkan (${safeQty} item).`);
     } else {
-      removeInventoryFromStore(racketInventory.id, 'default');
-      toast.success(`${racketInventory.name} dihapus dari add-ons.`);
+      removeInventoryFromStore(selectedInventory.id, 'default');
+      toast.success(`${selectedInventory.name} dihapus dari add-ons.`);
     }
   };
 
@@ -327,68 +311,92 @@ export default function AddOnsPage() {
         {/* === RAKET === */}
         {activeTab === 'raket' && (
           <div className="mb-4 flex flex-col gap-3">
-            <Card>
-              <div className="px-4 py-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-semibold">{racketName}</p>
-                    <p className="text-muted-foreground text-xs">
-                      {isInventoryPending && 'Memuat ketersediaan...'}
-                      {isInventoryError && 'Gagal memuat ketersediaan'}
-                      {!isInventoryPending &&
-                        !isInventoryError &&
-                        !racketInventory &&
-                        'Inventori tidak tersedia'}
-                      {!isInventoryPending &&
-                        !isInventoryError &&
-                        racketInventory &&
-                        `Tersedia ${availableRacket} equipment`}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => handleInventoryQtyChange(racketQty - 1)}
-                      disabled={racketQty <= 0}
-                    >
-                      <Minus size={16} />
-                    </Button>
-                    <span className="w-6 text-center font-semibold">{racketQty}</span>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => handleInventoryQtyChange(racketQty + 1)}
-                      disabled={
-                        racketQty >= availableRacket ||
-                        availableRacket === 0 ||
-                        isInventoryPending ||
-                        isInventoryError
-                      }
-                    >
-                      <Plus size={16} />
-                    </Button>
-                  </div>
+            {isInventoryPending && (
+              <Card>
+                <div className="px-4 py-3">
+                  <p className="text-muted-foreground text-sm">Memuat ketersediaan...</p>
                 </div>
+              </Card>
+            )}
 
-                <div className="bg-muted mt-4 flex rounded-sm px-4 py-2">
-                  <p className="text-foreground">
-                    <span className="text-primary font-semibold">
-                      Rp{racketPrice.toLocaleString('id-ID')}{' '}
-                    </span>
-                    <span className="text-muted-foreground text-sm">/equipment</span>
-                  </p>
+            {isInventoryError && (
+              <Card>
+                <div className="px-4 py-3">
+                  <p className="text-destructive text-sm">Gagal memuat ketersediaan inventori.</p>
                 </div>
+              </Card>
+            )}
 
-                {racketQty > 0 && (
-                  <p className="text-primary mt-2 text-sm font-medium">
-                    Total: Rp
-                    {(racketQty * racketPrice).toLocaleString('id-ID')}
-                  </p>
-                )}
-              </div>
-            </Card>
+            {!isInventoryPending && !isInventoryError && inventoryList.length === 0 && (
+              <Card>
+                <div className="px-4 py-3">
+                  <p className="text-muted-foreground text-sm">Inventori tidak tersedia.</p>
+                </div>
+              </Card>
+            )}
+
+            {!isInventoryPending &&
+              !isInventoryError &&
+              inventoryList.map((inventory) => {
+                const selectedQty =
+                  selectedInventories.find(
+                    (item) =>
+                      item.inventoryId === inventory.id &&
+                      (item.timeSlot ?? 'default') === 'default'
+                  )?.quantity ?? 0;
+                const availableQuantity = inventory.availableQuantity ?? 0;
+                const unitPrice = inventory.price ?? 0;
+
+                return (
+                  <Card key={inventory.id}>
+                    <div className="px-4 py-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-semibold">{inventory.name}</p>
+                          <p className="text-muted-foreground text-xs">
+                            Tersedia {availableQuantity} equipment
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleInventoryQtyChange(inventory.id, selectedQty - 1)}
+                            disabled={selectedQty <= 0}
+                          >
+                            <Minus size={16} />
+                          </Button>
+                          <span className="w-6 text-center font-semibold">{selectedQty}</span>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => handleInventoryQtyChange(inventory.id, selectedQty + 1)}
+                            disabled={selectedQty >= availableQuantity || availableQuantity === 0}
+                          >
+                            <Plus size={16} />
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="bg-muted mt-4 flex rounded-sm px-4 py-2">
+                        <p className="text-foreground">
+                          <span className="text-primary font-semibold">
+                            Rp{unitPrice.toLocaleString('id-ID')}{' '}
+                          </span>
+                          <span className="text-muted-foreground text-sm">/equipment</span>
+                        </p>
+                      </div>
+
+                      {selectedQty > 0 && (
+                        <p className="text-primary mt-2 text-sm font-medium">
+                          Total: Rp{(selectedQty * unitPrice).toLocaleString('id-ID')}
+                        </p>
+                      )}
+                    </div>
+                  </Card>
+                );
+              })}
           </div>
         )}
       </div>
