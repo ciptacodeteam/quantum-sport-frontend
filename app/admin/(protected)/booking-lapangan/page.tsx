@@ -74,27 +74,6 @@ const startOfWeek = (date: Date | string): Date => {
   return dayjs(date).startOf('week').toDate();
 };
 
-const parseSlotDateTime = (value: string | Date): dayjs.Dayjs => {
-  const dateTimeString = typeof value === 'string' ? value : value.toISOString();
-
-  if (dateTimeString.includes('T')) {
-    return dayjs(dateTimeString);
-  }
-
-  const [datePart, timePart] = dateTimeString.split(' ');
-  const [year, month, day] = datePart.split('-').map(Number);
-  const [hours, minutes, seconds = 0] = timePart.split(':').map(Number);
-
-  return dayjs()
-    .year(year)
-    .month(month - 1)
-    .date(day)
-    .hour(hours)
-    .minute(minutes)
-    .second(seconds)
-    .millisecond(0);
-};
-
 // Time slots will be generated from actual API data
 
 type SelectedBooking = {
@@ -593,8 +572,20 @@ export default function BookingLapangan() {
       return true;
     }
 
-    const slotStartDateTime = parseSlotDateTime(matchingSlot.startAt);
-    const slotEndDateTime = parseSlotDateTime(matchingSlot.endAt);
+    const slotStartTime = formatSlotTime(matchingSlot.startAt);
+    const slotEndTime = formatSlotTime(matchingSlot.endAt);
+
+    const slotStartDateTime = dayjs(
+      `${selectedDateString} ${slotStartTime}`,
+      'YYYY-MM-DD HH:mm',
+      true
+    );
+    let slotEndDateTime = dayjs(`${selectedDateString} ${slotEndTime}`, 'YYYY-MM-DD HH:mm', true);
+
+    if (slotEndDateTime.isSame(slotStartDateTime) || slotEndDateTime.isBefore(slotStartDateTime)) {
+      slotEndDateTime = slotEndDateTime.add(1, 'day');
+    }
+
     const now = dayjs();
 
     // Ongoing slots should remain selectable for admin.
