@@ -38,7 +38,7 @@ const EditBannerForm = ({ data }: Props) => {
     resolver: zodResolver(formSchema),
     defaultValues: {
       sequence: data?.sequence || 1,
-      isActive: data?.isActive || true,
+      isActive: data?.isActive,
       image: undefined,
       link: data?.link || '',
       startAt: data?.startAt ? dayjs(data.startAt).toDate() : dayjs().toDate(),

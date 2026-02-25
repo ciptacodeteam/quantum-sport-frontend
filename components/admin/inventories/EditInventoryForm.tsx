@@ -22,7 +22,7 @@ const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   description: z.string().optional(),
   quantity: z.number().min(1, { message: 'Quantity must be at least 1.' }),
-  isActive: z.boolean().optional()
+  isActive: z.boolean().default(true)
 });
 
 type FormSchema = z.infer<typeof formSchema>;
@@ -38,7 +38,7 @@ const EditInventoryForm = ({ data }: Props) => {
       name: data?.name || '',
       description: data?.description || '',
       quantity: data?.quantity || 1,
-      isActive: data?.isActive || true
+      isActive: data?.isActive
     }
   });
 
