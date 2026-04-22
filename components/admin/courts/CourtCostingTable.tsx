@@ -3,6 +3,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
+import { NumberInput } from '@/components/ui/number-input';
 import {
   DialogContent,
   DialogDescription,
@@ -14,14 +15,17 @@ import {
 import { ManagedDialog, useDialog } from '@/components/ui/dialog-context';
 import { formatSlotTimeRange } from '@/lib/time-utils';
 import { adminCourtCostingQueryOptionsById } from '@/queries/admin/court';
-import { adminUpdateSlotAvailabilityMutationOptions } from '@/mutations/admin/court';
+import {
+  adminUpdateSlotPriceMutationOptions,
+  adminUpdateSlotAvailabilityMutationOptions
+} from '@/mutations/admin/court';
 import type { Slot } from '@/types/model';
-import { IconPlus, IconPower } from '@tabler/icons-react';
+import { IconPencil, IconPlus, IconPower } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import CreateCourtCostForm from './CreateCourtCostForm';
 
 type Props = {
@@ -29,6 +33,12 @@ type Props = {
 };
 
 type ToggleSlotModalProps = {
+  slot: Slot;
+  courtId: string;
+  dialogId: string;
+};
+
+type EditSlotModalProps = {
   slot: Slot;
   courtId: string;
   dialogId: string;
@@ -74,6 +84,92 @@ const ToggleSlotModal = ({ slot, courtId, dialogId }: ToggleSlotModalProps) => {
           {isUpdating ? 'Memproses...' : isAvailable ? 'Nonaktifkan' : 'Aktifkan'}
         </Button>
       </DialogFooter>
+    </DialogContent>
+  );
+};
+
+const EditSlotModal = ({ slot, courtId, dialogId }: EditSlotModalProps) => {
+  const { closeDialog } = useDialog();
+  const queryClient = useQueryClient();
+  const [price, setPrice] = useState(slot.price || 0);
+  const [discountPrice, setDiscountPrice] = useState(slot.discountPrice || 0);
+
+  const isDiscountInvalid = (discountPrice || 0) > (price || 0);
+
+  const { mutate: updateSlotPrice, isPending: isUpdating } = useMutation(
+    adminUpdateSlotPriceMutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries({
+          queryKey: adminCourtCostingQueryOptionsById(courtId).queryKey
+        });
+        closeDialog(dialogId);
+      }
+    })
+  );
+
+  return (
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Ubah Harga Slot</DialogTitle>
+        <DialogDescription>Slot: {formatSlotTimeRange(slot.startAt, slot.endAt)}</DialogDescription>
+      </DialogHeader>
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          updateSlotPrice({
+            slotId: slot.id,
+            price: price || 0,
+            discountPrice: discountPrice || 0
+          });
+        }}
+      >
+        <div className="space-y-4 py-2">
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Harga Normal</p>
+            <NumberInput
+              thousandSeparator="."
+              decimalSeparator=","
+              prefix="Rp "
+              min={0}
+              allowNegative={false}
+              placeholder="e.g. Rp 100.000"
+              value={price}
+              onValueChange={(value) => setPrice(value || 0)}
+              withControl={false}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Harga Diskon</p>
+            <NumberInput
+              thousandSeparator="."
+              decimalSeparator=","
+              prefix="Rp "
+              min={0}
+              allowNegative={false}
+              placeholder="e.g. Rp 80.000"
+              value={discountPrice}
+              onValueChange={(value) => setDiscountPrice(value || 0)}
+              withControl={false}
+            />
+            {isDiscountInvalid && (
+              <p className="text-destructive text-xs">
+                Harga diskon tidak boleh melebihi harga normal.
+              </p>
+            )}
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => closeDialog(dialogId)}>
+            Batal
+          </Button>
+          <Button type="submit" disabled={isUpdating || isDiscountInvalid}>
+            {isUpdating ? 'Memproses...' : 'Simpan'}
+          </Button>
+        </DialogFooter>
+      </form>
     </DialogContent>
   );
 };
@@ -211,8 +307,17 @@ const CourtCostingTable = ({ courtId }: Props) => {
                 cell: (info) => {
                   const slot = info.row.original as Slot;
                   const dialogId = `toggle-slot-${slot.id}`;
+                  const dialogEditId = `edit-slot-${slot.id}`;
                   return (
-                    <div className="flex justify-end">
+                    <div className="flex justify-end gap-2">
+                      <ManagedDialog id={dialogEditId}>
+                        <DialogTrigger asChild>
+                          <Button size="icon" variant="lightInfo">
+                            <IconPencil />
+                          </Button>
+                        </DialogTrigger>
+                        <EditSlotModal slot={slot} courtId={courtId} dialogId={dialogEditId} />
+                      </ManagedDialog>
                       <ManagedDialog id={dialogId}>
                         <DialogTrigger asChild>
                           <Button size="icon" variant="lightInfo">

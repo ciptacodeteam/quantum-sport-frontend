@@ -3,7 +3,8 @@ import {
   createCourtCostApi,
   updateCourtApi,
   updateCourtCostApi,
-  updateSlotAvailabilityApi
+  updateSlotAvailabilityApi,
+  updateSlotPriceApi
 } from '@/api/admin/court';
 import type { MutationFuncProps } from '@/types';
 import { mutationOptions } from '@tanstack/react-query';
@@ -85,6 +86,31 @@ export const adminUpdateSlotAvailabilityMutationOptions = ({
     onError: (error) => {
       console.error('Error:', error);
       toast.error(error.msg || 'Gagal memperbarui status slot. Silakan coba lagi.');
+      onError?.(error);
+    }
+  });
+
+export const adminUpdateSlotPriceMutationOptions = ({
+  onSuccess,
+  onError
+}: MutationFuncProps = {}) =>
+  mutationOptions({
+    mutationFn: ({
+      slotId,
+      price,
+      discountPrice
+    }: {
+      slotId: string;
+      price: number;
+      discountPrice: number;
+    }) => updateSlotPriceApi(slotId, { price, discountPrice }),
+    onSuccess: (data) => {
+      toast.success('Harga slot berhasil diperbarui!');
+      onSuccess?.(data);
+    },
+    onError: (error) => {
+      console.error('Error:', error);
+      toast.error(error.msg || 'Gagal memperbarui harga slot. Silakan coba lagi.');
       onError?.(error);
     }
   });

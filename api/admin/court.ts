@@ -80,3 +80,11 @@ export async function updateSlotAvailabilityApi(slotId: string, isAvailable: boo
   const { data } = await adminApi.put(`/courts/slots/${slotId}/availability`, { isAvailable });
   return data;
 }
+
+export async function updateSlotPriceApi(
+  slotId: string,
+  payload: { price: number; discountPrice: number }
+) {
+  const { data } = await adminApi.put(`/courts/slots/${slotId}/pricing`, payload);
+  return data;
+}
