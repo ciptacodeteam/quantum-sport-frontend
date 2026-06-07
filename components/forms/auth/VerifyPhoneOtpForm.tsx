@@ -1,5 +1,7 @@
 'use client';
 
+import { mapApiErrorsToForm } from '@/lib/api-error';
+
 import { ResendOtpButton } from '@/components/buttons/ResendOtpButton';
 import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from '@/components/ui/field';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
@@ -73,15 +75,7 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
         onVerifySuccess?.();
       },
       onError: (err) => {
-        if (err.errors?.name === 'ZodError') {
-          const fieldErrors = err.errors.fields as Record<string, string>;
-          Object.entries(fieldErrors).forEach(([fieldName, message]) => {
-            form.setError(fieldName as keyof FormSchema, {
-              type: 'server',
-              message
-            });
-          });
-        }
+        mapApiErrorsToForm(form, err);
       }
     })
   );
@@ -107,15 +101,7 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
         onVerifySuccess?.();
       },
       onError: (err) => {
-        if (err.errors?.name === 'ZodError') {
-          const fieldErrors = err.errors.fields as Record<string, string>;
-          Object.entries(fieldErrors).forEach(([fieldName, message]) => {
-            form.setError(fieldName as keyof FormSchema, {
-              type: 'server',
-              message
-            });
-          });
-        }
+        mapApiErrorsToForm(form, err);
       }
     })
   );

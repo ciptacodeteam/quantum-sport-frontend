@@ -7,6 +7,7 @@ import {
 } from '@/api/admin/auth';
 import type { MutationFuncProps } from '@/types';
 import { mutationOptions } from '@tanstack/react-query';
+import { handleMutationError } from '@/lib/handle-mutation-error';
 import { toast } from 'sonner';
 
 export const adminLoginMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -16,11 +17,11 @@ export const adminLoginMutationOptions = ({ onSuccess, onError }: MutationFuncPr
       toast.success('Login successful!');
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Login failed. Please check your credentials and try again.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Login failed. Please check your credentials and try again.'
+      })
   });
 
 export const adminRegisterMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -30,11 +31,11 @@ export const adminRegisterMutationOptions = ({ onSuccess, onError }: MutationFun
       toast.success('Registration successful!');
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Registration failed. Please check your details and try again.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Registration failed. Please check your details and try again.'
+      })
   });
 
 export const adminLogoutMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -44,11 +45,11 @@ export const adminLogoutMutationOptions = ({ onSuccess, onError }: MutationFuncP
       toast.success('Logout successful!');
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Logout failed. Please try again.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Logout failed. Please try again.'
+      })
   });
 
 export const adminUpdateProfileMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -58,11 +59,11 @@ export const adminUpdateProfileMutationOptions = ({ onSuccess, onError }: Mutati
       toast.success('Profile updated successfully!');
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Profile update failed. Please try again.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Profile update failed. Please try again.'
+      })
   });
 
 export const adminChangePasswordMutationOptions = ({
@@ -75,9 +76,9 @@ export const adminChangePasswordMutationOptions = ({
       toast.success('Password changed successfully!');
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Password change failed. Please try again.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Password change failed. Please try again.'
+      })
   });

@@ -1,4 +1,5 @@
 import { env } from '@/env';
+import { normalizeApiErrorResponse } from '@/lib/api-error';
 import useAuthStore from '@/stores/useAuthStore';
 import axios, { type AxiosError, HttpStatusCode, type InternalAxiosRequestConfig } from 'axios';
 
@@ -122,6 +123,10 @@ adminApi.interceptors.response.use(
         ...error.response?.data,
         message: 'Maaf, terjadi kesalahan pada server. Silakan coba lagi nanti.'
       };
+    }
+
+    if (newResponse && typeof newResponse === 'object') {
+      return Promise.reject(normalizeApiErrorResponse(newResponse as Record<string, unknown>));
     }
 
     return Promise.reject(newResponse);

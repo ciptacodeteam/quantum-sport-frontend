@@ -3,9 +3,11 @@
 import MainHeader from '@/components/headers/MainHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { FieldError } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { getValidationFieldErrors } from '@/lib/api-error';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { createClubMutationOptions } from '@/mutations/club';
@@ -31,6 +33,16 @@ const CreateClubPage = () => {
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const clearFieldError = (fieldName: string) => {
+    setFieldErrors((prev) => {
+      if (!prev[fieldName]) return prev;
+      const next = { ...prev };
+      delete next[fieldName];
+      return next;
+    });
+  };
 
   // Wait for Zustand to hydrate
   useEffect(() => {
@@ -56,6 +68,12 @@ const CreateClubPage = () => {
         } else {
           router.push('/clubs');
         }
+      },
+      onError: (err) => {
+        const errors = getValidationFieldErrors(err);
+        if (errors) {
+          setFieldErrors(errors);
+        }
       }
     })
   );
@@ -64,9 +82,11 @@ const CreateClubPage = () => {
     e.preventDefault();
 
     if (!formData.name.trim()) {
-      toast.error('Club name is required');
+      setFieldErrors({ name: 'Club name is required' });
       return;
     }
+
+    setFieldErrors({});
 
     // Create FormData to handle file upload
     const formDataToSend = new FormData();
@@ -94,15 +114,17 @@ const CreateClubPage = () => {
     if (file) {
       // Check file type
       if (!file.type.startsWith('image/')) {
-        toast.error('Please select an image file');
+        setFieldErrors((prev) => ({ ...prev, logo: 'Please select an image file' }));
         return;
       }
 
       // Check file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        toast.error('File size must be less than 5MB');
+        setFieldErrors((prev) => ({ ...prev, logo: 'File size must be less than 5MB' }));
         return;
       }
+
+      clearFieldError('logo');
 
       setLogoFile(file);
 
@@ -154,9 +176,13 @@ const CreateClubPage = () => {
                     id="name"
                     placeholder="e.g., Morning Tennis Club"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) => {
+                      clearFieldError('name');
+                      setFormData({ ...formData, name: e.target.value });
+                    }}
                     required
                   />
+                  <FieldError>{fieldErrors.name}</FieldError>
                 </div>
 
                 {/* Logo Upload */}
@@ -187,6 +213,7 @@ const CreateClubPage = () => {
                   <p className="text-muted-foreground text-xs">
                     Upload gambar (max 5MB, PNG, JPG, JPEG)
                   </p>
+                  <FieldError>{fieldErrors.logo}</FieldError>
                 </div>
 
                 {/* Description */}
@@ -198,9 +225,13 @@ const CreateClubPage = () => {
                     id="description"
                     placeholder="Deskripsi club Kamu, aktivitas, and tujuan..."
                     value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    onChange={(e) => {
+                      clearFieldError('description');
+                      setFormData({ ...formData, description: e.target.value });
+                    }}
                     rows={4}
                   />
+                  <FieldError>{fieldErrors.description}</FieldError>
                 </div>
 
                 {/* Rules */}
@@ -212,9 +243,13 @@ const CreateClubPage = () => {
                     id="rules"
                     placeholder="Ketikan aturan untuk club Kamu..."
                     value={formData.rules}
-                    onChange={(e) => setFormData({ ...formData, rules: e.target.value })}
+                    onChange={(e) => {
+                      clearFieldError('rules');
+                      setFormData({ ...formData, rules: e.target.value });
+                    }}
                     rows={4}
                   />
+                  <FieldError>{fieldErrors.rules}</FieldError>
                 </div>
 
                 {/* Visibility */}

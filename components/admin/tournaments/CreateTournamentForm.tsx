@@ -1,5 +1,7 @@
 'use client';
 
+import { mapApiErrorsToForm } from '@/lib/api-error';
+
 import { Editor } from '@/components/blocks/editor-00/editor';
 import { Button } from '@/components/ui/button';
 import DatetimePicker from '@/components/ui/datetime-picker';
@@ -94,15 +96,7 @@ const CreateTournamentForm = () => {
         router.push('/admin/kelola-turnamen');
       },
       onError: (err) => {
-        if (err.errors?.name === 'ZodError') {
-          const fieldErrors = err.errors.fields as Record<string, string>;
-          Object.entries(fieldErrors).forEach(([fieldName, message]) => {
-            form.setError(fieldName as keyof FormSchema, {
-              type: 'server',
-              message
-            });
-          });
-        }
+        mapApiErrorsToForm(form, err);
       }
     })
   );

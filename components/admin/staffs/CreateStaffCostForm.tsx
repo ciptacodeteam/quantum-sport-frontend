@@ -1,5 +1,7 @@
 'use client';
 
+import { mapApiErrorsToForm } from '@/lib/api-error';
+
 import { Button } from '@/components/ui/button';
 import DatePickerInput from '@/components/ui/date-picker-input';
 import { useDialog } from '@/components/ui/dialog-context';
@@ -65,15 +67,7 @@ const CreateStaffCostForm = ({ staffId }: Props) => {
         closeDialog('create-staff-costing');
       },
       onError: (err) => {
-        if (err.errors?.name === 'ZodError') {
-          const fieldErrors = err.errors.fields as Record<string, string>;
-          Object.entries(fieldErrors).forEach(([fieldName, message]) => {
-            form.setError(fieldName as keyof FormSchema, {
-              type: 'server',
-              message
-            });
-          });
-        }
+        mapApiErrorsToForm(form, err);
       }
     })
   );

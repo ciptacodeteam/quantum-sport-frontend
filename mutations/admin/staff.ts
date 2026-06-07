@@ -7,6 +7,7 @@ import {
 } from '@/api/admin/staff';
 import type { MutationFuncProps } from '@/types';
 import { mutationOptions } from '@tanstack/react-query';
+import { handleMutationError } from '@/lib/handle-mutation-error';
 import { toast } from 'sonner';
 
 export const adminCreateStaffMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -16,11 +17,11 @@ export const adminCreateStaffMutationOptions = ({ onSuccess, onError }: Mutation
       toast.success('Data berhasil disimpan!');
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Gagal menyimpan data. Silakan coba lagi.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Gagal menyimpan data. Silakan coba lagi.'
+      })
   });
 
 export const adminUpdateStaffMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -30,11 +31,11 @@ export const adminUpdateStaffMutationOptions = ({ onSuccess, onError }: Mutation
       toast.success('Data berhasil diperbarui!');
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Gagal memperbarui data. Silakan coba lagi.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Gagal memperbarui data. Silakan coba lagi.'
+      })
   });
 
 export const adminResetStaffPasswordMutationOptions = ({
@@ -47,11 +48,11 @@ export const adminResetStaffPasswordMutationOptions = ({
       toast.success('Password berhasil direset!');
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Gagal mereset password. Silakan coba lagi.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Gagal mereset password. Silakan coba lagi.'
+      })
   });
 
 export const adminRevokeStaffSessionMutationOptions = ({
@@ -64,11 +65,11 @@ export const adminRevokeStaffSessionMutationOptions = ({
       toast.success('Session berhasil dicabut!');
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Gagal mencabut session. Silakan coba lagi.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Gagal mencabut session. Silakan coba lagi.'
+      })
   });
 
 export const adminCreateStaffCostMutationOptions = ({
@@ -81,9 +82,9 @@ export const adminCreateStaffCostMutationOptions = ({
       toast.success('Data berhasil disimpan!');
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Gagal menyimpan data. Silakan coba lagi.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Gagal menyimpan data. Silakan coba lagi.'
+      })
   });

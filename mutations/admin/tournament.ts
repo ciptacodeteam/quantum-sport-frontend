@@ -5,6 +5,7 @@ import {
 } from '@/api/admin/tournament';
 import type { MutationFuncProps } from '@/types';
 import { mutationOptions } from '@tanstack/react-query';
+import { handleMutationError } from '@/lib/handle-mutation-error';
 import { toast } from 'sonner';
 
 export const adminCreateTournamentMutationOptions = ({
@@ -18,11 +19,11 @@ export const adminCreateTournamentMutationOptions = ({
       toast.success(msg);
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Failed to create tournament. Please try again.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Failed to create tournament. Please try again.'
+      })
   });
 
 export const adminUpdateTournamentMutationOptions = ({
@@ -36,11 +37,11 @@ export const adminUpdateTournamentMutationOptions = ({
       toast.success(msg);
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Failed to update tournament. Please try again.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Failed to update tournament. Please try again.'
+      })
   });
 
 export const deleteTournamentMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -51,9 +52,9 @@ export const deleteTournamentMutationOptions = ({ onSuccess, onError }: Mutation
       toast.success(msg);
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Failed to delete tournament. Please try again.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Failed to delete tournament. Please try again.'
+      })
   });

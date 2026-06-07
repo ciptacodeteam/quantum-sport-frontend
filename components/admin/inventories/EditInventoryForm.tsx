@@ -1,5 +1,7 @@
 'use client';
 
+import { mapApiErrorsToForm } from '@/lib/api-error';
+
 import { Button } from '@/components/ui/button';
 import { useDialog } from '@/components/ui/dialog';
 import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from '@/components/ui/field';
@@ -54,15 +56,7 @@ const EditInventoryForm = ({ data }: Props) => {
         closeDialog(`edit-inventory-${data.id}`);
       },
       onError: (err) => {
-        if (err.errors?.name === 'ZodError') {
-          const fieldErrors = err.errors.fields as Record<string, string>;
-          Object.entries(fieldErrors).forEach(([fieldName, message]) => {
-            form.setError(fieldName as keyof FormSchema, {
-              type: 'server',
-              message
-            });
-          });
-        }
+        mapApiErrorsToForm(form, err);
       }
     })
   );

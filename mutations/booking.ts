@@ -1,6 +1,7 @@
 import { applyPromoApi, createBookingApi, checkoutApi, expireInvoiceApi } from '@/api/booking';
 import type { MutationFuncProps } from '@/types';
 import { mutationOptions } from '@tanstack/react-query';
+import { handleMutationError } from '@/lib/handle-mutation-error';
 import { toast } from 'sonner';
 
 export const createBookingMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -10,11 +11,11 @@ export const createBookingMutationOptions = ({ onSuccess, onError }: MutationFun
       toast.success('Pemesanan berhasil dibuat!');
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Gagal membuat pemesanan. Silakan coba lagi.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Gagal membuat pemesanan. Silakan coba lagi.'
+      })
   });
 
 export const checkoutMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -24,11 +25,11 @@ export const checkoutMutationOptions = ({ onSuccess, onError }: MutationFuncProp
       toast.success('Checkout berhasil!');
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Gagal melakukan checkout. Silakan coba lagi.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Gagal melakukan checkout. Silakan coba lagi.'
+      })
   });
 
 export const applyPromoMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -37,11 +38,11 @@ export const applyPromoMutationOptions = ({ onSuccess, onError }: MutationFuncPr
     onSuccess: (data) => {
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Gagal menerapkan kode promo. Silakan coba lagi.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Gagal menerapkan kode promo. Silakan coba lagi.'
+      })
   });
 
 export const expireInvoiceMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>

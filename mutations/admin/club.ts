@@ -1,4 +1,5 @@
 import { approveAdminClubApi, deleteAdminClubApi } from '@/api/admin/club';
+import { handleMutationError } from '@/lib/handle-mutation-error';
 import type { MutationFuncProps } from '@/types';
 import { mutationOptions } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -11,16 +12,11 @@ export const deleteAdminClubMutationOptions = ({ onSuccess, onError }: MutationF
       toast.success(successMsg);
       onSuccess?.(data);
     },
-    onError: (error: any) => {
-      console.error('Error:', error);
-      const errorMsg =
-        error?.response?.data?.msg ||
-        error?.msg ||
-        error?.message ||
-        'Failed to delete club. Please try again.';
-      toast.error(errorMsg);
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Failed to delete club. Please try again.'
+      })
   });
 
 export const approveAdminClubMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -31,14 +27,9 @@ export const approveAdminClubMutationOptions = ({ onSuccess, onError }: Mutation
       toast.success(successMsg);
       onSuccess?.(data);
     },
-    onError: (error: any) => {
-      console.error('Error:', error);
-      const errorMsg =
-        error?.response?.data?.msg ||
-        error?.msg ||
-        error?.message ||
-        'Failed to approve club. Please try again.';
-      toast.error(errorMsg);
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Failed to approve club. Please try again.'
+      })
   });

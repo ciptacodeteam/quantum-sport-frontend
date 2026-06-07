@@ -1,5 +1,7 @@
 'use client';
 
+import { mapApiErrorsToForm } from '@/lib/api-error';
+
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import DatePickerInput from '@/components/ui/date-picker-input';
@@ -102,15 +104,7 @@ const CreateStaffForm = () => {
         router.push('/admin/kelola-karyawan');
       },
       onError: (err) => {
-        if (err.errors?.name === 'ZodError') {
-          const fieldErrors = err.errors.fields as Record<string, string>;
-          Object.entries(fieldErrors).forEach(([fieldName, message]) => {
-            form.setError(fieldName as keyof FormSchema, {
-              type: 'server',
-              message
-            });
-          });
-        }
+        mapApiErrorsToForm(form, err);
       }
     })
   );

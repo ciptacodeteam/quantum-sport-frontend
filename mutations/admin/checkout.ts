@@ -1,6 +1,7 @@
 import { adminCheckoutApi, type AdminCheckoutPayload } from '@/api/admin/checkout';
 import type { MutationFuncProps } from '@/types';
 import { mutationOptions } from '@tanstack/react-query';
+import { handleMutationError } from '@/lib/handle-mutation-error';
 import { toast } from 'sonner';
 
 export const adminCheckoutMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -10,9 +11,9 @@ export const adminCheckoutMutationOptions = ({ onSuccess, onError }: MutationFun
       toast.success('Pemesanan berhasil dikonfirmasi!');
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Gagal mengonfirmasi pemesanan. Silakan coba lagi.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Gagal mengonfirmasi pemesanan. Silakan coba lagi.'
+      })
   });

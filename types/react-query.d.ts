@@ -1,11 +1,16 @@
 import '@tanstack/react-query';
-import type { ZodFlattenedError } from 'zod';
+
+export type ValidationErrors = {
+  name: string;
+  fields: Record<string, string>;
+};
 
 export interface ApiError {
   code: number;
   success: boolean;
-  msg: string;
-  errors?: Record<string, unknown> | ZodFlattenedError | null;
+  msg?: string;
+  message?: string;
+  errors?: ValidationErrors | null;
 }
 
 declare module '@tanstack/react-query' {

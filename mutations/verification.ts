@@ -6,6 +6,7 @@ import {
 } from '@/api/verification';
 import type { MutationFuncProps } from '@/types';
 import { mutationOptions } from '@tanstack/react-query';
+import { handleMutationError } from '@/lib/handle-mutation-error';
 import { toast } from 'sonner';
 
 export const sendVerificationOtpMutationOptions = ({

@@ -14,6 +14,7 @@ import { verifyPhoneOtpApi } from '@/api/phone';
 import { profileQueryOptions } from '@/queries/profile';
 import type { MutationFuncProps } from '@/types';
 import { mutationOptions } from '@tanstack/react-query';
+import { handleMutationError } from '@/lib/handle-mutation-error';
 import { toast } from 'sonner';
 
 export const checkAccountMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -22,11 +23,11 @@ export const checkAccountMutationOptions = ({ onSuccess, onError }: MutationFunc
     onSuccess: (data) => {
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Failed to check account. Please try again.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Failed to check account. Please try again.'
+      })
   });
 
 export const sendLoginOtpMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -36,11 +37,11 @@ export const sendLoginOtpMutationOptions = ({ onSuccess, onError }: MutationFunc
       toast.success('OTP sent successfully!');
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Failed to send OTP. Please try again.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Failed to send OTP. Please try again.'
+      })
   });
 
 export const loginMutationOptions = ({ onSuccess, onError, queryClient }: MutationFuncProps = {}) =>
@@ -51,11 +52,11 @@ export const loginMutationOptions = ({ onSuccess, onError, queryClient }: Mutati
       queryClient?.invalidateQueries({ queryKey: profileQueryOptions.queryKey });
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Login failed. Please check your credentials and try again.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Login failed. Please check your credentials and try again.'
+      })
   });
 
 export const registerMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -65,11 +66,11 @@ export const registerMutationOptions = ({ onSuccess, onError }: MutationFuncProp
       toast.success('Registration successful!');
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Registration failed. Please check your details and try again.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Registration failed. Please check your details and try again.'
+      })
   });
 
 export const logoutMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -79,11 +80,11 @@ export const logoutMutationOptions = ({ onSuccess, onError }: MutationFuncProps 
       toast.success('Logout successful!');
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Logout failed. Please try again.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Logout failed. Please try again.'
+      })
   });
 
 export const forgotPasswordMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -93,11 +94,11 @@ export const forgotPasswordMutationOptions = ({ onSuccess, onError }: MutationFu
       toast.success('OTP sent successfully!');
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Failed to send OTP. Please try again.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Failed to send OTP. Please try again.'
+      })
   });
 
 export const resetPasswordMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -107,11 +108,11 @@ export const resetPasswordMutationOptions = ({ onSuccess, onError }: MutationFun
       toast.success('Password reset successfully!');
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Failed to reset password. Please try again.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Failed to reset password. Please try again.'
+      })
   });
 
 export const resetPasswordWithTokenMutationOptions = ({
@@ -124,11 +125,11 @@ export const resetPasswordWithTokenMutationOptions = ({
       toast.success('Password reset successfully!');
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Failed to reset password. Please try again.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Failed to reset password. Please try again.'
+      })
   });
 
 export const verifyPhoneOtpMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -137,11 +138,11 @@ export const verifyPhoneOtpMutationOptions = ({ onSuccess, onError }: MutationFu
     onSuccess: (data) => {
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Failed to verify OTP. Please try again.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Failed to verify OTP. Please try again.'
+      })
   });
 
 export const verifyPasswordMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -151,11 +152,11 @@ export const verifyPasswordMutationOptions = ({ onSuccess, onError }: MutationFu
       toast.success('Kata sandi diverifikasi!');
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Kata sandi salah. Silakan coba lagi.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Kata sandi salah. Silakan coba lagi.'
+      })
   });
 
 export const changePasswordMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -165,9 +166,9 @@ export const changePasswordMutationOptions = ({ onSuccess, onError }: MutationFu
       toast.success('Kata sandi berhasil diubah! Email konfirmasi telah dikirim.');
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Gagal mengubah kata sandi. Silakan coba lagi.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Gagal mengubah kata sandi. Silakan coba lagi.'
+      })
   });

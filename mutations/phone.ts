@@ -1,6 +1,7 @@
 import { sendPhoneOtpApi } from '@/api/phone';
 import type { MutationFuncProps } from '@/types';
 import { mutationOptions } from '@tanstack/react-query';
+import { handleMutationError } from '@/lib/handle-mutation-error';
 import { toast } from 'sonner';
 
 export const sendPhoneOtpMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -10,9 +11,9 @@ export const sendPhoneOtpMutationOptions = ({ onSuccess, onError }: MutationFunc
       toast.success('OTP sent successfully!');
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Failed to send OTP. Please try again.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Failed to send OTP. Please try again.'
+      })
   });

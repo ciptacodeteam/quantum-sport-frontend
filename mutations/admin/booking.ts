@@ -1,6 +1,7 @@
 import { createBookingApi } from '@/api/admin/booking';
 import type { MutationFuncProps } from '@/types';
 import { mutationOptions } from '@tanstack/react-query';
+import { handleMutationError } from '@/lib/handle-mutation-error';
 import { toast } from 'sonner';
 
 export const adminCreateBookingMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -10,9 +11,9 @@ export const adminCreateBookingMutationOptions = ({ onSuccess, onError }: Mutati
       toast.success('Pemesanan berhasil dibuat!');
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Gagal membuat pemesanan. Silakan coba lagi.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Gagal membuat pemesanan. Silakan coba lagi.'
+      })
   });

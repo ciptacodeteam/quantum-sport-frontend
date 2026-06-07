@@ -7,6 +7,7 @@ import {
 } from '@/api/admin/customer';
 import type { MutationFuncProps } from '@/types';
 import { mutationOptions } from '@tanstack/react-query';
+import { handleMutationError } from '@/lib/handle-mutation-error';
 import { toast } from 'sonner';
 
 export const adminCreateCustomerMutationOptions = ({
@@ -19,11 +20,11 @@ export const adminCreateCustomerMutationOptions = ({
       toast.success('Data berhasil disimpan!');
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Gagal menyimpan data. Silakan coba lagi.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Gagal menyimpan data. Silakan coba lagi.'
+      })
   });
 
 export const adminUpdateCustomerMutationOptions = ({
@@ -36,11 +37,11 @@ export const adminUpdateCustomerMutationOptions = ({
       toast.success('Data berhasil diperbarui!');
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Gagal memperbarui data. Silakan coba lagi.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Gagal memperbarui data. Silakan coba lagi.'
+      })
   });
 
 export const adminBanCustomerMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -50,11 +51,11 @@ export const adminBanCustomerMutationOptions = ({ onSuccess, onError }: Mutation
       toast.success('Data berhasil dibanned!');
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Gagal membanned data. Silakan coba lagi.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Gagal membanned data. Silakan coba lagi.'
+      })
   });
 
 export const adminUnbanCustomerMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -64,11 +65,11 @@ export const adminUnbanCustomerMutationOptions = ({ onSuccess, onError }: Mutati
       toast.success('Data berhasil diunbanned!');
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Gagal mengunbanned data. Silakan coba lagi.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Gagal mengunbanned data. Silakan coba lagi.'
+      })
   });
 
 export const adminSendCustomerResetPasswordMutationOptions = ({
@@ -81,9 +82,9 @@ export const adminSendCustomerResetPasswordMutationOptions = ({
       toast.success('Link reset kata sandi berhasil dikirim!');
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Gagal mengirim link reset kata sandi. Silakan coba lagi.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Gagal mengirim link reset kata sandi. Silakan coba lagi.'
+      })
   });

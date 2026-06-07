@@ -5,6 +5,7 @@ import {
 } from '@/api/admin/notification';
 import type { CreateNotificationPayload } from '@/types/model';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { handleMutationError } from '@/lib/handle-mutation-error';
 import { toast } from 'sonner';
 
 export const useCreateNotificationMutation = () => {

@@ -6,6 +6,7 @@ import {
 } from '@/api/email';
 import type { MutationFuncProps } from '@/types';
 import { mutationOptions } from '@tanstack/react-query';
+import { handleMutationError } from '@/lib/handle-mutation-error';
 import { toast } from 'sonner';
 
 export const sendEmailOtpMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -15,11 +16,11 @@ export const sendEmailOtpMutationOptions = ({ onSuccess, onError }: MutationFunc
       toast.success('Verification email sent!');
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Failed to send email OTP. Please try again.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Failed to send email OTP. Please try again.'
+      })
   });
 
 export const verifyEmailOtpMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -29,11 +30,11 @@ export const verifyEmailOtpMutationOptions = ({ onSuccess, onError }: MutationFu
       toast.success('Email verified successfully!');
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Failed to verify email OTP. Please try again.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Failed to verify email OTP. Please try again.'
+      })
   });
 
 export const requestEmailChangeMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -43,11 +44,11 @@ export const requestEmailChangeMutationOptions = ({ onSuccess, onError }: Mutati
       toast.success('Verification code sent to new email!');
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Failed to request email change. Please try again.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Failed to request email change. Please try again.'
+      })
   });
 
 export const verifyEmailChangeMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -57,9 +58,9 @@ export const verifyEmailChangeMutationOptions = ({ onSuccess, onError }: Mutatio
       toast.success('Email changed successfully!');
       onSuccess?.(data);
     },
-    onError: (error) => {
-      console.error('Error:', error);
-      toast.error(error.msg || 'Failed to verify email change. Please try again.');
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Failed to verify email change. Please try again.'
+      })
   });

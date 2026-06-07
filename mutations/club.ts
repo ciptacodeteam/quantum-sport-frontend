@@ -8,6 +8,8 @@ import {
   deleteClubApi,
   removeMemberApi
 } from '@/api/club';
+import { getApiErrorMessage, isValidationError } from '@/lib/api-error';
+import { handleMutationError } from '@/lib/handle-mutation-error';
 import type { MutationFuncProps } from '@/types';
 import { mutationOptions } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -16,41 +18,34 @@ export const joinClubMutationOptions = ({ onSuccess, onError }: MutationFuncProp
   mutationOptions({
     mutationFn: joinClubApi,
     onSuccess: (data) => {
-      // Extract success message from backend response
       const successMsg = data?.msg || 'Berhasil bergabung dengan club!';
       toast.success(successMsg);
       onSuccess?.(data);
     },
-    onError: (error: any) => {
-      console.error('Error:', error);
-      const errorMsg =
-        error?.response?.data?.msg ||
-        error?.msg ||
-        error?.message ||
-        'Gagal bergabung dengan club. Silakan coba lagi.';
-      toast.error(errorMsg);
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Gagal bergabung dengan club. Silakan coba lagi.'
+      })
   });
 
 export const requestJoinClubMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
   mutationOptions({
     mutationFn: requestJoinClubApi,
     onSuccess: (data) => {
-      // Extract success message from backend response
       const successMsg = data?.msg || 'Permintaan bergabung berhasil dikirim!';
       toast.success(successMsg);
       onSuccess?.(data);
     },
-    onError: (error: any) => {
+    onError: (error) => {
       console.error('Error:', error);
-      const errorMsg =
-        error?.response?.data?.msg ||
-        error?.msg ||
-        error?.message ||
-        'Gagal mengirim permintaan. Silakan coba lagi.';
 
-      // Check if error is about already being in a club or already requested
+      if (isValidationError(error)) {
+        onError?.(error);
+        return;
+      }
+
+      const errorMsg = getApiErrorMessage(error, 'Gagal mengirim permintaan. Silakan coba lagi.');
       const errorLower = errorMsg.toLowerCase();
       const isAlreadyMemberError =
         errorLower.includes('already') ||
@@ -59,7 +54,6 @@ export const requestJoinClubMutationOptions = ({ onSuccess, onError }: MutationF
         errorLower.includes('telah mengirim') ||
         errorLower.includes('pending');
 
-      // Show warning toast for membership conflicts, error toast for other errors
       if (isAlreadyMemberError) {
         toast.warning(errorMsg);
       } else {
@@ -74,42 +68,30 @@ export const leaveClubMutationOptions = ({ onSuccess, onError }: MutationFuncPro
   mutationOptions({
     mutationFn: leaveClubApi,
     onSuccess: (data) => {
-      // Extract success message from backend response
       const successMsg = data?.msg || 'Berhasil keluar dari club';
       toast.success(successMsg);
       onSuccess?.(data);
     },
-    onError: (error: any) => {
-      console.error('Error:', error);
-      const errorMsg =
-        error?.response?.data?.msg ||
-        error?.msg ||
-        error?.message ||
-        'Gagal keluar dari club. Silakan coba lagi.';
-      toast.error(errorMsg);
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Gagal keluar dari club. Silakan coba lagi.'
+      })
   });
 
 export const createClubMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
   mutationOptions({
     mutationFn: createClubApi,
     onSuccess: (data) => {
-      // Extract success message from backend response
       const successMsg = data?.msg || 'Club berhasil dibuat!';
       toast.success(successMsg);
       onSuccess?.(data);
     },
-    onError: (error: any) => {
-      console.error('Error:', error);
-      const errorMsg =
-        error?.response?.data?.msg ||
-        error?.msg ||
-        error?.message ||
-        'Gagal membuat club. Silakan coba lagi.';
-      toast.error(errorMsg);
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Gagal membuat club. Silakan coba lagi.'
+      })
   });
 
 export const approveClubRequestMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -121,16 +103,11 @@ export const approveClubRequestMutationOptions = ({ onSuccess, onError }: Mutati
       toast.success(successMsg);
       onSuccess?.(data);
     },
-    onError: (error: any) => {
-      console.error('Error:', error);
-      const errorMsg =
-        error?.response?.data?.msg ||
-        error?.msg ||
-        error?.message ||
-        'Failed to approve request. Please try again.';
-      toast.error(errorMsg);
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Failed to approve request. Please try again.'
+      })
   });
 
 export const rejectClubRequestMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -142,16 +119,11 @@ export const rejectClubRequestMutationOptions = ({ onSuccess, onError }: Mutatio
       toast.success(successMsg);
       onSuccess?.(data);
     },
-    onError: (error: any) => {
-      console.error('Error:', error);
-      const errorMsg =
-        error?.response?.data?.msg ||
-        error?.msg ||
-        error?.message ||
-        'Failed to reject request. Please try again.';
-      toast.error(errorMsg);
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Failed to reject request. Please try again.'
+      })
   });
 
 export const deleteClubMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -162,16 +134,11 @@ export const deleteClubMutationOptions = ({ onSuccess, onError }: MutationFuncPr
       toast.success(successMsg);
       onSuccess?.(data);
     },
-    onError: (error: any) => {
-      console.error('Error:', error);
-      const errorMsg =
-        error?.response?.data?.msg ||
-        error?.msg ||
-        error?.message ||
-        'Failed to delete club. Please try again.';
-      toast.error(errorMsg);
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Failed to delete club. Please try again.'
+      })
   });
 
 export const removeMemberMutationOptions = ({ onSuccess, onError }: MutationFuncProps = {}) =>
@@ -183,14 +150,9 @@ export const removeMemberMutationOptions = ({ onSuccess, onError }: MutationFunc
       toast.success(successMsg);
       onSuccess?.(data);
     },
-    onError: (error: any) => {
-      console.error('Error:', error);
-      const errorMsg =
-        error?.response?.data?.msg ||
-        error?.msg ||
-        error?.message ||
-        'Failed to remove member. Please try again.';
-      toast.error(errorMsg);
-      onError?.(error);
-    }
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Failed to remove member. Please try again.'
+      })
   });
