@@ -10,14 +10,14 @@ const MenuItem = ({ item }: Props) => {
     <Link
       href={item.url}
       prefetch
-      className="group/menu flex flex-col items-center gap-2 lg:h-full lg:w-full"
+      className="group/menu flex w-full min-w-0 flex-col items-center gap-2 text-center lg:h-full lg:text-left"
     >
-      <div className="bg-muted lg:hover:border-primary/40 flex h-16 w-16 items-center justify-center rounded-xl text-2xl lg:h-full lg:w-full lg:flex-col lg:items-start lg:justify-start lg:gap-3 lg:rounded-lg lg:border lg:bg-white lg:p-4 lg:transition-all lg:duration-300 lg:ease-out lg:hover:-translate-y-1 lg:hover:shadow-md">
-        <div className="lg:bg-muted group-hover/menu:scale-105 lg:me-3 lg:mb-2 lg:flex lg:h-16 lg:w-16 lg:items-center lg:justify-center lg:rounded-lg lg:p-2 lg:transition-transform lg:duration-300 lg:ease-out">
+      <div className="bg-muted/80 ring-border/60 group-hover/menu:bg-primary/8 group-hover/menu:ring-primary/25 flex h-[58px] w-[58px] items-center justify-center rounded-2xl text-2xl ring-1 transition-all duration-300 ease-out group-hover/menu:-translate-y-0.5 group-hover/menu:shadow-sm sm:h-16 sm:w-16 lg:hover:border-primary/40 lg:h-full lg:w-full lg:flex-col lg:items-start lg:justify-start lg:gap-3 lg:rounded-lg lg:border lg:bg-white lg:p-4 lg:ring-0 lg:hover:-translate-y-1 lg:hover:shadow-md">
+        <div className="flex items-center justify-center transition-transform duration-300 ease-out group-hover/menu:scale-105 lg:bg-muted lg:me-3 lg:mb-2 lg:h-16 lg:w-16 lg:rounded-lg lg:p-2">
           {item.icon}
         </div>
 
-        <div>
+        <div className="hidden lg:block">
           <span className="text-primary mb-1 hidden text-left font-semibold lg:block">
             {item.title}
           </span>
@@ -27,8 +27,9 @@ const MenuItem = ({ item }: Props) => {
         </div>
       </div>
 
-      {/* MOBILE TITLE tetap di luar */}
-      <span className="text-sm lg:hidden">{item.title}</span>
+      <span className="block min-h-8 max-w-[68px] text-center text-[11px] leading-tight font-medium text-zinc-800 sm:max-w-[76px] sm:text-xs lg:hidden">
+        {item.title}
+      </span>
     </Link>
   );
 };

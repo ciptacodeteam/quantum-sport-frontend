@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { ROLE, ROLE_OPTIONS } from '@/lib/constants';
 import { cn, formatPhone, getPlaceholderImageUrl } from '@/lib/utils';
 import { adminCreateStaffMutationOptions } from '@/mutations/admin/staff';
@@ -44,6 +45,7 @@ const formSchema = z
       message: 'Role tidak valid'
     }),
     coachType: z.string().optional(),
+    coachProfile: z.string().max(2000, { message: 'Portfolio maksimal 2000 karakter' }).optional(),
     phone: z
       .string()
       .min(10, { message: 'Nomor telepon minimal 10 digit' })
@@ -79,6 +81,7 @@ const CreateStaffForm = () => {
       email: '',
       role: ROLE.ADMIN,
       coachType: undefined,
+      coachProfile: '',
       phone: '',
       password: '',
       confirmPassword: '',
@@ -224,6 +227,7 @@ const CreateStaffForm = () => {
                     field.onChange(value);
                     if (value !== ROLE.COACH) {
                       form.setValue('coachType', undefined);
+                      form.setValue('coachProfile', '');
                     }
                   }}
                   value={field.value}
@@ -246,27 +250,43 @@ const CreateStaffForm = () => {
             <FieldError>{form.formState.errors.role?.message}</FieldError>
           </Field>
           {selectedRole === ROLE.COACH && (
-            <Field>
-              <FieldLabel htmlFor="coachType">Coach Type</FieldLabel>
-              <Controller
-                control={form.control}
-                name="coachType"
-                render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Select coach type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectItem value="GUIDED_MATCH">Guided Match</SelectItem>
-                        <SelectItem value="COACH">Coach</SelectItem>
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              <FieldError>{form.formState.errors.coachType?.message}</FieldError>
-            </Field>
+            <>
+              <Field>
+                <FieldLabel htmlFor="coachType">Coach Type</FieldLabel>
+                <Controller
+                  control={form.control}
+                  name="coachType"
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Select coach type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectItem value="GUIDED_MATCH">Guided Match</SelectItem>
+                          <SelectItem value="COACH">Coach</SelectItem>
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                <FieldError>{form.formState.errors.coachType?.message}</FieldError>
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="coachProfile">Portfolio Coach</FieldLabel>
+                <Textarea
+                  id="coachProfile"
+                  {...form.register('coachProfile')}
+                  className="min-h-28"
+                  placeholder={'Satu prestasi per baris\nContoh: Certified padel coach'}
+                />
+                <FieldDescription>
+                  Setiap baris akan tampil sebagai list prestasi di halaman Coach.
+                </FieldDescription>
+                <FieldError>{form.formState.errors.coachProfile?.message}</FieldError>
+              </Field>
+            </>
           )}
           <Field>
             <FieldLabel htmlFor="joinedAt">Tanggal Bergabung</FieldLabel>
