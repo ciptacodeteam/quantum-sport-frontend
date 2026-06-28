@@ -3,6 +3,7 @@ import BookingMenuIcon from '@/assets/icons/menus/booking.svg';
 import ClubMenuIcon from '@/assets/icons/menus/club.svg';
 import MembershipMenuIcon from '@/assets/icons/menus/membership.svg';
 import TournamentMenuIcon from '@/assets/icons/menus/tournament.svg';
+import { IconUserStar } from '@tabler/icons-react';
 
 const MenuSection = () => {
   const menuList = [
@@ -11,6 +12,12 @@ const MenuSection = () => {
       subtitle: 'Pesan lapangan dengan mudah dan bermain tanpa ribet.',
       url: '/booking',
       icon: <BookingMenuIcon className="size-13 lg:size-12" />
+    },
+    {
+      title: 'Coach',
+      subtitle: 'Lihat profil coach, pengalaman, dan portfolio latihan.',
+      url: '/coaches',
+      icon: <IconUserStar className="text-primary size-9 lg:size-10" stroke={1.8} />
     },
     {
       title: 'Club',
@@ -33,10 +40,10 @@ const MenuSection = () => {
   ];
 
   return (
-    <section className="mx-auto my-8 w-11/12 max-w-7xl">
-      <div className="mx-auto grid w-full grid-cols-4 gap-6 lg:gap-4">
+    <section className="mx-auto my-7 w-11/12 max-w-7xl">
+      <div className="mx-auto grid w-full grid-cols-5 gap-2 sm:gap-3 lg:gap-4">
         {menuList.map((item) => (
-          <div key={item.title} className="flex-center flex-1">
+          <div key={item.title} className="flex justify-center">
             <MenuItem item={item} />
           </div>
         ))}

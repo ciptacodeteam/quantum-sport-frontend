@@ -72,6 +72,15 @@ export type CoachAvailability = {
   endAt: string;
 };
 
+export type Coach = {
+  id: string;
+  name: string;
+  image: string | null;
+  coachType: 'GUIDED_MATCH' | 'COACH' | null;
+  coachProfile: string | null;
+  achievements: string[];
+};
+
 export type PaymentMethod = {
   id: string;
   name: string;
@@ -214,6 +223,7 @@ export type Staff = {
   joinedAt: Date | null;
   coachTypeId: string | null;
   coachType?: string | null;
+  coachProfile?: string | null;
   createdAt: Date;
   updatedAt: Date;
 };

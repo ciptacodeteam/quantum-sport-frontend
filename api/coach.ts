@@ -12,3 +12,8 @@ export async function getCoachAvailabilityApi(params: CoachAvailabilityParams) {
 
   return data;
 }
+
+export async function getCoachesApi() {
+  const { data } = await api.get('/coaches');
+  return data;
+}

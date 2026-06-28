@@ -10,7 +10,7 @@ export const adminProfileQueryOptions = queryOptions({
 });
 
 type CheckAdminAccountResponse = {
-  hasAccount: boolean;
+  hasAdmin: boolean;
 };
 
 export const checkAdminAccountQueryOptions = queryOptions({

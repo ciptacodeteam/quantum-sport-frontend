@@ -2,12 +2,13 @@ import LoginForm from '@/components/admin/forms/LoginForm';
 import RegisterForm from '@/components/admin/forms/RegisterForm';
 import { Card, CardContent } from '@/components/ui/card';
 import { FieldDescription } from '@/components/ui/field';
+import { env } from '@/env';
 import { cn, getPlaceholderImageUrl } from '@/lib/utils';
 import Image from 'next/image';
 import Link from 'next/link';
 
 export default async function LoginPage() {
-  const data = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/auth/check-account`, {
+  const data = await fetch(`${env.NEXT_PUBLIC_API_URL}/admin/auth/check-account`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json'
