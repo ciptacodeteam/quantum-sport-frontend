@@ -142,3 +142,24 @@
 .scrollable {
   -webkit-overflow-scrolling: touch;
 }
+
+.coach-whatsapp-widget footer form {
+  grid-template-columns: minmax(0, 1fr) 52px !important;
+  gap: 8px;
+}
+
+.coach-whatsapp-widget footer form button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  border-radius: 9999px;
+  color: #6b7280;
+}
+
+.coach-whatsapp-widget footer form button svg {
+  width: 26px;
+  height: 26px;
+}

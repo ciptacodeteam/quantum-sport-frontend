@@ -14,8 +14,9 @@ import type { BookingItem } from '@/stores/useBookingStore';
 import { useBookingStore } from '@/stores/useBookingStore';
 import type { Court, Slot } from '@/types/model';
 import { IconCalendarFilled, IconInfoCircle } from '@tabler/icons-react';
+import { useHasMounted } from '@/hooks/useHasMounted';
+import dayjs, { nowJakarta } from '@/lib/dayjs';
 import { useQuery } from '@tanstack/react-query';
-import dayjs from 'dayjs';
 import Image from 'next/image';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -66,7 +67,7 @@ const normalizeDateKey = (value: string) => {
 
   const display = dayjs(value, 'DD MMM', true);
   if (display.isValid()) {
-    return display.year(dayjs().year()).format('YYYY-MM-DD');
+    return display.year(nowJakarta().year()).format('YYYY-MM-DD');
   }
 
   const parsed = dayjs(value);
@@ -74,7 +75,7 @@ const normalizeDateKey = (value: string) => {
     return parsed.format('YYYY-MM-DD');
   }
 
-  return dayjs().format('YYYY-MM-DD');
+  return nowJakarta().format('YYYY-MM-DD');
 };
 
 export default function BookingPage() {
@@ -86,7 +87,8 @@ export default function BookingPage() {
     setCartOpen
   } = useBookingStore();
 
-  const [selectedDate, setSelectedDate] = useState(dayjs().format('YYYY-MM-DD'));
+  const hasMounted = useHasMounted();
+  const [selectedDate, setSelectedDate] = useState(() => nowJakarta().format('YYYY-MM-DD'));
   const [dateList, setDateList] = useState<
     { label: string; date: string; fullDate: string; active?: boolean }[]
   >([]);
@@ -125,17 +127,19 @@ export default function BookingPage() {
 
   const slots = useMemo(() => slotsData ?? [], [slotsData]);
 
-  // Filter time slots to exclude past hours for today
+  // Filter time slots to exclude past hours for today (client-only to match SSR)
   const availableTimeSlots = useMemo(() => {
-    const isToday = dayjs(selectedFullDate).isSame(dayjs(), 'day');
+    if (!hasMounted) return timeSlots;
+
+    const isToday = dayjs(selectedFullDate).isSame(nowJakarta(), 'day');
     if (!isToday) return timeSlots;
 
-    const currentHour = dayjs().hour();
+    const currentHour = nowJakarta().hour();
     return timeSlots.filter((time) => {
       const slotHour = parseInt(time.split(':')[0], 10);
       return slotHour > currentHour;
     });
-  }, [selectedFullDate]);
+  }, [selectedFullDate, hasMounted]);
 
   const courts = useMemo(() => {
     const map = new Map<string, { id: string; name: string; image?: string | null }>();
@@ -379,7 +383,7 @@ export default function BookingPage() {
   }, [selectionsByDate, selectedFullDate, setBookingItems, setBookingDate, bookingItems]);
 
   useEffect(() => {
-    const today = dayjs();
+    const today = nowJakarta();
     const endDate = today.add(3, 'month');
     const updatedDates: {
       label: string;
@@ -560,7 +564,7 @@ export default function BookingPage() {
         price: typeof item.price === 'number' ? item.price : 0,
         date: start
           ? start.format('YYYY-MM-DD')
-          : (bookingItems[0]?.date ?? dayjs().format('YYYY-MM-DD')),
+          : (bookingItems[0]?.date ?? nowJakarta().format('YYYY-MM-DD')),
         slotId: item.slotId,
         coachTypeId: item.coachTypeId ?? null,
         startAt: item.startAt,
@@ -935,11 +939,13 @@ export default function BookingPage() {
         <header className="flex-between my-2 items-end">
           <div>
             <span className="text-muted-foreground text-xs">Subtotal</span>
-            <h2 className="text-lg font-semibold">Rp{courtTotal.toLocaleString('id-ID')}</h2>
+            <h2 className="text-lg font-semibold" suppressHydrationWarning>
+              Rp{(hasMounted ? courtTotal : 0).toLocaleString('id-ID')}
+            </h2>
           </div>
           <div>
-            <span className="text-muted-foreground text-xs">
-              {bookingItems.length} Slot Terpilih
+            <span className="text-muted-foreground text-xs" suppressHydrationWarning>
+              {hasMounted ? bookingItems.length : 0} Slot Terpilih
             </span>
           </div>
         </header>
@@ -948,7 +954,7 @@ export default function BookingPage() {
             className="w-full"
             size={'xl'}
             onClick={handleBooking}
-            disabled={bookingItems.length === 0}
+            disabled={!hasMounted || bookingItems.length === 0}
           >
             Pilih Jadwal
           </Button>

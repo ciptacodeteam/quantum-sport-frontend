@@ -2,8 +2,9 @@ import MenuItem from './MenuItem';
 import BookingMenuIcon from '@/assets/icons/menus/booking.svg';
 import ClubMenuIcon from '@/assets/icons/menus/club.svg';
 import MembershipMenuIcon from '@/assets/icons/menus/membership.svg';
+import SracademyLogo from '@/assets/icons/menus/sr.webp';
 import TournamentMenuIcon from '@/assets/icons/menus/tournament.svg';
-import { IconUserFilled } from '@tabler/icons-react';
+import Image from 'next/image';
 
 const MenuSection = () => {
   const menuList = [
@@ -17,7 +18,14 @@ const MenuSection = () => {
       title: 'Coach',
       subtitle: 'Lihat profil coach, pengalaman, dan portfolio latihan.',
       url: '/coaches',
-      icon: <IconUserFilled className="text-primary size-9 lg:size-10" stroke={1.8} />
+      icon: (
+        <Image
+          src={SracademyLogo}
+          alt=""
+          className="size-9 object-contain lg:size-10"
+          aria-hidden
+        />
+      )
     },
     {
       title: 'Club',
