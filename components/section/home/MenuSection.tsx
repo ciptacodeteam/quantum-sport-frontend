@@ -3,7 +3,7 @@ import BookingMenuIcon from '@/assets/icons/menus/booking.svg';
 import ClubMenuIcon from '@/assets/icons/menus/club.svg';
 import MembershipMenuIcon from '@/assets/icons/menus/membership.svg';
 import TournamentMenuIcon from '@/assets/icons/menus/tournament.svg';
-import { IconUserStar } from '@tabler/icons-react';
+import { IconUserFilled } from '@tabler/icons-react';
 
 const MenuSection = () => {
   const menuList = [
@@ -17,7 +17,7 @@ const MenuSection = () => {
       title: 'Coach',
       subtitle: 'Lihat profil coach, pengalaman, dan portfolio latihan.',
       url: '/coaches',
-      icon: <IconUserStar className="text-primary size-9 lg:size-10" stroke={1.8} />
+      icon: <IconUserFilled className="text-primary size-9 lg:size-10" stroke={1.8} />
     },
     {
       title: 'Club',
