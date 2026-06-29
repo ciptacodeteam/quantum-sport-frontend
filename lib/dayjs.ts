@@ -8,7 +8,7 @@ dayjs.extend(timezone);
 dayjs.locale(localeId);
 dayjs.tz.setDefault('Asia/Jakarta');
 
-/** Current instant in Asia/Jakarta — use for all user-facing dates to avoid SSR/client drift. */
-export const nowJakarta = () => dayjs.tz('Asia/Jakarta');
+/** Current instant in Asia/Jakarta; use for user-facing dates to avoid SSR/client drift. */
+export const nowJakarta = () => dayjs().tz('Asia/Jakarta');
 
 export default dayjs;
