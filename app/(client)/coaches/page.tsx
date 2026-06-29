@@ -52,48 +52,54 @@ const CoachesPage = () => {
           )}
 
           {!isLoading && !isError && coaches.length > 0 && (
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid items-stretch gap-4 lg:grid-cols-2">
               {coaches.map((coach) => (
                 <Card
                   key={coach.id}
-                  className="overflow-hidden rounded-2xl border-zinc-200/80 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+                  className="h-full overflow-hidden rounded-lg border-zinc-200/80 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
                 >
-                  <CardContent className="p-4 sm:p-5">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
-                      <Avatar className="size-24 shrink-0 rounded-2xl sm:size-28">
-                        <AvatarImage src={coach.image || undefined} alt={coach.name} />
-                        <AvatarFallback className="bg-primary/10 text-primary rounded-2xl font-semibold">
-                          <IconUserStar className="size-10" stroke={1.8} />
-                        </AvatarFallback>
-                      </Avatar>
+                  <CardContent className="h-full p-5 sm:p-6">
+                    <div className="grid h-full gap-5 sm:grid-cols-[7rem_minmax(0,1fr)] sm:gap-6">
+                      <div className="flex justify-center sm:justify-start">
+                        <Avatar className="size-28 shrink-0 rounded-lg ring-1 ring-zinc-200">
+                          <AvatarImage
+                            src={coach.image || undefined}
+                            alt={coach.name}
+                            className="object-cover"
+                          />
+                          <AvatarFallback className="bg-primary/10 text-primary rounded-lg font-semibold">
+                            <IconUserStar className="size-10" stroke={1.8} />
+                          </AvatarFallback>
+                        </Avatar>
+                      </div>
 
-                      <div className="min-w-0 flex-1">
-                        <div className="mb-3 flex flex-wrap items-start gap-2">
-                          <h2 className="text-primary min-w-0 flex-1 text-xl leading-tight font-semibold">
+                      <div className="flex min-w-0 flex-col">
+                        <div className="flex flex-col gap-3 border-b border-zinc-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
+                          <h2 className="text-primary min-w-0 text-center text-xl leading-tight font-semibold sm:text-left">
                             {coach.name}
                           </h2>
                           <Badge
                             variant="secondary"
-                            className="shrink-0 rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-700"
+                            className="mx-auto shrink-0 rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-700 sm:mx-0"
                           >
                             {getCoachTypeLabel(coach.coachType)}
                           </Badge>
                         </div>
 
                         {coach.achievements.length > 0 ? (
-                          <ul className="space-y-3">
+                          <ul className="mt-4 space-y-3">
                             {coach.achievements.map((achievement) => (
                               <li
                                 key={achievement}
-                                className="text-muted-foreground grid grid-cols-[1.25rem_1fr] gap-3 text-sm leading-7 sm:text-base"
+                                className="text-muted-foreground grid grid-cols-[1.25rem_minmax(0,1fr)] items-start gap-3 text-sm leading-6"
                               >
-                                <IconAward className="text-primary mt-1 size-5" />
+                                <IconAward className="text-primary mt-0.5 size-5" />
                                 <span className="min-w-0">{achievement}</span>
                               </li>
                             ))}
                           </ul>
                         ) : (
-                          <p className="text-muted-foreground text-sm">
+                          <p className="text-muted-foreground mt-4 text-center text-sm sm:text-left">
                             Portfolio coach belum ditambahkan.
                           </p>
                         )}
@@ -119,8 +125,8 @@ const CoachesPage = () => {
         notificationDelay={30}
         notificationLoop={1}
         className="coach-whatsapp-widget"
-        buttonStyle={{ right: '1rem', bottom: '6rem' }}
-        chatboxStyle={{ right: '1rem', bottom: '10.5rem' }}
+        buttonStyle={{ right: '1rem', bottom: '1rem' }}
+        chatboxStyle={{ right: '1rem', bottom: '5.75rem' }}
       />
     </>
   );
