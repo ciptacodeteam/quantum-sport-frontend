@@ -19,7 +19,12 @@ import {
   SectionHeader,
   SectionTitle
 } from '@/components/ui/section';
-import { BOOKING_STATUS_BADGE_VARIANT, BOOKING_STATUS_MAP, BookingStatus } from '@/lib/constants';
+import {
+  BOOKING_STATUS_BADGE_VARIANT,
+  BOOKING_STATUS_MAP,
+  BookingStatus,
+  getCoachTypeLabel
+} from '@/lib/constants';
 import { formatSlotTime } from '@/lib/time-utils';
 import { formatPhone } from '@/lib/utils';
 import { adminScheduleQueryOptions } from '@/queries/admin/booking';
@@ -844,7 +849,10 @@ export default function SchedulePage() {
                                                               )}
                                                               {coach.coachType && (
                                                                 <p className="text-muted-foreground text-xs">
-                                                                  🎯 Type: {coach.coachType}
+                                                                  🎯 Type:{' '}
+                                                                  {getCoachTypeLabel(
+                                                                    coach.coachType
+                                                                  )}
                                                                 </p>
                                                               )}
                                                             </div>

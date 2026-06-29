@@ -71,6 +71,7 @@
     "react-day-picker": "^9.13.0",
     "react-dom": "19.2.3",
     "react-fast-marquee": "^1.6.5",
+    "react-floating-whatsapp": "^5.0.8",
     "react-hook-form": "^7.70.0",
     "react-number-format": "^5.4.4",
     "recharts": "3.6.0",

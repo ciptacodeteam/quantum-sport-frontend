@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { ROLE, ROLE_OPTIONS } from '@/lib/constants';
+import { COACH_TYPE_OPTIONS, ROLE, ROLE_OPTIONS } from '@/lib/constants';
 import { cn, formatPhone, getPlaceholderImageUrl } from '@/lib/utils';
 import { adminUpdateStaffMutationOptions } from '@/mutations/admin/staff';
 import { adminStaffQueryOptions } from '@/queries/admin/staff';
@@ -35,6 +35,12 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Controller, type SubmitHandler, useForm } from 'react-hook-form';
 import z from 'zod';
+
+const normalizeCoachTypeValue = (value?: string | null) => {
+  if (value === 'GUIDED_MATCH') return 'PADEL_TENNIS';
+  if (value === 'COACH') return 'PADEL';
+  return value ?? undefined;
+};
 
 const formSchema = z
   .object({
@@ -81,7 +87,7 @@ const EditStaffForm = ({ staffId }: Props) => {
       name: data?.name || '',
       email: data?.email || '',
       role: data?.role,
-      coachType: data?.coachType ?? undefined,
+      coachType: normalizeCoachTypeValue(data?.coachType),
       coachProfile: data?.coachProfile ?? '',
       phone: data?.phone ? formatPhone(data.phone).replace(/^\+62/, '') : '',
       image: undefined,
@@ -265,8 +271,11 @@ const EditStaffForm = ({ staffId }: Props) => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectGroup>
-                          <SelectItem value="GUIDED_MATCH">Guided Match</SelectItem>
-                          <SelectItem value="COACH">Coach</SelectItem>
+                          {COACH_TYPE_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
                         </SelectGroup>
                       </SelectContent>
                     </Select>

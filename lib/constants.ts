@@ -119,21 +119,42 @@ export const SLOT_TYPE_BADGE_VARIANT: Record<SlotType, BadgeVariant['variant']> 
 };
 
 export const COACH_TYPE = {
-  GUIDED_MATCH: 'GUIDED_MATCH',
-  COACH: 'COACH'
+  PADEL: 'PADEL',
+  PADEL_TENNIS: 'PADEL_TENNIS',
+  TENNIS: 'TENNIS'
 } as const;
 
-export type CoachType = keyof typeof COACH_TYPE;
+export type CoachType = (typeof COACH_TYPE)[keyof typeof COACH_TYPE];
 
 export const COACH_TYPE_MAP: Record<CoachType, string> = {
-  [COACH_TYPE.GUIDED_MATCH]: 'Guided Match',
-  [COACH_TYPE.COACH]: 'Coach'
+  [COACH_TYPE.PADEL]: 'Padel',
+  [COACH_TYPE.PADEL_TENNIS]: 'Padel & Tennis',
+  [COACH_TYPE.TENNIS]: 'Tennis'
 };
 
 export const COACH_TYPE_OPTIONS: Array<{ label: string; value: CoachType }> = [
-  { label: 'Guided Match', value: COACH_TYPE.GUIDED_MATCH },
-  { label: 'Coach', value: COACH_TYPE.COACH }
+  { label: 'Padel', value: COACH_TYPE.PADEL },
+  { label: 'Padel & Tennis', value: COACH_TYPE.PADEL_TENNIS },
+  { label: 'Tennis', value: COACH_TYPE.TENNIS }
 ];
+
+export const getCoachTypeLabel = (coachType?: string | null) => {
+  const normalizedType = String(coachType ?? '').toUpperCase();
+
+  if (normalizedType === 'PADEL_TENNIS' || normalizedType === 'GUIDED_MATCH') {
+    return COACH_TYPE_MAP[COACH_TYPE.PADEL_TENNIS];
+  }
+
+  if (normalizedType === 'TENNIS') {
+    return COACH_TYPE_MAP[COACH_TYPE.TENNIS];
+  }
+
+  if (normalizedType === 'PADEL' || normalizedType === 'COACH') {
+    return COACH_TYPE_MAP[COACH_TYPE.PADEL];
+  }
+
+  return coachType ?? '-';
+};
 
 export const BookingStatus = {
   HOLD: 'HOLD', // temporary hold on slots before payment (expiry)

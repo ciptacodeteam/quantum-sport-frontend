@@ -76,7 +76,7 @@ export type Coach = {
   id: string;
   name: string;
   image: string | null;
-  coachType: 'GUIDED_MATCH' | 'COACH' | null;
+  coachType: 'PADEL' | 'PADEL_TENNIS' | 'TENNIS' | null;
   coachProfile: string | null;
   achievements: string[];
 };

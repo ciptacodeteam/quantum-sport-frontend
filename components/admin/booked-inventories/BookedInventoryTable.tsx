@@ -20,7 +20,11 @@ import {
 } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useConfirmMutation } from '@/hooks/useConfirmDialog';
-import { BOOKING_STATUS_BADGE_VARIANT, BOOKING_STATUS_MAP } from '@/lib/constants';
+import {
+  BOOKING_STATUS_BADGE_VARIANT,
+  BOOKING_STATUS_MAP,
+  getCoachTypeLabel
+} from '@/lib/constants';
 import { formatPhone } from '@/lib/utils';
 import {
   adminBookedInventoriesQueryOptions,
@@ -368,7 +372,7 @@ const InventoryDetail = ({ id }: { id: string }) => {
               <div key={idx} className="bg-muted/50 rounded-lg border p-3">
                 <p className="font-medium">{c.staff.name}</p>
                 <p className="text-muted-foreground text-sm">
-                  {(c as any).coachType?.name ?? c.coachType} ·{' '}
+                  {(c as any).coachType?.name ?? getCoachTypeLabel(c.coachType)} ·{' '}
                   {dayjs(c.slot.startAt).format('HH:mm')} - {dayjs(c.slot.endAt).format('HH:mm')}
                 </p>
               </div>

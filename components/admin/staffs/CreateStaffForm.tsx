@@ -25,7 +25,7 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { ROLE, ROLE_OPTIONS } from '@/lib/constants';
+import { COACH_TYPE_OPTIONS, ROLE, ROLE_OPTIONS } from '@/lib/constants';
 import { cn, formatPhone, getPlaceholderImageUrl } from '@/lib/utils';
 import { adminCreateStaffMutationOptions } from '@/mutations/admin/staff';
 import { adminStaffsQueryOptions } from '@/queries/admin/staff';
@@ -263,8 +263,11 @@ const CreateStaffForm = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectGroup>
-                          <SelectItem value="GUIDED_MATCH">Guided Match</SelectItem>
-                          <SelectItem value="COACH">Coach</SelectItem>
+                          {COACH_TYPE_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
                         </SelectGroup>
                       </SelectContent>
                     </Select>
