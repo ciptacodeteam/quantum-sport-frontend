@@ -16,7 +16,7 @@ export default function TermsAndConditionsPage() {
           {/* Header */}
           <div className="space-y-2">
             <h1 className="text-2xl font-bold lg:text-3xl">Quantum Padel</h1>
-            <p className="text-muted-foreground text-xs lg:text-sm">
+            <p className="text-muted-foreground text-xs lg:text-sm" suppressHydrationWarning>
               Terakhir diperbarui:{' '}
               {new Date().toLocaleDateString('id-ID', {
                 day: 'numeric',

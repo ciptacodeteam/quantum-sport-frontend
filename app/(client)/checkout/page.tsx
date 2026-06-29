@@ -477,7 +477,7 @@ export default function CheckoutPage() {
     try {
       const ok = await confirm({
         title: 'Konfirmasi Pemesanan',
-        description: 'Apakah pesanan anda sudah sesuai?',
+        description: 'Reschedule berlaku H-3.Pastikan pesanan anda sudah sesuai',
         confirmText: 'Bayar Sekarang',
         cancelText: 'Cek Lagi',
         dismissible: true
