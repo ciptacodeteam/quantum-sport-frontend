@@ -68,15 +68,19 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
       icon: IconScan,
       items: [
         {
-          title: 'Book Courts',
-          url: '/admin/booking-lapangan'
+          title: 'Book Padel Courts',
+          url: '/admin/booking-lapangan?courtSport=PADEL'
+        },
+        {
+          title: 'Book Tennis Courts',
+          url: '/admin/booking-lapangan?courtSport=TENNIS'
         },
         {
           title: 'Add-ons & Equipment',
           url: '/admin/booking-add-ons'
         },
         {
-          title: 'Book Membership',
+          title: 'Book Value Pack',
           url: '/admin/booking-membership'
         },
         {
@@ -90,8 +94,12 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
       icon: IconShoppingCart,
       items: [
         {
-          title: 'Lapangan',
-          url: '/admin/kelola-pemesanan/lapangan'
+          title: 'Lapangan Padel',
+          url: '/admin/kelola-pemesanan/lapangan?courtSport=PADEL'
+        },
+        {
+          title: 'Lapangan Tennis',
+          url: '/admin/kelola-pemesanan/lapangan?courtSport=TENNIS'
         },
         {
           title: 'Inventori',
@@ -102,7 +110,7 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
           url: '/admin/kelola-pemesanan/coach'
         },
         {
-          title: 'Membership',
+          title: 'Value Pack',
           url: '/admin/kelola-pemesanan/membership'
         }
       ]
@@ -182,7 +190,7 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
           url: '/admin/kelola-lapangan'
         },
         {
-          title: 'Kelola Membership',
+          title: 'Kelola Value Pack',
           url: '/admin/kelola-membership'
         },
         {
@@ -245,15 +253,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           icon: IconScan,
           items: [
             {
-              title: 'Book Courts',
-              url: '/admin/booking-lapangan'
+              title: 'Book Padel Courts',
+              url: '/admin/booking-lapangan?courtSport=PADEL'
+            },
+            {
+              title: 'Book Tennis Courts',
+              url: '/admin/booking-lapangan?courtSport=TENNIS'
             },
             {
               title: 'Add-ons & Equipment',
               url: '/admin/booking-add-ons'
             },
             {
-              title: 'Book Membership',
+              title: 'Book Value Pack',
               url: '/admin/booking-membership'
             },
             {
@@ -267,8 +279,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           icon: IconShoppingCart,
           items: [
             {
-              title: 'Lapangan',
-              url: '/admin/kelola-pemesanan/lapangan'
+              title: 'Lapangan Padel',
+              url: '/admin/kelola-pemesanan/lapangan?courtSport=PADEL'
+            },
+            {
+              title: 'Lapangan Tennis',
+              url: '/admin/kelola-pemesanan/lapangan?courtSport=TENNIS'
             },
             {
               title: 'Inventori',

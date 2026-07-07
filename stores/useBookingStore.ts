@@ -11,9 +11,18 @@ export interface BookingItem {
   price: number;
   normalPrice?: number;
   discountPrice?: number;
+  sport?: 'PADEL' | 'TENNIS';
   date: string;
   endTime: string;
 }
+
+const getBookingItemBasePrice = (item: BookingItem) => {
+  const normalPrice = item.normalPrice ?? 0;
+  const discountPrice = item.discountPrice ?? 0;
+  if (discountPrice > 0) return discountPrice;
+  if (item.price > 0) return item.price;
+  return normalPrice;
+};
 
 export interface Coach {
   id: string;
@@ -161,7 +170,7 @@ export const useBookingStore = create<BookingState>()(
 
       // Actions
       setBookingItems: (items) => {
-        const courtTotal = items.reduce((sum, item) => sum + item.price, 0);
+        const courtTotal = items.reduce((sum, item) => sum + getBookingItemBasePrice(item), 0);
         set({ bookingItems: items, courtTotal });
       },
 
@@ -170,7 +179,7 @@ export const useBookingStore = create<BookingState>()(
         const newItems = state.bookingItems.filter(
           (item) => !(item.courtId === courtId && item.timeSlot === timeSlot && item.date === date)
         );
-        const courtTotal = newItems.reduce((sum, item) => sum + item.price, 0);
+        const courtTotal = newItems.reduce((sum, item) => sum + getBookingItemBasePrice(item), 0);
         set({ bookingItems: newItems, courtTotal });
       },
 

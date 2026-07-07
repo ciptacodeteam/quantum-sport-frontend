@@ -8,16 +8,20 @@ export const coachesQueryOptions = queryOptions({
   select: (res) => res.data as Coach[]
 });
 
-export const coachAvailabilityQueryOptions = (startAt?: string, endAt?: string) =>
+export const coachAvailabilityQueryOptions = (
+  startAt?: string,
+  endAt?: string,
+  courtSport?: 'PADEL' | 'TENNIS'
+) =>
   queryOptions({
-    queryKey: ['coach', 'availability', startAt, endAt],
+    queryKey: ['coach', 'availability', startAt, endAt, courtSport],
     enabled: Boolean(startAt && endAt),
     queryFn: () => {
       if (!startAt || !endAt) {
         return Promise.resolve({ data: [] });
       }
 
-      return getCoachAvailabilityApi({ startAt, endAt });
+      return getCoachAvailabilityApi({ startAt, endAt, courtSport });
     },
     select: (res) => res.data as CoachAvailability[]
   });

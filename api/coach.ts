@@ -3,6 +3,7 @@ import { api } from '@/lib/api';
 type CoachAvailabilityParams = {
   startAt: string;
   endAt: string;
+  courtSport?: 'PADEL' | 'TENNIS';
 };
 
 export async function getCoachAvailabilityApi(params: CoachAvailabilityParams) {

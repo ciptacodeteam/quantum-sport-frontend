@@ -42,14 +42,28 @@ import DatePickerInput from '@/components/ui/date-picker-input';
 
 const columnHelper = createColumnHelper<MembershipUser>();
 
+type MembershipSportFilter = 'all' | 'PADEL' | 'TENNIS';
+
+const sportLabels: Record<'PADEL' | 'TENNIS', string> = {
+  PADEL: 'Padel',
+  TENNIS: 'Tennis'
+};
+
 const formatDate = (date: Date | string): string => {
   return dayjs(date).format('DD MMM YYYY');
 };
 
 const MembershipTransactionTable = () => {
   const [source, setSource] = useState<string>('');
+  const [sport, setSport] = useState<MembershipSportFilter>('all');
+  const queryParams = useMemo(() => {
+    const params: Record<string, string> = {};
+    if (source && source !== 'all') params.source = source;
+    if (sport !== 'all') params.sport = sport;
+    return params;
+  }, [source, sport]);
   const { data: transactions = [], isLoading } = useQuery(
-    adminMembershipTransactionsQueryOptions(source && source !== 'all' ? { source } : {})
+    adminMembershipTransactionsQueryOptions(queryParams)
   );
 
   const { confirmAndMutate: approveTx } = useApproveMembershipTransactionMutation();
@@ -90,7 +104,7 @@ const MembershipTransactionTable = () => {
         size: 250
       }),
       columnHelper.accessor('membership', {
-        header: 'Membership',
+        header: 'Value Pack',
         cell: (info) => {
           const membership = info.getValue();
           if (!membership) return '-';
@@ -98,9 +112,12 @@ const MembershipTransactionTable = () => {
           return (
             <div>
               <p className="font-medium">{membership.name}</p>
-              <p className="text-muted-foreground text-xs">
-                {membership.sessions} sessions · {membership.duration} days
-              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                <Badge variant="outline">{sportLabels[membership.sport ?? 'PADEL']}</Badge>
+                <p className="text-muted-foreground text-xs">
+                  {membership.sessions} sessions · {membership.duration} days
+                </p>
+              </div>
             </div>
           );
         },
@@ -223,7 +240,7 @@ const MembershipTransactionTable = () => {
                 </DialogTrigger>
                 <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>Membership Transaction Detail</DialogTitle>
+                    <DialogTitle>Value Pack Transaction Detail</DialogTitle>
                   </DialogHeader>
                   <MembershipTransactionDetail transaction={transaction} />
                 </DialogContent>
@@ -278,6 +295,24 @@ const MembershipTransactionTable = () => {
         rightActions={
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-2">
+              <label htmlFor="membership-sport-filter" className="text-sm font-medium">
+                Kategori:
+              </label>
+              <Select
+                value={sport}
+                onValueChange={(value) => setSport(value as MembershipSportFilter)}
+              >
+                <SelectTrigger id="membership-sport-filter" className="w-[150px]">
+                  <SelectValue placeholder="Semua" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua</SelectItem>
+                  <SelectItem value="PADEL">Padel</SelectItem>
+                  <SelectItem value="TENNIS">Tennis</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
               <label htmlFor="source-filter" className="text-sm font-medium">
                 Filter Sumber:
               </label>
@@ -295,7 +330,7 @@ const MembershipTransactionTable = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => exportExcel({})}
+              onClick={() => exportExcel(queryParams)}
               disabled={exporting}
             >
               <IconFileExcel />
@@ -332,13 +367,14 @@ const MembershipTransactionDetail = ({ transaction }: { transaction: MembershipU
         </div>
       </div>
 
-      {/* Membership Info */}
+      {/* Value Pack Info */}
       <div className="border-b pb-4">
-        <h3 className="mb-3 font-semibold">Membership Details</h3>
+        <h3 className="mb-3 font-semibold">Value Pack Details</h3>
         <div className="space-y-3">
           <div>
             <p className="text-muted-foreground text-sm">Package</p>
             <p className="text-lg font-semibold">{membership?.name || '-'}</p>
+            {membership?.sport && <Badge variant="outline">{sportLabels[membership.sport]}</Badge>}
             <p className="text-muted-foreground text-sm">{membership?.description || ''}</p>
           </div>
           <div className="grid gap-3 md:grid-cols-3">
@@ -516,7 +552,7 @@ const SuspendMembershipDialog = ({
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Suspend Membership</DialogTitle>
+          <DialogTitle>Suspend Value Pack</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>

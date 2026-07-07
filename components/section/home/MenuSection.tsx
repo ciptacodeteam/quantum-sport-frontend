@@ -2,16 +2,29 @@ import MenuItem from './MenuItem';
 import BookingMenuIcon from '@/assets/icons/menus/booking.svg';
 import ClubMenuIcon from '@/assets/icons/menus/club.svg';
 import MembershipMenuIcon from '@/assets/icons/menus/membership.svg';
+import PadelCourtIcon from '@/assets/icons/menus/padelcourt.webp';
 import SracademyLogo from '@/assets/icons/menus/sr.webp';
-import TournamentMenuIcon from '@/assets/icons/menus/tournament.svg';
 import Image from 'next/image';
 
 const MenuSection = () => {
   const menuList = [
     {
-      title: 'Booking',
+      title: 'Padel',
       subtitle: 'Pesan lapangan dengan mudah dan bermain tanpa ribet.',
       url: '/booking',
+      icon: (
+        <Image
+          src={PadelCourtIcon}
+          alt=""
+          className="size-9 object-contain mix-blend-multiply lg:size-10"
+          aria-hidden
+        />
+      )
+    },
+    {
+      title: 'Tennis',
+      subtitle: 'Booking lapangan tennis dengan alur yang sama.',
+      url: '/booking/tennis',
       icon: <BookingMenuIcon className="size-13 lg:size-12" />
     },
     {
@@ -38,12 +51,6 @@ const MenuSection = () => {
       subtitle: 'Dapatkan paket hemat dengan berbagai keuntungan eksklusif.',
       url: '/membership',
       icon: <MembershipMenuIcon className="size-9 lg:size-10" />
-    },
-    {
-      title: 'Turnamen',
-      subtitle: 'Ikuti berbagai event dan kompetisi padel seru yang diadakan rutin.',
-      url: '/tournaments',
-      icon: <TournamentMenuIcon className="size-9 lg:size-9" />
     }
   ];
 

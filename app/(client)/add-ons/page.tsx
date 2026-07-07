@@ -15,6 +15,10 @@ import { toast } from 'sonner';
 export default function AddOnsPage() {
   const router = useRouter();
   const bookingItems = useBookingStore((state) => state.bookingItems) as BookingItem[];
+  const courtSport = useMemo<'PADEL' | 'TENNIS'>(
+    () => bookingItems.find((item) => item.sport)?.sport ?? 'PADEL',
+    [bookingItems]
+  );
   // const selectedCoaches = useBookingStore((state) => state.selectedCoaches);
   // const addCoachToStore = useBookingStore((state) => state.addCoach);
   // const removeCoachFromStore = useBookingStore((state) => state.removeCoach);
@@ -26,7 +30,7 @@ export default function AddOnsPage() {
     data: inventoryAvailability,
     isPending: isInventoryPending,
     isError: isInventoryError
-  } = useQuery(inventoryAvailabilityQueryOptions);
+  } = useQuery(inventoryAvailabilityQueryOptions({ courtSport }));
 
   const bookingTimeRange = useMemo(() => {
     if (bookingItems.length === 0) {

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCallback } from 'react';
 import BottomNavigationWrapper from '../ui/BottomNavigationWrapper';
-import { CalendarCheckIcon, HomeIcon } from 'lucide-react';
+import { CalendarCheckIcon, HomeIcon, TrophyIcon } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { profileQueryOptions } from '@/queries/profile';
 import useAuthModalStore from '@/stores/useAuthModalStore';
@@ -13,6 +13,7 @@ import useAuthModalStore from '@/stores/useAuthModalStore';
 const navigationItems = [
   { title: 'Beranda', icon: <HomeIcon size={28} />, path: '/' },
   { title: 'My Club', icon: <IconBallTennis size={28} />, path: '/my-club', requiresAuth: true },
+  { title: 'Turnamen', icon: <TrophyIcon size={28} />, path: '/tournaments' },
   { title: 'Invoice', icon: <CalendarCheckIcon size={28} />, path: '/invoice', requiresAuth: true },
   { title: 'Profil', icon: <IconUser size={28} />, path: '/profile', requiresAuth: true }
 ];

@@ -7,6 +7,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useMembershipDiscount } from '@/hooks/useMembershipDiscount';
+import { isTimeAllowedForMembershipType, type MembershipType } from '@/lib/membership-hours';
 import { formatSlotTime } from '@/lib/time-utils';
 import { cn, getPlaceholderImageUrl } from '@/lib/utils';
 import { adminCourtCostingQueryOptions } from '@/queries/admin/court';
@@ -20,7 +21,7 @@ import customParseFormat from 'dayjs/plugin/customParseFormat';
 import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -87,6 +88,10 @@ type SelectedBooking = {
 
 export default function BookingLapangan() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const courtSport: 'PADEL' | 'TENNIS' =
+    searchParams.get('courtSport') === 'TENNIS' ? 'TENNIS' : 'PADEL';
+  const courtSportLabel = courtSport === 'TENNIS' ? 'Tennis' : 'Padel';
   const queryClient = useQueryClient();
   const {
     bookingItems,
@@ -109,21 +114,32 @@ export default function BookingLapangan() {
   const [selectedCourt, setSelectedCourt] = useState<string | null>(null);
   const [localCustomerId, setLocalCustomerId] = useState<string>(selectedCustomerId ?? '');
   const [bookings, setBookings] = useState<SelectedBooking[]>(
-    bookingItems.map((item) => ({
-      courtId: item.courtId,
-      courtName: item.courtName,
-      timeSlot: item.timeSlot,
-      price: item.price,
-      normalPrice: item.normalPrice,
-      discountPrice: item.discountPrice,
-      date: item.date,
-      slotId: item.slotId || '',
-      endTime: item.endTime
-    }))
+    bookingItems.map((item) => {
+      const normalPrice = item.normalPrice ?? item.price;
+      const discountPrice = item.discountPrice ?? 0;
+      const effectivePrice = discountPrice > 0 ? discountPrice : normalPrice;
+
+      return {
+        courtId: item.courtId,
+        courtName: item.courtName,
+        timeSlot: item.timeSlot,
+        price: effectivePrice,
+        normalPrice,
+        discountPrice,
+        date: item.date,
+        slotId: item.slotId || '',
+        endTime: item.endTime
+      };
+    })
   );
   const [calendarOpen, setCalendarOpen] = useState(false);
   // Customer selection is now handled by BookingSummary component
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerSearchResult | null>(null);
+  const activeMembershipType = useMemo<MembershipType | null>(() => {
+    const activeMembership = selectedCustomer?.activeMembership;
+    if (!activeMembership || activeMembership.membership.sport !== courtSport) return null;
+    return activeMembership.membership.type ?? 'ALL_HOUR';
+  }, [courtSport, selectedCustomer]);
 
   // Fetch slots for the selected date
   // Include next day's 00:00 slot (which is actually the end of the current day in Jakarta time)
@@ -133,9 +149,10 @@ export default function BookingLapangan() {
     const end = startOfDay(addDays(localSelectedDate, 1));
     return {
       startAt: start.toISOString(),
-      endAt: end.toISOString()
+      endAt: end.toISOString(),
+      courtSport
     };
-  }, [localSelectedDate]);
+  }, [localSelectedDate, courtSport]);
 
   const { data: slotsData, isLoading: isSlotsLoading } = useQuery(
     // courtsSlotsQueryOptions(slotQueryParams)
@@ -153,17 +170,20 @@ export default function BookingLapangan() {
         price: booking.price,
         normalPrice: booking.normalPrice,
         discountPrice: booking.discountPrice,
+        sport: courtSport,
         date: booking.date,
         endTime: booking.endTime || booking.timeSlot.split(' - ')[1] || ''
       })),
-    [bookings]
+    [bookings, courtSport]
   );
 
   // Pass membership data from selected customer to avoid separate API call
   const membershipDiscount = useMembershipDiscount(
     localCustomerId,
     bookingItemsForDiscount,
-    selectedCustomer ? { activeMembership: selectedCustomer.activeMembership } : null
+    selectedCustomer ? { activeMembership: selectedCustomer.activeMembership } : null,
+    false,
+    courtSport
   );
 
   // Update store with membership discount
@@ -172,6 +192,58 @@ export default function BookingLapangan() {
   }, [membershipDiscount.discountAmount, setMembershipDiscount]);
 
   const slots = useMemo(() => slotsData ?? [], [slotsData]);
+
+  useEffect(() => {
+    if (slots.length === 0 || bookings.length === 0) return;
+
+    let didRepair = false;
+    const slotsById = new Map(slots.map((slot) => [slot.id, slot]));
+    const repairedBookings = bookings.map((booking) => {
+      const slot = slotsById.get(booking.slotId);
+      if (!slot) return booking;
+
+      const normalPrice = slot.price || 0;
+      const discountPrice = slot.discountPrice || 0;
+      const effectivePrice = discountPrice > 0 ? discountPrice : normalPrice;
+
+      if (
+        booking.price === effectivePrice &&
+        booking.normalPrice === normalPrice &&
+        booking.discountPrice === discountPrice
+      ) {
+        return booking;
+      }
+
+      didRepair = true;
+      return {
+        ...booking,
+        price: effectivePrice,
+        normalPrice,
+        discountPrice
+      };
+    });
+
+    if (didRepair) {
+      setBookings(repairedBookings);
+      setBookingItems(
+        repairedBookings.map((booking) => ({
+          courtId: booking.courtId,
+          courtName: booking.courtName,
+          timeSlot: booking.timeSlot,
+          price:
+            booking.discountPrice && booking.discountPrice > 0
+              ? booking.discountPrice
+              : booking.normalPrice || booking.price,
+          normalPrice: booking.normalPrice,
+          discountPrice: booking.discountPrice,
+          sport: courtSport,
+          date: booking.date,
+          slotId: booking.slotId,
+          endTime: booking.endTime || booking.timeSlot.split(' - ')[1] || ''
+        }))
+      );
+    }
+  }, [bookings, courtSport, setBookingItems, slots]);
 
   // Extract courts from slots
   const courts = useMemo(() => {
@@ -258,6 +330,13 @@ export default function BookingLapangan() {
     }
     return slots;
   }, []);
+  const allowedStandardTimeSlots = useMemo(
+    () =>
+      standardTimeSlots.filter((timeSlot) =>
+        isTimeAllowedForMembershipType(activeMembershipType, timeSlot)
+      ),
+    [activeMembershipType, standardTimeSlots]
+  );
 
   // Get time slots filtered by selected court (if a court is selected)
   // IMPORTANT: We include ALL time slots regardless of isAvailable status
@@ -267,7 +346,7 @@ export default function BookingLapangan() {
     const timeSet = new Set<string>();
 
     // First, add all standard time slots as base
-    standardTimeSlots.forEach((time) => timeSet.add(time));
+    allowedStandardTimeSlots.forEach((time) => timeSet.add(time));
 
     // Then, add any additional slots from API (in case there are slots outside standard hours)
     // If a court is selected, only show slots for that court
@@ -297,12 +376,32 @@ export default function BookingLapangan() {
 
     // Convert to array and sort
     return Array.from(timeSet).sort((a, b) => a.localeCompare(b));
-  }, [slots, selectedDateString, selectedCourt, standardTimeSlots]);
+  }, [slots, selectedDateString, selectedCourt, allowedStandardTimeSlots]).filter((timeSlot) =>
+    isTimeAllowedForMembershipType(activeMembershipType, timeSlot)
+  );
 
   // Sync with store when component mounts
   useEffect(() => {
     setLocalSelectedDate(selectedDate);
   }, [selectedDate]);
+
+  useEffect(() => {
+    setSelectedTimeSlots((prev) =>
+      prev.filter((timeSlot) => isTimeAllowedForMembershipType(activeMembershipType, timeSlot))
+    );
+    setBookings((prev) =>
+      prev.filter((booking) =>
+        isTimeAllowedForMembershipType(activeMembershipType, booking.timeSlot)
+      )
+    );
+    setBookingItems(
+      useBookingStore
+        .getState()
+        .bookingItems.filter((item) =>
+          isTimeAllowedForMembershipType(activeMembershipType, item.timeSlot)
+        )
+    );
+  }, [activeMembershipType, setBookingItems]);
 
   // Get current week for horizontal scroll
   const getWeekDates = () => {
@@ -403,6 +502,7 @@ export default function BookingLapangan() {
       price: booking.price,
       normalPrice: booking.normalPrice,
       discountPrice: booking.discountPrice,
+      sport: courtSport,
       date: booking.date,
       slotId: booking.slotId,
       endTime: booking.endTime
@@ -434,9 +534,13 @@ export default function BookingLapangan() {
         courtId: booking.courtId,
         courtName: booking.courtName,
         timeSlot: booking.timeSlot,
-        price: booking.price,
+        price:
+          booking.discountPrice && booking.discountPrice > 0
+            ? booking.discountPrice
+            : booking.normalPrice || booking.price,
         normalPrice: booking.normalPrice,
         discountPrice: booking.discountPrice,
+        sport: courtSport,
         date: booking.date,
         slotId: booking.slotId,
         endTime: endTime
@@ -469,9 +573,13 @@ export default function BookingLapangan() {
       courtId: booking.courtId,
       courtName: booking.courtName,
       timeSlot: booking.timeSlot,
-      price: booking.price,
+      price:
+        booking.discountPrice && booking.discountPrice > 0
+          ? booking.discountPrice
+          : booking.normalPrice || booking.price,
       normalPrice: booking.normalPrice,
       discountPrice: booking.discountPrice,
+      sport: courtSport,
       date: booking.date,
       slotId: booking.slotId,
       endTime: booking.endTime || booking.timeSlot.split(' - ')[1] || ''
@@ -633,7 +741,7 @@ export default function BookingLapangan() {
         <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div className="flex items-center gap-2">
             <IconMapPin className="text-primary h-5 w-5" />
-            <h1 className="text-xl font-bold lg:text-2xl">Padel Court Booking</h1>
+            <h1 className="text-xl font-bold lg:text-2xl">{courtSportLabel} Court Booking</h1>
           </div>
 
           {/* Calendar Selector */}
@@ -722,10 +830,10 @@ export default function BookingLapangan() {
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:gap-4">
                     {courts.map((court) => {
                       // Total slots is based on standard time slots (06:00-23:00)
-                      const totalSlotsCount = standardTimeSlots.length;
+                      const totalSlotsCount = allowedStandardTimeSlots.length;
 
                       // Available slots - count how many slots are NOT booked
-                      const availableSlotsCount = standardTimeSlots.filter((timeSlot) => {
+                      const availableSlotsCount = allowedStandardTimeSlots.filter((timeSlot) => {
                         return !isTimeSlotBooked(timeSlot, court.id);
                       }).length;
 

@@ -16,17 +16,29 @@ import {
 } from '@/components/ui/sidebar';
 import type { AppSidebarItem } from '@/types';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Badge } from './badge';
 
 export function NavMain({ items }: { items: AppSidebarItem[] }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   // Check if a URL matches the current pathname
   const isActive = (url?: string) => {
     if (!url) return false;
+    const [itemPathname, itemQueryString] = url.split('?');
+
+    if (itemQueryString) {
+      if (pathname !== itemPathname) return false;
+
+      const itemSearchParams = new URLSearchParams(itemQueryString);
+      return Array.from(itemSearchParams.entries()).every(
+        ([key, value]) => searchParams.get(key) === value
+      );
+    }
+
     // Exact match or starts with the URL (for nested routes)
-    return pathname === url || pathname.startsWith(`${url}/`);
+    return pathname === itemPathname || pathname.startsWith(`${itemPathname}/`);
   };
 
   // Check if any sub-item is active

@@ -6,6 +6,13 @@ import { Button } from '@/components/ui/button';
 import { useDialog } from '@/components/ui/dialog';
 import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
@@ -23,6 +30,7 @@ import z from 'zod';
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   description: z.string().optional(),
+  sport: z.enum(['PADEL', 'TENNIS']),
   quantity: z.number().min(1, { message: 'Quantity must be at least 1.' }),
   isActive: z.boolean().default(true)
 });
@@ -39,6 +47,7 @@ const EditInventoryForm = ({ data }: Props) => {
     defaultValues: {
       name: data?.name || '',
       description: data?.description || '',
+      sport: data?.sport || 'PADEL',
       quantity: data?.quantity || 1,
       isActive: data?.isActive
     }
@@ -78,6 +87,25 @@ const EditInventoryForm = ({ data }: Props) => {
             <FieldLabel htmlFor="name">Nama</FieldLabel>
             <Input id="name" {...form.register('name')} placeholder="e.g. Raket" />
             <FieldError>{form.formState.errors.name?.message}</FieldError>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="sport">Kategori</FieldLabel>
+            <Controller
+              control={form.control}
+              name="sport"
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger id="sport" className="w-full">
+                    <SelectValue placeholder="Pilih kategori" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PADEL">Padel</SelectItem>
+                    <SelectItem value="TENNIS">Tennis</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            <FieldError>{form.formState.errors.sport?.message}</FieldError>
           </Field>
           <Field>
             <FieldLabel htmlFor="description">Keterangan</FieldLabel>

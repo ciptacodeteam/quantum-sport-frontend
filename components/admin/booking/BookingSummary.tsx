@@ -103,6 +103,8 @@ export interface BookingSummaryProps {
       };
     } | null;
   } | null;
+  useMembership?: boolean;
+  onUseMembershipChange?: (value: boolean) => void;
 
   /** Primary action button configuration */
   primaryAction?: {
@@ -230,6 +232,8 @@ export default function BookingSummary({
   membershipDiscount: _membershipDiscountAmount = 0,
   totalAmount,
   membershipDiscountDetails,
+  useMembership = true,
+  onUseMembershipChange,
   primaryAction,
   secondaryActions = [],
   showCustomerSelection = true,
@@ -313,7 +317,10 @@ export default function BookingSummary({
   const calculatedMembershipDiscount = useMembershipDiscount(
     selectedCustomerId || null,
     bookingItems,
-    selectedCustomer ? { activeMembership: selectedCustomer.activeMembership } : null
+    selectedCustomer ? { activeMembership: selectedCustomer.activeMembership } : null,
+    false,
+    undefined,
+    useMembership
   );
 
   // Use provided membership discount details if available, otherwise use calculated
@@ -568,6 +575,17 @@ export default function BookingSummary({
                     {membershipDiscount.activeMembership.remainingSessions} sesi
                   </span>
                 </div>
+                {onUseMembershipChange && (
+                  <label className="mt-2 flex items-center justify-between gap-3 rounded-md border bg-white px-3 py-2">
+                    <span className="text-muted-foreground">Gunakan Value Pack</span>
+                    <input
+                      type="checkbox"
+                      checked={useMembership}
+                      onChange={(event) => onUseMembershipChange(event.target.checked)}
+                      className="accent-primary h-4 w-4"
+                    />
+                  </label>
+                )}
                 {membershipDiscount.canUseMembership && bookingItems.length > 0 && (
                   <div className="text-primary mt-1 font-medium">
                     {membershipDiscount.slotsToDeduct} slot akan gratis menggunakan membership

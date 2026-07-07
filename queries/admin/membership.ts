@@ -1,12 +1,14 @@
 import { getMembershipApi, getMembershipsApi } from '@/api/admin/membership';
+import type { SearchParamsData } from '@/types';
 import type { Membership } from '@/types/model';
 import { queryOptions } from '@tanstack/react-query';
 
-export const adminMembershipsQueryOptions = queryOptions({
-  queryKey: ['admin', 'memberships'],
-  queryFn: getMembershipsApi,
-  select: (res) => res.data as Membership[]
-});
+export const adminMembershipsQueryOptions = (queryParams?: SearchParamsData) =>
+  queryOptions({
+    queryKey: ['admin', 'memberships', queryParams],
+    queryFn: () => getMembershipsApi(queryParams),
+    select: (res) => res.data as Membership[]
+  });
 
 export const adminMembershipQueryOptions = (id: string) =>
   queryOptions({

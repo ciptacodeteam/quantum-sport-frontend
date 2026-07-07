@@ -3,7 +3,15 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 import { STATUS_BADGE_VARIANT, STATUS_MAP } from '@/lib/constants';
+import { membershipTypeLabels } from '@/lib/membership-hours';
 import { hasCreatePermission, hasEditPermission } from '@/lib/utils';
 import { adminMembershipsQueryOptions } from '@/queries/admin/membership';
 import { adminProfileQueryOptions } from '@/queries/admin/auth';
@@ -13,16 +21,24 @@ import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
 import Link from 'next/link';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+
+type MembershipSportFilter = 'all' | 'PADEL' | 'TENNIS';
+
+const sportLabels: Record<'PADEL' | 'TENNIS', string> = {
+  PADEL: 'Padel',
+  TENNIS: 'Tennis'
+};
 
 const MembershipTable = () => {
   const colHelper = createColumnHelper<Membership>();
   const { data: me } = useQuery(adminProfileQueryOptions);
+  const [sportFilter, setSportFilter] = useState<MembershipSportFilter>('all');
 
   const columns = useMemo(
     () => [
       colHelper.accessor('name', {
-        header: 'Nama Membership',
+        header: 'Nama Value Pack',
         cell: (info) => info.getValue()
       }),
       colHelper.accessor('description', {
@@ -31,6 +47,19 @@ const MembershipTable = () => {
         meta: {
           width: 300
         }
+      }),
+      colHelper.accessor('sport', {
+        header: 'Kategori',
+        cell: (info) => {
+          const sport = (info.getValue() ?? 'PADEL') as 'PADEL' | 'TENNIS';
+          return <Badge variant="outline">{sportLabels[sport]}</Badge>;
+        },
+        meta: { width: 120 }
+      }),
+      colHelper.accessor('type', {
+        header: 'Jenis Jam',
+        cell: (info) => <Badge variant="secondary">{membershipTypeLabels[info.getValue()]}</Badge>,
+        meta: { width: 140 }
       }),
       colHelper.accessor('duration', {
         header: 'Durasi (hari)',
@@ -78,7 +107,11 @@ const MembershipTable = () => {
     [colHelper, me?.role]
   );
 
-  const { data, isPending } = useQuery(adminMembershipsQueryOptions);
+  const queryParams = useMemo(
+    () => (sportFilter === 'all' ? undefined : { sport: sportFilter }),
+    [sportFilter]
+  );
+  const { data, isPending } = useQuery(adminMembershipsQueryOptions(queryParams));
 
   return (
     <DataTable
@@ -86,6 +119,26 @@ const MembershipTable = () => {
       data={data || []}
       columns={columns}
       enableRowSelection={false}
+      rightActions={
+        <div className="flex items-center gap-2">
+          <label htmlFor="membership-sport-filter" className="text-sm font-medium">
+            Kategori:
+          </label>
+          <Select
+            value={sportFilter}
+            onValueChange={(value) => setSportFilter(value as MembershipSportFilter)}
+          >
+            <SelectTrigger id="membership-sport-filter" className="w-[150px]">
+              <SelectValue placeholder="Semua" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua</SelectItem>
+              <SelectItem value="PADEL">Padel</SelectItem>
+              <SelectItem value="TENNIS">Tennis</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      }
       addButton={
         hasCreatePermission(me?.role) ? (
           <Link href="/admin/kelola-membership/tambah" prefetch>

@@ -56,7 +56,6 @@ export default function BookingAddOns() {
     removeInventory,
     removeBookingItem,
     // updateInventoryQuantity,
-    getTotalAmount,
     setMembershipDiscount,
     courtTotal,
     coachTotal,
@@ -72,6 +71,11 @@ export default function BookingAddOns() {
   // Selected date and time for add-ons when no court bookings exist
   const [selectedAddOnDate, setSelectedAddOnDate] = useState<string>(dayjs().format('YYYY-MM-DD'));
   const [selectedAddOnTimeSlot, setSelectedAddOnTimeSlot] = useState<string>('');
+  const [useMembership, setUseMembership] = useState(true);
+  const courtSport = useMemo<'PADEL' | 'TENNIS'>(
+    () => bookingItems.find((item) => item.sport)?.sport ?? 'PADEL',
+    [bookingItems]
+  );
 
   // Customer selection is now handled by BookingSummary component
   // Keep selectedCustomer state for membership discount calculation
@@ -82,13 +86,18 @@ export default function BookingAddOns() {
   const membershipDiscount = useMembershipDiscount(
     selectedCustomerId || null,
     bookingItems,
-    selectedCustomer ? { activeMembership: selectedCustomer.activeMembership } : null
+    selectedCustomer ? { activeMembership: selectedCustomer.activeMembership } : null,
+    false,
+    courtSport,
+    useMembership
   );
 
   // Update store with membership discount
   useEffect(() => {
     setMembershipDiscount(membershipDiscount.discountAmount);
   }, [membershipDiscount.discountAmount, setMembershipDiscount]);
+
+  const totalAmount = membershipDiscount.discountedTotal + coachTotal + inventoryTotal;
 
   // Get date range from bookings or selected add-on date
   // Helper to create ISO string for start/end of day in UTC
@@ -145,7 +154,7 @@ export default function BookingAddOns() {
 
   // Fetch coach availability
   const { data: coachAvailabilityData } = useQuery(
-    adminCoachAvailabilityQueryOptions(dateRange?.startAt, dateRange?.endAt)
+    adminCoachAvailabilityQueryOptions(dateRange?.startAt, dateRange?.endAt, courtSport)
   );
 
   // Helpers to avoid timezone shifts; use local time parts from ISO strings (same as court slots)
@@ -154,7 +163,7 @@ export default function BookingAddOns() {
 
   // Fetch inventory availability
   const { data: inventoryAvailabilityData } = useQuery(
-    adminInventoryAvailabilityQueryOptions(dateRange?.startAt, dateRange?.endAt)
+    adminInventoryAvailabilityQueryOptions(dateRange?.startAt, dateRange?.endAt, courtSport)
   );
 
   // Transform coach availability data to match component format
@@ -557,7 +566,8 @@ export default function BookingAddOns() {
       coachSlots: coachSlots.length > 0 ? coachSlots : undefined,
       ballboySlots: ballboySlots.length > 0 ? ballboySlots : undefined,
       inventories: inventories.length > 0 ? inventories : undefined,
-      coachDescription: coachDescription || undefined
+      coachDescription: coachDescription || undefined,
+      useMembership
     };
 
     if (selectedCustomerId) {
@@ -1173,8 +1183,10 @@ export default function BookingAddOns() {
           courtTotal={courtTotal}
           coachTotal={coachTotal}
           inventoryTotal={inventoryTotal}
-          totalAmount={getTotalAmount()}
+          totalAmount={totalAmount}
           membershipDiscountDetails={membershipDiscount}
+          useMembership={useMembership}
+          onUseMembershipChange={setUseMembership}
           primaryAction={{
             label: isConfirming ? 'Processing...' : 'Confirm Booking',
             onClick: handleConfirmBooking,

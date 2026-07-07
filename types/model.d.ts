@@ -40,6 +40,7 @@ export type Inventory = {
   id: string;
   name: string;
   description: string;
+  sport: 'PADEL' | 'TENNIS';
   quantity: number;
   price: number;
   isActive: boolean;
@@ -51,6 +52,7 @@ export type InventoryAvailability = {
   id: string;
   name: string;
   description: string;
+  sport: 'PADEL' | 'TENNIS';
   price: number;
   totalQuantity: number;
   availableQuantity: number;
@@ -66,6 +68,7 @@ export type CoachAvailability = {
     phone?: string | null;
     image?: string | null;
     role?: string;
+    coachType?: 'PADEL' | 'PADEL_TENNIS' | 'TENNIS' | null;
   };
   price: number;
   startAt: string;
@@ -137,6 +140,7 @@ export type Court = {
   id: string;
   name: string;
   description: string | null;
+  sport: 'PADEL' | 'TENNIS';
   isActive: boolean;
   image: string | null;
   createdAt: Date;
@@ -234,6 +238,8 @@ export type Membership = {
   description: string | null;
   content: string | null;
   contentHtml: string | null;
+  sport: 'PADEL' | 'TENNIS';
+  type: 'ALL_HOUR' | 'HAPPY_HOUR' | 'AFTER_HOUR';
   price: number;
   sessions: number;
   duration: number; // in days

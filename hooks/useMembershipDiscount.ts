@@ -2,6 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import { adminCustomerMembershipQueryOptions } from '@/queries/admin/customer';
 import { myMembershipQueryOptions } from '@/queries/membership';
 import type { BookingItem } from '@/stores/useBookingStore';
+import {
+  isTimeAllowedForMembershipType,
+  type MembershipType
+} from '@/lib/membership-hours';
 import { useMemo } from 'react';
 
 export interface ActiveMembership {
@@ -16,6 +20,8 @@ export interface ActiveMembership {
     id: string;
     name: string;
     price: number;
+    sport?: 'PADEL' | 'TENNIS';
+    type?: MembershipType;
   };
 }
 
@@ -41,7 +47,9 @@ export function useMembershipDiscount(
   customerId: string | null,
   bookingItems: BookingItem[],
   membershipData?: { activeMembership: ActiveMembership | null } | null,
-  isUser: boolean = false
+  isUser: boolean = false,
+  courtSport?: 'PADEL' | 'TENNIS',
+  useMembership: boolean = true
 ): MembershipDiscountResult {
   // Fetch membership for current user if isUser is true
   const { data: userMembershipData } = useQuery({
@@ -60,11 +68,23 @@ export function useMembershipDiscount(
 
   return useMemo(() => {
     const activeMembership = activeMembershipData?.activeMembership ?? null;
+    const membershipSport = activeMembership?.membership.sport ?? 'PADEL';
+    const membershipType = activeMembership?.membership.type ?? 'ALL_HOUR';
+    const bookingSport = courtSport ?? bookingItems[0]?.sport;
+    const isMatchingSport = !bookingSport || membershipSport === bookingSport;
+    const eligibleBookingItems = bookingItems.filter((booking) =>
+      isTimeAllowedForMembershipType(membershipType, booking.timeSlot)
+    );
+    const allBookingItemsEligible =
+      bookingItems.length === 0 || eligibleBookingItems.length === bookingItems.length;
     const remainingSessions = activeMembership?.remainingSessions ?? 0;
     const canUseMembership =
       activeMembership &&
+      useMembership &&
       !activeMembership.isExpired &&
       !activeMembership.isSuspended &&
+      isMatchingSport &&
+      allBookingItemsEligible &&
       remainingSessions > 0;
 
     // Calculate how many slots can be free (1 session = 1 slot)
@@ -107,5 +127,5 @@ export function useMembershipDiscount(
       originalTotal,
       discountedTotal
     };
-  }, [activeMembershipData, bookingItems]);
+  }, [activeMembershipData, bookingItems, courtSport, useMembership]);
 }

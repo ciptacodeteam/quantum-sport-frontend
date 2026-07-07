@@ -27,7 +27,7 @@ const ManageMembershipPage = () => {
     <main>
       <Section>
         <SectionHeader>
-          <SectionTitle title="Kelola Membership" />
+          <SectionTitle title="Kelola Value Pack" />
           <SectionDescription description="Atur dan pantau membership Anda di sini." />
         </SectionHeader>
         <SectionContent>
