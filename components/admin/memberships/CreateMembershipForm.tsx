@@ -8,6 +8,13 @@ import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from '@/component
 import { Input } from '@/components/ui/input';
 import { NumberInput } from '@/components/ui/number-input';
 import { Separator } from '@/components/ui/separator';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { adminCreateMembershipMutationOptions } from '@/mutations/admin/membership';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -22,6 +29,8 @@ const formSchema = z.object({
   description: z.string(),
   content: z.string(),
   contentHtml: z.string(),
+  sport: z.enum(['PADEL', 'TENNIS']),
+  type: z.enum(['ALL_HOUR', 'HAPPY_HOUR', 'AFTER_HOUR']),
   price: z.number().min(0, { message: 'Harga tidak boleh negatif' }),
   sessions: z.number().min(0, { message: 'Jumlah jam tidak boleh negatif' }),
   duration: z.number().min(1, { message: 'Durasi minimal 1 hari' }),
@@ -40,6 +49,8 @@ const CreateMembershipForm = () => {
       description: '',
       content: '',
       contentHtml: '',
+      sport: 'PADEL',
+      type: 'ALL_HOUR',
       price: 0,
       sessions: 0,
       duration: 30,
@@ -83,7 +94,7 @@ const CreateMembershipForm = () => {
           <div className="grid grid-cols-1 gap-x-6 gap-y-4 xl:grid-cols-2">
             <FieldGroup>
               <Field>
-                <FieldLabel htmlFor="name">Nama Membership</FieldLabel>
+                <FieldLabel htmlFor="name">Nama Value Pack</FieldLabel>
                 <Input
                   id="name"
                   type="text"
@@ -100,6 +111,45 @@ const CreateMembershipForm = () => {
                   placeholder="Deskripsi singkat mengenai membership"
                 />
                 <FieldError>{form.formState.errors.description?.message}</FieldError>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="sport">Kategori</FieldLabel>
+                <Controller
+                  control={form.control}
+                  name="sport"
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger id="sport" className="w-full">
+                        <SelectValue placeholder="Pilih kategori" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="PADEL">Padel</SelectItem>
+                        <SelectItem value="TENNIS">Tennis</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                <FieldError>{form.formState.errors.sport?.message}</FieldError>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="type">Jenis Jam</FieldLabel>
+                <Controller
+                  control={form.control}
+                  name="type"
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger id="type" className="w-full">
+                        <SelectValue placeholder="Pilih jenis jam" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL_HOUR">All Hour</SelectItem>
+                        <SelectItem value="HAPPY_HOUR">Happy Hour (06:00 - 15:00)</SelectItem>
+                        <SelectItem value="AFTER_HOUR">After Hour (15:00 - 00:00)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                <FieldError>{form.formState.errors.type?.message}</FieldError>
               </Field>
               <Field>
                 <FieldLabel htmlFor="price">Harga</FieldLabel>
@@ -143,7 +193,7 @@ const CreateMembershipForm = () => {
                   <FieldError>{form.formState.errors.sessions?.message}</FieldError>
                 </Field>
                 <Field>
-                  <FieldLabel htmlFor="duration">Durasi Membership (dalam hari)</FieldLabel>
+                  <FieldLabel htmlFor="duration">Durasi Value Pack (dalam hari)</FieldLabel>
                   <Controller
                     control={form.control}
                     name="duration"
@@ -181,7 +231,7 @@ const CreateMembershipForm = () => {
                 <FieldError>{form.formState.errors.sequence?.message}</FieldError>
               </Field>
               <Field>
-                <FieldLabel htmlFor="content">Konten Membership</FieldLabel>
+                <FieldLabel htmlFor="content">Konten Value Pack</FieldLabel>
                 <Controller
                   control={form.control}
                   name="content"
@@ -202,7 +252,7 @@ const CreateMembershipForm = () => {
             <FieldGroup>
               <Separator className="my-4 xl:hidden" />
               <Field>
-                <FieldLabel>Benefit Membership</FieldLabel>
+                <FieldLabel>Benefit Value Pack</FieldLabel>
                 <div className="overflow-x-auto">
                   <div className="rounded-md border pb-2">
                     <table className="min-w-full text-sm">

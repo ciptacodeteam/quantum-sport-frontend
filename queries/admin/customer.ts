@@ -34,6 +34,8 @@ export type CustomerMembershipResponse = {
       id: string;
       name: string;
       price: number;
+      sport?: 'PADEL' | 'TENNIS';
+      type?: 'ALL_HOUR' | 'HAPPY_HOUR' | 'AFTER_HOUR';
     };
   } | null;
 };
@@ -63,6 +65,8 @@ export type CustomerSearchResult = {
       id: string;
       name: string;
       price: number;
+      sport?: 'PADEL' | 'TENNIS';
+      type?: 'ALL_HOUR' | 'HAPPY_HOUR' | 'AFTER_HOUR';
     };
   } | null;
 };

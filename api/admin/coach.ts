@@ -3,6 +3,7 @@ import { adminApi } from '@/lib/adminApi';
 type AdminCoachAvailabilityParams = {
   startAt: string;
   endAt: string;
+  courtSport?: 'PADEL' | 'TENNIS';
 };
 
 export async function getAdminCoachAvailabilityApi(params: AdminCoachAvailabilityParams) {

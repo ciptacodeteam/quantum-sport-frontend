@@ -5,12 +5,13 @@ import {
   getMyMembershipApi
 } from '@/api/membership';
 import type { Membership } from '@/types/model';
+import type { SearchParamsData } from '@/types';
 import { queryOptions } from '@tanstack/react-query';
 
-export const membershipsQueryOptions = () =>
+export const membershipsQueryOptions = (queryParams?: SearchParamsData) =>
   queryOptions({
-    queryKey: ['memberships'],
-    queryFn: getMembershipsApi,
+    queryKey: ['memberships', queryParams],
+    queryFn: () => getMembershipsApi(queryParams),
     select: (res) => res.data as Membership[]
   });
 
@@ -57,6 +58,8 @@ export type UserMembershipResponse = {
       id: string;
       name: string;
       price: number;
+      sport?: 'PADEL' | 'TENNIS';
+      type?: 'ALL_HOUR' | 'HAPPY_HOUR' | 'AFTER_HOUR';
     };
   } | null;
 };

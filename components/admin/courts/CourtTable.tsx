@@ -63,6 +63,12 @@ const CourtTable = () => {
         header: 'Deskripsi',
         cell: (info) => info.getValue() || '-'
       }),
+      colHelper.accessor('sport', {
+        header: 'Kategori',
+        cell: (info) => (
+          <Badge variant="outline">{info.getValue() === 'TENNIS' ? 'Tennis' : 'Padel'}</Badge>
+        )
+      }),
       colHelper.accessor('isActive', {
         header: 'Status',
         cell: (info) => (

@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Command,
   CommandEmpty,
@@ -36,6 +37,7 @@ import {
   IconUserPlus
 } from '@tabler/icons-react';
 import { cn } from '@/lib/utils';
+import { membershipTypeDescriptions, membershipTypeLabels } from '@/lib/membership-hours';
 import { toast } from 'sonner';
 import { adminMembershipsQueryOptions } from '@/queries/admin/membership';
 import type { AdminMembershipCheckoutPayload } from '@/api/admin/membership';
@@ -46,6 +48,13 @@ import {
 import { adminMembershipCheckoutMutationOptions } from '@/mutations/admin/membership';
 import type { Membership } from '@/types/model';
 
+type MembershipSport = 'PADEL' | 'TENNIS';
+
+const sportLabels: Record<MembershipSport, string> = {
+  PADEL: 'Padel',
+  TENNIS: 'Tennis'
+};
+
 const formatCurrency = (value?: number | null) => {
   if (!value && value !== 0) return '-';
   return `Rp ${new Intl.NumberFormat('id-ID').format(value)}`;
@@ -53,9 +62,10 @@ const formatCurrency = (value?: number | null) => {
 
 const BookingMembershipPage = () => {
   const router = useRouter();
+  const [selectedSport, setSelectedSport] = useState<MembershipSport>('PADEL');
 
   const { data: membershipsData, isPending: isMembershipsLoading } = useQuery(
-    adminMembershipsQueryOptions
+    adminMembershipsQueryOptions({ sport: selectedSport })
   );
 
   const memberships = useMemo<Membership[]>(() => {
@@ -81,6 +91,10 @@ const BookingMembershipPage = () => {
     }, 300);
     return () => clearTimeout(timer);
   }, [customerSearch]);
+
+  useEffect(() => {
+    setSelectedMembershipId(null);
+  }, [selectedSport]);
 
   // Use search endpoint instead of fetching all customers
   const { data: searchResults, isLoading: isSearching } = useQuery(
@@ -141,9 +155,9 @@ const BookingMembershipPage = () => {
   return (
     <main className="space-y-6">
       <header className="space-y-1">
-        <p className="text-primary/70 text-sm font-semibold">Membership</p>
+        <p className="text-primary/70 text-sm font-semibold">Value Pack</p>
         <div className="flex flex-wrap items-baseline justify-between gap-3">
-          <h1 className="text-2xl leading-tight font-semibold">Booking Membership</h1>
+          <h1 className="text-2xl leading-tight font-semibold">Booking Value Pack</h1>
           <Badge
             variant="outline"
             className="rounded-full px-3 py-1 text-xs font-semibold tracking-wide"
@@ -152,7 +166,7 @@ const BookingMembershipPage = () => {
           </Badge>
         </div>
         <p className="text-muted-foreground text-sm">
-          Pilih paket, tetapkan pelanggan, lalu proses pembayaran membership secara instan.
+          Pilih kategori paket, tetapkan pelanggan, lalu proses pembayaran membership secara instan.
         </p>
       </header>
 
@@ -162,12 +176,20 @@ const BookingMembershipPage = () => {
             <div>
               <p className="text-muted-foreground text-sm font-medium">Katalog paket aktif</p>
               <p className="text-lg font-semibold">
-                {isMembershipsLoading ? 'Memuat data...' : `${memberships.length} opsi membership`}
+                {isMembershipsLoading
+                  ? 'Memuat data...'
+                  : `${memberships.length} opsi ${sportLabels[selectedSport]}`}
               </p>
             </div>
-            <Badge variant="secondary">
-              {isMembershipsLoading ? 'Memuat...' : `${memberships.length} paket`}
-            </Badge>
+            <Tabs
+              value={selectedSport}
+              onValueChange={(value) => setSelectedSport(value as MembershipSport)}
+            >
+              <TabsList className="grid h-10 w-[220px] grid-cols-2">
+                <TabsTrigger value="PADEL">Padel</TabsTrigger>
+                <TabsTrigger value="TENNIS">Tennis</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -200,14 +222,18 @@ const BookingMembershipPage = () => {
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 space-y-1">
                           <p className="text-primary text-[11px] font-semibold tracking-wide uppercase">
-                            {membership.sessions} sesi
+                            {sportLabels[membership.sport ?? 'PADEL']} · {membership.sessions} sesi
                           </p>
+                          <Badge variant="secondary" className="w-fit">
+                            {membershipTypeLabels[membership.type]} ·{' '}
+                            {membershipTypeDescriptions[membership.type]}
+                          </Badge>
                           <div className="flex items-center gap-2 text-lg leading-tight font-semibold">
                             <IconCrown className="h-4 w-4 text-yellow-500" />
                             <span className="truncate">{membership.name}</span>
                           </div>
                           <p className="text-muted-foreground line-clamp-2 text-sm">
-                            {membership.description || 'Membership unggulan Quantum Sport'}
+                            {membership.description || 'Value Pack unggulan Quantum Sport'}
                           </p>
                         </div>
                         {isSelected && (
@@ -464,7 +490,7 @@ const BookingMembershipPage = () => {
 
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
-                  <span>Membership</span>
+                  <span>Value Pack</span>
                   <span className="font-medium">
                     {selectedMembership ? selectedMembership.name : '-'}
                   </span>
@@ -498,7 +524,7 @@ const BookingMembershipPage = () => {
                 onClick={handleSubmit}
                 disabled={!canSubmit || isSubmitting}
               >
-                {isSubmitting ? 'Memproses...' : 'Buat Booking Membership'}
+                {isSubmitting ? 'Memproses...' : 'Buat Booking Value Pack'}
               </Button>
             </CardContent>
           </Card>

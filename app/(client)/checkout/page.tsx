@@ -87,13 +87,20 @@ export default function CheckoutPage() {
   const isAuthenticated = !!user?.id;
   const openAuthModal = useAuthModalStore((state) => state.open);
   const setRedirectPath = useAuthRedirectStore((state) => state.setRedirectPath);
+  const [useMembership, setUseMembership] = useState(true);
+  const courtSport = useMemo(
+    () => bookingItems.find((item) => item.sport)?.sport ?? 'PADEL',
+    [bookingItems]
+  );
 
   // Calculate membership discount for court bookings (only if user is authenticated)
   const membershipDiscount = useMembershipDiscount(
     user?.id || null,
     bookingItems,
     undefined,
-    true // isUser = true, so it fetches membership for current logged-in user
+    true, // isUser = true, so it fetches membership for current logged-in user
+    courtSport,
+    useMembership
   );
 
   // Apply membership discount to court total
@@ -434,7 +441,8 @@ export default function CheckoutPage() {
     const { courtSlots, coachSlots, ballboySlots, inventories } = buildCheckoutSelections();
 
     const payload: any = {
-      paymentMethodId: selectedPaymentMethod.id
+      paymentMethodId: selectedPaymentMethod.id,
+      useMembership
     };
 
     if (appliedPromoCode) {
@@ -902,9 +910,23 @@ export default function CheckoutPage() {
                   <span className="text-muted-foreground">Sisa Sesi:</span>{' '}
                   <span className="font-medium">{membershipDiscount.remainingSessions} sesi</span>
                 </div>
+                <label className="border-primary/20 bg-background mt-2 flex items-center justify-between gap-3 rounded-md border px-3 py-2">
+                  <span className="text-foreground font-medium">Gunakan Value Pack</span>
+                  <input
+                    type="checkbox"
+                    checked={useMembership}
+                    onChange={(event) => setUseMembership(event.target.checked)}
+                    className="accent-primary h-4 w-4"
+                  />
+                </label>
                 {membershipDiscount.canUseMembership && bookingItems.length > 0 && (
                   <div className="text-primary mt-1 font-medium">
                     {membershipDiscount.slotsToDeduct} slot akan gratis menggunakan membership
+                  </div>
+                )}
+                {!useMembership && (
+                  <div className="text-muted-foreground mt-1">
+                    Paket tidak dipakai untuk booking ini.
                   </div>
                 )}
               </div>

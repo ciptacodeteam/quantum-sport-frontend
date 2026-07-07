@@ -162,7 +162,11 @@ const getBookingStatus = (status: number | BookingStatus): BookingStatus => {
   return statusMap[status] || BookingStatus.HOLD;
 };
 
-const BookingTable = () => {
+type BookingTableProps = {
+  courtSport?: 'PADEL' | 'TENNIS';
+};
+
+const BookingTable = ({ courtSport }: BookingTableProps) => {
   const queryClient = useQueryClient();
   const [source, setSource] = useState<string>('');
   const [range, setRange] = useState<DateRange | undefined>({
@@ -611,9 +615,14 @@ const BookingTable = () => {
     [colHelper, updateStatus, approveBooking, cancelBooking, queryClient]
   );
 
-  const { data, isPending } = useQuery(
-    adminBookingsQueryOptions(source && source !== 'all' ? { source } : {})
-  );
+  const queryParams = useMemo(() => {
+    const params: Record<string, string> = {};
+    if (source && source !== 'all') params.source = source;
+    if (courtSport) params.courtSport = courtSport;
+    return params;
+  }, [courtSport, source]);
+
+  const { data, isPending } = useQuery(adminBookingsQueryOptions(queryParams));
 
   return (
     <div className="space-y-4">
@@ -656,6 +665,7 @@ const BookingTable = () => {
 
                   const params: any = {};
                   if (source && source !== 'all') params.source = source;
+                  if (courtSport) params.courtSport = courtSport;
                   if (startDate) params.startDate = startDate;
                   if (endDate) params.endDate = endDate;
 
@@ -686,7 +696,10 @@ const BookingTable = () => {
           </div>
         }
         addButton={
-          <Link href="/admin/booking-lapangan" prefetch>
+          <Link
+            href={`/admin/booking-lapangan${courtSport ? `?courtSport=${courtSport}` : ''}`}
+            prefetch
+          >
             <Button>
               <IconPlus />
               Tambah

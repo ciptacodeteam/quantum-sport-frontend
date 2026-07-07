@@ -7,10 +7,13 @@ import { DatePickerModal, DatePickerModalTrigger } from '@/components/ui/date-pi
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
+import { isTimeAllowedForMembershipType, type MembershipType } from '@/lib/membership-hours';
 import { cn, getPlaceholderImageUrl } from '@/lib/utils';
 import { coachAvailabilityQueryOptions } from '@/queries/coach';
 import { courtsSlotsQueryOptions } from '@/queries/court';
+import { myMembershipQueryOptions } from '@/queries/membership';
 import type { BookingItem } from '@/stores/useBookingStore';
+import useAuthStore from '@/stores/useAuthStore';
 import { useBookingStore } from '@/stores/useBookingStore';
 import type { Court, Slot } from '@/types/model';
 import { IconCalendarFilled, IconInfoCircle } from '@tabler/icons-react';
@@ -18,6 +21,7 @@ import { useHasMounted } from '@/hooks/useHasMounted';
 import dayjs, { nowJakarta } from '@/lib/dayjs';
 import { useQuery } from '@tanstack/react-query';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -79,6 +83,10 @@ const normalizeDateKey = (value: string) => {
 };
 
 export default function BookingPage() {
+  const pathname = usePathname();
+  const courtSport = pathname.includes('/tennis') ? 'TENNIS' : 'PADEL';
+  const bookingTitle = courtSport === 'TENNIS' ? 'Tennis Court' : 'Padel Court';
+  const isAuthenticated = useAuthStore((state) => state.isAuth);
   const {
     bookingItems,
     setBookingItems,
@@ -116,30 +124,44 @@ export default function BookingPage() {
   const slotQueryParams = useMemo(
     () => ({
       startAt: dayjs(selectedFullDate).startOf('day').format('YYYY-MM-DD HH:mm:ss'),
-      endAt: dayjs(selectedFullDate).endOf('day').format('YYYY-MM-DD HH:mm:ss')
+      endAt: dayjs(selectedFullDate).endOf('day').format('YYYY-MM-DD HH:mm:ss'),
+      courtSport
     }),
-    [selectedFullDate]
+    [selectedFullDate, courtSport]
   );
 
   const { data: slotsData, isLoading: isSlotsLoading } = useQuery(
     courtsSlotsQueryOptions(slotQueryParams)
   );
+  const { data: userMembershipData } = useQuery({
+    ...myMembershipQueryOptions,
+    enabled: isAuthenticated
+  });
 
   const slots = useMemo(() => slotsData ?? [], [slotsData]);
+  const activeMembershipType = useMemo<MembershipType | null>(() => {
+    const activeMembership = userMembershipData?.activeMembership;
+    if (!activeMembership || activeMembership.membership.sport !== courtSport) return null;
+    return activeMembership.membership.type ?? 'ALL_HOUR';
+  }, [courtSport, userMembershipData]);
 
   // Filter time slots to exclude past hours for today (client-only to match SSR)
   const availableTimeSlots = useMemo(() => {
     if (!hasMounted) return timeSlots;
 
     const isToday = dayjs(selectedFullDate).isSame(nowJakarta(), 'day');
-    if (!isToday) return timeSlots;
+    const membershipFilteredSlots = activeMembershipType
+      ? timeSlots.filter((time) => isTimeAllowedForMembershipType(activeMembershipType, time))
+      : timeSlots;
+
+    if (!isToday) return membershipFilteredSlots;
 
     const currentHour = nowJakarta().hour();
-    return timeSlots.filter((time) => {
+    return membershipFilteredSlots.filter((time) => {
       const slotHour = parseInt(time.split(':')[0], 10);
       return slotHour > currentHour;
     });
-  }, [selectedFullDate, hasMounted]);
+  }, [selectedFullDate, hasMounted, activeMembershipType]);
 
   const courts = useMemo(() => {
     const map = new Map<string, { id: string; name: string; image?: string | null }>();
@@ -281,7 +303,11 @@ export default function BookingPage() {
 
       const filtered = currentSelections.filter((cell) => {
         const slot = slotMap.get(`${cell.courtId}-${cell.time}`);
-        return !!slot && slot.isAvailable;
+        return (
+          !!slot &&
+          slot.isAvailable &&
+          isTimeAllowedForMembershipType(activeMembershipType, cell.time)
+        );
       });
 
       if (filtered.length === currentSelections.length) {
@@ -296,7 +322,7 @@ export default function BookingPage() {
       }
       return next;
     });
-  }, [slotMap, selectedDate]);
+  }, [slotMap, selectedDate, activeMembershipType]);
 
   // Sync deletions from CartSheet back to local selections
   useEffect(() => {
@@ -358,6 +384,7 @@ export default function BookingPage() {
           price: cell.price,
           normalPrice: cell.normalPrice,
           discountPrice: cell.discountPrice,
+          sport: courtSport,
           date,
           endTime: dayjs(cell.time, 'HH:mm').add(1, 'hour').format('HH:mm')
         });
@@ -482,7 +509,7 @@ export default function BookingPage() {
   })();
 
   const { data: coachAvailability = [], isLoading: isCoachLoading } = useQuery(
-    coachAvailabilityQueryOptions(bookingTimeRange.startAt, bookingTimeRange.endAt)
+    coachAvailabilityQueryOptions(bookingTimeRange.startAt, bookingTimeRange.endAt, courtSport)
   );
 
   const uniqueCoaches = useMemo(() => {
@@ -577,7 +604,7 @@ export default function BookingPage() {
 
   return (
     <>
-      <MainHeader backHref="/" title="Booking Court" withLogo={false} withCartBadge withBorder />
+      <MainHeader backHref="/" title={bookingTitle} withLogo={false} withCartBadge withBorder />
 
       <main className="mt-24 flex h-[calc(100dvh-180px)] w-full flex-col md:mt-24 lg:h-[calc(100dvh-230px)]">
         <div className="sticky top-24 z-30 border-b bg-white pb-2 md:top-14">

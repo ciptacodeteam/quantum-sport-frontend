@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { STATUS_BADGE_VARIANT, STATUS_MAP } from '@/lib/constants';
+import { membershipTypeDescriptions, membershipTypeLabels } from '@/lib/membership-hours';
 import { membershipQueryOptions } from '@/queries/membership';
 import { profileQueryOptions } from '@/queries/profile';
 import useAuthModalStore from '@/stores/useAuthModalStore';
@@ -108,6 +109,20 @@ export default function MembershipDetailPage({ params }: { params: Promise<{ id:
 
           <CardContent className="p-4 sm:p-6">
             <div className="grid grid-cols-1 gap-3 sm:gap-4">
+              <div className="bg-card flex items-center gap-3 rounded-lg border p-3 sm:p-4">
+                <div className="bg-primary/10 text-primary rounded-lg p-2 sm:p-2.5">
+                  <IconTrophy className="h-5 w-5 sm:h-6 sm:w-6" />
+                </div>
+                <div>
+                  <p className="text-base font-bold sm:text-xl">
+                    {membershipTypeLabels[membership.type]}
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    {membershipTypeDescriptions[membership.type]}
+                  </p>
+                </div>
+              </div>
+
               {/* Sessions Info */}
               <div className="bg-card flex items-center gap-3 rounded-lg border p-3 sm:p-4">
                 <div className="bg-primary/10 text-primary rounded-lg p-2 sm:p-2.5">

@@ -6,6 +6,13 @@ import { Button } from '@/components/ui/button';
 import { useDialog } from '@/components/ui/dialog-context';
 import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { adminCreateCourtMutationOptions } from '@/mutations/admin/court';
 import { adminCourtsQueryOptions } from '@/queries/admin/court';
@@ -20,6 +27,7 @@ const formSchema = z.object({
   name: z.string().min(1, { message: 'Name is required.' }),
   description: z.string().optional(),
   image: z.file().min(1, { message: 'Image is required.' }),
+  sport: z.enum(['PADEL', 'TENNIS']).default('PADEL'),
   isActive: z.boolean().default(true)
 });
 
@@ -32,6 +40,7 @@ const CreateCourtForm = () => {
       isActive: true,
       image: undefined,
       name: '',
+      sport: 'PADEL',
       description: ''
     }
   });
@@ -103,6 +112,25 @@ const CreateCourtForm = () => {
             <FieldLabel htmlFor="name">Name</FieldLabel>
             <Input id="name" {...form.register('name')} placeholder="e.g. Lapangan A" />
             <FieldError>{form.formState.errors.name?.message}</FieldError>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="sport">Kategori</FieldLabel>
+            <Controller
+              control={form.control}
+              name="sport"
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger id="sport" className="w-full">
+                    <SelectValue placeholder="Pilih kategori" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PADEL">Padel</SelectItem>
+                    <SelectItem value="TENNIS">Tennis</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            <FieldError>{form.formState.errors.sport?.message}</FieldError>
           </Field>
           <Field>
             <FieldLabel htmlFor="description">Keterangan</FieldLabel>

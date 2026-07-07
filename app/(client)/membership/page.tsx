@@ -10,19 +10,51 @@ import {
   CardHeader,
   CardTitle
 } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { membershipTypeDescriptions, membershipTypeLabels } from '@/lib/membership-hours';
 import { membershipsQueryOptions } from '@/queries/membership';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
+import { useMemo, useState } from 'react';
+
+type MembershipSport = 'PADEL' | 'TENNIS';
+
+const sportLabels: Record<MembershipSport, string> = {
+  PADEL: 'Padel',
+  TENNIS: 'Tennis'
+};
 
 export default function MembershipPage() {
   const { data, isLoading, isError } = useQuery(membershipsQueryOptions());
-  const memberships = (data ?? []).filter((membership) => membership.isActive);
+  const [selectedSport, setSelectedSport] = useState<MembershipSport>('PADEL');
+  const activeMemberships = useMemo(
+    () => (data ?? []).filter((membership) => membership.isActive),
+    [data]
+  );
+  const memberships = useMemo(
+    () => activeMemberships.filter((membership) => (membership.sport ?? 'PADEL') === selectedSport),
+    [activeMemberships, selectedSport]
+  );
 
   return (
     <>
       <MainHeader backHref="/" title="Value Pack" withLogo={false} withBorder />
 
-      <main className="mx-auto flex w-11/12 max-w-7xl flex-col gap-4 pb-12">
+      <main className="mx-auto flex w-11/12 max-w-7xl flex-col gap-4 pt-24 pb-12 md:pt-28">
+        {!isLoading && !isError && (
+          <div className="pt-2">
+            <Tabs
+              value={selectedSport}
+              onValueChange={(value) => setSelectedSport(value as MembershipSport)}
+            >
+              <TabsList className="grid h-10 w-full grid-cols-2 sm:w-fit">
+                <TabsTrigger value="PADEL">Padel</TabsTrigger>
+                <TabsTrigger value="TENNIS">Tennis</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+        )}
+
         {/* Loading state */}
         {isLoading && (
           <div className="flex min-h-[40vh] flex-col items-center justify-center gap-2 text-center">
@@ -40,16 +72,17 @@ export default function MembershipPage() {
         {/* Empty state */}
         {!isLoading && !isError && memberships.length === 0 && (
           <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-center">
-            <p className="text-lg font-semibold">Belum ada Paket Membership</p>
+            <p className="text-lg font-semibold">Belum ada Paket {sportLabels[selectedSport]}</p>
             <p className="text-muted-foreground max-w-sm text-sm">
-              Kami sedang menyiapkan paket terbaik untuk kamu. Silahkan tunggu beberapa saat.
+              Kami sedang menyiapkan paket terbaik untuk kategori ini. Silahkan tunggu beberapa
+              saat.
             </p>
           </div>
         )}
 
         {/* Membership list */}
         {!isLoading && !isError && memberships.length > 0 && (
-          <section className="grid gap-6 pt-24 pb-12">
+          <section className="grid gap-6 pt-4 pb-12">
             {memberships.map((pack) => (
               <Card key={pack.id} className="flex flex-col">
                 <CardHeader>
@@ -62,6 +95,9 @@ export default function MembershipPage() {
                         Aktif
                       </span>
                     )}
+                  </div>
+                  <div className="bg-muted text-muted-foreground w-fit rounded px-2 py-1 text-xs font-medium">
+                    {membershipTypeLabels[pack.type]} · {membershipTypeDescriptions[pack.type]}
                   </div>
 
                   <div className="space-y-2">

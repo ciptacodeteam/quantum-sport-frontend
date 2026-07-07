@@ -12,8 +12,8 @@ const MembershipTransactionsPage = () => {
     <main>
       <Section>
         <SectionHeader>
-          <SectionTitle title="Kelola Pemesanan Membership" />
-          <SectionDescription description="Atur dan pantau transaksi membership pelanggan di sini." />
+          <SectionTitle title="Kelola Pemesanan Value Pack" />
+          <SectionDescription description="Atur dan pantau transaksi value pack pelanggan di sini." />
         </SectionHeader>
         <SectionContent>
           <MembershipTransactionTable />

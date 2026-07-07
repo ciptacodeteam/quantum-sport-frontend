@@ -1,6 +1,7 @@
 'use client';
 
 import { deleteInventoryApi } from '@/api/admin/inventory';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import {
@@ -60,6 +61,10 @@ const InventoryTable = () => {
       colHelper.accessor('description', {
         header: 'Keterangan',
         cell: (info) => <p className="line-clamp-2">{info.getValue() || '-'}</p>
+      }),
+      colHelper.accessor('sport', {
+        header: 'Kategori',
+        cell: (info) => <Badge variant="outline">{info.getValue() === 'TENNIS' ? 'Tennis' : 'Padel'}</Badge>
       }),
       colHelper.accessor('quantity', {
         header: 'Qty',

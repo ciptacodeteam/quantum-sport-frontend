@@ -19,13 +19,18 @@ export const adminInventoryQueryOptions = (id: string) =>
     select: (res) => res.data as Inventory
   });
 
-export const adminInventoryAvailabilityQueryOptions = (startAt?: string, endAt?: string) =>
+export const adminInventoryAvailabilityQueryOptions = (
+  startAt?: string,
+  endAt?: string,
+  courtSport?: 'PADEL' | 'TENNIS'
+) =>
   queryOptions({
-    queryKey: ['admin', 'inventory', 'availability', startAt ?? 'all', endAt ?? 'all'],
+    queryKey: ['admin', 'inventory', 'availability', startAt ?? 'all', endAt ?? 'all', courtSport],
     queryFn: () =>
       getAdminInventoryAvailabilityApi({
         ...(startAt ? { startAt } : {}),
-        ...(endAt ? { endAt } : {})
+        ...(endAt ? { endAt } : {}),
+        ...(courtSport ? { courtSport } : {})
       }),
     select: (res) => res.data as InventoryAvailability[]
   });

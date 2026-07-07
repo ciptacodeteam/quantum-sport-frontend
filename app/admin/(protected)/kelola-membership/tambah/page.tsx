@@ -12,7 +12,7 @@ const CreateMembershipPage = () => {
     <main>
       <Section>
         <SectionHeader>
-          <SectionTitle title="Tambah Membership" />
+          <SectionTitle title="Tambah Value Pack" />
           <SectionDescription description="Tambahkan membership baru ke dalam sistem Anda di sini." />
         </SectionHeader>
         <SectionContent className="mt-4">
