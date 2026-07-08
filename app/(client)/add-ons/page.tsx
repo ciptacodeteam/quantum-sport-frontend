@@ -12,7 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { Minus, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 const getISODate = (isoString?: string | null) => (isoString ? isoString.slice(0, 10) : '');
@@ -32,11 +32,19 @@ const normalizeTime = (time?: string | null) => {
 };
 
 const getBookingStartTime = (booking: BookingItem) => {
+  if (booking.startAt) {
+    return formatSlotTime(booking.startAt);
+  }
+
   const [startTime] = booking.timeSlot.split(' - ');
   return normalizeTime(startTime);
 };
 
 const getBookingEndTime = (booking: BookingItem) => {
+  if (booking.endAt) {
+    return formatSlotTime(booking.endAt);
+  }
+
   const [, endTimeFromRange] = booking.timeSlot.split(' - ');
   return normalizeTime(booking.endTime || endTimeFromRange);
 };
@@ -76,6 +84,15 @@ export default function AddOnsPage() {
   const [activeTab, setActiveTab] = useState<'ballboy' | 'inventory'>(
     courtSport === 'TENNIS' ? 'ballboy' : 'inventory'
   );
+
+  useEffect(() => {
+    if (courtSport === 'TENNIS') {
+      setActiveTab('ballboy');
+      return;
+    }
+
+    setActiveTab('inventory');
+  }, [courtSport]);
   const {
     data: inventoryAvailability,
     isPending: isInventoryPending,
@@ -93,6 +110,20 @@ export default function AddOnsPage() {
     let latestIso: string | undefined;
 
     bookingItems.forEach((item) => {
+      if (item.startAt && item.endAt) {
+        if (earliestValue === null || item.startAt < earliestValue) {
+          earliestValue = item.startAt;
+          earliestIso = item.startAt;
+        }
+
+        if (latestValue === null || item.endAt > latestValue) {
+          latestValue = item.endAt;
+          latestIso = item.endAt;
+        }
+
+        return;
+      }
+
       const startTime = getBookingStartTime(item);
       const endTime = getBookingEndTime(item);
 
@@ -143,7 +174,9 @@ export default function AddOnsPage() {
 
   const primaryBookingDate = useMemo(() => {
     if (bookingTimeRange.startAt) {
-      return dayjs(bookingTimeRange.startAt).format('YYYY-MM-DD');
+      return (
+        getISODate(bookingTimeRange.startAt) || dayjs(bookingTimeRange.startAt).format('YYYY-MM-DD')
+      );
     }
 
     return bookingItems[0]?.date ?? dayjs().format('YYYY-MM-DD');
@@ -225,7 +258,9 @@ export default function AddOnsPage() {
     item: (typeof ballboyAvailability)[number],
     booking: BookingItem
   ) => {
-    if (!item.startAt || !item.endAt || getISODate(item.startAt) !== booking.date) {
+    const bookingDate = getISODate(booking.startAt) || booking.date;
+
+    if (!item.startAt || !item.endAt || getISODate(item.startAt) !== bookingDate) {
       return false;
     }
 
@@ -246,10 +281,7 @@ export default function AddOnsPage() {
     const ballboyEnd = normalizeEndMinutes(ballboyStart, rawBallboyEnd);
     const bookingEnd = normalizeEndMinutes(bookingStart, rawBookingEnd);
 
-    return (
-      ballboyStart <= bookingStart &&
-      ballboyEnd >= bookingEnd
-    );
+    return ballboyStart <= bookingStart && ballboyEnd >= bookingEnd;
   };
 
   const getMatchingBallboySlots = (booking: BookingItem) => {
@@ -267,7 +299,10 @@ export default function AddOnsPage() {
     [ballboyAvailability, bookingItems]
   );
 
-  const handleBallboyToggle = (item: (typeof ballboyAvailability)[number], booking: BookingItem) => {
+  const handleBallboyToggle = (
+    item: (typeof ballboyAvailability)[number],
+    booking: BookingItem
+  ) => {
     if (!hasBookingSelection) {
       toast.error('Tambahkan booking lapangan tennis terlebih dahulu sebelum memilih ballboy.');
       return;
@@ -283,7 +318,9 @@ export default function AddOnsPage() {
       return;
     }
 
-    const selectedForCourt = selectedBallboys.find((ballboy) => ballboy.courtSlotId === booking.slotId);
+    const selectedForCourt = selectedBallboys.find(
+      (ballboy) => ballboy.courtSlotId === booking.slotId
+    );
     if (selectedForCourt?.slotId === item.slotId) {
       removeBallboyFromStore(item.ballboy.id, selectedForCourt.timeSlot, item.slotId);
       toast.success(`${item.ballboy.name ?? 'Ballboy'} dihapus dari add-ons.`);
@@ -325,11 +362,11 @@ export default function AddOnsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-32">
+    <div className="bg-background min-h-screen pb-32">
       <MainHeader onBack={() => router.back()} title="Produk Tambahan" withLogo={false} />
 
       <main className="mx-auto w-11/12 pt-24 pb-8">
-        <div className="sticky top-20 z-30 mb-4 flex gap-2 border-b bg-background/95 py-3 backdrop-blur">
+        <div className="bg-background/95 sticky top-20 z-30 mb-4 flex gap-2 border-b py-3 backdrop-blur">
           {courtSport === 'TENNIS' && (
             <Button
               variant={activeTab === 'ballboy' ? 'default' : 'outline'}

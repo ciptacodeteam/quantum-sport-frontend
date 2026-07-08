@@ -84,6 +84,8 @@ type SelectedBooking = {
   date: string;
   slotId: string;
   endTime?: string;
+  startAt?: string;
+  endAt?: string;
 };
 
 export default function BookingLapangan() {
@@ -128,7 +130,9 @@ export default function BookingLapangan() {
         discountPrice,
         date: item.date,
         slotId: item.slotId || '',
-        endTime: item.endTime
+        endTime: item.endTime,
+        startAt: item.startAt,
+        endAt: item.endAt
       };
     })
   );
@@ -239,7 +243,9 @@ export default function BookingLapangan() {
           sport: courtSport,
           date: booking.date,
           slotId: booking.slotId,
-          endTime: booking.endTime || booking.timeSlot.split(' - ')[1] || ''
+          endTime: booking.endTime || booking.timeSlot.split(' - ')[1] || '',
+          startAt: booking.startAt,
+          endAt: booking.endAt
         }))
       );
     }
@@ -481,7 +487,9 @@ export default function BookingLapangan() {
         discountPrice: slot.discountPrice || 0,
         date: currentDateFormatted,
         slotId: slot.id,
-        endTime: endTime
+        endTime: endTime,
+        startAt: typeof slot.startAt === 'string' ? slot.startAt : slot.startAt.toISOString(),
+        endAt: typeof slot.endAt === 'string' ? slot.endAt : slot.endAt.toISOString()
       } as SelectedBooking;
     });
 
@@ -505,7 +513,9 @@ export default function BookingLapangan() {
       sport: courtSport,
       date: booking.date,
       slotId: booking.slotId,
-      endTime: booking.endTime
+      endTime: booking.endTime,
+      startAt: booking.startAt,
+      endAt: booking.endAt
     }));
 
     const allBookingItems: any = [...existingBookingItems, ...newBookingItems];
@@ -543,7 +553,9 @@ export default function BookingLapangan() {
         sport: courtSport,
         date: booking.date,
         slotId: booking.slotId,
-        endTime: endTime
+        endTime: endTime,
+        startAt: booking.startAt,
+        endAt: booking.endAt
       };
     });
 
@@ -582,7 +594,9 @@ export default function BookingLapangan() {
       sport: courtSport,
       date: booking.date,
       slotId: booking.slotId,
-      endTime: booking.endTime || booking.timeSlot.split(' - ')[1] || ''
+      endTime: booking.endTime || booking.timeSlot.split(' - ')[1] || '',
+      startAt: booking.startAt,
+      endAt: booking.endAt
     }));
     setBookingItems(bookingItemsForStore);
 

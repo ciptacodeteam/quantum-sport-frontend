@@ -168,7 +168,7 @@ export default function BookingAddOns() {
   );
 
   // Helpers to avoid timezone shifts; use local time parts from ISO strings (same as court slots)
-  const getISODate = (isoString: string) => (isoString ? isoString.slice(0, 10) : '');
+  const getISODate = (isoString?: string | null) => (isoString ? isoString.slice(0, 10) : '');
   const getTimeRangeLocal = (startAt: string, endAt: string) => formatSlotTimeRange(startAt, endAt);
   const normalizeTime = (time?: string | null) => {
     if (!time) {
@@ -194,6 +194,22 @@ export default function BookingAddOns() {
   };
   const normalizeEndMinutes = (startMinutes: number, endMinutes: number) =>
     endMinutes <= startMinutes ? endMinutes + 24 * 60 : endMinutes;
+  const getBookingStartTime = (booking: (typeof bookingItems)[number]) => {
+    if (booking.startAt) {
+      return formatSlotTime(booking.startAt);
+    }
+
+    const [startTime] = booking.timeSlot.split(' - ');
+    return normalizeTime(startTime);
+  };
+  const getBookingEndTime = (booking: (typeof bookingItems)[number]) => {
+    if (booking.endAt) {
+      return formatSlotTime(booking.endAt);
+    }
+
+    const [, endTimeFromRange] = booking.timeSlot.split(' - ');
+    return normalizeTime(booking.endTime || endTimeFromRange);
+  };
 
   // Fetch inventory availability
   const { data: inventoryAvailabilityData } = useQuery(
@@ -374,16 +390,16 @@ export default function BookingAddOns() {
     slot: NonNullable<typeof ballboyAvailabilityData>[number],
     booking: (typeof bookingItems)[number]
   ) => {
-    const [startTime, endTimeFromRange] = booking.timeSlot.split(' - ');
-    const endTime = booking.endTime || endTimeFromRange;
-    if (!slot.startAt || !slot.endAt || getISODate(slot.startAt) !== booking.date) {
+    const bookingDate = getISODate(booking.startAt) || booking.date;
+
+    if (!slot.startAt || !slot.endAt || getISODate(slot.startAt) !== bookingDate) {
       return false;
     }
 
     const ballboyStart = timeToMinutes(formatSlotTime(slot.startAt));
     const rawBallboyEnd = timeToMinutes(formatSlotTime(slot.endAt));
-    const bookingStart = timeToMinutes(startTime);
-    const rawBookingEnd = timeToMinutes(endTime);
+    const bookingStart = timeToMinutes(getBookingStartTime(booking));
+    const rawBookingEnd = timeToMinutes(getBookingEndTime(booking));
 
     if (
       ballboyStart === null ||
@@ -397,10 +413,7 @@ export default function BookingAddOns() {
     const ballboyEnd = normalizeEndMinutes(ballboyStart, rawBallboyEnd);
     const bookingEnd = normalizeEndMinutes(bookingStart, rawBookingEnd);
 
-    return (
-      ballboyStart <= bookingStart &&
-      ballboyEnd >= bookingEnd
-    );
+    return ballboyStart <= bookingStart && ballboyEnd >= bookingEnd;
   };
 
   const ballboyAvailableForBookings = useMemo(() => {
@@ -1058,7 +1071,10 @@ export default function BookingAddOns() {
                 <div className="mb-2 flex items-center justify-between">
                   <p className="text-sm font-medium">Select ballboys</p>
                   <Badge variant="outline" className="text-[10px] sm:text-xs">
-                    {ballboyAvailableForBookings.reduce((acc, group) => acc + group.slots.length, 0)}{' '}
+                    {ballboyAvailableForBookings.reduce(
+                      (acc, group) => acc + group.slots.length,
+                      0
+                    )}{' '}
                     slots
                   </Badge>
                 </div>
@@ -1109,9 +1125,7 @@ export default function BookingAddOns() {
                       <CardContent className="space-y-3 p-3 sm:p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <h3 className="truncate text-sm font-semibold">
-                              {booking.courtName}
-                            </h3>
+                            <h3 className="truncate text-sm font-semibold">{booking.courtName}</h3>
                             <p className="text-muted-foreground text-xs">
                               {dayjs(booking.date).format('ddd, DD MMM')} • {booking.timeSlot}
                             </p>

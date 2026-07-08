@@ -7,6 +7,7 @@ import { DatePickerModal, DatePickerModalTrigger } from '@/components/ui/date-pi
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
+import { formatSlotTime } from '@/lib/time-utils';
 import { isTimeAllowedForMembershipType, type MembershipType } from '@/lib/membership-hours';
 import { cn, getPlaceholderImageUrl } from '@/lib/utils';
 import { coachAvailabilityQueryOptions } from '@/queries/coach';
@@ -61,6 +62,8 @@ type SelectedCell = {
   normalPrice?: number;
   discountPrice?: number;
   dateKey: string;
+  startAt?: string;
+  endAt?: string;
 };
 
 const normalizeDateKey = (value: string) => {
@@ -197,8 +200,8 @@ export default function BookingPage() {
     slots.forEach((slot) => {
       const courtId = slot.courtId || slot.court?.id;
       if (!courtId || !slot.startAt) return;
-      const time = dayjs(slot.startAt).format('HH:mm');
-      map.set(`${slot.courtId}-${time}`, slot);
+      const time = formatSlotTime(slot.startAt);
+      map.set(`${courtId}-${time}`, slot);
     });
     return map;
   }, [slots]);
@@ -251,7 +254,9 @@ export default function BookingPage() {
           price: item.price,
           normalPrice: item.normalPrice,
           discountPrice: item.discountPrice,
-          dateKey
+          dateKey,
+          startAt: item.startAt,
+          endAt: item.endAt
         });
       });
 
@@ -386,7 +391,11 @@ export default function BookingPage() {
           discountPrice: cell.discountPrice,
           sport: courtSport,
           date,
-          endTime: dayjs(cell.time, 'HH:mm').add(1, 'hour').format('HH:mm')
+          endTime: cell.endAt
+            ? formatSlotTime(cell.endAt)
+            : dayjs(cell.time, 'HH:mm').add(1, 'hour').format('HH:mm'),
+          startAt: cell.startAt,
+          endAt: cell.endAt
         });
       });
     });
@@ -729,7 +738,15 @@ export default function BookingPage() {
                                       price: effectivePrice,
                                       normalPrice,
                                       discountPrice,
-                                      dateKey
+                                      dateKey,
+                                      startAt:
+                                        typeof slot.startAt === 'string'
+                                          ? slot.startAt
+                                          : slot.startAt.toISOString(),
+                                      endAt:
+                                        typeof slot.endAt === 'string'
+                                          ? slot.endAt
+                                          : slot.endAt.toISOString()
                                     }
                                   ];
                                 }
