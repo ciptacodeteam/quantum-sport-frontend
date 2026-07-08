@@ -112,6 +112,7 @@ interface BookingState {
   selectedCustomerPhone?: string | null;
   walkInName?: string | null;
   walkInPhone?: string | null;
+  bookingAdminNote?: string | null;
 
   // Add-ons
   selectedCoaches: SelectedCoach[];
@@ -138,6 +139,7 @@ interface BookingState {
   setSelectedCustomerId: (customerId: string | null) => void;
   setSelectedCustomerDetails: (name: string | null, phone: string | null) => void;
   setWalkInCustomer: (name: string | null, phone: string | null) => void;
+  setBookingAdminNote: (note: string | null) => void;
   addCoach: (coach: SelectedCoach) => void;
   removeCoach: (coachId: string, timeSlot: string, slotId?: string) => void;
   addBallboy: (ballboy: SelectedBallboy) => void;
@@ -164,6 +166,7 @@ export const useBookingStore = create<BookingState>()(
       selectedCustomerPhone: null,
       walkInName: null,
       walkInPhone: null,
+      bookingAdminNote: null,
       selectedCoaches: [],
       selectedBallboys: [],
       selectedInventories: [],
@@ -208,6 +211,7 @@ export const useBookingStore = create<BookingState>()(
         set({ selectedCustomerName: name, selectedCustomerPhone: phone }),
 
       setWalkInCustomer: (name, phone) => set({ walkInName: name, walkInPhone: phone }),
+      setBookingAdminNote: (note) => set({ bookingAdminNote: note }),
 
       addCoach: (coach) => {
         const state = get();
@@ -345,6 +349,7 @@ export const useBookingStore = create<BookingState>()(
           selectedCustomerPhone: null,
           walkInName: null,
           walkInPhone: null,
+          bookingAdminNote: null,
           courtTotal: 0,
           coachTotal: 0,
           ballboyTotal: 0,
@@ -377,6 +382,7 @@ export const useBookingStore = create<BookingState>()(
         selectedCustomerPhone: state.selectedCustomerPhone,
         walkInName: state.walkInName,
         walkInPhone: state.walkInPhone,
+        bookingAdminNote: state.bookingAdminNote,
         selectedCoaches: state.selectedCoaches,
         selectedBallboys: state.selectedBallboys,
         selectedInventories: state.selectedInventories,

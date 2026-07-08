@@ -10,6 +10,7 @@ export type AdminCheckoutPayload = {
   ballboySlots?: string[];
   inventories?: { inventoryId: string; quantity: number }[];
   coachDescription?: string;
+  adminNote?: string;
   useMembership?: boolean;
 };
 

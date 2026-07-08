@@ -471,6 +471,7 @@ export type Booking = {
   holdExpiresAt: Date | null;
   cancelledAt: Date | null;
   cancellationReason: string | null;
+  adminNote?: string | null;
 
   user?: UserProfile;
   cashier?: Cashier;

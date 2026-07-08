@@ -45,6 +45,8 @@ export default function BookingAddOns() {
     setSelectedCustomerDetails,
     walkInName: storeWalkInName,
     walkInPhone: storeWalkInPhone,
+    bookingAdminNote,
+    setBookingAdminNote,
     setWalkInCustomer,
     selectedCoaches,
     selectedBallboys,
@@ -702,6 +704,7 @@ export default function BookingAddOns() {
       ballboySlots: ballboySlots.length > 0 ? ballboySlots : undefined,
       inventories: inventories.length > 0 ? inventories : undefined,
       coachDescription: coachDescription || undefined,
+      adminNote: bookingAdminNote || undefined,
       useMembership
     };
 
@@ -1334,6 +1337,7 @@ export default function BookingAddOns() {
           selectedCustomerPhone={storeCustomerPhone}
           walkInName={storeWalkInName}
           walkInPhone={storeWalkInPhone}
+          adminNote={bookingAdminNote}
           onCustomerSelect={(customerId, customer) => {
             setSelectedCustomerId(customerId);
             setSelectedCustomer(customer);
@@ -1349,8 +1353,10 @@ export default function BookingAddOns() {
             setSelectedCustomerId(null);
             setSelectedCustomer(null);
           }}
+          onAdminNoteChange={setBookingAdminNote}
           onWalkInClear={() => {
             setWalkInCustomer(null, null);
+            setBookingAdminNote(null);
           }}
           selectedCoaches={selectedCoaches}
           selectedBallboys={selectedBallboys}

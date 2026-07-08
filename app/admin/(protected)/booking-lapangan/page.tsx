@@ -106,6 +106,8 @@ export default function BookingLapangan() {
     setSelectedCustomerId,
     setSelectedCustomerDetails,
     setWalkInCustomer,
+    bookingAdminNote,
+    setBookingAdminNote,
     setMembershipDiscount,
     walkInName: storeWalkInName,
     walkInPhone: storeWalkInPhone
@@ -1207,6 +1209,7 @@ export default function BookingLapangan() {
             selectedCustomerPhone={storeCustomerPhone}
             walkInName={storeWalkInName}
             walkInPhone={storeWalkInPhone}
+            adminNote={bookingAdminNote}
             onCustomerSelect={(customerId, customer) => {
               setLocalCustomerId(customerId);
               setSelectedCustomerId(customerId);
@@ -1225,8 +1228,10 @@ export default function BookingLapangan() {
               setSelectedCustomerId(null);
               setSelectedCustomer(null);
             }}
+            onAdminNoteChange={setBookingAdminNote}
             onWalkInClear={() => {
               setWalkInCustomer(null, null);
+              setBookingAdminNote(null);
             }}
             courtTotal={membershipDiscount.originalTotal}
             totalAmount={totalPrice}

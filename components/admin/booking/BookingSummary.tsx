@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Command,
   CommandEmpty,
@@ -57,12 +58,16 @@ export interface BookingSummaryProps {
   walkInName?: string | null;
   /** Walk-in customer phone */
   walkInPhone?: string | null;
+  /** Admin note for walk-in/cashier booking */
+  adminNote?: string | null;
   /** Callback when a customer is selected from search */
   onCustomerSelect: (customerId: string, customer: CustomerSearchResult) => void;
   /** Callback to clear selected customer */
   onCustomerClear: () => void;
   /** Callback to set walk-in customer details */
   onWalkInSet: (name: string, phone: string) => void;
+  /** Callback to update admin note */
+  onAdminNoteChange?: (note: string | null) => void;
   /** Callback to clear walk-in customer */
   onWalkInClear: () => void;
 
@@ -229,9 +234,11 @@ export default function BookingSummary({
   selectedCustomerPhone,
   walkInName,
   walkInPhone,
+  adminNote,
   onCustomerSelect,
   onCustomerClear,
   onWalkInSet,
+  onAdminNoteChange,
   onWalkInClear,
   selectedCoaches = [],
   selectedBallboys = [],
@@ -267,6 +274,7 @@ export default function BookingSummary({
   const [isWalkInOpen, setIsWalkInOpen] = useState(false);
   const [walkInNameLocal, setWalkInNameLocal] = useState(walkInName || '');
   const [walkInPhoneLocal, setWalkInPhoneLocal] = useState(walkInPhone || '');
+  const [adminNoteLocal, setAdminNoteLocal] = useState(adminNote || '');
 
   // Debounce search query
   useEffect(() => {
@@ -281,6 +289,10 @@ export default function BookingSummary({
     setWalkInNameLocal(walkInName || '');
     setWalkInPhoneLocal(walkInPhone || '');
   }, [walkInName, walkInPhone]);
+
+  useEffect(() => {
+    setAdminNoteLocal(adminNote || '');
+  }, [adminNote]);
 
   // Reset selectedCustomer when selectedCustomerId becomes null (e.g., after booking is cleared)
   useEffect(() => {
@@ -371,6 +383,7 @@ export default function BookingSummary({
       return;
     }
     onWalkInSet(walkInNameLocal.trim(), walkInPhoneLocal.trim());
+    onAdminNoteChange?.(adminNoteLocal.trim() || null);
     toast.success('Walk-in customer disimpan');
     setIsWalkInOpen(false);
   };
@@ -478,6 +491,16 @@ export default function BookingSummary({
                           onChange={(e) => setWalkInPhoneLocal(e.target.value)}
                         />
                       </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="walkInNote">Note</Label>
+                        <Textarea
+                          id="walkInNote"
+                          placeholder="Contoh: minta lapangan dekat lobby, DP cash, atau catatan customer"
+                          value={adminNoteLocal}
+                          onChange={(e) => setAdminNoteLocal(e.target.value)}
+                          className="min-h-24"
+                        />
+                      </div>
                       <div className="flex justify-end gap-2 pt-2">
                         <Button
                           type="button"
@@ -507,6 +530,11 @@ export default function BookingSummary({
                       <span className="font-medium">Walk-in:</span> <span>{walkInName || '-'}</span>
                       {walkInPhone && (
                         <span className="text-muted-foreground ml-1">({walkInPhone})</span>
+                      )}
+                      {adminNote && (
+                        <p className="text-muted-foreground mt-1 whitespace-pre-line">
+                          Note: {adminNote}
+                        </p>
                       )}
                     </div>
                     <Button type="button" variant="ghost" size="sm" onClick={onWalkInClear}>

@@ -12,6 +12,7 @@ import {
   ManagedDialog
 } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Section,
   SectionContent,
@@ -134,6 +135,7 @@ export default function SchedulePage() {
   today.setHours(0, 0, 0, 0);
 
   const [selectedDate, setSelectedDate] = useState<Date>(today);
+  const [courtSport, setCourtSport] = useState<'PADEL' | 'TENNIS'>('PADEL');
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
 
@@ -167,16 +169,22 @@ export default function SchedulePage() {
   }, []);
 
   // Fetch courts
-  const { data: courtsData, isLoading: isCourtsLoading } = useQuery(adminCourtsQueryOptions());
+  const { data: courtsData, isLoading: isCourtsLoading } = useQuery(
+    adminCourtsQueryOptions({ courtSport })
+  );
   const courts = useMemo(
-    () => (courtsData || []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || '')),
-    [courtsData]
+    () =>
+      (courtsData || [])
+        .filter((court) => court.sport === courtSport)
+        .slice()
+        .sort((a, b) => (a.name || '').localeCompare(b.name || '')),
+    [courtsData, courtSport]
   );
 
   // Fetch all bookings - we'll filter by slot date on client side
   // Fetch without date filters to ensure we get all bookings, then filter by slot date
   const { data: bookingsData, isLoading: isBookingsLoading } = useQuery(
-    adminScheduleQueryOptions()
+    adminScheduleQueryOptions({ courtSport })
   );
   const allBookings = bookingsData || [];
 
@@ -195,7 +203,7 @@ export default function SchedulePage() {
 
   // Fetch slots for the selected date to get all time slots (optional - for dynamic slots)
   const { data: slotsData, isLoading: isSlotsLoading } = useQuery(
-    adminCourtsWithSlotsQueryOptions(selectedDateString)
+    adminCourtsWithSlotsQueryOptions(selectedDateString, undefined, courtSport)
   );
   const slots = slotsData?.slots || [];
 
@@ -343,9 +351,18 @@ export default function SchedulePage() {
             {/* Date Filter */}
             <Card>
               <CardHeader>
-                <CardTitle>Filter Tanggal</CardTitle>
+                <CardTitle>Filter Jadwal</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <Tabs
+                  value={courtSport}
+                  onValueChange={(value) => setCourtSport(value as 'PADEL' | 'TENNIS')}
+                >
+                  <TabsList className="grid h-10 w-full grid-cols-2 sm:w-[240px]">
+                    <TabsTrigger value="PADEL">Padel</TabsTrigger>
+                    <TabsTrigger value="TENNIS">Tennis</TabsTrigger>
+                  </TabsList>
+                </Tabs>
                 <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full gap-2 sm:w-auto">
@@ -378,7 +395,10 @@ export default function SchedulePage() {
               )}
             >
               <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                <CardTitle>Jadwal {formatDate(selectedDate, 'DD MMM YYYY')}</CardTitle>
+                <CardTitle>
+                  Jadwal {courtSport === 'TENNIS' ? 'Tennis' : 'Padel'}{' '}
+                  {formatDate(selectedDate, 'DD MMM YYYY')}
+                </CardTitle>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -657,6 +677,16 @@ export default function SchedulePage() {
                                                       bookingCell.booking.holdExpiresAt,
                                                       'DD/MM/YYYY HH:mm'
                                                     )}
+                                                  </p>
+                                                </div>
+                                              )}
+                                              {bookingCell.booking.adminNote && (
+                                                <div className="col-span-2">
+                                                  <p className="text-muted-foreground text-sm">
+                                                    Note Admin
+                                                  </p>
+                                                  <p className="text-sm whitespace-pre-line">
+                                                    {bookingCell.booking.adminNote}
                                                   </p>
                                                 </div>
                                               )}

@@ -39,9 +39,13 @@ export const adminCourtCostingQueryOptionsById = (id: string, queryParams?: Sear
   });
 
 // Query to get courts with available slots for a specific date (admin)
-export const adminCourtsWithSlotsQueryOptions = (date: string, courtId?: string) =>
+export const adminCourtsWithSlotsQueryOptions = (
+  date: string,
+  courtId?: string,
+  courtSport?: 'PADEL' | 'TENNIS'
+) =>
   queryOptions({
-    queryKey: ['admin', 'courts', 'slots', date, courtId],
+    queryKey: ['admin', 'courts', 'slots', date, courtId, courtSport],
     queryFn: async () => {
       // Get slots for the entire day (06:00 to 23:00)
       // API expects ISO format: 2025-01-20T08:00:00
@@ -49,8 +53,12 @@ export const adminCourtsWithSlotsQueryOptions = (date: string, courtId?: string)
       const endAt = dayjs(date).startOf('day').add(23, 'hour').toISOString();
 
       // First, fetch all courts (don't filter by availability)
-      const courtsResponse = await getCourtsApi();
+      const courtsResponse = await getCourtsApi(courtSport ? { courtSport } : undefined);
       let courts = courtsResponse.data as Court[];
+
+      if (courtSport) {
+        courts = courts.filter((c) => c.sport === courtSport);
+      }
 
       // Filter by courtId if specified
       if (courtId) {
@@ -60,7 +68,7 @@ export const adminCourtsWithSlotsQueryOptions = (date: string, courtId?: string)
       // Use the /courts/slots endpoint to get all slots at once (avoids 404s from individual court endpoints)
       let allSlots: Slot[] = [];
       try {
-        const slotsResponse = await getCourtsSlotsApi({ startAt, endAt });
+        const slotsResponse = await getCourtsSlotsApi({ startAt, endAt, ...(courtSport ? { courtSport } : {}) });
         allSlots = (slotsResponse.data || []) as Slot[];
       } catch (error) {
         // If the bulk endpoint fails, fall back to individual court endpoints
@@ -93,6 +101,15 @@ export const adminCourtsWithSlotsQueryOptions = (date: string, courtId?: string)
       // Filter slots by courtId if specified
       if (courtId) {
         allSlots = allSlots.filter((slot) => slot.courtId === courtId);
+      }
+      if (courtSport) {
+        const courtIds = new Set(courts.map((court) => court.id));
+        allSlots = allSlots.filter((slot) => {
+          const slotCourtSport = (slot as Slot & { court?: Court }).court?.sport;
+          return slotCourtSport
+            ? slotCourtSport === courtSport
+            : Boolean(slot.courtId && courtIds.has(slot.courtId));
+        });
       }
 
       return {

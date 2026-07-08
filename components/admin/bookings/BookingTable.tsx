@@ -169,6 +169,7 @@ type BookingTableProps = {
 const BookingTable = ({ courtSport }: BookingTableProps) => {
   const queryClient = useQueryClient();
   const [source, setSource] = useState<string>('');
+  const [coachFilter, setCoachFilter] = useState<string>('all');
   const [range, setRange] = useState<DateRange | undefined>({
     from: subDays(new Date(), 30),
     to: new Date()
@@ -412,6 +413,12 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
                           </p>
                         </div>
                       )}
+                      {booking.adminNote && (
+                        <div className="col-span-2">
+                          <p className="text-muted-foreground text-sm">Note Admin</p>
+                          <p className="text-sm whitespace-pre-line">{booking.adminNote}</p>
+                        </div>
+                      )}
                     </div>
                     {booking.details && booking.details.length > 0 && (
                       <div className="border-t pt-4">
@@ -618,9 +625,10 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
   const queryParams = useMemo(() => {
     const params: Record<string, string> = {};
     if (source && source !== 'all') params.source = source;
+    if (coachFilter && coachFilter !== 'all') params.coach = coachFilter;
     if (courtSport) params.courtSport = courtSport;
     return params;
-  }, [courtSport, source]);
+  }, [coachFilter, courtSport, source]);
 
   const { data, isPending } = useQuery(adminBookingsQueryOptions(queryParams));
 
@@ -648,6 +656,21 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
                 </SelectContent>
               </Select>
             </div>
+            <div className="flex items-center gap-2">
+              <label htmlFor="coach-filter" className="text-sm font-medium">
+                Filter Coach:
+              </label>
+              <Select value={coachFilter} onValueChange={setCoachFilter}>
+                <SelectTrigger id="coach-filter" className="w-[180px]">
+                  <SelectValue placeholder="Semua" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua</SelectItem>
+                  <SelectItem value="with">Dengan Coach</SelectItem>
+                  <SelectItem value="without">Tanpa Coach</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
             {/* <DateRangeInput value={range} onValueChange={(r) => setRange(r ?? undefined)} /> */}
 
@@ -665,6 +688,7 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
 
                   const params: any = {};
                   if (source && source !== 'all') params.source = source;
+                  if (coachFilter && coachFilter !== 'all') params.coach = coachFilter;
                   if (courtSport) params.courtSport = courtSport;
                   if (startDate) params.startDate = startDate;
                   if (endDate) params.endDate = endDate;
