@@ -265,11 +265,11 @@ export default function AddOnsPage() {
   };
 
   return (
-    <>
+    <div className="min-h-screen bg-background pb-32">
       <MainHeader onBack={() => router.back()} title="Produk Tambahan" withLogo={false} />
 
-      <div className="mx-auto w-11/12 pt-16">
-        <div className="mb-4 flex gap-2">
+      <main className="mx-auto w-11/12 pt-24 pb-8">
+        <div className="sticky top-20 z-30 mb-4 flex gap-2 border-b bg-background/95 py-3 backdrop-blur">
           {courtSport === 'TENNIS' && (
             <Button
               variant={activeTab === 'ballboy' ? 'default' : 'outline'}
@@ -299,7 +299,7 @@ export default function AddOnsPage() {
         </div>
 
         {activeTab === 'ballboy' && courtSport === 'TENNIS' && (
-          <div className="mb-4 flex flex-col gap-3">
+          <div className="flex flex-col gap-3 pb-24">
             {!hasBookingSelection && (
               <Card>
                 <div className="px-4 py-3">
@@ -514,7 +514,7 @@ export default function AddOnsPage() {
 
         {/* === RAKET === */}
         {activeTab === 'inventory' && (
-          <div className="mb-4 flex flex-col gap-3">
+          <div className="flex flex-col gap-3 pb-24">
             {isInventoryPending && (
               <Card>
                 <div className="px-4 py-3">
@@ -603,9 +603,9 @@ export default function AddOnsPage() {
               })}
           </div>
         )}
-      </div>
+      </main>
 
       {/* Seleksi coach & inventori langsung melalui kartu */}
-    </>
+    </div>
   );
 }
