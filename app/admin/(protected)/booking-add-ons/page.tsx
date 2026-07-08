@@ -170,6 +170,30 @@ export default function BookingAddOns() {
   // Helpers to avoid timezone shifts; use local time parts from ISO strings (same as court slots)
   const getISODate = (isoString: string) => (isoString ? isoString.slice(0, 10) : '');
   const getTimeRangeLocal = (startAt: string, endAt: string) => formatSlotTimeRange(startAt, endAt);
+  const normalizeTime = (time?: string | null) => {
+    if (!time) {
+      return '';
+    }
+
+    const cleaned = time.trim().split(' ')[0];
+    const [hour, minute = '00'] = cleaned.split(':');
+    if (!hour) {
+      return '';
+    }
+
+    return `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
+  };
+  const timeToMinutes = (time: string) => {
+    const [hour, minute] = normalizeTime(time).split(':').map(Number);
+
+    if (!Number.isFinite(hour) || !Number.isFinite(minute)) {
+      return null;
+    }
+
+    return hour * 60 + minute;
+  };
+  const normalizeEndMinutes = (startMinutes: number, endMinutes: number) =>
+    endMinutes <= startMinutes ? endMinutes + 24 * 60 : endMinutes;
 
   // Fetch inventory availability
   const { data: inventoryAvailabilityData } = useQuery(
@@ -352,23 +376,30 @@ export default function BookingAddOns() {
   ) => {
     const [startTime, endTimeFromRange] = booking.timeSlot.split(' - ');
     const endTime = booking.endTime || endTimeFromRange;
-    const ballboyStart = dayjs(slot.startAt);
-    const ballboyEnd = dayjs(slot.endAt);
-    const bookingStart = dayjs(`${booking.date} ${startTime}`);
-    const bookingEnd = dayjs(`${booking.date} ${endTime}`);
+    if (!slot.startAt || !slot.endAt || getISODate(slot.startAt) !== booking.date) {
+      return false;
+    }
+
+    const ballboyStart = timeToMinutes(formatSlotTime(slot.startAt));
+    const rawBallboyEnd = timeToMinutes(formatSlotTime(slot.endAt));
+    const bookingStart = timeToMinutes(startTime);
+    const rawBookingEnd = timeToMinutes(endTime);
 
     if (
-      !ballboyStart.isValid() ||
-      !ballboyEnd.isValid() ||
-      !bookingStart.isValid() ||
-      !bookingEnd.isValid()
+      ballboyStart === null ||
+      rawBallboyEnd === null ||
+      bookingStart === null ||
+      rawBookingEnd === null
     ) {
       return false;
     }
 
+    const ballboyEnd = normalizeEndMinutes(ballboyStart, rawBallboyEnd);
+    const bookingEnd = normalizeEndMinutes(bookingStart, rawBookingEnd);
+
     return (
-      ballboyStart.valueOf() <= bookingStart.valueOf() &&
-      ballboyEnd.valueOf() >= bookingEnd.valueOf()
+      ballboyStart <= bookingStart &&
+      ballboyEnd >= bookingEnd
     );
   };
 
@@ -377,10 +408,12 @@ export default function BookingAddOns() {
       return [];
     }
 
-    return bookingItems.map((booking) => ({
-      booking,
-      slots: ballboyAvailabilityData.filter((slot) => ballboyCoversBooking(slot, booking))
-    }));
+    return bookingItems
+      .map((booking) => ({
+        booking,
+        slots: ballboyAvailabilityData.filter((slot) => ballboyCoversBooking(slot, booking))
+      }))
+      .filter(({ slots }) => slots.length > 0);
   }, [ballboyAvailabilityData, bookingItems, courtSport]);
 
   // Helper function to check if coach is available for any of the booked dates/slots
@@ -1025,20 +1058,7 @@ export default function BookingAddOns() {
                 <div className="mb-2 flex items-center justify-between">
                   <p className="text-sm font-medium">Select ballboys</p>
                   <Badge variant="outline" className="text-[10px] sm:text-xs">
-                    {(() => {
-                      if (!ballboyAvailabilityData || bookingItems.length === 0) return 0;
-
-                      const bookedPairs = new Set<string>();
-                      Object.entries(bookingsByDate).forEach(([date, info]) => {
-                        info.timeSlots.forEach((t) => bookedPairs.add(`${date}|${t}`));
-                      });
-
-                      return ballboyAvailabilityData.reduce((acc, slot) => {
-                        const d = getISODate(slot.startAt);
-                        const range = getTimeRangeLocal(slot.startAt, slot.endAt);
-                        return bookedPairs.has(`${d}|${range}`) ? acc + 1 : acc;
-                      }, 0);
-                    })()}{' '}
+                    {ballboyAvailableForBookings.reduce((acc, group) => acc + group.slots.length, 0)}{' '}
                     slots
                   </Badge>
                 </div>

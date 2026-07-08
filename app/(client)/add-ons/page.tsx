@@ -4,6 +4,7 @@ import MainHeader from '@/components/headers/MainHeader';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { formatSlotTime, formatSlotTimeRange } from '@/lib/time-utils';
 import { ballboyAvailabilityQueryOptions } from '@/queries/ballboy';
 import { inventoryAvailabilityQueryOptions } from '@/queries/inventory';
 import { useBookingStore, type BookingItem } from '@/stores/useBookingStore';
@@ -13,6 +14,48 @@ import { Minus, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
+
+const getISODate = (isoString?: string | null) => (isoString ? isoString.slice(0, 10) : '');
+
+const normalizeTime = (time?: string | null) => {
+  if (!time) {
+    return '';
+  }
+
+  const cleaned = time.trim().split(' ')[0];
+  const [hour, minute = '00'] = cleaned.split(':');
+  if (!hour) {
+    return '';
+  }
+
+  return `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
+};
+
+const getBookingStartTime = (booking: BookingItem) => {
+  const [startTime] = booking.timeSlot.split(' - ');
+  return normalizeTime(startTime);
+};
+
+const getBookingEndTime = (booking: BookingItem) => {
+  const [, endTimeFromRange] = booking.timeSlot.split(' - ');
+  return normalizeTime(booking.endTime || endTimeFromRange);
+};
+
+const toDateTimeParam = (date: string, time: string) => `${date}T${time}:00`;
+
+const timeToMinutes = (time: string) => {
+  const normalized = normalizeTime(time);
+  const [hour, minute] = normalized.split(':').map(Number);
+
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) {
+    return null;
+  }
+
+  return hour * 60 + minute;
+};
+
+const normalizeEndMinutes = (startMinutes: number, endMinutes: number) =>
+  endMinutes <= startMinutes ? endMinutes + 24 * 60 : endMinutes;
 
 export default function AddOnsPage() {
   const router = useRouter();
@@ -44,41 +87,28 @@ export default function AddOnsPage() {
       return { startAt: undefined as string | undefined, endAt: undefined as string | undefined };
     }
 
-    const parseBookingTime = (date: string, time: string) => {
-      const candidates = [`${date} ${time}`, `${date}T${time}`, date];
-
-      for (const candidate of candidates) {
-        const parsed = dayjs(candidate);
-        if (parsed.isValid()) {
-          return parsed;
-        }
-      }
-
-      return null;
-    };
-
-    let earliestTimestamp: number | null = null;
+    let earliestValue: string | null = null;
     let earliestIso: string | undefined;
-    let latestTimestamp: number | null = null;
+    let latestValue: string | null = null;
     let latestIso: string | undefined;
 
     bookingItems.forEach((item) => {
-      const start = parseBookingTime(item.date, item.timeSlot);
-      const end = parseBookingTime(item.date, item.endTime ?? item.timeSlot);
+      const startTime = getBookingStartTime(item);
+      const endTime = getBookingEndTime(item);
 
-      if (start) {
-        const value = start.valueOf();
-        if (earliestTimestamp === null || value < earliestTimestamp) {
-          earliestTimestamp = value;
-          earliestIso = start.toISOString();
+      if (startTime) {
+        const value = toDateTimeParam(item.date, startTime);
+        if (earliestValue === null || value < earliestValue) {
+          earliestValue = value;
+          earliestIso = value;
         }
       }
 
-      if (end) {
-        const value = end.valueOf();
-        if (latestTimestamp === null || value > latestTimestamp) {
-          latestTimestamp = value;
-          latestIso = end.toISOString();
+      if (endTime) {
+        const value = toDateTimeParam(item.date, endTime);
+        if (latestValue === null || value > latestValue) {
+          latestValue = value;
+          latestIso = value;
         }
       }
     });
@@ -195,24 +225,47 @@ export default function AddOnsPage() {
     item: (typeof ballboyAvailability)[number],
     booking: BookingItem
   ) => {
-    const ballboyStart = item.startAt ? dayjs(item.startAt) : null;
-    const ballboyEnd = item.endAt ? dayjs(item.endAt) : null;
-    const bookingStart = dayjs(`${booking.date} ${booking.timeSlot}`);
-    const bookingEnd = dayjs(`${booking.date} ${booking.endTime}`);
-
-    if (!ballboyStart || !ballboyEnd || !bookingStart.isValid() || !bookingEnd.isValid()) {
+    if (!item.startAt || !item.endAt || getISODate(item.startAt) !== booking.date) {
       return false;
     }
 
+    const ballboyStart = timeToMinutes(formatSlotTime(item.startAt));
+    const rawBallboyEnd = timeToMinutes(formatSlotTime(item.endAt));
+    const bookingStart = timeToMinutes(getBookingStartTime(booking));
+    const rawBookingEnd = timeToMinutes(getBookingEndTime(booking));
+
+    if (
+      ballboyStart === null ||
+      rawBallboyEnd === null ||
+      bookingStart === null ||
+      rawBookingEnd === null
+    ) {
+      return false;
+    }
+
+    const ballboyEnd = normalizeEndMinutes(ballboyStart, rawBallboyEnd);
+    const bookingEnd = normalizeEndMinutes(bookingStart, rawBookingEnd);
+
     return (
-      ballboyStart.valueOf() <= bookingStart.valueOf() &&
-      ballboyEnd.valueOf() >= bookingEnd.valueOf()
+      ballboyStart <= bookingStart &&
+      ballboyEnd >= bookingEnd
     );
   };
 
   const getMatchingBallboySlots = (booking: BookingItem) => {
     return ballboyAvailability.filter((item) => ballboyCoversBooking(item, booking));
   };
+
+  const ballboySlotsByBooking = useMemo(
+    () =>
+      bookingItems
+        .map((booking) => ({
+          booking,
+          slots: getMatchingBallboySlots(booking)
+        }))
+        .filter(({ slots }) => slots.length > 0),
+    [ballboyAvailability, bookingItems]
+  );
 
   const handleBallboyToggle = (item: (typeof ballboyAvailability)[number], booking: BookingItem) => {
     if (!hasBookingSelection) {
@@ -251,17 +304,15 @@ export default function AddOnsPage() {
       );
     }
 
-    const start = item.startAt ? dayjs(item.startAt) : null;
-    const end = item.endAt ? dayjs(item.endAt) : null;
     const timeSlot =
-      start && end ? `${start.format('HH:mm')} - ${end.format('HH:mm')}` : booking.timeSlot;
+      item.startAt && item.endAt ? formatSlotTimeRange(item.startAt, item.endAt) : booking.timeSlot;
 
     addBallboyToStore({
       ballboyId: item.ballboy.id,
       ballboyName: item.ballboy.name ?? 'Ballboy',
       timeSlot,
       price: item.price ?? 0,
-      date: start ? start.format('YYYY-MM-DD') : booking.date,
+      date: getISODate(item.startAt) || booking.date,
       slotId: item.slotId,
       courtId: booking.courtId,
       courtName: booking.courtName,
@@ -338,8 +389,20 @@ export default function AddOnsPage() {
             {hasBookingSelection &&
               !isBallboyPending &&
               !isBallboyError &&
-              bookingItems.map((booking) => {
-                const matchingSlots = getMatchingBallboySlots(booking);
+              ballboySlotsByBooking.length === 0 && (
+                <Card>
+                  <div className="px-4 py-3">
+                    <p className="text-muted-foreground text-sm">
+                      Ballboy tidak tersedia untuk jadwal booking yang dipilih.
+                    </p>
+                  </div>
+                </Card>
+              )}
+
+            {hasBookingSelection &&
+              !isBallboyPending &&
+              !isBallboyError &&
+              ballboySlotsByBooking.map(({ booking, slots: matchingSlots }) => {
                 const selectedForCourt = selectedBallboys.find(
                   (ballboy) => ballboy.courtSlotId === booking.slotId
                 );
@@ -358,45 +421,39 @@ export default function AddOnsPage() {
                         {selectedForCourt && <Badge>Dipilih</Badge>}
                       </div>
 
-                      {matchingSlots.length === 0 ? (
-                        <p className="text-muted-foreground rounded-md border px-3 py-2 text-sm">
-                          Ballboy tidak tersedia untuk jadwal ini.
-                        </p>
-                      ) : (
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          {matchingSlots.map((item) => {
-                            const isSelected = selectedForCourt?.slotId === item.slotId;
-                            const isUsedElsewhere = selectedBallboys.some(
-                              (ballboy) =>
-                                ballboy.slotId === item.slotId &&
-                                ballboy.courtSlotId !== booking.slotId
-                            );
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {matchingSlots.map((item) => {
+                          const isSelected = selectedForCourt?.slotId === item.slotId;
+                          const isUsedElsewhere = selectedBallboys.some(
+                            (ballboy) =>
+                              ballboy.slotId === item.slotId &&
+                              ballboy.courtSlotId !== booking.slotId
+                          );
 
-                            return (
-                              <Button
-                                key={item.slotId}
-                                type="button"
-                                variant={isSelected ? 'default' : 'outline'}
-                                className="h-auto justify-between gap-3 px-3 py-2"
-                                disabled={isUsedElsewhere}
-                                onClick={() => handleBallboyToggle(item, booking)}
-                              >
-                                <span className="min-w-0 text-left">
-                                  <span className="block truncate">
-                                    {item.ballboy?.name ?? 'Ballboy'}
-                                  </span>
-                                  <span className="text-xs opacity-75">
-                                    Rp{Number(item.price ?? 0).toLocaleString('id-ID')}
-                                  </span>
+                          return (
+                            <Button
+                              key={item.slotId}
+                              type="button"
+                              variant={isSelected ? 'default' : 'outline'}
+                              className="h-auto justify-between gap-3 px-3 py-2"
+                              disabled={isUsedElsewhere}
+                              onClick={() => handleBallboyToggle(item, booking)}
+                            >
+                              <span className="min-w-0 text-left">
+                                <span className="block truncate">
+                                  {item.ballboy?.name ?? 'Ballboy'}
                                 </span>
-                                {isUsedElsewhere && (
-                                  <span className="text-[11px] opacity-70">Terpakai</span>
-                                )}
-                              </Button>
-                            );
-                          })}
-                        </div>
-                      )}
+                                <span className="text-xs opacity-75">
+                                  Rp{Number(item.price ?? 0).toLocaleString('id-ID')}
+                                </span>
+                              </span>
+                              {isUsedElsewhere && (
+                                <span className="text-[11px] opacity-70">Terpakai</span>
+                              )}
+                            </Button>
+                          );
+                        })}
+                      </div>
                     </div>
                   </Card>
                 );
