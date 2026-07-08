@@ -346,13 +346,30 @@ export default function BookingAddOns() {
     return { available: item.availableQuantity > 0, quantity: item.availableQuantity };
   };
 
-  const isBallboyAvailable = (timeSlot: string, date: string): boolean => {
-    if (!ballboyAvailabilityData) return false;
-    return ballboyAvailabilityData.some((slot) => {
-      const slotDateStr = getISODate(slot.startAt);
-      const slotTimeRange = getTimeRangeLocal(slot.startAt, slot.endAt);
-      return slotDateStr === date && slotTimeRange === timeSlot;
-    });
+  const ballboyCoversBooking = (
+    slot: NonNullable<typeof ballboyAvailabilityData>[number],
+    booking: (typeof bookingItems)[number]
+  ) => {
+    const [startTime, endTimeFromRange] = booking.timeSlot.split(' - ');
+    const endTime = booking.endTime || endTimeFromRange;
+    const ballboyStart = dayjs(slot.startAt);
+    const ballboyEnd = dayjs(slot.endAt);
+    const bookingStart = dayjs(`${booking.date} ${startTime}`);
+    const bookingEnd = dayjs(`${booking.date} ${endTime}`);
+
+    if (
+      !ballboyStart.isValid() ||
+      !ballboyEnd.isValid() ||
+      !bookingStart.isValid() ||
+      !bookingEnd.isValid()
+    ) {
+      return false;
+    }
+
+    return (
+      ballboyStart.valueOf() <= bookingStart.valueOf() &&
+      ballboyEnd.valueOf() >= bookingEnd.valueOf()
+    );
   };
 
   const ballboyAvailableForBookings = useMemo(() => {
@@ -362,11 +379,7 @@ export default function BookingAddOns() {
 
     return bookingItems.map((booking) => ({
       booking,
-      slots: ballboyAvailabilityData.filter((slot) => {
-        const slotDateStr = getISODate(slot.startAt);
-        const slotTimeRange = getTimeRangeLocal(slot.startAt, slot.endAt);
-        return slotDateStr === booking.date && slotTimeRange === booking.timeSlot;
-      })
+      slots: ballboyAvailabilityData.filter((slot) => ballboyCoversBooking(slot, booking))
     }));
   }, [ballboyAvailabilityData, bookingItems, courtSport]);
 

@@ -191,18 +191,27 @@ export default function AddOnsPage() {
     }
   };
 
-  const getMatchingBallboySlots = (booking: BookingItem) => {
-    return ballboyAvailability.filter((item) => {
-      const start = item.startAt ? dayjs(item.startAt) : null;
-      const end = item.endAt ? dayjs(item.endAt) : null;
-      if (!start || !end) return false;
+  const ballboyCoversBooking = (
+    item: (typeof ballboyAvailability)[number],
+    booking: BookingItem
+  ) => {
+    const ballboyStart = item.startAt ? dayjs(item.startAt) : null;
+    const ballboyEnd = item.endAt ? dayjs(item.endAt) : null;
+    const bookingStart = dayjs(`${booking.date} ${booking.timeSlot}`);
+    const bookingEnd = dayjs(`${booking.date} ${booking.endTime}`);
 
-      return (
-        start.format('YYYY-MM-DD') === booking.date &&
-        start.format('HH:mm') === booking.timeSlot &&
-        end.format('HH:mm') === booking.endTime
-      );
-    });
+    if (!ballboyStart || !ballboyEnd || !bookingStart.isValid() || !bookingEnd.isValid()) {
+      return false;
+    }
+
+    return (
+      ballboyStart.valueOf() <= bookingStart.valueOf() &&
+      ballboyEnd.valueOf() >= bookingEnd.valueOf()
+    );
+  };
+
+  const getMatchingBallboySlots = (booking: BookingItem) => {
+    return ballboyAvailability.filter((item) => ballboyCoversBooking(item, booking));
   };
 
   const handleBallboyToggle = (item: (typeof ballboyAvailability)[number], booking: BookingItem) => {
