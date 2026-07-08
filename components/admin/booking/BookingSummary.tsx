@@ -32,7 +32,12 @@ import {
 } from '@/queries/admin/customer';
 import { useMembershipDiscount } from '@/hooks/useMembershipDiscount';
 import { cn } from '@/lib/utils';
-import type { BookingItem, SelectedCoach, SelectedInventory } from '@/stores/useBookingStore';
+import type {
+  BookingItem,
+  SelectedBallboy,
+  SelectedCoach,
+  SelectedInventory
+} from '@/stores/useBookingStore';
 import { IconX } from '@tabler/icons-react';
 
 /**
@@ -63,10 +68,14 @@ export interface BookingSummaryProps {
 
   /** Selected coaches (optional - for add-ons page) */
   selectedCoaches?: SelectedCoach[];
+  /** Selected ballboys (optional - for add-ons page) */
+  selectedBallboys?: SelectedBallboy[];
   /** Selected inventory items (optional - for add-ons page) */
   selectedInventories?: SelectedInventory[];
   /** Callback to remove a coach (optional - for add-ons page) */
   onCoachRemove?: (coachId: string, timeSlot: string, slotId?: string) => void;
+  /** Callback to remove a ballboy (optional - for add-ons page) */
+  onBallboyRemove?: (ballboyId: string, timeSlot: string, slotId?: string) => void;
   /** Callback to remove an inventory item (optional - for add-ons page) */
   onInventoryRemove?: (inventoryId: string, timeSlot?: string) => void;
 
@@ -74,6 +83,8 @@ export interface BookingSummaryProps {
   courtTotal: number;
   /** Total price for coaches (optional - for add-ons page) */
   coachTotal?: number;
+  /** Total price for ballboys (optional - for add-ons page) */
+  ballboyTotal?: number;
   /** Total price for inventory (optional - for add-ons page) */
   inventoryTotal?: number;
   /** Membership discount amount (deprecated - use membershipDiscountDetails instead) */
@@ -223,11 +234,14 @@ export default function BookingSummary({
   onWalkInSet,
   onWalkInClear,
   selectedCoaches = [],
+  selectedBallboys = [],
   selectedInventories = [],
   onCoachRemove,
+  onBallboyRemove,
   onInventoryRemove,
   courtTotal,
   coachTotal = 0,
+  ballboyTotal = 0,
   inventoryTotal = 0,
   membershipDiscount: _membershipDiscountAmount = 0,
   totalAmount,
@@ -737,6 +751,48 @@ export default function BookingSummary({
             </div>
           )}
 
+          {/* Selected Ballboys */}
+          {showAddOns && onBallboyRemove && (
+            <div className="space-y-2">
+              <h4 className="text-muted-foreground text-sm font-medium">Selected Ballboys</h4>
+              {selectedBallboys.length === 0 ? (
+                <div className="bg-muted rounded-lg p-4 text-center">
+                  <p className="text-muted-foreground text-xs">Belum ada ballboy yang dipilih</p>
+                </div>
+              ) : (
+                selectedBallboys.map((ballboy, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between gap-2 rounded bg-amber-50 p-2 text-xs"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{ballboy.ballboyName}</p>
+                      <p className="text-muted-foreground">
+                        {dayjs(ballboy.date).format('DD MMM')} • {ballboy.timeSlot}
+                        {ballboy.courtName ? ` • ${ballboy.courtName}` : ''}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="text-primary font-semibold">
+                        {formatCurrency(ballboy.price)}
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 w-6 p-0 text-red-500 hover:bg-red-50 hover:text-red-700"
+                        onClick={() =>
+                          onBallboyRemove(ballboy.ballboyId, ballboy.timeSlot, ballboy.slotId)
+                        }
+                      >
+                        <IconX className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
           {/* Selected Equipment */}
           {showAddOns && onInventoryRemove && (
             <div className="space-y-2">
@@ -804,6 +860,12 @@ export default function BookingSummary({
                   <div className="flex items-center justify-between text-sm">
                     <span>Coaches</span>
                     <span>{formatCurrency(coachTotal)}</span>
+                  </div>
+                )}
+                {ballboyTotal > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Ballboys</span>
+                    <span>{formatCurrency(ballboyTotal)}</span>
                   </div>
                 )}
                 {inventoryTotal > 0 && (

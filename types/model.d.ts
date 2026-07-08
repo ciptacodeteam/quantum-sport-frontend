@@ -75,6 +75,21 @@ export type CoachAvailability = {
   endAt: string;
 };
 
+export type BallboyAvailability = {
+  slotId: string;
+  ballboy: {
+    id: string;
+    name: string;
+    email?: string | null;
+    phone?: string | null;
+    image?: string | null;
+    role?: string;
+  };
+  price: number;
+  startAt: string;
+  endAt: string;
+};
+
 export type Coach = {
   id: string;
   name: string;

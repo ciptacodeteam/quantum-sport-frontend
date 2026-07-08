@@ -73,14 +73,16 @@ export default function CheckoutPage() {
   // const searchParams = useSearchParams();
   const bookingItems = useBookingStore((state) => state.bookingItems);
   const coachTotal = useBookingStore((state) => state.coachTotal);
+  const ballboyTotal = useBookingStore((state) => state.ballboyTotal);
   const inventoryTotal = useBookingStore((state) => state.inventoryTotal);
   const selectedCoaches = useBookingStore((state) => state.selectedCoaches);
   const selectedBallboys = useBookingStore((state) => state.selectedBallboys);
   const selectedInventories = useBookingStore((state) => state.selectedInventories);
   // const removeCoach = useBookingStore((state) => state.removeCoach);
+  const removeBallboy = useBookingStore((state) => state.removeBallboy);
   const removeInventory = useBookingStore((state) => state.removeInventory);
 
-  const addOnsTotal = coachTotal + inventoryTotal;
+  const addOnsTotal = coachTotal + ballboyTotal + inventoryTotal;
 
   // Authentication check
   const { data: user, isPending: isUserPending } = useQuery(profileQueryOptions);
@@ -715,6 +717,48 @@ export default function CheckoutPage() {
             </div>
           </section>
         )} */}
+
+        {selectedBallboys.length > 0 && (
+          <section className="border-muted space-y-3 rounded-lg border bg-white p-4">
+            <header className="space-y-1">
+              <h3 className="text-base font-semibold">Ballboy</h3>
+              <p className="text-muted-foreground text-sm">
+                {selectedBallboys.length} sesi dipilih
+              </p>
+            </header>
+            <div className="space-y-2">
+              {selectedBallboys.map((ballboy, index) => (
+                <div
+                  key={`${ballboy.ballboyId}-${ballboy.slotId ?? ballboy.timeSlot}-${index}`}
+                  className="border-muted/70 flex items-center justify-between rounded-md border px-4 py-3"
+                >
+                  <div className="flex min-w-0 flex-col">
+                    <span className="truncate text-sm font-medium">{ballboy.ballboyName}</span>
+                    <span className="text-muted-foreground text-xs">
+                      {dayjs(ballboy.date).format('DD MMM YYYY')} • {ballboy.timeSlot}
+                      {ballboy.courtName ? ` • ${ballboy.courtName}` : ''}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-semibold">{formatCurrency(ballboy.price)}</span>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="text-muted-foreground hover:text-destructive h-8 w-8"
+                      aria-label="Hapus ballboy"
+                      onClick={() =>
+                        removeBallboy(ballboy.ballboyId, ballboy.timeSlot, ballboy.slotId)
+                      }
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {selectedInventories.length > 0 && (
           <section className="border-muted space-y-3 rounded-lg border bg-white p-4">

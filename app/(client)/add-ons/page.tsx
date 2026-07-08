@@ -1,8 +1,10 @@
 'use client';
 
 import MainHeader from '@/components/headers/MainHeader';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { ballboyAvailabilityQueryOptions } from '@/queries/ballboy';
 import { inventoryAvailabilityQueryOptions } from '@/queries/inventory';
 import { useBookingStore, type BookingItem } from '@/stores/useBookingStore';
 import { useQuery } from '@tanstack/react-query';
@@ -22,10 +24,15 @@ export default function AddOnsPage() {
   // const selectedCoaches = useBookingStore((state) => state.selectedCoaches);
   // const addCoachToStore = useBookingStore((state) => state.addCoach);
   // const removeCoachFromStore = useBookingStore((state) => state.removeCoach);
+  const selectedBallboys = useBookingStore((state) => state.selectedBallboys);
   const selectedInventories = useBookingStore((state) => state.selectedInventories);
+  const addBallboyToStore = useBookingStore((state) => state.addBallboy);
+  const removeBallboyFromStore = useBookingStore((state) => state.removeBallboy);
   const addInventoryToStore = useBookingStore((state) => state.addInventory);
   const removeInventoryFromStore = useBookingStore((state) => state.removeInventory);
-  const [activeTab] = useState<'coach' | 'raket'>('raket');
+  const [activeTab, setActiveTab] = useState<'ballboy' | 'inventory'>(
+    courtSport === 'TENNIS' ? 'ballboy' : 'inventory'
+  );
   const {
     data: inventoryAvailability,
     isPending: isInventoryPending,
@@ -95,6 +102,14 @@ export default function AddOnsPage() {
   // const coachList = coachAvailability ?? [];
 
   const inventoryList = inventoryAvailability ?? [];
+
+  const {
+    data: ballboyAvailability = [],
+    isPending: isBallboyPending,
+    isError: isBallboyError
+  } = useQuery(
+    ballboyAvailabilityQueryOptions(bookingTimeRange.startAt, bookingTimeRange.endAt, courtSport)
+  );
 
   const primaryBookingDate = useMemo(() => {
     if (bookingTimeRange.startAt) {
@@ -176,24 +191,209 @@ export default function AddOnsPage() {
     }
   };
 
+  const getMatchingBallboySlots = (booking: BookingItem) => {
+    return ballboyAvailability.filter((item) => {
+      const start = item.startAt ? dayjs(item.startAt) : null;
+      const end = item.endAt ? dayjs(item.endAt) : null;
+      if (!start || !end) return false;
+
+      return (
+        start.format('YYYY-MM-DD') === booking.date &&
+        start.format('HH:mm') === booking.timeSlot &&
+        end.format('HH:mm') === booking.endTime
+      );
+    });
+  };
+
+  const handleBallboyToggle = (item: (typeof ballboyAvailability)[number], booking: BookingItem) => {
+    if (!hasBookingSelection) {
+      toast.error('Tambahkan booking lapangan tennis terlebih dahulu sebelum memilih ballboy.');
+      return;
+    }
+
+    if (courtSport !== 'TENNIS') {
+      toast.error('Ballboy hanya tersedia untuk tennis.');
+      return;
+    }
+
+    if (!item?.slotId || !item?.ballboy?.id) {
+      toast.error('Data ballboy tidak valid.');
+      return;
+    }
+
+    const selectedForCourt = selectedBallboys.find((ballboy) => ballboy.courtSlotId === booking.slotId);
+    if (selectedForCourt?.slotId === item.slotId) {
+      removeBallboyFromStore(item.ballboy.id, selectedForCourt.timeSlot, item.slotId);
+      toast.success(`${item.ballboy.name ?? 'Ballboy'} dihapus dari add-ons.`);
+      return;
+    }
+
+    const selectedBySlot = selectedBallboys.find((ballboy) => ballboy.slotId === item.slotId);
+    if (selectedBySlot && selectedBySlot.courtSlotId !== booking.slotId) {
+      toast.error('Ballboy ini sudah dipilih untuk lapangan lain di jam yang sama.');
+      return;
+    }
+
+    if (selectedForCourt) {
+      removeBallboyFromStore(
+        selectedForCourt.ballboyId,
+        selectedForCourt.timeSlot,
+        selectedForCourt.slotId
+      );
+    }
+
+    const start = item.startAt ? dayjs(item.startAt) : null;
+    const end = item.endAt ? dayjs(item.endAt) : null;
+    const timeSlot =
+      start && end ? `${start.format('HH:mm')} - ${end.format('HH:mm')}` : booking.timeSlot;
+
+    addBallboyToStore({
+      ballboyId: item.ballboy.id,
+      ballboyName: item.ballboy.name ?? 'Ballboy',
+      timeSlot,
+      price: item.price ?? 0,
+      date: start ? start.format('YYYY-MM-DD') : booking.date,
+      slotId: item.slotId,
+      courtId: booking.courtId,
+      courtName: booking.courtName,
+      courtSlotId: booking.slotId,
+      startAt: item.startAt,
+      endAt: item.endAt
+    });
+
+    toast.success(`${item.ballboy.name ?? 'Ballboy'} ditambahkan ke add-ons.`);
+  };
+
   return (
     <>
       <MainHeader onBack={() => router.back()} title="Produk Tambahan" withLogo={false} />
 
       <div className="mx-auto w-11/12 pt-16">
-        {/* Tabs utama */}
-        {/* <div className="mb-4 flex gap-2">
-          {['Coach', 'Raket'].map((item) => (
+        <div className="mb-4 flex gap-2">
+          {courtSport === 'TENNIS' && (
             <Button
-              key={item}
-              variant={activeTab === item.toLowerCase().replace(' ', '') ? 'default' : 'outline'}
+              variant={activeTab === 'ballboy' ? 'default' : 'outline'}
               className="flex-1"
-              onClick={() => setActiveTab(item.toLowerCase().replace(' ', '') as any)}
+              onClick={() => setActiveTab('ballboy')}
             >
-              {item}
+              Ballboy
+              {selectedBallboys.length > 0 && (
+                <Badge variant="secondary" className="ml-2">
+                  {selectedBallboys.length}
+                </Badge>
+              )}
             </Button>
-          ))}
-        </div> */}
+          )}
+          <Button
+            variant={activeTab === 'inventory' ? 'default' : 'outline'}
+            className="flex-1"
+            onClick={() => setActiveTab('inventory')}
+          >
+            Peralatan
+            {selectedInventories.length > 0 && (
+              <Badge variant="secondary" className="ml-2">
+                {selectedInventories.length}
+              </Badge>
+            )}
+          </Button>
+        </div>
+
+        {activeTab === 'ballboy' && courtSport === 'TENNIS' && (
+          <div className="mb-4 flex flex-col gap-3">
+            {!hasBookingSelection && (
+              <Card>
+                <div className="px-4 py-3">
+                  <p className="text-muted-foreground text-sm">
+                    Tambahkan booking lapangan tennis terlebih dahulu untuk memilih ballboy.
+                  </p>
+                </div>
+              </Card>
+            )}
+
+            {hasBookingSelection && isBallboyPending && (
+              <Card>
+                <div className="px-4 py-3">
+                  <p className="text-muted-foreground text-sm">Memuat daftar ballboy...</p>
+                </div>
+              </Card>
+            )}
+
+            {hasBookingSelection && isBallboyError && (
+              <Card>
+                <div className="px-4 py-3">
+                  <p className="text-destructive text-sm">Gagal memuat ketersediaan ballboy.</p>
+                </div>
+              </Card>
+            )}
+
+            {hasBookingSelection &&
+              !isBallboyPending &&
+              !isBallboyError &&
+              bookingItems.map((booking) => {
+                const matchingSlots = getMatchingBallboySlots(booking);
+                const selectedForCourt = selectedBallboys.find(
+                  (ballboy) => ballboy.courtSlotId === booking.slotId
+                );
+
+                return (
+                  <Card key={booking.slotId}>
+                    <div className="space-y-3 px-4 py-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="font-semibold">{booking.courtName}</p>
+                          <p className="text-muted-foreground text-sm">
+                            {dayjs(booking.date).format('DD MMM YYYY')} • {booking.timeSlot} -{' '}
+                            {booking.endTime}
+                          </p>
+                        </div>
+                        {selectedForCourt && <Badge>Dipilih</Badge>}
+                      </div>
+
+                      {matchingSlots.length === 0 ? (
+                        <p className="text-muted-foreground rounded-md border px-3 py-2 text-sm">
+                          Ballboy tidak tersedia untuk jadwal ini.
+                        </p>
+                      ) : (
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {matchingSlots.map((item) => {
+                            const isSelected = selectedForCourt?.slotId === item.slotId;
+                            const isUsedElsewhere = selectedBallboys.some(
+                              (ballboy) =>
+                                ballboy.slotId === item.slotId &&
+                                ballboy.courtSlotId !== booking.slotId
+                            );
+
+                            return (
+                              <Button
+                                key={item.slotId}
+                                type="button"
+                                variant={isSelected ? 'default' : 'outline'}
+                                className="h-auto justify-between gap-3 px-3 py-2"
+                                disabled={isUsedElsewhere}
+                                onClick={() => handleBallboyToggle(item, booking)}
+                              >
+                                <span className="min-w-0 text-left">
+                                  <span className="block truncate">
+                                    {item.ballboy?.name ?? 'Ballboy'}
+                                  </span>
+                                  <span className="text-xs opacity-75">
+                                    Rp{Number(item.price ?? 0).toLocaleString('id-ID')}
+                                  </span>
+                                </span>
+                                {isUsedElsewhere && (
+                                  <span className="text-[11px] opacity-70">Terpakai</span>
+                                )}
+                              </Button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                );
+              })}
+          </div>
+        )}
 
         {/* === COACH LIST === */}
         {/* {activeTab === 'coach' && (
@@ -313,7 +513,7 @@ export default function AddOnsPage() {
         )} */}
 
         {/* === RAKET === */}
-        {activeTab === 'raket' && (
+        {activeTab === 'inventory' && (
           <div className="mb-4 flex flex-col gap-3">
             {isInventoryPending && (
               <Card>

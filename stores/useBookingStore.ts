@@ -85,6 +85,9 @@ export interface SelectedBallboy {
   price: number;
   date: string;
   slotId?: string;
+  courtId?: string;
+  courtName?: string;
+  courtSlotId?: string;
   startAt?: string;
   endAt?: string;
 }
@@ -116,6 +119,7 @@ interface BookingState {
   // Totals
   courtTotal: number;
   coachTotal: number;
+  ballboyTotal: number;
   inventoryTotal: number;
   membershipDiscount: number; // Discount amount from membership sessions
 
@@ -163,6 +167,7 @@ export const useBookingStore = create<BookingState>()(
       selectedInventories: [],
       courtTotal: 0,
       coachTotal: 0,
+      ballboyTotal: 0,
       inventoryTotal: 0,
       membershipDiscount: 0,
       coachDescription: null,
@@ -171,7 +176,12 @@ export const useBookingStore = create<BookingState>()(
       // Actions
       setBookingItems: (items) => {
         const courtTotal = items.reduce((sum, item) => sum + getBookingItemBasePrice(item), 0);
-        set({ bookingItems: items, courtTotal });
+        const validCourtSlotIds = new Set(items.map((item) => item.slotId));
+        const selectedBallboys = get().selectedBallboys.filter(
+          (ballboy) => !ballboy.courtSlotId || validCourtSlotIds.has(ballboy.courtSlotId)
+        );
+        const ballboyTotal = selectedBallboys.reduce((sum, ballboy) => sum + ballboy.price, 0);
+        set({ bookingItems: items, selectedBallboys, courtTotal, ballboyTotal });
       },
 
       removeBookingItem: (courtId, timeSlot, date) => {
@@ -180,7 +190,12 @@ export const useBookingStore = create<BookingState>()(
           (item) => !(item.courtId === courtId && item.timeSlot === timeSlot && item.date === date)
         );
         const courtTotal = newItems.reduce((sum, item) => sum + getBookingItemBasePrice(item), 0);
-        set({ bookingItems: newItems, courtTotal });
+        const validCourtSlotIds = new Set(newItems.map((item) => item.slotId));
+        const selectedBallboys = state.selectedBallboys.filter(
+          (ballboy) => !ballboy.courtSlotId || validCourtSlotIds.has(ballboy.courtSlotId)
+        );
+        const ballboyTotal = selectedBallboys.reduce((sum, ballboy) => sum + ballboy.price, 0);
+        set({ bookingItems: newItems, selectedBallboys, courtTotal, ballboyTotal });
       },
 
       setSelectedDate: (date) => set({ selectedDate: date }),
@@ -227,6 +242,10 @@ export const useBookingStore = create<BookingState>()(
       addBallboy: (ballboy) => {
         const state = get();
         const exists = state.selectedBallboys.find((b) => {
+          if (ballboy.courtSlotId) {
+            return b.courtSlotId === ballboy.courtSlotId;
+          }
+
           if (ballboy.slotId) {
             return b.slotId === ballboy.slotId;
           }
@@ -240,8 +259,8 @@ export const useBookingStore = create<BookingState>()(
 
         if (!exists) {
           const newBallboys = [...state.selectedBallboys, ballboy];
-          const coachTotal = newBallboys.reduce((sum, b) => sum + b.price, 0);
-          set({ selectedBallboys: newBallboys, coachTotal });
+          const ballboyTotal = newBallboys.reduce((sum, b) => sum + b.price, 0);
+          set({ selectedBallboys: newBallboys, ballboyTotal });
         }
       },
 
@@ -254,8 +273,8 @@ export const useBookingStore = create<BookingState>()(
 
           return !(b.ballboyId === ballboyId && b.timeSlot === timeSlot);
         });
-        const coachTotal = newBallboys.reduce((sum, b) => sum + b.price, 0);
-        set({ selectedBallboys: newBallboys, coachTotal });
+        const ballboyTotal = newBallboys.reduce((sum, b) => sum + b.price, 0);
+        set({ selectedBallboys: newBallboys, ballboyTotal });
       },
 
       addInventory: (inventory) => {
@@ -317,6 +336,7 @@ export const useBookingStore = create<BookingState>()(
         set({
           bookingItems: [],
           selectedCoaches: [],
+          selectedBallboys: [],
           selectedInventories: [],
           selectedCustomerId: null,
           selectedCustomerName: null,
@@ -325,6 +345,7 @@ export const useBookingStore = create<BookingState>()(
           walkInPhone: null,
           courtTotal: 0,
           coachTotal: 0,
+          ballboyTotal: 0,
           inventoryTotal: 0,
           membershipDiscount: 0,
           coachDescription: null
@@ -338,7 +359,7 @@ export const useBookingStore = create<BookingState>()(
         const state = get();
         // Apply membership discount to court total only
         const discountedCourtTotal = Math.max(0, state.courtTotal - state.membershipDiscount);
-        return discountedCourtTotal + state.coachTotal + state.inventoryTotal;
+        return discountedCourtTotal + state.coachTotal + state.ballboyTotal + state.inventoryTotal;
       },
 
       setCartOpen: (open) => set({ isCartOpen: open })
@@ -382,9 +403,11 @@ export const useBookingStore = create<BookingState>()(
         walkInName: state.walkInName,
         walkInPhone: state.walkInPhone,
         selectedCoaches: state.selectedCoaches,
+        selectedBallboys: state.selectedBallboys,
         selectedInventories: state.selectedInventories,
         courtTotal: state.courtTotal,
         coachTotal: state.coachTotal,
+        ballboyTotal: state.ballboyTotal,
         inventoryTotal: state.inventoryTotal,
         membershipDiscount: state.membershipDiscount,
         coachDescription: state.coachDescription

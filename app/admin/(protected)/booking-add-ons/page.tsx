@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useMembershipDiscount } from '@/hooks/useMembershipDiscount';
 import { formatSlotTime, formatSlotTimeRange } from '@/lib/time-utils';
 import { cn } from '@/lib/utils';
+import { adminBallboyAvailabilityQueryOptions } from '@/queries/admin/ballboy';
 import { adminCheckoutMutationOptions } from '@/mutations/admin/checkout';
 import { adminCoachAvailabilityQueryOptions } from '@/queries/admin/coach';
 import { type CustomerSearchResult } from '@/queries/admin/customer';
@@ -52,6 +53,8 @@ export default function BookingAddOns() {
     selectedInventories,
     addCoach,
     removeCoach,
+    addBallboy,
+    removeBallboy,
     addInventory,
     removeInventory,
     removeBookingItem,
@@ -59,6 +62,7 @@ export default function BookingAddOns() {
     setMembershipDiscount,
     courtTotal,
     coachTotal,
+    ballboyTotal,
     inventoryTotal,
     coachDescription,
     setCoachDescription
@@ -66,7 +70,7 @@ export default function BookingAddOns() {
 
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState<'coaches' | 'inventory'>('coaches');
+  const [activeTab, setActiveTab] = useState<'coaches' | 'ballboys' | 'inventory'>('coaches');
   // const [inventoryQuantities, setInventoryQuantities] = useState<Record<string, number>>({});
   // Selected date and time for add-ons when no court bookings exist
   const [selectedAddOnDate, setSelectedAddOnDate] = useState<string>(dayjs().format('YYYY-MM-DD'));
@@ -97,7 +101,8 @@ export default function BookingAddOns() {
     setMembershipDiscount(membershipDiscount.discountAmount);
   }, [membershipDiscount.discountAmount, setMembershipDiscount]);
 
-  const totalAmount = membershipDiscount.discountedTotal + coachTotal + inventoryTotal;
+  const totalAmount =
+    membershipDiscount.discountedTotal + coachTotal + ballboyTotal + inventoryTotal;
 
   // Get date range from bookings or selected add-on date
   // Helper to create ISO string for start/end of day in UTC
@@ -155,6 +160,11 @@ export default function BookingAddOns() {
   // Fetch coach availability
   const { data: coachAvailabilityData } = useQuery(
     adminCoachAvailabilityQueryOptions(dateRange?.startAt, dateRange?.endAt, courtSport)
+  );
+
+  // Fetch ballboy availability. Ballboy is only available for tennis bookings.
+  const { data: ballboyAvailabilityData } = useQuery(
+    adminBallboyAvailabilityQueryOptions(dateRange?.startAt, dateRange?.endAt, courtSport)
   );
 
   // Helpers to avoid timezone shifts; use local time parts from ISO strings (same as court slots)
@@ -336,6 +346,30 @@ export default function BookingAddOns() {
     return { available: item.availableQuantity > 0, quantity: item.availableQuantity };
   };
 
+  const isBallboyAvailable = (timeSlot: string, date: string): boolean => {
+    if (!ballboyAvailabilityData) return false;
+    return ballboyAvailabilityData.some((slot) => {
+      const slotDateStr = getISODate(slot.startAt);
+      const slotTimeRange = getTimeRangeLocal(slot.startAt, slot.endAt);
+      return slotDateStr === date && slotTimeRange === timeSlot;
+    });
+  };
+
+  const ballboyAvailableForBookings = useMemo(() => {
+    if (!ballboyAvailabilityData || courtSport !== 'TENNIS' || bookingItems.length === 0) {
+      return [];
+    }
+
+    return bookingItems.map((booking) => ({
+      booking,
+      slots: ballboyAvailabilityData.filter((slot) => {
+        const slotDateStr = getISODate(slot.startAt);
+        const slotTimeRange = getTimeRangeLocal(slot.startAt, slot.endAt);
+        return slotDateStr === booking.date && slotTimeRange === booking.timeSlot;
+      })
+    }));
+  }, [ballboyAvailabilityData, bookingItems, courtSport]);
+
   // Helper function to check if coach is available for any of the booked dates/slots
   // If no bookings, check against selected add-on date/time
   const isCoachAvailableForBookings = (coach: { id: string }) => {
@@ -427,6 +461,58 @@ export default function BookingAddOns() {
       });
       toast.success(`Added ${coachName} for ${timeSlot} on ${dayjs(date).format('DD MMM')}`);
     }
+  };
+
+  const handleBallboySelect = (
+    ballboySlot: NonNullable<typeof ballboyAvailabilityData>[number],
+    booking: (typeof bookingItems)[number]
+  ) => {
+    if (courtSport !== 'TENNIS') {
+      toast.error('Ballboy hanya tersedia untuk tennis.');
+      return;
+    }
+
+    if (!ballboySlot.slotId || !ballboySlot.ballboy?.id) {
+      toast.error('Data ballboy tidak valid.');
+      return;
+    }
+
+    const selectedForCourt = selectedBallboys.find((b) => b.courtSlotId === booking.slotId);
+    if (selectedForCourt?.slotId === ballboySlot.slotId) {
+      removeBallboy(ballboySlot.ballboy.id, selectedForCourt.timeSlot, ballboySlot.slotId);
+      toast.success(`Removed ${ballboySlot.ballboy.name ?? 'Ballboy'} from ${booking.timeSlot}`);
+      return;
+    }
+
+    const selectedBySlot = selectedBallboys.find((b) => b.slotId === ballboySlot.slotId);
+    if (selectedBySlot && selectedBySlot.courtSlotId !== booking.slotId) {
+      toast.error('Ballboy ini sudah dipilih untuk lapangan lain di jam yang sama.');
+      return;
+    }
+
+    if (selectedForCourt) {
+      removeBallboy(selectedForCourt.ballboyId, selectedForCourt.timeSlot, selectedForCourt.slotId);
+    }
+
+    const timeSlot = getTimeRangeLocal(ballboySlot.startAt, ballboySlot.endAt);
+
+    addBallboy({
+      ballboyId: ballboySlot.ballboy.id,
+      ballboyName: ballboySlot.ballboy.name ?? 'Ballboy',
+      timeSlot,
+      price: ballboySlot.price ?? 0,
+      date: getISODate(ballboySlot.startAt),
+      slotId: ballboySlot.slotId,
+      courtId: booking.courtId,
+      courtName: booking.courtName,
+      courtSlotId: booking.slotId,
+      startAt: ballboySlot.startAt,
+      endAt: ballboySlot.endAt
+    });
+
+    toast.success(
+      `Added ${ballboySlot.ballboy.name ?? 'Ballboy'} for ${dayjs(booking.date).format('DD MMM')} ${booking.timeSlot}`
+    );
   };
 
   // Handle inventory quantity change - now uses real API data
@@ -691,6 +777,21 @@ export default function BookingAddOns() {
                 </Badge>
               )}
             </Button>
+            {courtSport === 'TENNIS' && (
+              <Button
+                variant={activeTab === 'ballboys' ? 'default' : 'ghost'}
+                className="flex-1"
+                onClick={() => setActiveTab('ballboys')}
+              >
+                <IconUser className="mr-2 h-4 w-4" />
+                Ballboy
+                {selectedBallboys.length > 0 && (
+                  <Badge variant="secondary" className="ml-2">
+                    {selectedBallboys.length}
+                  </Badge>
+                )}
+              </Button>
+            )}
             <Button
               variant={activeTab === 'inventory' ? 'default' : 'ghost'}
               className="flex-1"
@@ -900,6 +1001,132 @@ export default function BookingAddOns() {
                     </Field>
                   </CardContent>
                 </Card>
+              </div>
+            </div>
+          )}
+
+          {/* Ballboys Tab */}
+          {activeTab === 'ballboys' && courtSport === 'TENNIS' && (
+            <div className="space-y-4">
+              <div className="rounded-md border bg-white p-3 sm:p-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-sm font-medium">Select ballboys</p>
+                  <Badge variant="outline" className="text-[10px] sm:text-xs">
+                    {(() => {
+                      if (!ballboyAvailabilityData || bookingItems.length === 0) return 0;
+
+                      const bookedPairs = new Set<string>();
+                      Object.entries(bookingsByDate).forEach(([date, info]) => {
+                        info.timeSlots.forEach((t) => bookedPairs.add(`${date}|${t}`));
+                      });
+
+                      return ballboyAvailabilityData.reduce((acc, slot) => {
+                        const d = getISODate(slot.startAt);
+                        const range = getTimeRangeLocal(slot.startAt, slot.endAt);
+                        return bookedPairs.has(`${d}|${range}`) ? acc + 1 : acc;
+                      }, 0);
+                    })()}{' '}
+                    slots
+                  </Badge>
+                </div>
+                <div className="text-muted-foreground text-[11px]">
+                  {bookingItems.length > 0 ? (
+                    Object.entries(bookingsByDate).map(([date, info]) => (
+                      <span key={date} className="mr-3 inline-block">
+                        <span className="font-medium">{info.shortDate}:</span>{' '}
+                        {info.timeSlots.join(', ')}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-amber-600">
+                      Ballboy hanya bisa dipilih bersama booking lapangan tennis.
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {bookingItems.length === 0 && (
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-muted-foreground text-sm">
+                      Tambahkan booking lapangan tennis terlebih dahulu untuk memilih ballboy.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {bookingItems.length > 0 && ballboyAvailableForBookings.length === 0 && (
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-muted-foreground text-sm">
+                      Ballboy tidak tersedia untuk jadwal booking yang dipilih.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                {ballboyAvailableForBookings.map(({ booking, slots }) => {
+                  const selectedForCourt = selectedBallboys.find(
+                    (b) => b.courtSlotId === booking.slotId
+                  );
+
+                  return (
+                    <Card key={booking.slotId} className="border-muted">
+                      <CardContent className="space-y-3 p-3 sm:p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <h3 className="truncate text-sm font-semibold">
+                              {booking.courtName}
+                            </h3>
+                            <p className="text-muted-foreground text-xs">
+                              {dayjs(booking.date).format('ddd, DD MMM')} • {booking.timeSlot}
+                            </p>
+                          </div>
+                          {selectedForCourt && <Badge>Dipilih</Badge>}
+                        </div>
+
+                        {slots.length === 0 ? (
+                          <p className="text-muted-foreground rounded-md border px-3 py-2 text-sm">
+                            Ballboy tidak tersedia di jam ini.
+                          </p>
+                        ) : (
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            {slots.map((slot) => {
+                              const isSelected = selectedForCourt?.slotId === slot.slotId;
+                              const isUsedElsewhere = selectedBallboys.some(
+                                (b) => b.slotId === slot.slotId && b.courtSlotId !== booking.slotId
+                              );
+
+                              return (
+                                <Button
+                                  key={slot.slotId}
+                                  type="button"
+                                  variant={isSelected ? 'default' : 'outline'}
+                                  className="h-auto justify-between gap-3 px-3 py-2"
+                                  disabled={isUsedElsewhere}
+                                  onClick={() => handleBallboySelect(slot, booking)}
+                                >
+                                  <span className="min-w-0 text-left">
+                                    <span className="block truncate">
+                                      {slot.ballboy?.name ?? 'Ballboy'}
+                                    </span>
+                                    <span className="text-xs opacity-75">
+                                      Rp {Number(slot.price ?? 0).toLocaleString('id-ID')}/hr
+                                    </span>
+                                  </span>
+                                  {isUsedElsewhere && (
+                                    <span className="text-[11px] opacity-70">Terpakai</span>
+                                  )}
+                                </Button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -1176,12 +1403,15 @@ export default function BookingAddOns() {
             setWalkInCustomer(null, null);
           }}
           selectedCoaches={selectedCoaches}
+          selectedBallboys={selectedBallboys}
           selectedInventories={selectedInventories}
           onCoachRemove={removeCoach}
+          onBallboyRemove={removeBallboy}
           onInventoryRemove={removeInventory}
           onBookingRemove={removeBookingItem}
           courtTotal={courtTotal}
           coachTotal={coachTotal}
+          ballboyTotal={ballboyTotal}
           inventoryTotal={inventoryTotal}
           totalAmount={totalAmount}
           membershipDiscountDetails={membershipDiscount}
