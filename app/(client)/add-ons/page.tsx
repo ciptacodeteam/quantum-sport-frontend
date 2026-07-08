@@ -93,12 +93,6 @@ export default function AddOnsPage() {
 
     setActiveTab('inventory');
   }, [courtSport]);
-  const {
-    data: inventoryAvailability,
-    isPending: isInventoryPending,
-    isError: isInventoryError
-  } = useQuery(inventoryAvailabilityQueryOptions({ courtSport }));
-
   const bookingTimeRange = useMemo(() => {
     if (bookingItems.length === 0) {
       return { startAt: undefined as string | undefined, endAt: undefined as string | undefined };
@@ -152,6 +146,18 @@ export default function AddOnsPage() {
       endAt
     };
   }, [bookingItems]);
+
+  const {
+    data: inventoryAvailability,
+    isPending: isInventoryPending,
+    isError: isInventoryError
+  } = useQuery(
+    inventoryAvailabilityQueryOptions({
+      courtSport,
+      ...(bookingTimeRange.startAt ? { startAt: bookingTimeRange.startAt } : {}),
+      ...(bookingTimeRange.endAt ? { endAt: bookingTimeRange.endAt } : {})
+    })
+  );
 
   // const {
   //   data: coachAvailability,
@@ -637,7 +643,11 @@ export default function AddOnsPage() {
             {!isInventoryPending && !isInventoryError && inventoryList.length === 0 && (
               <Card>
                 <div className="px-4 py-3">
-                  <p className="text-muted-foreground text-sm">Inventori tidak tersedia.</p>
+                  <p className="text-muted-foreground text-sm">
+                    {courtSport === 'TENNIS' && hasBookingSelection
+                      ? 'Raket di jam tersebut tidak tersedia.'
+                      : 'Inventori tidak tersedia.'}
+                  </p>
                 </div>
               </Card>
             )}

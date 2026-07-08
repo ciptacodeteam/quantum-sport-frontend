@@ -167,6 +167,22 @@ export default function BookingAddOns() {
     adminBallboyAvailabilityQueryOptions(dateRange?.startAt, dateRange?.endAt, courtSport)
   );
 
+  const inventoryDateRange = useMemo(() => {
+    const bookingsWithSlotRange = bookingItems.filter((item) => item.startAt && item.endAt);
+
+    if (bookingsWithSlotRange.length === 0) {
+      return dateRange;
+    }
+
+    const sortedStarts = bookingsWithSlotRange.map((item) => item.startAt as string).sort();
+    const sortedEnds = bookingsWithSlotRange.map((item) => item.endAt as string).sort();
+
+    return {
+      startAt: sortedStarts[0],
+      endAt: sortedEnds[sortedEnds.length - 1]
+    };
+  }, [bookingItems, dateRange]);
+
   // Helpers to avoid timezone shifts; use local time parts from ISO strings (same as court slots)
   const getISODate = (isoString?: string | null) => (isoString ? isoString.slice(0, 10) : '');
   const getTimeRangeLocal = (startAt: string, endAt: string) => formatSlotTimeRange(startAt, endAt);
@@ -213,7 +229,11 @@ export default function BookingAddOns() {
 
   // Fetch inventory availability
   const { data: inventoryAvailabilityData } = useQuery(
-    adminInventoryAvailabilityQueryOptions(dateRange?.startAt, dateRange?.endAt, courtSport)
+    adminInventoryAvailabilityQueryOptions(
+      inventoryDateRange?.startAt,
+      inventoryDateRange?.endAt,
+      courtSport
+    )
   );
 
   // Transform coach availability data to match component format
@@ -1207,6 +1227,18 @@ export default function BookingAddOns() {
                   </div>
                 </div>
               </div>
+
+              {inventoryItems.length === 0 && (
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-muted-foreground text-sm">
+                      {courtSport === 'TENNIS' && bookingItems.length > 0
+                        ? 'Raket di jam tersebut tidak tersedia.'
+                        : 'Inventory tidak tersedia.'}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
 
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {inventoryItems.map((item) => {
