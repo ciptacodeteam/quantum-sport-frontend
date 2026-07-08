@@ -701,7 +701,7 @@ export default function AddOnsPage() {
                           <span className="text-primary font-semibold">
                             Rp{unitPrice.toLocaleString('id-ID')}{' '}
                           </span>
-                          <span className="text-muted-foreground text-sm">/equipment</span>
+                          <span className="text-muted-foreground text-sm">/item</span>
                         </p>
                       </div>
 
