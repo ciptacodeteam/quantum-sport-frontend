@@ -282,8 +282,11 @@ export default function CheckoutPage() {
     const coachSlots = selectedCoaches.filter((coach) => coach.slotId).map((coach) => coach.slotId);
 
     const ballboySlots = selectedBallboys
-      .filter((ballboy) => ballboy.slotId)
-      .map((ballboy) => ballboy.slotId);
+      .filter((ballboy) => ballboy.slotId && ballboy.courtSlotId)
+      .map((ballboy) => ({
+        slotId: ballboy.slotId as string,
+        courtSlotId: ballboy.courtSlotId as string
+      }));
 
     const inventories = selectedInventories
       .filter((inventory) => inventory.inventoryId && inventory.quantity > 0)

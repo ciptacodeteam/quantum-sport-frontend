@@ -626,7 +626,12 @@ export default function BookingAddOns() {
 
     const courtSlots = bookingItems.map((b) => b.slotId).filter(Boolean);
     const coachSlots = selectedCoaches.map((c) => c.slotId).filter(Boolean) as string[];
-    const ballboySlots = selectedBallboys.map((b) => b.slotId).filter(Boolean) as string[];
+    const ballboySlots = selectedBallboys
+      .filter((b) => b.slotId && b.courtSlotId)
+      .map((b) => ({
+        slotId: b.slotId as string,
+        courtSlotId: b.courtSlotId as string
+      }));
     const inventories = selectedInventories
       .filter((i) => i.quantity > 0)
       .map((i) => ({ inventoryId: i.inventoryId, quantity: i.quantity }));
