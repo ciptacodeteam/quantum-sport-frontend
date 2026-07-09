@@ -1,5 +1,6 @@
 'use client';
 
+import { BookingBallboySection } from '@/components/admin/bookings/BookingBallboySection';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -27,6 +28,7 @@ import {
   getCoachTypeLabel
 } from '@/lib/constants';
 import { formatSlotTime } from '@/lib/time-utils';
+import { formatBallboyBadgeLabel, getBallboyNames } from '@/lib/ballboy-utils';
 import { formatPhone } from '@/lib/utils';
 import { adminScheduleQueryOptions } from '@/queries/admin/booking';
 import { adminCourtsQueryOptions, adminCourtsWithSlotsQueryOptions } from '@/queries/admin/court';
@@ -34,6 +36,7 @@ import type {
   Booking,
   BookingDetail,
   BookingCoach,
+  BookingBallboy,
   BookingInventory,
   Staff,
   Inventory
@@ -572,8 +575,14 @@ export default function SchedulePage() {
 
                                                 const hasCoaches = coachNames.length > 0;
                                                 const hasInventories = inventoryNames.length > 0;
+                                                const ballboyNames = getBallboyNames(
+                                                  (bookingCell.booking.ballboys ||
+                                                    []) as BookingBallboy[]
+                                                );
+                                                const hasBallboys = ballboyNames.length > 0;
 
-                                                if (!hasCoaches && !hasInventories) return null;
+                                                if (!hasCoaches && !hasInventories && !hasBallboys)
+                                                  return null;
 
                                                 // Build display text
                                                 const parts: string[] = [];
@@ -583,6 +592,10 @@ export default function SchedulePage() {
                                                       ? coachNames[0]
                                                       : `${coachNames[0]}${coachNames.length > 1 ? ` +${coachNames.length - 1}` : ''}`;
                                                   parts.push(`Coach: ${coachDisplay}`);
+                                                }
+                                                const ballboyLabel = formatBallboyBadgeLabel(ballboyNames);
+                                                if (ballboyLabel) {
+                                                  parts.push(ballboyLabel);
                                                 }
                                                 if (hasInventories) {
                                                   const inventoryDisplay =
@@ -894,6 +907,13 @@ export default function SchedulePage() {
                                                 </div>
                                               );
                                             })()}
+
+                                            <BookingBallboySection
+                                              ballboys={
+                                                (bookingCell.booking.ballboys || []) as BookingBallboy[]
+                                              }
+                                              details={bookingCell.booking.details}
+                                            />
 
                                             {/* Inventories Section */}
                                             {(() => {

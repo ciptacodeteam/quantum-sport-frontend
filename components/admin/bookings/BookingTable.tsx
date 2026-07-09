@@ -10,6 +10,7 @@ import {
   RescheduleCourtDialog,
   type BookingDetailWithSlot
 } from '@/components/admin/bookings/RescheduleCourtDialog';
+import { BookingBallboySection } from '@/components/admin/bookings/BookingBallboySection';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/clipboard-copy';
@@ -34,7 +35,7 @@ import { BOOKING_STATUS_BADGE_VARIANT, BOOKING_STATUS_MAP, BookingStatus } from 
 import { formatSlotTime } from '@/lib/time-utils';
 import { formatPhone, getTwoWordName } from '@/lib/utils';
 import { adminBookingsQueryOptions } from '@/queries/admin/booking';
-import type { Booking } from '@/types/model';
+import type { Booking, BookingBallboy } from '@/types/model';
 import { IconEye, IconFileExcel, IconPencil, IconPlus, IconX } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
@@ -474,6 +475,15 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
                         </div>
                       </div>
                     )}
+                    {(() => {
+                      const bookingBallboys = (booking.ballboys || []) as BookingBallboy[];
+                      return (
+                        <BookingBallboySection
+                          ballboys={bookingBallboys}
+                          details={booking.details}
+                        />
+                      );
+                    })()}
                     {booking.cancellationReason && (
                       <div>
                         <p className="text-muted-foreground text-sm">Alasan Pembatalan</p>

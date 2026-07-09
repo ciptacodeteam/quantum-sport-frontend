@@ -477,7 +477,7 @@ export type Booking = {
   cashier?: Cashier;
   details?: BookingDetail[];
   inventories?: Inventory[] | BookingInventory[];
-  ballboys?: Staff[];
+  ballboys?: BookingBallboy[];
   coaches?: Staff[] | BookingCoach[];
   bookingCoaches?: BookingCoach[];
   invoice?: Invoice;

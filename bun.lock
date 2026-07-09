@@ -59,6 +59,7 @@
         "react-day-picker": "^9.13.0",
         "react-dom": "19.2.3",
         "react-fast-marquee": "^1.6.5",
+        "react-floating-whatsapp": "^5.0.8",
         "react-hook-form": "^7.70.0",
         "react-number-format": "^5.4.4",
         "recharts": "3.6.0",
@@ -90,6 +91,10 @@
         "typescript-eslint": "^8.52.0",
         "vite-tsconfig-paths": "^6.0.3",
         "vitest": "^4.0.16",
+      },
+      "optionalDependencies": {
+        "@tailwindcss/oxide-linux-x64-gnu": "^4.1.18",
+        "lightningcss-linux-x64-gnu": "^1.30.2",
       },
     },
   },
@@ -1579,6 +1584,8 @@
     "react-error-boundary": ["react-error-boundary@6.0.0", "", { "dependencies": { "@babel/runtime": "^7.12.5" }, "peerDependencies": { "react": ">=16.13.1" } }, "sha512-gdlJjD7NWr0IfkPlaREN2d9uUZUlksrfOx7SX62VRerwXbMY6ftGCIZua1VG1aXFNOimhISsTq+Owp725b9SiA=="],
 
     "react-fast-marquee": ["react-fast-marquee@1.6.5", "", { "peerDependencies": { "react": ">= 16.8.0 || ^18.0.0", "react-dom": ">= 16.8.0 || ^18.0.0" } }, "sha512-swDnPqrT2XISAih0o74zQVE2wQJFMvkx+9VZXYYNSLb/CUcAzU9pNj637Ar2+hyRw6b4tP6xh4GQZip2ZCpQpg=="],
+
+    "react-floating-whatsapp": ["react-floating-whatsapp@5.0.8", "", { "peerDependencies": { "react": ">=18.0.0", "react-dom": ">=18.0.0" } }, "sha512-4X485d04u7MoWpn61OpWPO/mL94P3gaFq1L932ztH7bo9eClAFcg5ufIxNKbJo9/1h0xpjWZKEW0KBB0apWzZw=="],
 
     "react-hook-form": ["react-hook-form@7.70.0", "", { "peerDependencies": { "react": "^16.8.0 || ^17 || ^18 || ^19" } }, "sha512-COOMajS4FI3Wuwrs3GPpi/Jeef/5W1DRR84Yl5/ShlT3dKVFUfoGiEZ/QE6Uw8P4T2/CLJdcTVYKvWBMQTEpvw=="],
 

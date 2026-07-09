@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 
 import { adminInvoiceQueryOptions } from '@/queries/admin/invoice';
+import { getCourtNameForSlot } from '@/lib/ballboy-utils';
 import { formatNumber } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -182,16 +183,23 @@ export default function InvoiceDetailPage() {
                   <div>
                     <p className="mb-2 font-semibold">Ballboy</p>
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-                      {invoice.booking.ballboys.map((item: any, idx: number) => (
-                        <div key={idx} className="rounded-md border p-3">
-                          <p className="font-medium">{item.staff?.name}</p>
-                          <p className="text-sm">
-                            {dayjs(item.slot?.startAt).format('DD/MM/YYYY HH:mm')} -{' '}
-                            {dayjs(item.slot?.endAt).format('HH:mm')}
-                          </p>
-                          <p className="text-sm">Rp {formatNumber(item.price || 0)}</p>
-                        </div>
-                      ))}
+                      {invoice.booking.ballboys.map((item: any, idx: number) => {
+                        const courtName = getCourtNameForSlot(item.slot, invoice.booking.courts);
+
+                        return (
+                          <div key={idx} className="rounded-md border p-3">
+                            <p className="font-medium">{item.staff?.name}</p>
+                            {courtName && (
+                              <p className="text-muted-foreground text-sm">{courtName}</p>
+                            )}
+                            <p className="text-sm">
+                              {dayjs(item.slot?.startAt).format('DD/MM/YYYY HH:mm')} -{' '}
+                              {dayjs(item.slot?.endAt).format('HH:mm')}
+                            </p>
+                            <p className="text-sm">Rp {formatNumber(item.price || 0)}</p>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
