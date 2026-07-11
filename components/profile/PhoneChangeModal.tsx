@@ -33,7 +33,7 @@ const phoneSchema = z.object({
 });
 
 const otpSchema = z.object({
-  otp: z.string().min(1, 'OTP is required').length(6, 'OTP must be 6 digits')
+  otp: z.string().min(1, 'OTP is required').length(4, 'OTP must be 4 digits')
 });
 
 type PhoneFormData = z.infer<typeof phoneSchema>;
@@ -215,11 +215,11 @@ export default function PhoneChangeModal({ open, phone, onOpenChange, onSuccess 
                       disabled={isVerifying}
                       render={({ field }) => (
                         <InputOTP
-                          maxLength={6}
+                          maxLength={4}
                           value={field.value}
                           onChange={(value) => {
                             field.onChange(value);
-                            if (value.length === 6) {
+                            if (value.length === 4) {
                               otpForm.handleSubmit(handleOtpSubmit)();
                             }
                           }}
@@ -229,8 +229,6 @@ export default function PhoneChangeModal({ open, phone, onOpenChange, onSuccess 
                             <InputOTPSlot index={1} className="size-14 md:text-xl" />
                             <InputOTPSlot index={2} className="size-14 md:text-xl" />
                             <InputOTPSlot index={3} className="size-14 md:text-xl" />
-                            <InputOTPSlot index={4} className="size-14 md:text-xl" />
-                            <InputOTPSlot index={5} className="size-14 md:text-xl" />
                           </InputOTPGroup>
                         </InputOTP>
                       )}
