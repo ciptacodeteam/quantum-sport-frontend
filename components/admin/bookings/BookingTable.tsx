@@ -163,6 +163,9 @@ const getBookingStatus = (status: number | BookingStatus): BookingStatus => {
   return statusMap[status] || BookingStatus.HOLD;
 };
 
+const getBookingDetailNormalPrice = (detail: NonNullable<Booking['details']>[number]) =>
+  detail.slot?.normalPrice ?? detail.slot?.price ?? detail.price;
+
 type BookingTableProps = {
   courtSport?: 'PADEL' | 'TENNIS';
 };
@@ -453,7 +456,10 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
                                   </div>
                                   <div className="flex items-center gap-3">
                                     <p className="text-base font-medium">
-                                      Rp {new Intl.NumberFormat('id-ID').format(detail.price)}
+                                      Rp{' '}
+                                      {new Intl.NumberFormat('id-ID').format(
+                                        getBookingDetailNormalPrice(detail)
+                                      )}
                                     </p>
                                     {detail.slot && status !== BookingStatus.CANCELLED && (
                                       <RescheduleCourtDialog
@@ -558,7 +564,10 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
                                     )}
                                   </div>
                                   <p className="text-muted-foreground text-xs">
-                                    Rp {new Intl.NumberFormat('id-ID').format(detail.price)}
+                                    Rp{' '}
+                                    {new Intl.NumberFormat('id-ID').format(
+                                      getBookingDetailNormalPrice(detail)
+                                    )}
                                   </p>
                                 </div>
                               ))}

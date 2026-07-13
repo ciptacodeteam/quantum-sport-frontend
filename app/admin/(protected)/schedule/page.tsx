@@ -109,6 +109,9 @@ const getBookingStatus = (status: number | BookingStatus): BookingStatus => {
   return statusMap[status] || BookingStatus.HOLD;
 };
 
+const getBookingDetailNormalPrice = (detail: BookingDetail) =>
+  detail.slot?.normalPrice ?? detail.slot?.price ?? detail.price;
+
 // Helper to format date with time
 const formatDateTime = (date: Date | string, format: string): string => {
   const dayjsDate = dayjs(date);
@@ -739,7 +742,7 @@ export default function SchedulePage() {
                                                           <p className="text-base font-medium">
                                                             Rp{' '}
                                                             {new Intl.NumberFormat('id-ID').format(
-                                                              detail.price
+                                                              getBookingDetailNormalPrice(detail)
                                                             )}
                                                           </p>
                                                         </div>
