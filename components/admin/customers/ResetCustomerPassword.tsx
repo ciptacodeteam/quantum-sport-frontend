@@ -37,7 +37,7 @@ const ResetCustomerPassword = ({ customerId }: Props) => {
     <Section>
       <SectionHeader>
         <SectionTitle title="Reset Password Kustomer" />
-        <SectionDescription description="Kirim link untuk mereset kata sandi kustomer ini." />
+        <SectionDescription description="Buat link untuk mereset kata sandi kustomer ini." />
       </SectionHeader>
       <SectionContent>
         <Alert variant="info" className="mb-4">
@@ -64,7 +64,7 @@ const ResetCustomerPassword = ({ customerId }: Props) => {
           onClick={() => sendResetPasswordLinkMutate(customerId)}
           loading={isPending}
         >
-          Kirim Link Reset Password
+          Buat Link Reset Password
         </Button>
       </SectionContent>
     </Section>
