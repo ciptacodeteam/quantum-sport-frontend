@@ -3,7 +3,8 @@ import {
   createCustomerApi,
   sendResetPasswordLinkApi,
   unbanCustomerApi,
-  updateCustomerApi
+  updateCustomerApi,
+  verifyCustomerPhoneApi
 } from '@/api/admin/customer';
 import type { MutationFuncProps } from '@/types';
 import { mutationOptions } from '@tanstack/react-query';
@@ -86,5 +87,22 @@ export const adminSendCustomerResetPasswordMutationOptions = ({
       handleMutationError(error, {
         onError,
         fallbackMessage: 'Gagal mengirim link reset kata sandi. Silakan coba lagi.'
+      })
+  });
+
+export const adminVerifyCustomerPhoneMutationOptions = ({
+  onSuccess,
+  onError
+}: MutationFuncProps = {}) =>
+  mutationOptions({
+    mutationFn: verifyCustomerPhoneApi,
+    onSuccess: (data) => {
+      toast.success('Nomor WhatsApp berhasil diverifikasi!');
+      onSuccess?.(data);
+    },
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Gagal memverifikasi nomor WhatsApp. Silakan coba lagi.'
       })
   });

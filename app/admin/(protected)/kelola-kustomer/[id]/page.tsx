@@ -3,6 +3,7 @@
 import BanCustomerAccess from '@/components/admin/customers/BanCustomerAccess';
 import EditCustomerForm from '@/components/admin/customers/EditCustomerForm';
 import ResetCustomerPassword from '@/components/admin/customers/ResetCustomerPassword';
+import VerifyCustomerWhatsApp from '@/components/admin/customers/VerifyCustomerWhatsApp';
 import {
   Section,
   SectionContent,
@@ -133,6 +134,8 @@ const EditCustomerPage = ({ params }: { params: Promise<IdParams> }) => {
           </div>
           <Separator className="mt-10 mb-6 block xl:hidden" />
           <div>
+            <VerifyCustomerWhatsApp customerId={param.id} />
+            <Separator className="my-4" />
             <ResetCustomerPassword customerId={param.id} />
             <Separator className="my-4" />
             <BanCustomerAccess customerId={param.id} />

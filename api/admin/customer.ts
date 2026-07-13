@@ -48,6 +48,11 @@ export async function sendResetPasswordLinkApi(id: string) {
   return data;
 }
 
+export async function verifyCustomerPhoneApi(id: string) {
+  const { data } = await adminApi.post(`/customers/${id}/verify-phone`);
+  return data;
+}
+
 export async function getCustomerMembershipApi(id: string) {
   const { data } = await adminApi.get(`/customers/${id}/membership`);
   return data;

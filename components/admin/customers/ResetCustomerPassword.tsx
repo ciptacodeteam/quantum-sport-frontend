@@ -2,6 +2,7 @@
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { CopyButton } from '@/components/ui/clipboard-copy';
 import {
   Section,
   SectionContent,
@@ -12,13 +13,21 @@ import {
 import { adminSendCustomerResetPasswordMutationOptions } from '@/mutations/admin/customer';
 import { IconInfoCircle } from '@tabler/icons-react';
 import { useMutation } from '@tanstack/react-query';
+import { useState } from 'react';
 
 type Props = {
   customerId: string;
 };
 
 const ResetCustomerPassword = ({ customerId }: Props) => {
-  const { mutate, isPending } = useMutation(adminSendCustomerResetPasswordMutationOptions());
+  const [resetLink, setResetLink] = useState('');
+  const { mutate, isPending } = useMutation(
+    adminSendCustomerResetPasswordMutationOptions({
+      onSuccess: (res) => {
+        setResetLink(res?.data?.resetLink || '');
+      }
+    })
+  );
 
   const sendResetPasswordLinkMutate = (id: string) => {
     mutate(id);
@@ -34,9 +43,20 @@ const ResetCustomerPassword = ({ customerId }: Props) => {
         <Alert variant="info" className="mb-4">
           <IconInfoCircle />
           <AlertDescription>
-            Fitur ini akan mengirimkan link kepada kustomer untuk mereset kata sandi mereka.
+            Fitur ini akan membuat link reset password. Jika email/WhatsApp tidak terkirim, salin
+            link dan kirim manual ke kustomer.
           </AlertDescription>
         </Alert>
+
+        {resetLink && (
+          <div className="border-border bg-muted/30 mb-4 rounded-lg border p-3">
+            <p className="text-muted-foreground mb-2 text-sm">Link reset password</p>
+            <div className="flex items-center gap-2">
+              <p className="min-w-0 flex-1 truncate text-sm font-medium">{resetLink}</p>
+              <CopyButton content={resetLink} variant="outline" />
+            </div>
+          </div>
+        )}
 
         <Button
           variant="secondaryInfo"
