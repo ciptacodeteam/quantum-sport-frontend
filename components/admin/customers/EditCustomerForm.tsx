@@ -18,9 +18,9 @@ import { cn, formatPhone, getPlaceholderImageUrl } from '@/lib/utils';
 import { adminUpdateCustomerMutationOptions } from '@/mutations/admin/customer';
 import { adminCustomerQueryOptions } from '@/queries/admin/customer';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Controller, type SubmitHandler, useForm } from 'react-hook-form';
 import z from 'zod';
 
@@ -44,14 +44,14 @@ type Props = {
 };
 
 const EditCustomerForm = ({ customerId }: Props) => {
-  const { data, refetch } = useSuspenseQuery(adminCustomerQueryOptions(customerId));
+  const { data, isError, isLoading, refetch } = useQuery(adminCustomerQueryOptions(customerId));
 
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: data?.name || '',
-      email: data?.email || '',
-      phone: data?.phone ? formatPhone(data.phone).replace(/^\+62/, '') : '',
+      name: '',
+      email: '',
+      phone: '',
       image: undefined
     },
     mode: 'onChange'
@@ -74,6 +74,17 @@ const EditCustomerForm = ({ customerId }: Props) => {
     })
   );
 
+  useEffect(() => {
+    if (!data) return;
+
+    form.reset({
+      name: data.name || '',
+      email: data.email || '',
+      phone: data.phone ? formatPhone(data.phone).replace(/^\+62/, '') : '',
+      image: undefined
+    });
+  }, [data, form]);
+
   const onSubmit: SubmitHandler<FormSchema> = (formData) => {
     mutate({
       id: customerId,
@@ -83,6 +94,18 @@ const EditCustomerForm = ({ customerId }: Props) => {
       }
     });
   };
+
+  if (isLoading) {
+    return <p className="text-muted-foreground text-sm">Memuat data kustomer...</p>;
+  }
+
+  if (isError || !data) {
+    return (
+      <p className="text-destructive text-sm">
+        Data kustomer tidak dapat dimuat. Silakan refresh halaman atau kembali ke daftar kustomer.
+      </p>
+    );
+  }
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)}>
