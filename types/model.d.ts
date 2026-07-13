@@ -27,6 +27,7 @@ export type UserProfile = {
   image: string | null;
   phone: string;
   phoneVerified: boolean;
+  source: 'ONLINE' | 'WALK_IN' | 'ADMIN_CREATED';
   banned: boolean;
   banReason: string | null;
   banExpires: Date | null;

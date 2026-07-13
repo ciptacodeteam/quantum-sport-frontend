@@ -40,80 +40,88 @@ const EditCustomerPage = ({ params }: { params: Promise<IdParams> }) => {
             <SectionDescription description="Informasi detail kustomer." />
           </SectionHeader>
           <SectionContent className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Informasi Kustomer</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Profile Image */}
-                <div className="flex items-center gap-4">
-                  <PreviewImage
-                    src={customer?.image}
-                    className="aspect-square size-24 rounded-lg object-cover"
-                    placeholder={getNameInitial(customer?.name || 'C')}
-                  />
-                  <div>
-                    <p className="text-lg font-semibold">{customer?.name}</p>
-                    <Badge variant={customer?.banned ? 'destructive' : 'success'}>
-                      {customer?.banned ? 'Diblokir' : 'Aktif'}
-                    </Badge>
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Customer Details */}
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <p className="text-muted-foreground text-sm">Email</p>
-                    <p className="font-medium">{customer?.email || '-'}</p>
-                    <Badge
-                      variant={customer?.emailVerified ? 'success' : 'secondary'}
-                      className="mt-1"
-                    >
-                      {customer?.emailVerified ? 'Terverifikasi' : 'Belum Terverifikasi'}
-                    </Badge>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground text-sm">Telepon</p>
-                    <p className="font-medium">{formatPhone(customer?.phone || '') || '-'}</p>
-                    <Badge
-                      variant={customer?.phoneVerified ? 'success' : 'secondary'}
-                      className="mt-1"
-                    >
-                      {customer?.phoneVerified ? 'Terverifikasi' : 'Belum Terverifikasi'}
-                    </Badge>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground text-sm">Tanggal Bergabung</p>
-                    <p className="font-medium">
-                      {customer?.createdAt ? dayjs(customer.createdAt).format('DD MMMM YYYY') : '-'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground text-sm">Terakhir Diperbarui</p>
-                    <p className="font-medium">
-                      {customer?.updatedAt ? dayjs(customer.updatedAt).format('DD MMMM YYYY') : '-'}
-                    </p>
-                  </div>
-                </div>
-
-                {customer?.banned && customer?.banReason && (
-                  <>
-                    <Separator />
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Informasi Kustomer</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Profile Image */}
+                  <div className="flex items-center gap-4">
+                    <PreviewImage
+                      src={customer?.image}
+                      className="aspect-square size-24 rounded-lg object-cover"
+                      placeholder={getNameInitial(customer?.name || 'C')}
+                    />
                     <div>
-                      <p className="text-muted-foreground text-sm">Alasan Pemblokiran</p>
-                      <p className="text-destructive font-medium">{customer.banReason}</p>
-                      {customer.banExpires && (
-                        <p className="text-muted-foreground mt-1 text-sm">
-                          Berakhir: {dayjs(customer.banExpires).format('DD MMMM YYYY')}
-                        </p>
-                      )}
+                      <p className="text-lg font-semibold">{customer?.name}</p>
+                      <Badge variant={customer?.banned ? 'destructive' : 'success'}>
+                        {customer?.banned ? 'Diblokir' : 'Aktif'}
+                      </Badge>
                     </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+                  </div>
+
+                  <Separator />
+
+                  {/* Customer Details */}
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <p className="text-muted-foreground text-sm">Email</p>
+                      <p className="font-medium">{customer?.email || '-'}</p>
+                      <Badge
+                        variant={customer?.emailVerified ? 'success' : 'secondary'}
+                        className="mt-1"
+                      >
+                        {customer?.emailVerified ? 'Terverifikasi' : 'Belum Terverifikasi'}
+                      </Badge>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-sm">Telepon</p>
+                      <p className="font-medium">{formatPhone(customer?.phone || '') || '-'}</p>
+                      <Badge
+                        variant={customer?.phoneVerified ? 'success' : 'secondary'}
+                        className="mt-1"
+                      >
+                        {customer?.phoneVerified ? 'Terverifikasi' : 'Belum Terverifikasi'}
+                      </Badge>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-sm">Tanggal Bergabung</p>
+                      <p className="font-medium">
+                        {customer?.createdAt
+                          ? dayjs(customer.createdAt).format('DD MMMM YYYY')
+                          : '-'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-sm">Terakhir Diperbarui</p>
+                      <p className="font-medium">
+                        {customer?.updatedAt
+                          ? dayjs(customer.updatedAt).format('DD MMMM YYYY')
+                          : '-'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {customer?.banned && customer?.banReason && (
+                    <>
+                      <Separator />
+                      <div>
+                        <p className="text-muted-foreground text-sm">Alasan Pemblokiran</p>
+                        <p className="text-destructive font-medium">{customer.banReason}</p>
+                        {customer.banExpires && (
+                          <p className="text-muted-foreground mt-1 text-sm">
+                            Berakhir: {dayjs(customer.banExpires).format('DD MMMM YYYY')}
+                          </p>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+
+              <ResetCustomerPassword customerId={param.id} />
+            </div>
           </SectionContent>
         </Section>
       </main>

@@ -18,6 +18,18 @@ import dayjs from 'dayjs';
 import Link from 'next/link';
 import { useMemo } from 'react';
 
+const CUSTOMER_SOURCE_LABEL = {
+  ONLINE: 'Online',
+  WALK_IN: 'Walk-in',
+  ADMIN_CREATED: 'Admin Created'
+} as const;
+
+const CUSTOMER_SOURCE_BADGE_VARIANT = {
+  ONLINE: 'lightInfo',
+  WALK_IN: 'lightWarning',
+  ADMIN_CREATED: 'secondary'
+} as const;
+
 const CustomerTable = () => {
   const { data: me } = useQuery(adminProfileQueryOptions);
   const isCashier = me?.role?.toUpperCase?.() === 'CASHIER';
@@ -117,6 +129,18 @@ const CustomerTable = () => {
             </TooltipContent>
           </Tooltip>
         )
+      }),
+      colHelper.accessor('source', {
+        header: 'Sumber',
+        cell: (info) => {
+          const source = info.getValue() || 'ONLINE';
+
+          return (
+            <Badge variant={CUSTOMER_SOURCE_BADGE_VARIANT[source]}>
+              {CUSTOMER_SOURCE_LABEL[source]}
+            </Badge>
+          );
+        }
       }),
       colHelper.accessor('createdAt', {
         header: 'Dibuat Pada',
