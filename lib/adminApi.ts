@@ -43,8 +43,7 @@ async function refreshAccessToken(): Promise<string | null> {
 
   refreshPromise = (async () => {
     try {
-      // Use baseApi to call /auth/refresh-token (not /admin/auth/refresh-token)
-      const { data } = await baseApi.post('/auth/refresh-token');
+      const { data } = await baseApi.post('/admin/auth/refresh-token');
       const newToken = data?.data?.token ?? null;
 
       if (newToken) {
