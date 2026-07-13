@@ -163,8 +163,11 @@ const getBookingStatus = (status: number | BookingStatus): BookingStatus => {
   return statusMap[status] || BookingStatus.HOLD;
 };
 
-const getBookingDetailNormalPrice = (detail: NonNullable<Booking['details']>[number]) =>
-  detail.slot?.normalPrice ?? detail.slot?.price ?? detail.price;
+const getBookingDetailChargedPrice = (detail: NonNullable<Booking['details']>[number]) =>
+  detail.price;
+
+const getBookingCourtTotal = (booking: Booking) =>
+  booking.details?.reduce((total, detail) => total + getBookingDetailChargedPrice(detail), 0) ?? 0;
 
 type BookingTableProps = {
   courtSport?: 'PADEL' | 'TENNIS';
@@ -395,12 +398,18 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
                         )}
                       </div>
                       <div>
-                        <p className="text-muted-foreground text-sm">Total Harga</p>
+                        <p className="text-muted-foreground text-sm">Total Tagihan</p>
                         <p className="font-medium">
                           Rp{' '}
                           {new Intl.NumberFormat('id-ID').format(
                             booking.totalPrice + (booking.processingFee || 0)
                           )}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-sm">Total Booking Lapangan</p>
+                        <p className="font-medium">
+                          Rp {new Intl.NumberFormat('id-ID').format(getBookingCourtTotal(booking))}
                         </p>
                       </div>
                       <div>
@@ -458,7 +467,7 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
                                     <p className="text-base font-medium">
                                       Rp{' '}
                                       {new Intl.NumberFormat('id-ID').format(
-                                        getBookingDetailNormalPrice(detail)
+                                        getBookingDetailChargedPrice(detail)
                                       )}
                                     </p>
                                     {detail.slot && status !== BookingStatus.CANCELLED && (
@@ -535,7 +544,7 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
                             )}
                           </div>
                           <div>
-                            <p className="text-muted-foreground text-xs">Total Harga</p>
+                            <p className="text-muted-foreground text-xs">Total Tagihan</p>
                             <p className="text-sm font-medium">
                               Rp{' '}
                               {new Intl.NumberFormat('id-ID').format(
@@ -566,7 +575,7 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
                                   <p className="text-muted-foreground text-xs">
                                     Rp{' '}
                                     {new Intl.NumberFormat('id-ID').format(
-                                      getBookingDetailNormalPrice(detail)
+                                      getBookingDetailChargedPrice(detail)
                                     )}
                                   </p>
                                 </div>

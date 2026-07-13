@@ -109,8 +109,10 @@ const getBookingStatus = (status: number | BookingStatus): BookingStatus => {
   return statusMap[status] || BookingStatus.HOLD;
 };
 
-const getBookingDetailNormalPrice = (detail: BookingDetail) =>
-  detail.slot?.normalPrice ?? detail.slot?.price ?? detail.price;
+const getBookingDetailChargedPrice = (detail: BookingDetail) => detail.price;
+
+const getBookingCourtTotal = (booking: Booking) =>
+  booking.details?.reduce((total, detail) => total + getBookingDetailChargedPrice(detail), 0) ?? 0;
 
 // Helper to format date with time
 const formatDateTime = (date: Date | string, format: string): string => {
@@ -596,7 +598,8 @@ export default function SchedulePage() {
                                                       : `${coachNames[0]}${coachNames.length > 1 ? ` +${coachNames.length - 1}` : ''}`;
                                                   parts.push(`Coach: ${coachDisplay}`);
                                                 }
-                                                const ballboyLabel = formatBallboyBadgeLabel(ballboyNames);
+                                                const ballboyLabel =
+                                                  formatBallboyBadgeLabel(ballboyNames);
                                                 if (ballboyLabel) {
                                                   parts.push(ballboyLabel);
                                                 }
@@ -662,13 +665,24 @@ export default function SchedulePage() {
                                               </div>
                                               <div>
                                                 <p className="text-muted-foreground text-sm">
-                                                  Total Harga
+                                                  Total Tagihan
                                                 </p>
                                                 <p className="font-medium">
                                                   Rp{' '}
                                                   {new Intl.NumberFormat('id-ID').format(
                                                     bookingCell.booking.totalPrice +
                                                       (bookingCell.booking.processingFee || 0)
+                                                  )}
+                                                </p>
+                                              </div>
+                                              <div>
+                                                <p className="text-muted-foreground text-sm">
+                                                  Total Booking Lapangan
+                                                </p>
+                                                <p className="font-medium">
+                                                  Rp{' '}
+                                                  {new Intl.NumberFormat('id-ID').format(
+                                                    getBookingCourtTotal(bookingCell.booking)
                                                   )}
                                                 </p>
                                               </div>
@@ -742,7 +756,7 @@ export default function SchedulePage() {
                                                           <p className="text-base font-medium">
                                                             Rp{' '}
                                                             {new Intl.NumberFormat('id-ID').format(
-                                                              getBookingDetailNormalPrice(detail)
+                                                              getBookingDetailChargedPrice(detail)
                                                             )}
                                                           </p>
                                                         </div>
@@ -913,7 +927,8 @@ export default function SchedulePage() {
 
                                             <BookingBallboySection
                                               ballboys={
-                                                (bookingCell.booking.ballboys || []) as BookingBallboy[]
+                                                (bookingCell.booking.ballboys ||
+                                                  []) as BookingBallboy[]
                                               }
                                               details={bookingCell.booking.details}
                                             />
