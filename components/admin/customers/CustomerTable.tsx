@@ -11,7 +11,7 @@ import { adminCustomersQueryOptions } from '@/queries/admin/customer';
 import { adminProfileQueryOptions } from '@/queries/admin/auth';
 import type { Customer } from '@/types/model';
 import { ROLE } from '@/lib/constants';
-import { IconCircleCheckFilled, IconCircleXFilled, IconPencil, IconEye } from '@tabler/icons-react';
+import { IconCircleCheckFilled, IconCircleXFilled, IconEye, IconPencil } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
@@ -87,28 +87,6 @@ const CustomerTable = () => {
                 </TooltipTrigger>
                 <TooltipContent>
                   {info.row.original.phoneVerified ? 'Terverifikasi' : 'Belum Terverifikasi'}
-                </TooltipContent>
-              </Tooltip>
-            )}
-          </div>
-        )
-      }),
-      colHelper.accessor('email', {
-        header: 'Email',
-        cell: (info) => (
-          <div className="flex items-center gap-2">
-            {info.getValue() || '-'}
-            {info.getValue() && (
-              <Tooltip>
-                <TooltipTrigger>
-                  {info.row.original.emailVerified ? (
-                    <IconCircleCheckFilled className="text-green-500" />
-                  ) : (
-                    <IconCircleXFilled className="text-red-500" />
-                  )}
-                </TooltipTrigger>
-                <TooltipContent>
-                  {info.row.original.emailVerified ? 'Terverifikasi' : 'Belum Terverifikasi'}
                 </TooltipContent>
               </Tooltip>
             )}
