@@ -26,7 +26,7 @@ import { toast } from 'sonner';
 import z from 'zod';
 
 const formSchema = z.object({
-  phone: z.string().min(1, 'Phone number is required').max(15, 'Phone number is too long'),
+  phone: z.string().min(1, 'WhatsApp Number is required').max(15, 'WhatsApp Number is too long'),
   password: z.string().optional()
 });
 
@@ -78,7 +78,7 @@ const LoginForm = ({ onRegisterClick, openVerifyPhoneOtpModal, onLoginSuccess }:
         const phone = res?.data?.phone;
 
         if (!phone) {
-          toast.error('Failed to get phone number. Please try again later.');
+          toast.error('Failed to get WhatsApp Number. Please try again later.');
           return;
         }
 
@@ -158,7 +158,7 @@ const LoginForm = ({ onRegisterClick, openVerifyPhoneOtpModal, onLoginSuccess }:
   const handleForgotPassword = () => {
     if (!form.getValues('phone')) {
       form.setError('phone', {
-        message: 'Phone number is required to reset password',
+        message: 'WhatsApp Number is required to reset password',
         type: 'manual'
       });
       return;
@@ -179,7 +179,7 @@ const LoginForm = ({ onRegisterClick, openVerifyPhoneOtpModal, onLoginSuccess }:
             </p>
           </header>
           <Field>
-            <FieldLabel htmlFor="phone">Phone</FieldLabel>
+            <FieldLabel htmlFor="phone">WhatsApp Number</FieldLabel>
             <InputGroup>
               <InputGroupText className="px-3">+62</InputGroupText>
               <Input

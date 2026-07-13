@@ -24,7 +24,7 @@ import z from 'zod';
 
 const formSchema = z.object({
   otp: z.string().min(1, 'OTP is required').max(6, 'OTP is too long'),
-  phone: z.string().min(1, 'Phone number is required').max(15, 'Phone number is too long'),
+  phone: z.string().min(1, 'WhatsApp Number is required').max(15, 'WhatsApp Number is too long'),
   requestId: z.string().min(1, 'Request ID is required')
 });
 
@@ -116,7 +116,7 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
       }
 
       if (!data.requestId || !data.phone) {
-        toast.error('Phone number or Request ID is missing');
+        toast.error('WhatsApp Number or Request ID is missing');
         return;
       }
 
@@ -147,7 +147,7 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
 
   const handleResendOtp = () => {
     if (!phone) {
-      toast.error('Phone number is missing! Refresh and try again.');
+      toast.error('WhatsApp Number is missing! Refresh and try again.');
       return;
     }
 
@@ -181,7 +181,7 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
               <header className="flex-center flex-col gap-4">
                 <Phone className="text-primary size-10" />
                 <FieldLabel htmlFor="otp" className="max-w-xs text-center leading-relaxed">
-                  Enter the OTP sent to your phone number <br /> {formatPhone(phone)}
+                  Enter the OTP sent to your WhatsApp Number <br /> {formatPhone(phone)}
                 </FieldLabel>
               </header>
               <Controller

@@ -29,7 +29,7 @@ import { z } from 'zod';
 import { ResendOtpButton } from '../buttons/ResendOtpButton';
 
 const phoneSchema = z.object({
-  phone: z.string().min(1, 'Phone number is required').max(15, 'Phone number is too long')
+  phone: z.string().min(1, 'WhatsApp Number is required').max(15, 'WhatsApp Number is too long')
 });
 
 const otpSchema = z.object({
@@ -80,7 +80,7 @@ export default function PhoneChangeModal({ open, phone, onOpenChange, onSuccess 
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: profileQueryOptions.queryKey });
     },
-    onError: (err: any) => toast.error(err?.message || 'Failed to update phone')
+    onError: (err: any) => toast.error(err?.message || 'Failed to update WhatsApp Number')
   });
 
   const { mutate: sendOtp, isPending: isSending } = useMutation(
@@ -88,7 +88,7 @@ export default function PhoneChangeModal({ open, phone, onOpenChange, onSuccess 
       onSuccess: () => {
         cooldown.start();
         setOtpSent(true);
-        toast.success('OTP sent to phone');
+        toast.success('OTP sent to WhatsApp Number');
       }
     })
   );
@@ -96,7 +96,7 @@ export default function PhoneChangeModal({ open, phone, onOpenChange, onSuccess 
   const { mutate: verifyOtp, isPending: isVerifying } = useMutation(
     verifyPhoneOtpMutationOptions({
       onSuccess: () => {
-        toast.success('Phone verified');
+        toast.success('WhatsApp Number verified');
         qc.invalidateQueries({ queryKey: profileQueryOptions.queryKey });
         otpForm.reset();
         setOtpSent(false);
@@ -141,15 +141,15 @@ export default function PhoneChangeModal({ open, phone, onOpenChange, onSuccess 
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Ubah Nomor Whatsapp</DialogTitle>
-          <DialogDescription>Perbarui dan verifikasi nomor Whatsapp Anda</DialogDescription>
+          <DialogTitle>Ubah WhatsApp Number</DialogTitle>
+          <DialogDescription>Perbarui dan verifikasi nomor WhatsApp Anda</DialogDescription>
         </DialogHeader>
         {!otpSent ? (
           <form onSubmit={phoneForm.handleSubmit(handlePhoneSubmit)} className="space-y-4">
             <FieldSet>
               <FieldGroup>
                 <Field>
-                  <FieldLabel htmlFor="phone-input">Nomor Whatsapp Baru</FieldLabel>
+                  <FieldLabel htmlFor="phone-input">WhatsApp Number Baru</FieldLabel>
                   <InputGroup>
                     <InputGroupText className="px-3">+62</InputGroupText>
                     <Input
@@ -204,7 +204,7 @@ export default function PhoneChangeModal({ open, phone, onOpenChange, onSuccess 
                     <header className="flex-center flex-col gap-4">
                       <Phone className="text-primary size-10" />
                       <FieldLabel htmlFor="otp" className="max-w-xs text-center leading-relaxed">
-                        Masukkan OTP yang dikirim ke nomor telepon Anda
+                        Masukkan OTP yang dikirim ke nomor WhatsApp Anda
                         <br /> {formatPhone(phoneForm.getValues('phone'))}
                       </FieldLabel>
                     </header>

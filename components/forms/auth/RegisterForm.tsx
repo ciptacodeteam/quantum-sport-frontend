@@ -19,7 +19,7 @@ import z from 'zod';
 const formSchema = z
   .object({
     name: z.string().min(1, 'Name is required').max(100, 'Name is too long'),
-    phone: z.string().min(1, 'Phone number is required').max(15, 'Phone number is too long'),
+    phone: z.string().min(1, 'WhatsApp Number is required').max(15, 'WhatsApp Number is too long'),
     password: z
       .string()
       .min(6, 'Password must be at least 6 characters long')
@@ -102,7 +102,7 @@ const RegisterForm = ({ onRegisterSuccess, onLoginClick }: Props) => {
             <FieldError>{form.formState.errors.name?.message}</FieldError>
           </Field>
           <Field>
-            <FieldLabel htmlFor="phone">Phone</FieldLabel>
+            <FieldLabel htmlFor="phone">WhatsApp Number</FieldLabel>
             <InputGroup>
               <InputGroupText className="px-3">+62</InputGroupText>
               <Input
