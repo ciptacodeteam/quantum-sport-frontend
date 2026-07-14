@@ -1,10 +1,12 @@
 'use client';
 
 import MainHeader from '@/components/headers/MainHeader';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { formatSlotTime, formatSlotTimeRange } from '@/lib/time-utils';
+import { resolveMediaUrl } from '@/lib/utils';
 import { ballboyAvailabilityQueryOptions } from '@/queries/ballboy';
 import { inventoryAvailabilityQueryOptions } from '@/queries/inventory';
 import { useBookingStore, type BookingItem } from '@/stores/useBookingStore';
@@ -16,6 +18,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 const getISODate = (isoString?: string | null) => (isoString ? isoString.slice(0, 10) : '');
+
+const getInitials = (name?: string | null) =>
+  (name || 'Ballboy')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('') || 'B';
 
 const normalizeTime = (time?: string | null) => {
   if (!time) {
@@ -472,6 +482,8 @@ export default function AddOnsPage() {
                               ballboy.slotId === item.slotId &&
                               ballboy.courtSlotId !== booking.slotId
                           );
+                          const ballboyName = item.ballboy?.name ?? 'Ballboy';
+                          const ballboyImage = resolveMediaUrl(item.ballboy?.image);
 
                           return (
                             <Button
@@ -482,12 +494,18 @@ export default function AddOnsPage() {
                               disabled={isUsedElsewhere}
                               onClick={() => handleBallboyToggle(item, booking)}
                             >
-                              <span className="min-w-0 text-left">
-                                <span className="block truncate">
-                                  {item.ballboy?.name ?? 'Ballboy'}
-                                </span>
-                                <span className="text-xs opacity-75">
-                                  Rp{Number(item.price ?? 0).toLocaleString('id-ID')}
+                              <span className="flex min-w-0 items-center gap-3 text-left">
+                                <Avatar className="h-10 w-10 shrink-0 border bg-white/80">
+                                  <AvatarImage src={ballboyImage ?? undefined} alt={ballboyName} />
+                                  <AvatarFallback className="text-xs font-semibold">
+                                    {getInitials(ballboyName)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="min-w-0">
+                                  <span className="block truncate">{ballboyName}</span>
+                                  <span className="text-xs opacity-75">
+                                    Rp{Number(item.price ?? 0).toLocaleString('id-ID')}
+                                  </span>
                                 </span>
                               </span>
                               {isUsedElsewhere && (

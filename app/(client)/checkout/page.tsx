@@ -94,6 +94,7 @@ export default function CheckoutPage() {
     () => bookingItems.find((item) => item.sport)?.sport ?? 'PADEL',
     [bookingItems]
   );
+  const bookingHref = courtSport === 'TENNIS' ? '/booking/tennis' : '/booking';
 
   // Calculate membership discount for court bookings (only if user is authenticated)
   const membershipDiscount = useMembershipDiscount(
@@ -334,13 +335,18 @@ export default function CheckoutPage() {
   if (bookingItems.length === 0) {
     return (
       <div className="bg-background min-h-screen">
-        <MainHeader title="Detail Pembayaran" backHref="/booking" withCartBadge withLogo={false} />
+        <MainHeader
+          title="Detail Pembayaran"
+          backHref={bookingHref}
+          withCartBadge
+          withLogo={false}
+        />
         <main className="flex min-h-[calc(100vh-96px)] flex-col items-center justify-center gap-4 px-6 text-center">
           <h1 className="text-xl font-semibold">Tidak ada pesanan</h1>
           <p className="text-muted-foreground text-sm">
             Tambahkan slot booking terlebih dahulu untuk melihat ringkasan pembayaran.
           </p>
-          <Button onClick={() => router.push('/booking')}>Kembali ke Booking</Button>
+          <Button onClick={() => router.push(bookingHref)}>Kembali ke Booking</Button>
         </main>
       </div>
     );
@@ -486,11 +492,24 @@ export default function CheckoutPage() {
       }
     }
 
+    const checkoutConfirmationDescription =
+      courtSport === 'TENNIS' ? (
+        <div className="space-y-2">
+          <p>
+            Khusus booking tennis, ballboy dari luar tidak diperkenankan. Jika membutuhkan layanan
+            ballboy, silakan gunakan ballboy resmi yang tersedia di Quantum Sport.
+          </p>
+          <p>Reschedule berlaku H-3. Pastikan pesanan Anda sudah sesuai.</p>
+        </div>
+      ) : (
+        'Reschedule berlaku H-3. Pastikan pesanan Anda sudah sesuai.'
+      );
+
     // Ask for user confirmation before sending to backend to create Payment Session
     try {
       const ok = await confirm({
         title: 'Konfirmasi Pemesanan',
-        description: 'Reschedule berlaku H-3.Pastikan pesanan anda sudah sesuai',
+        description: checkoutConfirmationDescription,
         confirmText: 'Bayar Sekarang',
         cancelText: 'Cek Lagi',
         dismissible: true
@@ -585,7 +604,7 @@ export default function CheckoutPage() {
     <div className="min-h-screen pb-16">
       <MainHeader
         title="Detail Pembayaran"
-        backHref="/booking"
+        backHref={bookingHref}
         withCartBadge
         withLogo={false}
         withBorder
