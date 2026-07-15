@@ -76,6 +76,7 @@ export default function BookingAddOns() {
   // Selected date and time for add-ons when no court bookings exist
   const [selectedAddOnDate, setSelectedAddOnDate] = useState<string>(dayjs().format('YYYY-MM-DD'));
   const [selectedAddOnTimeSlot, setSelectedAddOnTimeSlot] = useState<string>('');
+  const [selectedEquipmentSport, setSelectedEquipmentSport] = useState<'PADEL' | 'TENNIS'>('PADEL');
   const [useMembership, setUseMembership] = useState(true);
   const courtSport = useMemo<'PADEL' | 'TENNIS'>(
     () => bookingItems.find((item) => item.sport)?.sport ?? 'PADEL',
@@ -83,6 +84,12 @@ export default function BookingAddOns() {
   );
   const canBookBallboy = courtSport === 'TENNIS' || bookingItems.length === 0;
   const ballboyCourtSport: 'PADEL' | 'TENNIS' = canBookBallboy ? 'TENNIS' : courtSport;
+
+  useEffect(() => {
+    if (bookingItems.length > 0) {
+      setSelectedEquipmentSport(courtSport);
+    }
+  }, [bookingItems.length, courtSport]);
 
   // Customer selection is now handled by BookingSummary component
   // Keep selectedCustomer state for membership discount calculation
@@ -235,7 +242,7 @@ export default function BookingAddOns() {
     adminInventoryAvailabilityQueryOptions(
       inventoryDateRange?.startAt,
       inventoryDateRange?.endAt,
-      courtSport
+      selectedEquipmentSport
     )
   );
 
@@ -381,6 +388,45 @@ export default function BookingAddOns() {
 
   // Get all unique dates
   const bookedDates = Object.keys(bookingsByDate).sort();
+  const addOnTargetSlots = useMemo(() => {
+    if (bookingItems.length > 0) {
+      return Object.entries(bookingsByDate).flatMap(([date, info]) =>
+        info.timeSlots.map((timeSlot) => ({
+          date,
+          shortDate: info.shortDate,
+          timeSlot,
+          booking: info.items.find((item) => item.timeSlot === timeSlot)
+        }))
+      );
+    }
+
+    if (!selectedAddOnTimeSlot) {
+      return [];
+    }
+
+    return [
+      {
+        date: selectedAddOnDate,
+        shortDate: dayjs(selectedAddOnDate).format('ddd, DD MMM'),
+        timeSlot: selectedAddOnTimeSlot,
+        booking: undefined
+      }
+    ];
+  }, [bookingItems.length, bookingsByDate, selectedAddOnDate, selectedAddOnTimeSlot]);
+
+  const findCoachSlot = (
+    coach: { slots: NonNullable<typeof coachAvailabilityData> },
+    timeSlot: string,
+    date: string
+  ) => {
+    const timeSlotStart = timeSlot.split(' - ')[0];
+
+    return coach.slots.find((slot) => {
+      const slotTime = formatSlotTime(slot.startAt);
+      const slotDate = getISODate(slot.startAt);
+      return slotTime === timeSlotStart && slotDate === date;
+    });
+  };
 
   // Helper functions for coach availability - now uses real API data
   const isCoachAvailable = (coachId: string, timeSlot: string, date: string): boolean => {
@@ -428,12 +474,10 @@ export default function BookingAddOns() {
       return [];
     }
 
-    return bookingItems
-      .map((booking) => ({
-        booking,
-        slots: ballboyAvailabilityData.filter((slot) => ballboyCoversBooking(slot, booking))
-      }))
-      .filter(({ slots }) => slots.length > 0);
+    return bookingItems.map((booking) => ({
+      booking,
+      slots: ballboyAvailabilityData.filter((slot) => ballboyCoversBooking(slot, booking))
+    }));
   }, [ballboyAvailabilityData, bookingItems, courtSport]);
 
   const ballboyAvailableForAddOn = useMemo(() => {
@@ -920,21 +964,22 @@ export default function BookingAddOns() {
                   <p className="text-sm font-medium">Select coaches</p>
                   <Badge variant="outline" className="text-[10px] sm:text-xs">
                     {(() => {
-                      // Count only slots that match booked dates and time ranges
-                      if (!coachAvailabilityData || bookingItems.length === 0) return 0;
+                      if (!coachAvailabilityData) return 0;
 
-                      const bookedPairs = new Set<string>();
-                      Object.entries(bookingsByDate).forEach(([date, info]) => {
-                        info.timeSlots.forEach((t) => bookedPairs.add(`${date}|${t}`));
-                      });
+                      if (addOnTargetSlots.length === 0) {
+                        return coachAvailabilityData.filter(
+                          (slot) => getISODate(slot.startAt) === selectedAddOnDate
+                        ).length;
+                      }
 
-                      const count = coachAvailabilityData.reduce((acc, slot) => {
-                        const d = getISODate(slot.startAt);
-                        const range = getTimeRangeLocal(slot.startAt, slot.endAt);
-                        return bookedPairs.has(`${d}|${range}`) ? acc + 1 : acc;
-                      }, 0);
-
-                      return count;
+                      return coaches.reduce(
+                        (acc, coach) =>
+                          acc +
+                          addOnTargetSlots.filter(({ date, timeSlot }) =>
+                            Boolean(findCoachSlot(coach, timeSlot, date))
+                          ).length,
+                        0
+                      );
                     })()}{' '}
                     slots
                   </Badge>
@@ -962,41 +1007,37 @@ export default function BookingAddOns() {
 
               {/* Group timeslots per coach */}
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
-                {coaches
-                  .filter((coach) => isCoachAvailableForBookings(coach))
-                  .map((coach) => {
-                    // Collect available times per booked date for this coach, or use selected add-on date/time
-                    const availableSlots =
-                      bookingItems.length > 0
-                        ? Object.entries(bookingsByDate).reduce(
-                            (acc, [date, dateInfo]) => {
-                              const availableForDate = dateInfo.timeSlots.filter((timeSlot) =>
-                                isCoachAvailable(coach.id, timeSlot, date)
-                              );
-                              if (availableForDate.length > 0) {
-                                acc.push({
-                                  date,
-                                  shortDate: dateInfo.shortDate,
-                                  timeSlots: availableForDate
-                                });
-                              }
-                              return acc;
-                            },
-                            [] as Array<{ date: string; shortDate: string; timeSlots: string[] }>
-                          )
-                        : selectedAddOnTimeSlot &&
-                            isCoachAvailable(coach.id, selectedAddOnTimeSlot, selectedAddOnDate)
-                          ? [
-                              {
-                                date: selectedAddOnDate,
-                                shortDate: dayjs(selectedAddOnDate).format('ddd, DD MMM'),
-                                timeSlots: [selectedAddOnTimeSlot]
-                              }
-                            ]
-                          : [];
-
+                {coaches.map((coach) => {
                     const firstSlot = coach.slots[0];
                     if (!firstSlot) return null;
+                    const targetSlots =
+                      addOnTargetSlots.length > 0
+                        ? addOnTargetSlots
+                        : coach.slots
+                            .filter((slot) => getISODate(slot.startAt) === selectedAddOnDate)
+                            .map((slot) => ({
+                              date: getISODate(slot.startAt),
+                              shortDate: dayjs(getISODate(slot.startAt)).format('ddd, DD MMM'),
+                              timeSlot: getTimeRangeLocal(slot.startAt, slot.endAt),
+                              booking: undefined
+                            }));
+                    const targetSlotsByDate = targetSlots.reduce(
+                      (acc, slot) => {
+                        if (!acc[slot.date]) {
+                          acc[slot.date] = {
+                            shortDate: slot.shortDate,
+                            timeSlots: []
+                          };
+                        }
+
+                        if (!acc[slot.date].timeSlots.includes(slot.timeSlot)) {
+                          acc[slot.date].timeSlots.push(slot.timeSlot);
+                        }
+
+                        return acc;
+                      },
+                      {} as Record<string, { shortDate: string; timeSlots: string[] }>
+                    );
 
                     return (
                       <Card key={coach.id} className="border-muted">
@@ -1017,33 +1058,22 @@ export default function BookingAddOns() {
                             </div>
 
                             <div className="space-y-2">
-                              {availableSlots.map(({ date, shortDate, timeSlots }) => (
+                              {Object.entries(targetSlotsByDate).map(
+                                ([date, { shortDate, timeSlots }]) => (
                                 <div key={date} className="space-y-1">
                                   <div className="text-muted-foreground text-[11px] font-medium">
                                     {shortDate}
                                   </div>
                                   <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
                                     {timeSlots.map((timeSlot) => {
+                                      const matchingSlot = findCoachSlot(coach, timeSlot, date);
+                                      const isAvailable = Boolean(matchingSlot?.slotId);
                                       const isSelected = selectedCoaches.some(
                                         (c) =>
                                           c.coachId === coach.id &&
                                           c.timeSlot === timeSlot &&
                                           c.date === date
                                       );
-
-                                      // Find the matching slot for price and slotId
-                                      // timeSlot is in format "13:00 - 14:00", so we need to extract just the start time
-                                      const timeSlotStart = timeSlot.split(' - ')[0];
-                                      const matchingSlot = coach.slots.find((slot) => {
-                                        const slotTime = formatSlotTime(slot.startAt);
-                                        const slotDate = getISODate(slot.startAt);
-                                        return slotTime === timeSlotStart && slotDate === date;
-                                      });
-
-                                      // Ensure we have a matching slot with slotId before allowing selection
-                                      if (!matchingSlot || !matchingSlot.slotId) {
-                                        return null;
-                                      }
 
                                       return (
                                         <Button
@@ -1054,10 +1084,15 @@ export default function BookingAddOns() {
                                             'h-7 w-full truncate px-2 text-[11px] whitespace-nowrap',
                                             isSelected &&
                                               'bg-primary text-primary-foreground shadow-sm',
+                                            !isAvailable &&
+                                              'bg-muted text-muted-foreground opacity-70',
                                             !isSelected &&
+                                              isAvailable &&
                                               'hover:bg-primary/10 hover:border-primary'
                                           )}
+                                          disabled={!isAvailable}
                                           onClick={() =>
+                                            matchingSlot &&
                                             handleCoachSelect(
                                               coach.id,
                                               firstSlot.coach.name,
@@ -1078,7 +1113,13 @@ export default function BookingAddOns() {
                                     })}
                                   </div>
                                 </div>
-                              ))}
+                                )
+                              )}
+                              {Object.keys(targetSlotsByDate).length === 0 && (
+                                <p className="text-muted-foreground rounded-md border bg-muted/50 px-3 py-2 text-xs">
+                                  Tidak ada slot coach tersedia di tanggal ini.
+                                </p>
+                              )}
                             </div>
                           </div>
                         </CardContent>
@@ -1163,26 +1204,14 @@ export default function BookingAddOns() {
                 <Card>
                   <CardContent className="p-4">
                     <p className="text-muted-foreground text-sm">
-                      Ballboy tidak tersedia untuk jadwal booking yang dipilih.
+                      Belum ada jadwal tennis untuk dipasangkan dengan ballboy.
                     </p>
                   </CardContent>
                 </Card>
               )}
 
-              {bookingItems.length === 0 &&
-                selectedAddOnTimeSlot &&
-                ballboyAvailableForAddOn.length === 0 && (
-                  <Card>
-                    <CardContent className="p-4">
-                      <p className="text-muted-foreground text-sm">
-                        Ballboy tidak tersedia untuk jadwal yang dipilih.
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-
               <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-                {bookingItems.length === 0 && ballboyAvailableForAddOn.length > 0 && (
+                {bookingItems.length === 0 && selectedAddOnTimeSlot && (
                   <Card className="border-muted lg:col-span-2">
                     <CardContent className="space-y-3 p-3 sm:p-4">
                       <div className="flex items-start justify-between gap-3">
@@ -1197,6 +1226,19 @@ export default function BookingAddOns() {
                       </div>
 
                       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                        {ballboyAvailableForAddOn.length === 0 && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="text-muted-foreground h-auto justify-between gap-3 bg-muted px-3 py-2 opacity-70"
+                            disabled
+                          >
+                            <span className="min-w-0 text-left">
+                              <span className="block truncate">Ballboy tidak tersedia</span>
+                              <span className="text-xs opacity-75">{selectedAddOnTimeSlot}</span>
+                            </span>
+                          </Button>
+                        )}
                         {ballboyAvailableForAddOn.map((slot) => {
                           const isSelected = selectedBallboys.some(
                             (b) => b.slotId === slot.slotId && !b.courtSlotId
@@ -1252,9 +1294,17 @@ export default function BookingAddOns() {
                         </div>
 
                         {slots.length === 0 ? (
-                          <p className="text-muted-foreground rounded-md border px-3 py-2 text-sm">
-                            Ballboy tidak tersedia di jam ini.
-                          </p>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="text-muted-foreground h-auto justify-between gap-3 bg-muted px-3 py-2 opacity-70"
+                            disabled
+                          >
+                            <span className="min-w-0 text-left">
+                              <span className="block truncate">Ballboy tidak tersedia</span>
+                              <span className="text-xs opacity-75">{booking.timeSlot}</span>
+                            </span>
+                          </Button>
                         ) : (
                           <div className="grid gap-2 sm:grid-cols-2">
                             {slots.map((slot) => {
@@ -1299,16 +1349,43 @@ export default function BookingAddOns() {
           {/* Inventory Tab */}
           {activeTab === 'inventory' && (
             <div className="space-y-6">
-              <div className="rounded-lg border bg-slate-50 py-3 text-center">
-                <p className="text-muted-foreground mb-2 text-sm">
-                  Select equipment for your booked dates and times
-                </p>
+              <div className="rounded-lg border bg-slate-50 p-3 text-center">
+                <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-muted-foreground text-sm">
+                    Select {selectedEquipmentSport === 'TENNIS' ? 'tennis' : 'padel'} equipment
+                    for your booked dates and times
+                  </p>
+                  <div className="grid grid-cols-2 gap-1 rounded-md bg-white p-1 sm:w-56">
+                    {(['PADEL', 'TENNIS'] as const).map((sport) => (
+                      <Button
+                        key={sport}
+                        type="button"
+                        size="sm"
+                        variant={selectedEquipmentSport === sport ? 'default' : 'ghost'}
+                        className="h-8"
+                        disabled={bookingItems.length > 0 && courtSport !== sport}
+                        onClick={() => setSelectedEquipmentSport(sport)}
+                      >
+                        {sport === 'TENNIS' ? 'Tennis' : 'Padel'}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
                 <div className="text-muted-foreground mb-2 text-xs">
-                  {Object.entries(bookingsByDate).map(([date, info]) => (
-                    <div key={date} className="mx-2 inline-block">
-                      <strong>{info.shortDate}:</strong> {info.timeSlots.join(', ')}
+                  {bookingItems.length > 0 ? (
+                    Object.entries(bookingsByDate).map(([date, info]) => (
+                      <div key={date} className="mx-2 inline-block">
+                        <strong>{info.shortDate}:</strong> {info.timeSlots.join(', ')}
+                      </div>
+                    ))
+                  ) : selectedAddOnTimeSlot ? (
+                    <div className="mx-2 inline-block">
+                      <strong>{dayjs(selectedAddOnDate).format('ddd, DD MMM')}:</strong>{' '}
+                      {selectedAddOnTimeSlot}
                     </div>
-                  ))}
+                  ) : (
+                    <span className="text-amber-600">Pilih tanggal dan jam add-on.</span>
+                  )}
                 </div>
                 <div className="flex justify-center gap-4 text-xs">
                   <div className="flex items-center gap-1">
@@ -1349,9 +1426,13 @@ export default function BookingAddOns() {
                     )?.quantity ?? 0;
                   const availableQuantity = item.availableQuantity ?? 0;
                   const itemImage = resolveMediaUrl(item.image);
+                  const isUnavailable = availableQuantity <= 0;
 
                   return (
-                    <Card key={item.id} className="overflow-hidden">
+                    <Card
+                      key={item.id}
+                      className={cn('overflow-hidden', isUnavailable && 'bg-muted/40')}
+                    >
                       <CardContent className="p-4">
                         <div className="space-y-3">
                           <div className="flex items-start gap-3">
@@ -1390,10 +1471,12 @@ export default function BookingAddOns() {
                                   ? 'border-green-200 bg-green-50 text-green-700'
                                   : availableQuantity > 5
                                     ? 'border-yellow-200 bg-yellow-50 text-yellow-700'
-                                    : 'border-orange-200 bg-orange-50 text-orange-700'
+                                    : availableQuantity > 0
+                                      ? 'border-orange-200 bg-orange-50 text-orange-700'
+                                      : 'border-gray-200 bg-gray-100 text-gray-500'
                               )}
                             >
-                              {availableQuantity} tersedia
+                              {isUnavailable ? 'Tidak tersedia' : `${availableQuantity} tersedia`}
                             </Badge>
                           </div>
 
@@ -1402,7 +1485,7 @@ export default function BookingAddOns() {
                               variant="outline"
                               size="sm"
                               className="h-8 w-8 p-0"
-                              disabled={currentQuantity <= 0}
+                              disabled={currentQuantity <= 0 || isUnavailable}
                               onClick={() =>
                                 handleInventoryQuantityChange(
                                   item.id,
@@ -1422,6 +1505,7 @@ export default function BookingAddOns() {
                               min="0"
                               max={availableQuantity}
                               value={currentQuantity}
+                              disabled={isUnavailable}
                               onChange={(e) =>
                                 handleInventoryQuantityChange(
                                   item.id,
@@ -1442,7 +1526,7 @@ export default function BookingAddOns() {
                               variant="outline"
                               size="sm"
                               className="h-8 w-8 p-0"
-                              disabled={currentQuantity >= availableQuantity}
+                              disabled={currentQuantity >= availableQuantity || isUnavailable}
                               onClick={() =>
                                 handleInventoryQuantityChange(
                                   item.id,

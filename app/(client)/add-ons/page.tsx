@@ -307,12 +307,10 @@ export default function AddOnsPage() {
 
   const ballboySlotsByBooking = useMemo(
     () =>
-      bookingItems
-        .map((booking) => ({
-          booking,
-          slots: getMatchingBallboySlots(booking)
-        }))
-        .filter(({ slots }) => slots.length > 0),
+      bookingItems.map((booking) => ({
+        booking,
+        slots: getMatchingBallboySlots(booking)
+      })),
     [ballboyAvailability, bookingItems]
   );
 
@@ -443,26 +441,16 @@ export default function AddOnsPage() {
             {hasBookingSelection &&
               !isBallboyPending &&
               !isBallboyError &&
-              ballboySlotsByBooking.length === 0 && (
-                <Card>
-                  <div className="px-4 py-3">
-                    <p className="text-muted-foreground text-sm">
-                      Ballboy tidak tersedia untuk jadwal booking yang dipilih.
-                    </p>
-                  </div>
-                </Card>
-              )}
-
-            {hasBookingSelection &&
-              !isBallboyPending &&
-              !isBallboyError &&
               ballboySlotsByBooking.map(({ booking, slots: matchingSlots }) => {
                 const selectedForCourt = selectedBallboys.find(
                   (ballboy) => ballboy.courtSlotId === booking.slotId
                 );
 
                 return (
-                  <Card key={booking.slotId}>
+                  <Card
+                    key={booking.slotId}
+                    className={matchingSlots.length === 0 ? 'bg-muted/40' : undefined}
+                  >
                     <div className="space-y-3 px-4 py-3">
                       <div className="flex items-center justify-between gap-3">
                         <div>
@@ -476,6 +464,25 @@ export default function AddOnsPage() {
                       </div>
 
                       <div className="grid gap-2 sm:grid-cols-2">
+                        {matchingSlots.length === 0 && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="text-muted-foreground h-auto justify-between gap-3 bg-gray-100 px-3 py-2"
+                            disabled
+                          >
+                            <span className="flex min-w-0 items-center gap-3 text-left">
+                              <Avatar className="h-10 w-10 shrink-0 border bg-white/80">
+                                <AvatarFallback className="text-xs font-semibold">B</AvatarFallback>
+                              </Avatar>
+                              <span className="min-w-0">
+                                <span className="block truncate">Ballboy tidak tersedia</span>
+                                <span className="text-xs opacity-75">Jadwal ini penuh</span>
+                              </span>
+                            </span>
+                          </Button>
+                        )}
+
                         {matchingSlots.map((item) => {
                           const isSelected = selectedForCourt?.slotId === item.slotId;
                           const isUsedElsewhere = selectedBallboys.some(
@@ -683,9 +690,10 @@ export default function AddOnsPage() {
                 const availableQuantity = inventory.availableQuantity ?? 0;
                 const unitPrice = inventory.price ?? 0;
                 const inventoryImage = resolveMediaUrl(inventory.image);
+                const isUnavailable = availableQuantity <= 0;
 
                 return (
-                  <Card key={inventory.id}>
+                  <Card key={inventory.id} className={isUnavailable ? 'bg-muted/40' : undefined}>
                     <div className="px-4 py-3">
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex min-w-0 items-center gap-3">
@@ -708,7 +716,9 @@ export default function AddOnsPage() {
                           <div className="min-w-0">
                             <p className="truncate font-semibold">{inventory.name}</p>
                             <p className="text-muted-foreground text-xs">
-                              Tersedia {availableQuantity} equipment
+                              {isUnavailable
+                                ? 'Tidak tersedia di jadwal ini'
+                                : `Tersedia ${availableQuantity} equipment`}
                             </p>
                           </div>
                         </div>
@@ -718,7 +728,7 @@ export default function AddOnsPage() {
                             variant="outline"
                             size="icon"
                             onClick={() => handleInventoryQtyChange(inventory.id, selectedQty - 1)}
-                            disabled={selectedQty <= 0}
+                            disabled={selectedQty <= 0 || isUnavailable}
                           >
                             <Minus size={16} />
                           </Button>
@@ -727,7 +737,7 @@ export default function AddOnsPage() {
                             variant="outline"
                             size="icon"
                             onClick={() => handleInventoryQtyChange(inventory.id, selectedQty + 1)}
-                            disabled={selectedQty >= availableQuantity || availableQuantity === 0}
+                            disabled={selectedQty >= availableQuantity || isUnavailable}
                           >
                             <Plus size={16} />
                           </Button>
