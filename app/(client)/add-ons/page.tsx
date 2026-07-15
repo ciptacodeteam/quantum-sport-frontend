@@ -724,12 +724,14 @@ export default function AddOnsPage() {
               inventoryItemsByBooking.map(({ booking, items, isPending, isError }) => (
                 <Card
                   key={booking.slotId}
-                  className={items.length === 0 ? 'bg-muted/40' : undefined}
+                  className={`overflow-hidden ${items.length === 0 ? 'bg-muted/40' : ''}`}
                 >
-                  <div className="space-y-3 px-4 py-3">
-                    <div>
-                      <p className="font-semibold">{booking.courtName}</p>
-                      <p className="text-muted-foreground text-sm">
+                  <div className="space-y-3 px-3 py-3 sm:px-4">
+                    <div className="bg-muted/40 rounded-md px-3 py-2">
+                      <p className="truncate text-sm font-semibold sm:text-base">
+                        {booking.courtName}
+                      </p>
+                      <p className="text-muted-foreground mt-0.5 text-xs sm:text-sm">
                         {dayjs(booking.date).format('DD MMM YYYY')} • {booking.timeSlot} -{' '}
                         {booking.endTime}
                       </p>
@@ -757,21 +759,23 @@ export default function AddOnsPage() {
                         return (
                           <div
                             key={`${booking.slotId}-${inventory.id}`}
-                            className={`rounded-md border px-3 py-3 ${
+                            className={`rounded-lg border p-3 transition-colors ${
                               isUnavailable
                                 ? 'text-muted-foreground border-gray-200 bg-gray-100'
-                                : 'bg-white'
+                                : selectedQty > 0
+                                  ? 'border-primary/40 bg-primary/5'
+                                  : 'bg-white'
                             }`}
                           >
-                            <div className="flex items-center justify-between gap-3">
-                              <div className="flex min-w-0 items-center gap-3">
-                                <div className="bg-muted relative h-14 w-14 shrink-0 overflow-hidden rounded-md border">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                              <div className="flex min-w-0 gap-3">
+                                <div className="bg-muted relative h-16 w-16 shrink-0 overflow-hidden rounded-md border sm:h-14 sm:w-14">
                                   {inventoryImage ? (
                                     <Image
                                       src={inventoryImage}
                                       alt={inventory.name}
                                       fill
-                                      sizes="56px"
+                                      sizes="64px"
                                       className={`object-cover ${isUnavailable ? 'grayscale' : ''}`}
                                       unoptimized
                                     />
@@ -781,26 +785,36 @@ export default function AddOnsPage() {
                                     </div>
                                   )}
                                 </div>
-                                <div className="min-w-0">
-                                  <p className="truncate font-semibold">{inventory.name}</p>
-                                  <p className="text-muted-foreground text-xs">
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <p className="min-w-0 flex-1 text-sm leading-snug font-semibold sm:text-base">
+                                      {inventory.name}
+                                    </p>
+                                    {isUnavailable && (
+                                      <Badge variant="secondary" className="shrink-0 text-[10px]">
+                                        Booked
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-muted-foreground mt-1 text-xs">
                                     {isUnavailable
-                                      ? 'Booked'
-                                      : `Tersedia ${availableQuantity} racket`}
+                                      ? 'Tidak tersedia di sesi ini'
+                                      : `${availableQuantity} racket tersedia`}
                                   </p>
-                                  <p className="text-primary text-sm font-semibold">
-                                    Rp{unitPrice.toLocaleString('id-ID')}{' '}
-                                    <span className="text-muted-foreground text-xs font-normal">
-                                      /sesi
+                                  <div className="mt-2 flex flex-wrap items-baseline gap-x-1">
+                                    <span className="text-primary text-sm font-semibold">
+                                      Rp{unitPrice.toLocaleString('id-ID')}
                                     </span>
-                                  </p>
+                                    <span className="text-muted-foreground text-xs">/sesi</span>
+                                  </div>
                                 </div>
                               </div>
 
-                              <div className="flex shrink-0 items-center gap-2">
+                              <div className="flex h-11 w-full shrink-0 items-center justify-between rounded-md border bg-white px-2 sm:w-auto sm:border-0 sm:bg-transparent sm:px-0">
                                 <Button
                                   variant="outline"
                                   size="icon"
+                                  className="h-8 w-8 shrink-0"
                                   onClick={() =>
                                     handleInventoryQtyChange(inventory.id, selectedQty - 1, booking)
                                   }
@@ -808,10 +822,13 @@ export default function AddOnsPage() {
                                 >
                                   <Minus size={16} />
                                 </Button>
-                                <span className="w-6 text-center font-semibold">{selectedQty}</span>
+                                <span className="min-w-10 text-center text-sm font-semibold">
+                                  {selectedQty}
+                                </span>
                                 <Button
                                   variant="outline"
                                   size="icon"
+                                  className="h-8 w-8 shrink-0"
                                   onClick={() =>
                                     handleInventoryQtyChange(inventory.id, selectedQty + 1, booking)
                                   }

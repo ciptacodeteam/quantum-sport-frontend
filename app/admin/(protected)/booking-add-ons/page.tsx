@@ -1465,7 +1465,7 @@ export default function BookingAddOns() {
                           {booking.endTime}
                         </p>
                       </CardHeader>
-                      <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                         {isPending && (
                           <p className="text-muted-foreground text-sm">Memuat stok sesi ini...</p>
                         )}
@@ -1487,19 +1487,19 @@ export default function BookingAddOns() {
                             <div
                               key={`${booking.slotId}-${item.id}`}
                               className={cn(
-                                'rounded-lg border bg-white p-4',
+                                'flex min-h-[210px] flex-col rounded-lg border bg-white p-4 shadow-sm',
                                 isUnavailable && 'text-muted-foreground border-gray-200 bg-gray-100'
                               )}
                             >
-                              <div className="space-y-3">
-                                <div className="flex items-start gap-3">
-                                  <div className="bg-muted relative h-16 w-16 shrink-0 overflow-hidden rounded-md border">
+                              <div className="flex h-full flex-col gap-4">
+                                <div className="flex min-w-0 items-start gap-3">
+                                  <div className="bg-muted relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border md:h-[72px] md:w-[72px]">
                                     {itemImage ? (
                                       <Image
                                         src={itemImage}
                                         alt={item.name}
                                         fill
-                                        sizes="64px"
+                                        sizes="72px"
                                         className={cn('object-cover', isUnavailable && 'grayscale')}
                                         unoptimized
                                       />
@@ -1509,21 +1509,24 @@ export default function BookingAddOns() {
                                       </div>
                                     )}
                                   </div>
-                                  <div className="min-w-0">
-                                    <h3 className="truncate font-semibold">{item.name}</h3>
-                                    <p className="text-muted-foreground line-clamp-2 text-xs">
+                                  <div className="min-w-0 flex-1 pt-0.5">
+                                    <h3 className="line-clamp-2 text-base leading-snug font-semibold">
+                                      {item.name}
+                                    </h3>
+                                    <p className="text-muted-foreground mt-1 line-clamp-2 text-sm">
                                       {item.description || 'Available for rent'}
                                     </p>
                                   </div>
                                 </div>
 
-                                <div className="flex items-center justify-between gap-2">
-                                  <span className="text-primary font-bold">
+                                <div className="mt-auto flex items-center justify-between gap-3">
+                                  <span className="text-primary min-w-0 text-lg font-bold whitespace-nowrap">
                                     Rp {item.price.toLocaleString('id-ID')}/sesi
                                   </span>
                                   <Badge
                                     variant="outline"
                                     className={cn(
+                                      'shrink-0 rounded-full px-3 py-1 text-sm font-medium',
                                       availableQuantity > 10
                                         ? 'border-green-200 bg-green-50 text-green-700'
                                         : availableQuantity > 5
@@ -1537,11 +1540,11 @@ export default function BookingAddOns() {
                                   </Badge>
                                 </div>
 
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-3">
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="h-8 w-8 p-0"
+                                    className="h-10 w-10 rounded-lg p-0 text-base shadow-sm"
                                     disabled={currentQuantity <= 0 || isUnavailable}
                                     onClick={() =>
                                       handleInventoryQuantityChange(
@@ -1555,7 +1558,7 @@ export default function BookingAddOns() {
                                       )
                                     }
                                   >
-                                    <IconMinus className="h-3 w-3" />
+                                    <IconMinus className="h-4 w-4" />
                                   </Button>
 
                                   <Input
@@ -1578,13 +1581,13 @@ export default function BookingAddOns() {
                                         booking
                                       )
                                     }
-                                    className="h-8 w-16 text-center"
+                                    className="h-10 w-20 rounded-lg text-center text-base font-medium shadow-sm"
                                   />
 
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="h-8 w-8 p-0"
+                                    className="h-10 w-10 rounded-lg p-0 text-base shadow-sm"
                                     disabled={currentQuantity >= availableQuantity || isUnavailable}
                                     onClick={() =>
                                       handleInventoryQuantityChange(
@@ -1598,11 +1601,11 @@ export default function BookingAddOns() {
                                       )
                                     }
                                   >
-                                    <IconPlus className="h-3 w-3" />
+                                    <IconPlus className="h-4 w-4" />
                                   </Button>
 
                                   {currentQuantity > 0 && (
-                                    <span className="text-primary ml-2 text-xs font-medium">
+                                    <span className="text-primary ml-auto text-sm font-medium whitespace-nowrap">
                                       Rp {(item.price * currentQuantity).toLocaleString('id-ID')}
                                     </span>
                                   )}
@@ -1616,7 +1619,7 @@ export default function BookingAddOns() {
                   ))}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                   {inventoryItems.map((item) => {
                     const selectedDateForInventory = selectedAddOnDate;
                     const currentQuantity =
@@ -1632,122 +1635,126 @@ export default function BookingAddOns() {
                     return (
                       <Card
                         key={item.id}
-                        className={cn('overflow-hidden', isUnavailable && 'bg-muted/40')}
+                        className={cn(
+                          'min-h-[210px] overflow-hidden shadow-sm',
+                          isUnavailable && 'bg-muted/40'
+                        )}
                       >
-                        <CardContent className="p-4">
-                          <div className="space-y-3">
-                            <div className="flex items-start gap-3">
-                              <div className="bg-muted relative h-16 w-16 shrink-0 overflow-hidden rounded-md border">
-                                {itemImage ? (
-                                  <Image
-                                    src={itemImage}
-                                    alt={item.name}
-                                    fill
-                                    sizes="64px"
-                                    className="object-cover"
-                                    unoptimized
-                                  />
-                                ) : (
-                                  <div className="text-muted-foreground flex h-full w-full items-center justify-center">
-                                    <IconShoppingCart className="h-6 w-6" />
-                                  </div>
-                                )}
-                              </div>
-                              <div className="min-w-0">
-                                <h3 className="truncate font-semibold">{item.name}</h3>
-                                <p className="text-muted-foreground line-clamp-2 text-xs">
-                                  {item.description || 'Available for rent'}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center justify-between">
-                              <span className="text-primary font-bold">
-                                Rp {item.price.toLocaleString('id-ID')}/sesi
-                              </span>
-                              <Badge
-                                variant="outline"
-                                className={cn(
-                                  availableQuantity > 10
-                                    ? 'border-green-200 bg-green-50 text-green-700'
-                                    : availableQuantity > 5
-                                      ? 'border-yellow-200 bg-yellow-50 text-yellow-700'
-                                      : availableQuantity > 0
-                                        ? 'border-orange-200 bg-orange-50 text-orange-700'
-                                        : 'border-gray-200 bg-gray-100 text-gray-500'
-                                )}
-                              >
-                                {isUnavailable ? 'Booked' : `${availableQuantity} tersedia`}
-                              </Badge>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 w-8 p-0"
-                                disabled={currentQuantity <= 0 || isUnavailable}
-                                onClick={() =>
-                                  handleInventoryQuantityChange(
-                                    item.id,
-                                    item.name,
-                                    'default',
-                                    selectedDateForInventory,
-                                    Math.max(0, currentQuantity - 1),
-                                    item.price
-                                  )
-                                }
-                              >
-                                <IconMinus className="h-3 w-3" />
-                              </Button>
-
-                              <Input
-                                type="number"
-                                min="0"
-                                max={availableQuantity}
-                                value={currentQuantity}
-                                disabled={isUnavailable}
-                                onChange={(e) =>
-                                  handleInventoryQuantityChange(
-                                    item.id,
-                                    item.name,
-                                    'default',
-                                    selectedDateForInventory,
-                                    Math.min(
-                                      availableQuantity,
-                                      Math.max(0, parseInt(e.target.value) || 0)
-                                    ),
-                                    item.price
-                                  )
-                                }
-                                className="h-8 w-16 text-center"
-                              />
-
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 w-8 p-0"
-                                disabled={currentQuantity >= availableQuantity || isUnavailable}
-                                onClick={() =>
-                                  handleInventoryQuantityChange(
-                                    item.id,
-                                    item.name,
-                                    'default',
-                                    selectedDateForInventory,
-                                    Math.min(availableQuantity, currentQuantity + 1),
-                                    item.price
-                                  )
-                                }
-                              >
-                                <IconPlus className="h-3 w-3" />
-                              </Button>
-
-                              {currentQuantity > 0 && (
-                                <span className="text-primary ml-2 text-xs font-medium">
-                                  Rp {(item.price * currentQuantity).toLocaleString('id-ID')}
-                                </span>
+                        <CardContent className="flex h-full flex-col gap-4 p-4">
+                          <div className="flex min-w-0 items-start gap-3">
+                            <div className="bg-muted relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border md:h-[72px] md:w-[72px]">
+                              {itemImage ? (
+                                <Image
+                                  src={itemImage}
+                                  alt={item.name}
+                                  fill
+                                  sizes="72px"
+                                  className="object-cover"
+                                  unoptimized
+                                />
+                              ) : (
+                                <div className="text-muted-foreground flex h-full w-full items-center justify-center">
+                                  <IconShoppingCart className="h-6 w-6" />
+                                </div>
                               )}
                             </div>
+                            <div className="min-w-0 flex-1 pt-0.5">
+                              <h3 className="line-clamp-2 text-base leading-snug font-semibold">
+                                {item.name}
+                              </h3>
+                              <p className="text-muted-foreground mt-1 line-clamp-2 text-sm">
+                                {item.description || 'Available for rent'}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="mt-auto flex items-center justify-between gap-3">
+                            <span className="text-primary min-w-0 text-lg font-bold whitespace-nowrap">
+                              Rp {item.price.toLocaleString('id-ID')}/sesi
+                            </span>
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                'shrink-0 rounded-full px-3 py-1 text-sm font-medium',
+                                availableQuantity > 10
+                                  ? 'border-green-200 bg-green-50 text-green-700'
+                                  : availableQuantity > 5
+                                    ? 'border-yellow-200 bg-yellow-50 text-yellow-700'
+                                    : availableQuantity > 0
+                                      ? 'border-orange-200 bg-orange-50 text-orange-700'
+                                      : 'border-gray-200 bg-gray-100 text-gray-500'
+                              )}
+                            >
+                              {isUnavailable ? 'Booked' : `${availableQuantity} tersedia`}
+                            </Badge>
+                          </div>
+
+                          <div className="flex items-center gap-3">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-10 w-10 rounded-lg p-0 text-base shadow-sm"
+                              disabled={currentQuantity <= 0 || isUnavailable}
+                              onClick={() =>
+                                handleInventoryQuantityChange(
+                                  item.id,
+                                  item.name,
+                                  'default',
+                                  selectedDateForInventory,
+                                  Math.max(0, currentQuantity - 1),
+                                  item.price
+                                )
+                              }
+                            >
+                              <IconMinus className="h-4 w-4" />
+                            </Button>
+
+                            <Input
+                              type="number"
+                              min="0"
+                              max={availableQuantity}
+                              value={currentQuantity}
+                              disabled={isUnavailable}
+                              onChange={(e) =>
+                                handleInventoryQuantityChange(
+                                  item.id,
+                                  item.name,
+                                  'default',
+                                  selectedDateForInventory,
+                                  Math.min(
+                                    availableQuantity,
+                                    Math.max(0, parseInt(e.target.value) || 0)
+                                  ),
+                                  item.price
+                                )
+                              }
+                              className="h-10 w-20 rounded-lg text-center text-base font-medium shadow-sm"
+                            />
+
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-10 w-10 rounded-lg p-0 text-base shadow-sm"
+                              disabled={currentQuantity >= availableQuantity || isUnavailable}
+                              onClick={() =>
+                                handleInventoryQuantityChange(
+                                  item.id,
+                                  item.name,
+                                  'default',
+                                  selectedDateForInventory,
+                                  Math.min(availableQuantity, currentQuantity + 1),
+                                  item.price
+                                )
+                              }
+                            >
+                              <IconPlus className="h-4 w-4" />
+                            </Button>
+
+                            {currentQuantity > 0 && (
+                              <span className="text-primary ml-auto text-sm font-medium whitespace-nowrap">
+                                Rp {(item.price * currentQuantity).toLocaleString('id-ID')}
+                              </span>
+                            )}
                           </div>
                         </CardContent>
                       </Card>
