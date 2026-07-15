@@ -76,6 +76,11 @@ const timeToMinutes = (time: string) => {
 const normalizeEndMinutes = (startMinutes: number, endMinutes: number) =>
   endMinutes <= startMinutes ? endMinutes + 24 * 60 : endMinutes;
 
+const rangesOverlap = (
+  first: { start: number; end: number },
+  second: { start: number; end: number }
+) => first.start < second.end && first.end > second.start;
+
 export default function AddOnsPage() {
   const router = useRouter();
   const bookingItems = useBookingStore((state) => state.bookingItems) as BookingItem[];
@@ -251,10 +256,59 @@ export default function AddOnsPage() {
   //   toast.success(`${item.coach.name ?? 'Coach'} ditambahkan ke add-ons.`);
   // };
 
+  const getBookingRangeMs = (booking: BookingItem) => {
+    const startAt = booking.startAt ?? toDateTimeParam(booking.date, getBookingStartTime(booking));
+    const endAt = booking.endAt ?? toDateTimeParam(booking.date, getBookingEndTime(booking));
+    const start = dayjs(startAt).valueOf();
+    const rawEnd = dayjs(endAt).valueOf();
+
+    return {
+      start,
+      end: rawEnd <= start ? rawEnd + 24 * 60 * 60 * 1000 : rawEnd
+    };
+  };
+
+  const getInventorySelectionRangeMs = (inventory: (typeof selectedInventories)[number]) => {
+    if (inventory.startAt && inventory.endAt) {
+      const start = dayjs(inventory.startAt).valueOf();
+      const rawEnd = dayjs(inventory.endAt).valueOf();
+
+      return {
+        start,
+        end: rawEnd <= start ? rawEnd + 24 * 60 * 60 * 1000 : rawEnd
+      };
+    }
+
+    const booking = bookingItems.find((item) => item.slotId === inventory.courtSlotId);
+    return booking ? getBookingRangeMs(booking) : null;
+  };
+
+  const getOverlappingSelectedInventoryQty = (inventoryId: string, booking: BookingItem) => {
+    const bookingRange = getBookingRangeMs(booking);
+
+    return selectedInventories
+      .filter(
+        (inventory) =>
+          inventory.inventoryId === inventoryId &&
+          inventory.courtSlotId &&
+          inventory.courtSlotId !== booking.slotId
+      )
+      .reduce((total, inventory) => {
+        const inventoryRange = getInventorySelectionRangeMs(inventory);
+
+        if (!inventoryRange || !rangesOverlap(bookingRange, inventoryRange)) {
+          return total;
+        }
+
+        return total + inventory.quantity;
+      }, 0);
+  };
+
   const handleInventoryQtyChange = (
     inventoryId: string,
     nextQty: number,
-    booking?: BookingItem
+    booking?: BookingItem,
+    availableQuantityOverride?: number
   ) => {
     if (!hasBookingSelection) {
       toast.error('Tambahkan booking lapangan terlebih dahulu sebelum memilih peralatan.');
@@ -267,8 +321,12 @@ export default function AddOnsPage() {
       return;
     }
 
-    const availableQuantity = selectedInventory.availableQuantity ?? 0;
-    const safeQty = Math.max(0, Math.min(nextQty, availableQuantity));
+    const availableQuantity = availableQuantityOverride ?? selectedInventory.availableQuantity ?? 0;
+    const overlappingSelectedQty = booking
+      ? getOverlappingSelectedInventoryQty(inventoryId, booking)
+      : 0;
+    const currentMaxQty = Math.max(0, availableQuantity - overlappingSelectedQty);
+    const safeQty = Math.max(0, Math.min(nextQty, currentMaxQty));
 
     const unitPrice = selectedInventory.price ?? 0;
 
@@ -752,15 +810,26 @@ export default function AddOnsPage() {
                               (item.timeSlot ?? 'default') === booking.slotId
                           )?.quantity ?? 0;
                         const availableQuantity = inventory.availableQuantity ?? 0;
+                        const overlappingSelectedQty = getOverlappingSelectedInventoryQty(
+                          inventory.id,
+                          booking
+                        );
+                        const maxSelectableQty = Math.max(
+                          0,
+                          availableQuantity - overlappingSelectedQty
+                        );
+                        const remainingQty = Math.max(0, maxSelectableQty - selectedQty);
                         const unitPrice = inventory.price ?? 0;
                         const inventoryImage = resolveMediaUrl(inventory.image);
                         const isUnavailable = availableQuantity <= 0;
+                        const isLocallyUnavailable = maxSelectableQty <= 0 && selectedQty <= 0;
+                        const isDisabled = isUnavailable || isLocallyUnavailable;
 
                         return (
                           <div
                             key={`${booking.slotId}-${inventory.id}`}
                             className={`rounded-lg border p-3 transition-colors ${
-                              isUnavailable
+                              isDisabled
                                 ? 'text-muted-foreground border-gray-200 bg-gray-100'
                                 : selectedQty > 0
                                   ? 'border-primary/40 bg-primary/5'
@@ -776,7 +845,7 @@ export default function AddOnsPage() {
                                       alt={inventory.name}
                                       fill
                                       sizes="64px"
-                                      className={`object-cover ${isUnavailable ? 'grayscale' : ''}`}
+                                      className={`object-cover ${isDisabled ? 'grayscale' : ''}`}
                                       unoptimized
                                     />
                                   ) : (
@@ -790,7 +859,7 @@ export default function AddOnsPage() {
                                     <p className="min-w-0 flex-1 text-sm leading-snug font-semibold sm:text-base">
                                       {inventory.name}
                                     </p>
-                                    {isUnavailable && (
+                                    {isDisabled && (
                                       <Badge variant="secondary" className="shrink-0 text-[10px]">
                                         Booked
                                       </Badge>
@@ -799,7 +868,9 @@ export default function AddOnsPage() {
                                   <p className="text-muted-foreground mt-1 text-xs">
                                     {isUnavailable
                                       ? 'Tidak tersedia di sesi ini'
-                                      : `${availableQuantity} racket tersedia`}
+                                      : isLocallyUnavailable
+                                        ? 'Sudah dipakai di lapangan lain'
+                                        : `${remainingQty} racket tersisa`}
                                   </p>
                                   <div className="mt-2 flex flex-wrap items-baseline gap-x-1">
                                     <span className="text-primary text-sm font-semibold">
@@ -816,9 +887,14 @@ export default function AddOnsPage() {
                                   size="icon"
                                   className="h-8 w-8 shrink-0"
                                   onClick={() =>
-                                    handleInventoryQtyChange(inventory.id, selectedQty - 1, booking)
+                                    handleInventoryQtyChange(
+                                      inventory.id,
+                                      selectedQty - 1,
+                                      booking,
+                                      availableQuantity
+                                    )
                                   }
-                                  disabled={selectedQty <= 0 || isUnavailable}
+                                  disabled={selectedQty <= 0 || isDisabled}
                                 >
                                   <Minus size={16} />
                                 </Button>
@@ -830,9 +906,14 @@ export default function AddOnsPage() {
                                   size="icon"
                                   className="h-8 w-8 shrink-0"
                                   onClick={() =>
-                                    handleInventoryQtyChange(inventory.id, selectedQty + 1, booking)
+                                    handleInventoryQtyChange(
+                                      inventory.id,
+                                      selectedQty + 1,
+                                      booking,
+                                      availableQuantity
+                                    )
                                   }
-                                  disabled={selectedQty >= availableQuantity || isUnavailable}
+                                  disabled={selectedQty >= maxSelectableQty || isDisabled}
                                 >
                                   <Plus size={16} />
                                 </Button>

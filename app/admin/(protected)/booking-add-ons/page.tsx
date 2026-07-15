@@ -220,6 +220,10 @@ export default function BookingAddOns() {
   };
   const normalizeEndMinutes = (startMinutes: number, endMinutes: number) =>
     endMinutes <= startMinutes ? endMinutes + 24 * 60 : endMinutes;
+  const rangesOverlap = (
+    first: { start: number; end: number },
+    second: { start: number; end: number }
+  ) => first.start < second.end && first.end > second.start;
   const getBookingStartTime = (booking: (typeof bookingItems)[number]) => {
     if (booking.startAt) {
       return formatSlotTime(booking.startAt);
@@ -235,6 +239,54 @@ export default function BookingAddOns() {
 
     const [, endTimeFromRange] = booking.timeSlot.split(' - ');
     return normalizeTime(booking.endTime || endTimeFromRange);
+  };
+  const getBookingRangeMs = (booking: (typeof bookingItems)[number]) => {
+    const startAt = booking.startAt ?? `${booking.date}T${getBookingStartTime(booking)}:00`;
+    const endAt = booking.endAt ?? `${booking.date}T${getBookingEndTime(booking)}:00`;
+    const start = dayjs(startAt).valueOf();
+    const rawEnd = dayjs(endAt).valueOf();
+
+    return {
+      start,
+      end: rawEnd <= start ? rawEnd + 24 * 60 * 60 * 1000 : rawEnd
+    };
+  };
+  const getInventorySelectionRangeMs = (inventory: (typeof selectedInventories)[number]) => {
+    if (inventory.startAt && inventory.endAt) {
+      const start = dayjs(inventory.startAt).valueOf();
+      const rawEnd = dayjs(inventory.endAt).valueOf();
+
+      return {
+        start,
+        end: rawEnd <= start ? rawEnd + 24 * 60 * 60 * 1000 : rawEnd
+      };
+    }
+
+    const booking = bookingItems.find((item) => item.slotId === inventory.courtSlotId);
+    return booking ? getBookingRangeMs(booking) : null;
+  };
+  const getOverlappingSelectedInventoryQty = (
+    inventoryId: string,
+    booking: (typeof bookingItems)[number]
+  ) => {
+    const bookingRange = getBookingRangeMs(booking);
+
+    return selectedInventories
+      .filter(
+        (inventory) =>
+          inventory.inventoryId === inventoryId &&
+          inventory.courtSlotId &&
+          inventory.courtSlotId !== booking.slotId
+      )
+      .reduce((total, inventory) => {
+        const inventoryRange = getInventorySelectionRangeMs(inventory);
+
+        if (!inventoryRange || !rangesOverlap(bookingRange, inventoryRange)) {
+          return total;
+        }
+
+        return total + inventory.quantity;
+      }, 0);
   };
 
   // Fetch inventory availability
@@ -702,15 +754,25 @@ export default function BookingAddOns() {
     date: string,
     quantity: number,
     pricePerItem: number,
-    booking?: (typeof bookingItems)[number]
+    booking?: (typeof bookingItems)[number],
+    availableQuantityOverride?: number
   ) => {
-    if (quantity > 0) {
+    const overlappingSelectedQty = booking
+      ? getOverlappingSelectedInventoryQty(inventoryId, booking)
+      : 0;
+    const maxSelectableQty =
+      typeof availableQuantityOverride === 'number'
+        ? Math.max(0, availableQuantityOverride - overlappingSelectedQty)
+        : quantity;
+    const safeQuantity = Math.max(0, Math.min(quantity, maxSelectableQty));
+
+    if (safeQuantity > 0) {
       addInventory({
         inventoryId,
         inventoryName,
         timeSlot,
-        price: pricePerItem * quantity,
-        quantity,
+        price: pricePerItem * safeQuantity,
+        quantity: safeQuantity,
         date,
         courtId: booking?.courtId,
         courtName: booking?.courtName,
@@ -1480,15 +1542,26 @@ export default function BookingAddOns() {
                                 (inventory.timeSlot ?? 'default') === booking.slotId
                             )?.quantity ?? 0;
                           const availableQuantity = item.availableQuantity ?? 0;
+                          const overlappingSelectedQty = getOverlappingSelectedInventoryQty(
+                            item.id,
+                            booking
+                          );
+                          const maxSelectableQty = Math.max(
+                            0,
+                            availableQuantity - overlappingSelectedQty
+                          );
                           const itemImage = resolveMediaUrl(item.image);
                           const isUnavailable = availableQuantity <= 0;
+                          const isLocallyUnavailable =
+                            maxSelectableQty <= 0 && currentQuantity <= 0;
+                          const isDisabled = isUnavailable || isLocallyUnavailable;
 
                           return (
                             <div
                               key={`${booking.slotId}-${item.id}`}
                               className={cn(
                                 'flex min-h-[210px] flex-col rounded-lg border bg-white p-4 shadow-sm',
-                                isUnavailable && 'text-muted-foreground border-gray-200 bg-gray-100'
+                                isDisabled && 'text-muted-foreground border-gray-200 bg-gray-100'
                               )}
                             >
                               <div className="flex h-full flex-col gap-4">
@@ -1500,7 +1573,7 @@ export default function BookingAddOns() {
                                         alt={item.name}
                                         fill
                                         sizes="72px"
-                                        className={cn('object-cover', isUnavailable && 'grayscale')}
+                                        className={cn('object-cover', isDisabled && 'grayscale')}
                                         unoptimized
                                       />
                                     ) : (
@@ -1536,11 +1609,13 @@ export default function BookingAddOns() {
                                             : 'border-gray-200 bg-gray-100 text-gray-500'
                                     )}
                                   >
-                                    {isUnavailable ? 'Booked' : `${availableQuantity} tersedia`}
+                                    {isDisabled
+                                      ? 'Booked'
+                                      : `${Math.max(0, maxSelectableQty - currentQuantity)} tersedia`}
                                   </Badge>
                                 </div>
 
-                                <div className="flex items-center gap-3">
+                                <div className="grid grid-cols-[40px_80px_40px_minmax(0,1fr)] items-center gap-3">
                                   <Button
                                     variant="outline"
                                     size="sm"
@@ -1554,7 +1629,8 @@ export default function BookingAddOns() {
                                         booking.date,
                                         Math.max(0, currentQuantity - 1),
                                         item.price,
-                                        booking
+                                        booking,
+                                        availableQuantity
                                       )
                                     }
                                   >
@@ -1566,7 +1642,7 @@ export default function BookingAddOns() {
                                     min="0"
                                     max={availableQuantity}
                                     value={currentQuantity}
-                                    disabled={isUnavailable}
+                                    disabled={isDisabled}
                                     onChange={(e) =>
                                       handleInventoryQuantityChange(
                                         item.id,
@@ -1578,17 +1654,18 @@ export default function BookingAddOns() {
                                           Math.max(0, parseInt(e.target.value) || 0)
                                         ),
                                         item.price,
-                                        booking
+                                        booking,
+                                        availableQuantity
                                       )
                                     }
-                                    className="h-10 w-20 rounded-lg text-center text-base font-medium shadow-sm"
+                                    className="h-10 w-20 [appearance:textfield] rounded-lg text-center text-base font-medium shadow-sm [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                   />
 
                                   <Button
                                     variant="outline"
                                     size="sm"
                                     className="h-10 w-10 rounded-lg p-0 text-base shadow-sm"
-                                    disabled={currentQuantity >= availableQuantity || isUnavailable}
+                                    disabled={currentQuantity >= maxSelectableQty || isDisabled}
                                     onClick={() =>
                                       handleInventoryQuantityChange(
                                         item.id,
@@ -1597,7 +1674,8 @@ export default function BookingAddOns() {
                                         booking.date,
                                         Math.min(availableQuantity, currentQuantity + 1),
                                         item.price,
-                                        booking
+                                        booking,
+                                        availableQuantity
                                       )
                                     }
                                   >
@@ -1605,7 +1683,7 @@ export default function BookingAddOns() {
                                   </Button>
 
                                   {currentQuantity > 0 && (
-                                    <span className="text-primary ml-auto text-sm font-medium whitespace-nowrap">
+                                    <span className="text-primary text-right text-sm font-medium whitespace-nowrap">
                                       Rp {(item.price * currentQuantity).toLocaleString('id-ID')}
                                     </span>
                                   )}
@@ -1728,7 +1806,7 @@ export default function BookingAddOns() {
                                   item.price
                                 )
                               }
-                              className="h-10 w-20 rounded-lg text-center text-base font-medium shadow-sm"
+                              className="h-10 w-20 [appearance:textfield] rounded-lg text-center text-base font-medium shadow-sm [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                             />
 
                             <Button
