@@ -378,7 +378,7 @@ export default function AddOnsPage() {
 
   return (
     <div className="bg-background min-h-screen pb-32">
-      <MainHeader onBack={() => router.back()} title="Produk Tambahan" withLogo={false} />
+      <MainHeader onBack={() => router.back()} title="Produk Tambahan" withLogo={false} withBorder />
 
       <main className="mx-auto w-11/12 pt-24 pb-8">
         <div className="bg-background/95 sticky top-20 z-30 mb-4 flex gap-2 border-b py-3 backdrop-blur">
