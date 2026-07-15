@@ -293,7 +293,8 @@ export default function CheckoutPage() {
       .filter((inventory) => inventory.inventoryId && inventory.quantity > 0)
       .map((inventory) => ({
         inventoryId: inventory.inventoryId,
-        quantity: inventory.quantity
+        quantity: inventory.quantity,
+        ...(inventory.courtSlotId ? { courtSlotId: inventory.courtSlotId } : {})
       }));
 
     return { courtSlots, coachSlots, ballboySlots, inventories };
@@ -798,7 +799,14 @@ export default function CheckoutPage() {
                 >
                   <div className="flex flex-col">
                     <span className="text-sm font-medium">{inventory.inventoryName}</span>
-                    <span className="text-muted-foreground text-xs">Qty: {inventory.quantity}</span>
+                    <span className="text-muted-foreground text-xs">
+                      {inventory.courtName ? `${inventory.courtName} • ` : ''}
+                      {inventory.date ? `${dayjs(inventory.date).format('DD MMM YYYY')} • ` : ''}
+                      {inventory.timeSlot && inventory.timeSlot !== 'default'
+                        ? `${inventory.timeSlot} • `
+                        : ''}
+                      Qty: {inventory.quantity}
+                    </span>
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-semibold">{formatCurrency(inventory.price)}</span>

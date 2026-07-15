@@ -18,7 +18,7 @@ interface PaymentMethodSelectorProps {
   courtSlots?: string[];
   coachSlots?: string[];
   ballboySlots?: string[];
-  inventories?: Array<{ inventoryId: string; quantity: number }>;
+  inventories?: Array<{ inventoryId: string; quantity: number; courtSlotId?: string }>;
   totalAmount?: number;
   userEmail?: string;
   userPhoneNumber?: string;

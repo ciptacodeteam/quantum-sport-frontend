@@ -17,7 +17,7 @@ interface CreditCardCheckoutProps {
   courtSlots?: string[];
   coachSlots?: string[];
   ballboySlots?: string[];
-  inventories?: Array<{ inventoryId: string; quantity: number }>;
+  inventories?: Array<{ inventoryId: string; quantity: number; courtSlotId?: string }>;
   onSuccess?: (data: any) => void;
   onError?: (error: any) => void;
   totalAmount?: number;

@@ -10,7 +10,7 @@ import { resolveMediaUrl } from '@/lib/utils';
 import { ballboyAvailabilityQueryOptions } from '@/queries/ballboy';
 import { inventoryAvailabilityQueryOptions } from '@/queries/inventory';
 import { useBookingStore, type BookingItem } from '@/stores/useBookingStore';
-import { useQuery } from '@tanstack/react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { Minus, Plus } from 'lucide-react';
 import Image from 'next/image';
@@ -169,6 +169,19 @@ export default function AddOnsPage() {
       ...(bookingTimeRange.endAt ? { endAt: bookingTimeRange.endAt } : {})
     })
   );
+  const inventoryAvailabilityByBooking = useQueries({
+    queries: bookingItems.map((booking) => {
+      const startAt =
+        booking.startAt ?? toDateTimeParam(booking.date, getBookingStartTime(booking));
+      const endAt = booking.endAt ?? toDateTimeParam(booking.date, getBookingEndTime(booking));
+
+      return inventoryAvailabilityQueryOptions({
+        courtSport,
+        startAt,
+        endAt
+      });
+    })
+  });
 
   // const {
   //   data: coachAvailability,
@@ -238,7 +251,11 @@ export default function AddOnsPage() {
   //   toast.success(`${item.coach.name ?? 'Coach'} ditambahkan ke add-ons.`);
   // };
 
-  const handleInventoryQtyChange = (inventoryId: string, nextQty: number) => {
+  const handleInventoryQtyChange = (
+    inventoryId: string,
+    nextQty: number,
+    booking?: BookingItem
+  ) => {
     if (!hasBookingSelection) {
       toast.error('Tambahkan booking lapangan terlebih dahulu sebelum memilih peralatan.');
       return;
@@ -255,18 +272,25 @@ export default function AddOnsPage() {
 
     const unitPrice = selectedInventory.price ?? 0;
 
+    const timeSlot = booking?.slotId ?? 'default';
+
     if (safeQty > 0) {
       addInventoryToStore({
         inventoryId: selectedInventory.id,
         inventoryName: selectedInventory.name,
-        timeSlot: 'default',
+        timeSlot,
         price: safeQty * unitPrice,
         quantity: safeQty,
-        date: primaryBookingDate
+        date: booking?.date ?? primaryBookingDate,
+        courtId: booking?.courtId,
+        courtName: booking?.courtName,
+        courtSlotId: booking?.slotId,
+        startAt: booking?.startAt,
+        endAt: booking?.endAt
       });
       toast.success(`${selectedInventory.name} ditambahkan (${safeQty} item).`);
     } else {
-      removeInventoryFromStore(selectedInventory.id, 'default');
+      removeInventoryFromStore(selectedInventory.id, timeSlot);
       toast.success(`${selectedInventory.name} dihapus dari add-ons.`);
     }
   };
@@ -312,6 +336,18 @@ export default function AddOnsPage() {
         slots: getMatchingBallboySlots(booking)
       })),
     [ballboyAvailability, bookingItems]
+  );
+
+  const inventoryItemsByBooking = useMemo(
+    () =>
+      bookingItems.map((booking, index) => ({
+        booking,
+        items: (inventoryAvailabilityByBooking[index]?.data ??
+          inventoryList) as typeof inventoryList,
+        isPending: inventoryAvailabilityByBooking[index]?.isPending ?? false,
+        isError: inventoryAvailabilityByBooking[index]?.isError ?? false
+      })),
+    [bookingItems, inventoryAvailabilityByBooking, inventoryList]
   );
 
   const handleBallboyToggle = (
@@ -378,7 +414,12 @@ export default function AddOnsPage() {
 
   return (
     <div className="bg-background min-h-screen pb-32">
-      <MainHeader onBack={() => router.back()} title="Produk Tambahan" withLogo={false} withBorder />
+      <MainHeader
+        onBack={() => router.back()}
+        title="Produk Tambahan"
+        withLogo={false}
+        withBorder
+      />
 
       <main className="mx-auto w-11/12 pt-24 pb-8">
         <div className="bg-background/95 sticky top-20 z-30 mb-4 flex gap-2 border-b py-3 backdrop-blur">
@@ -680,88 +721,119 @@ export default function AddOnsPage() {
 
             {!isInventoryPending &&
               !isInventoryError &&
-              inventoryList.map((inventory) => {
-                const selectedQty =
-                  selectedInventories.find(
-                    (item) =>
-                      item.inventoryId === inventory.id &&
-                      (item.timeSlot ?? 'default') === 'default'
-                  )?.quantity ?? 0;
-                const availableQuantity = inventory.availableQuantity ?? 0;
-                const unitPrice = inventory.price ?? 0;
-                const inventoryImage = resolveMediaUrl(inventory.image);
-                const isUnavailable = availableQuantity <= 0;
+              inventoryItemsByBooking.map(({ booking, items, isPending, isError }) => (
+                <Card
+                  key={booking.slotId}
+                  className={items.length === 0 ? 'bg-muted/40' : undefined}
+                >
+                  <div className="space-y-3 px-4 py-3">
+                    <div>
+                      <p className="font-semibold">{booking.courtName}</p>
+                      <p className="text-muted-foreground text-sm">
+                        {dayjs(booking.date).format('DD MMM YYYY')} • {booking.timeSlot} -{' '}
+                        {booking.endTime}
+                      </p>
+                    </div>
 
-                return (
-                  <Card key={inventory.id} className={isUnavailable ? 'bg-muted/40' : undefined}>
-                    <div className="px-4 py-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex min-w-0 items-center gap-3">
-                          <div className="bg-muted relative h-14 w-14 shrink-0 overflow-hidden rounded-md border">
-                            {inventoryImage ? (
-                              <Image
-                                src={inventoryImage}
-                                alt={inventory.name}
-                                fill
-                                sizes="56px"
-                                className="object-cover"
-                                unoptimized
-                              />
-                            ) : (
-                              <div className="text-muted-foreground flex h-full w-full items-center justify-center text-sm font-semibold">
-                                {getInitials(inventory.name)}
+                    <div className="grid gap-3">
+                      {isPending && (
+                        <p className="text-muted-foreground text-sm">Memuat stok sesi ini...</p>
+                      )}
+                      {isError && (
+                        <p className="text-destructive text-sm">Gagal memuat stok sesi ini.</p>
+                      )}
+                      {items.map((inventory) => {
+                        const selectedQty =
+                          selectedInventories.find(
+                            (item) =>
+                              item.inventoryId === inventory.id &&
+                              (item.timeSlot ?? 'default') === booking.slotId
+                          )?.quantity ?? 0;
+                        const availableQuantity = inventory.availableQuantity ?? 0;
+                        const unitPrice = inventory.price ?? 0;
+                        const inventoryImage = resolveMediaUrl(inventory.image);
+                        const isUnavailable = availableQuantity <= 0;
+
+                        return (
+                          <div
+                            key={`${booking.slotId}-${inventory.id}`}
+                            className={`rounded-md border px-3 py-3 ${
+                              isUnavailable
+                                ? 'text-muted-foreground border-gray-200 bg-gray-100'
+                                : 'bg-white'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex min-w-0 items-center gap-3">
+                                <div className="bg-muted relative h-14 w-14 shrink-0 overflow-hidden rounded-md border">
+                                  {inventoryImage ? (
+                                    <Image
+                                      src={inventoryImage}
+                                      alt={inventory.name}
+                                      fill
+                                      sizes="56px"
+                                      className={`object-cover ${isUnavailable ? 'grayscale' : ''}`}
+                                      unoptimized
+                                    />
+                                  ) : (
+                                    <div className="text-muted-foreground flex h-full w-full items-center justify-center text-sm font-semibold">
+                                      {getInitials(inventory.name)}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="truncate font-semibold">{inventory.name}</p>
+                                  <p className="text-muted-foreground text-xs">
+                                    {isUnavailable
+                                      ? 'Booked'
+                                      : `Tersedia ${availableQuantity} racket`}
+                                  </p>
+                                  <p className="text-primary text-sm font-semibold">
+                                    Rp{unitPrice.toLocaleString('id-ID')}{' '}
+                                    <span className="text-muted-foreground text-xs font-normal">
+                                      /sesi
+                                    </span>
+                                  </p>
+                                </div>
                               </div>
+
+                              <div className="flex shrink-0 items-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() =>
+                                    handleInventoryQtyChange(inventory.id, selectedQty - 1, booking)
+                                  }
+                                  disabled={selectedQty <= 0 || isUnavailable}
+                                >
+                                  <Minus size={16} />
+                                </Button>
+                                <span className="w-6 text-center font-semibold">{selectedQty}</span>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  onClick={() =>
+                                    handleInventoryQtyChange(inventory.id, selectedQty + 1, booking)
+                                  }
+                                  disabled={selectedQty >= availableQuantity || isUnavailable}
+                                >
+                                  <Plus size={16} />
+                                </Button>
+                              </div>
+                            </div>
+
+                            {selectedQty > 0 && (
+                              <p className="text-primary mt-2 text-sm font-medium">
+                                Total: Rp{(selectedQty * unitPrice).toLocaleString('id-ID')}
+                              </p>
                             )}
                           </div>
-                          <div className="min-w-0">
-                            <p className="truncate font-semibold">{inventory.name}</p>
-                            <p className="text-muted-foreground text-xs">
-                              {isUnavailable
-                                ? 'Tidak tersedia di jadwal ini'
-                                : `Tersedia ${availableQuantity} equipment`}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex shrink-0 items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handleInventoryQtyChange(inventory.id, selectedQty - 1)}
-                            disabled={selectedQty <= 0 || isUnavailable}
-                          >
-                            <Minus size={16} />
-                          </Button>
-                          <span className="w-6 text-center font-semibold">{selectedQty}</span>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handleInventoryQtyChange(inventory.id, selectedQty + 1)}
-                            disabled={selectedQty >= availableQuantity || isUnavailable}
-                          >
-                            <Plus size={16} />
-                          </Button>
-                        </div>
-                      </div>
-
-                      <div className="bg-muted mt-4 flex rounded-sm px-4 py-2">
-                        <p className="text-foreground">
-                          <span className="text-primary font-semibold">
-                            Rp{unitPrice.toLocaleString('id-ID')}{' '}
-                          </span>
-                          <span className="text-muted-foreground text-sm">/item</span>
-                        </p>
-                      </div>
-
-                      {selectedQty > 0 && (
-                        <p className="text-primary mt-2 text-sm font-medium">
-                          Total: Rp{(selectedQty * unitPrice).toLocaleString('id-ID')}
-                        </p>
-                      )}
+                        );
+                      })}
                     </div>
-                  </Card>
-                );
-              })}
+                  </div>
+                </Card>
+              ))}
           </div>
         )}
       </main>

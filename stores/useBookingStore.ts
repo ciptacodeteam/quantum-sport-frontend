@@ -101,6 +101,11 @@ export interface SelectedInventory {
   price: number;
   quantity: number;
   date?: string;
+  courtId?: string;
+  courtName?: string;
+  courtSlotId?: string;
+  startAt?: string;
+  endAt?: string;
 }
 
 interface BookingState {
