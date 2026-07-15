@@ -19,15 +19,18 @@ import { adminCreateInventoryMutationOptions } from '@/mutations/admin/inventory
 import { adminInventoriesQueryOptions } from '@/queries/admin/inventory';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import Image from 'next/image';
+import { useState } from 'react';
 import { Controller, type SubmitHandler, useForm } from 'react-hook-form';
 import z from 'zod';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   description: z.string().optional(),
+  image: z.file().optional(),
   sport: z.enum(['PADEL', 'TENNIS']),
   price: z.number().min(0, { message: 'Price must be at least 0.' }),
-  quantity: z.number().min(1, { message: 'Quantity must be at least 1.' })
+  quantity: z.number().min(0, { message: 'Quantity must be at least 0.' })
 });
 
 type FormSchema = z.infer<typeof formSchema>;
@@ -38,11 +41,14 @@ const CreateInventoryForm = () => {
     defaultValues: {
       name: '',
       description: '',
+      image: undefined,
       sport: 'PADEL',
-      quantity: 1,
+      quantity: 0,
       price: 0
     }
   });
+
+  const [imagePreview, setImagePreview] = useState<string | ArrayBuffer | null>(null);
 
   const { closeDialog } = useDialog();
 
@@ -68,6 +74,43 @@ const CreateInventoryForm = () => {
     <form onSubmit={form.handleSubmit(onSubmit)}>
       <FieldSet>
         <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="image">Gambar</FieldLabel>
+            {imagePreview && (
+              <Image
+                src={String(imagePreview)}
+                unoptimized
+                alt="Preview inventory"
+                width={400}
+                height={300}
+                className="border-muted max-h-44 max-w-xs rounded-md border object-cover"
+              />
+            )}
+            <Controller
+              control={form.control}
+              name="image"
+              render={({ field }) => (
+                <Input
+                  id="image"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    field.onChange(file);
+
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => setImagePreview(reader.result);
+                      reader.readAsDataURL(file);
+                    } else {
+                      setImagePreview(null);
+                    }
+                  }}
+                />
+              )}
+            />
+            <FieldError>{form.formState.errors.image?.message}</FieldError>
+          </Field>
           <Field>
             <FieldLabel htmlFor="name">Nama</FieldLabel>
             <Input id="name" {...form.register('name')} placeholder="e.g. Raket" />

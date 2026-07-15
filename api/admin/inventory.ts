@@ -22,12 +22,16 @@ export async function getAdminInventoryAvailabilityApi(queryParams: SearchParams
 }
 
 export async function createInventoryApi(payload: CreateMutationPayload) {
-  const { data } = await adminApi.post('/inventory', payload);
+  const { data } = await adminApi.post('/inventory', payload, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
   return data;
 }
 
 export async function updateInventoryApi(payload: UpdateMutationPayload) {
-  const { data } = await adminApi.put(`/inventory/${payload.id}`, payload.data);
+  const { data } = await adminApi.put(`/inventory/${payload.id}`, payload.data, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
   return data;
 }
 

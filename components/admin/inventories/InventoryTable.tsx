@@ -25,6 +25,7 @@ import { IconPencil, IconPlus, IconTrash, IconEye } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
+import Image from 'next/image';
 import { useMemo } from 'react';
 import CreateInventoryForm from './CreateInventoryForm';
 import EditInventoryForm from './EditInventoryForm';
@@ -54,6 +55,25 @@ const InventoryTable = () => {
 
   const columns = useMemo(
     () => [
+      colHelper.accessor('image', {
+        header: 'Gambar',
+        cell: (info) => {
+          const image = info.getValue();
+
+          if (!image) return <span className="text-muted-foreground">-</span>;
+
+          return (
+            <Image
+              src={image}
+              unoptimized
+              alt={info.row.original.name}
+              width={56}
+              height={56}
+              className="border-muted h-14 w-14 rounded-md border object-cover"
+            />
+          );
+        }
+      }),
       colHelper.accessor('name', {
         header: 'Nama Alat',
         cell: (info) => info.getValue()
@@ -64,7 +84,9 @@ const InventoryTable = () => {
       }),
       colHelper.accessor('sport', {
         header: 'Kategori',
-        cell: (info) => <Badge variant="outline">{info.getValue() === 'TENNIS' ? 'Tennis' : 'Padel'}</Badge>
+        cell: (info) => (
+          <Badge variant="outline">{info.getValue() === 'TENNIS' ? 'Tennis' : 'Padel'}</Badge>
+        )
       }),
       colHelper.accessor('quantity', {
         header: 'Qty',
