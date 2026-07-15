@@ -112,7 +112,7 @@ type ApiBooking = {
   ballboys?: Array<{
     id: string;
     price: number;
-    slot?: { startAt?: string; staff?: { name?: string } };
+    slot?: { startAt?: string; endAt?: string; staff?: { name?: string } };
   }>;
 };
 
@@ -221,7 +221,7 @@ export default function InvoiceDetailPage() {
   if (isLoading || (isPending && !response)) {
     return (
       <div className="min-h-screen">
-        <MainHeader title="Detail Transaksi" withLogo={false} backHref="/invoice" />
+        <MainHeader title="Detail Transaksi" withLogo={false} backHref="/invoice" withBorder />
         <div className="container mx-auto mt-28 pb-10">
           <div className="mx-auto w-11/12 max-w-7xl">
             <div className="animate-pulse space-y-4">
@@ -354,7 +354,7 @@ export default function InvoiceDetailPage() {
 
   return (
     <div className="min-h-screen">
-      <MainHeader title="Detail Transaksi" withLogo={false} backHref="/invoice" />
+      <MainHeader title="Detail Transaksi" withLogo={false} backHref="/invoice" withBorder />
 
       <div className="container mx-auto mt-28 pb-10">
         <div className="mx-auto w-11/12 max-w-7xl">
@@ -405,6 +405,7 @@ export default function InvoiceDetailPage() {
               coaches={bookingCoaches as any}
               ballboys={bookingBallboys as any}
               inventories={bookingInventories as any}
+              details={bookingDetails as any}
             />
           )}
 

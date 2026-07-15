@@ -13,6 +13,7 @@ import { useBookingStore, type BookingItem } from '@/stores/useBookingStore';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { Minus, Plus } from 'lucide-react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -681,19 +682,38 @@ export default function AddOnsPage() {
                   )?.quantity ?? 0;
                 const availableQuantity = inventory.availableQuantity ?? 0;
                 const unitPrice = inventory.price ?? 0;
+                const inventoryImage = resolveMediaUrl(inventory.image);
 
                 return (
                   <Card key={inventory.id}>
                     <div className="px-4 py-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-semibold">{inventory.name}</p>
-                          <p className="text-muted-foreground text-xs">
-                            Tersedia {availableQuantity} equipment
-                          </p>
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className="bg-muted relative h-14 w-14 shrink-0 overflow-hidden rounded-md border">
+                            {inventoryImage ? (
+                              <Image
+                                src={inventoryImage}
+                                alt={inventory.name}
+                                fill
+                                sizes="56px"
+                                className="object-cover"
+                                unoptimized
+                              />
+                            ) : (
+                              <div className="text-muted-foreground flex h-full w-full items-center justify-center text-sm font-semibold">
+                                {getInitials(inventory.name)}
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold">{inventory.name}</p>
+                            <p className="text-muted-foreground text-xs">
+                              Tersedia {availableQuantity} equipment
+                            </p>
+                          </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex shrink-0 items-center gap-2">
                           <Button
                             variant="outline"
                             size="icon"

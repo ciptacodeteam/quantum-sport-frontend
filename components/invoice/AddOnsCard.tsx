@@ -1,13 +1,20 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { getCourtNameForSlot } from '@/lib/ballboy-utils';
 import dayjs from 'dayjs';
 
 type Props = {
   coaches: any[];
   ballboys: any[];
   inventories: any[];
+  details?: any[];
 };
 
-export default function AddOnsCard({ coaches = [], ballboys = [], inventories = [] }: Props) {
+export default function AddOnsCard({
+  coaches = [],
+  ballboys = [],
+  inventories = [],
+  details = []
+}: Props) {
   if ((coaches.length || ballboys.length || inventories.length) === 0) return null;
 
   return (
@@ -42,22 +49,35 @@ export default function AddOnsCard({ coaches = [], ballboys = [], inventories = 
         {ballboys.length > 0 && (
           <div>
             <h4 className="mb-2 font-semibold">Ballboy</h4>
-            {ballboys.map((ballboy: any, idx: number) => (
-              <div
-                key={ballboy.id || idx}
-                className="flex items-center justify-between border-b py-2 last:border-0"
-              >
-                <div>
-                  <p className="font-medium">{ballboy.slot?.staff?.name || 'Ballboy'}</p>
-                  <p className="text-sm text-gray-600">
-                    {dayjs(ballboy.slot?.startAt).format('DD MMM YYYY, HH:mm')}
-                  </p>
+            {ballboys.map((ballboy: any, idx: number) => {
+              const courtName = getCourtNameForSlot(ballboy.slot, details);
+              const startAt = ballboy.slot?.startAt;
+              const endAt = ballboy.slot?.endAt;
+
+              return (
+                <div
+                  key={ballboy.id || idx}
+                  className="flex items-center justify-between gap-4 border-b py-2 last:border-0"
+                >
+                  <div>
+                    <p className="font-medium">
+                      {ballboy.slot?.staff?.name || ballboy.staff?.name || 'Ballboy'}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {courtName ? `${courtName} - ` : ''}
+                      {startAt
+                        ? `${dayjs(startAt).format('DD MMM YYYY, HH:mm')}${
+                            endAt ? ` - ${dayjs(endAt).format('HH:mm')}` : ''
+                          }`
+                        : 'Jadwal ballboy'}
+                    </p>
+                  </div>
+                  <span className="font-semibold">
+                    Rp{Number(ballboy.price).toLocaleString('id-ID')}
+                  </span>
                 </div>
-                <span className="font-semibold">
-                  Rp{Number(ballboy.price).toLocaleString('id-ID')}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 

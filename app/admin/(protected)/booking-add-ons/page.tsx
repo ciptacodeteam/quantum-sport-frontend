@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useMembershipDiscount } from '@/hooks/useMembershipDiscount';
 import { formatSlotTime, formatSlotTimeRange } from '@/lib/time-utils';
-import { cn } from '@/lib/utils';
+import { cn, resolveMediaUrl } from '@/lib/utils';
 import { adminBallboyAvailabilityQueryOptions } from '@/queries/admin/ballboy';
 import { adminCheckoutMutationOptions } from '@/mutations/admin/checkout';
 import { adminCoachAvailabilityQueryOptions } from '@/queries/admin/coach';
@@ -29,6 +29,7 @@ import {
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -80,6 +81,8 @@ export default function BookingAddOns() {
     () => bookingItems.find((item) => item.sport)?.sport ?? 'PADEL',
     [bookingItems]
   );
+  const canBookBallboy = courtSport === 'TENNIS' || bookingItems.length === 0;
+  const ballboyCourtSport: 'PADEL' | 'TENNIS' = canBookBallboy ? 'TENNIS' : courtSport;
 
   // Customer selection is now handled by BookingSummary component
   // Keep selectedCustomer state for membership discount calculation
@@ -164,7 +167,7 @@ export default function BookingAddOns() {
 
   // Fetch ballboy availability. Ballboy is only available for tennis bookings.
   const { data: ballboyAvailabilityData } = useQuery(
-    adminBallboyAvailabilityQueryOptions(dateRange?.startAt, dateRange?.endAt, courtSport)
+    adminBallboyAvailabilityQueryOptions(dateRange?.startAt, dateRange?.endAt, ballboyCourtSport)
   );
 
   const inventoryDateRange = useMemo(() => {
@@ -331,6 +334,7 @@ export default function BookingAddOns() {
       id: item.id,
       name: item.name,
       description: item.description || '',
+      image: item.image || null,
       price: item.price,
       availableQuantity: item.availableQuantity,
       totalQuantity: item.totalQuantity
@@ -432,6 +436,38 @@ export default function BookingAddOns() {
       .filter(({ slots }) => slots.length > 0);
   }, [ballboyAvailabilityData, bookingItems, courtSport]);
 
+  const ballboyAvailableForAddOn = useMemo(() => {
+    if (!ballboyAvailabilityData || bookingItems.length > 0 || !selectedAddOnTimeSlot) {
+      return [];
+    }
+
+    const [selectedStartTime, selectedEndTime] = selectedAddOnTimeSlot.split(' - ');
+    const selectedStart = timeToMinutes(selectedStartTime);
+    const rawSelectedEnd = timeToMinutes(selectedEndTime);
+
+    if (selectedStart === null || rawSelectedEnd === null) {
+      return [];
+    }
+
+    const selectedEnd = normalizeEndMinutes(selectedStart, rawSelectedEnd);
+
+    return ballboyAvailabilityData.filter((slot) => {
+      if (!slot.startAt || !slot.endAt || getISODate(slot.startAt) !== selectedAddOnDate) {
+        return false;
+      }
+
+      const ballboyStart = timeToMinutes(formatSlotTime(slot.startAt));
+      const rawBallboyEnd = timeToMinutes(formatSlotTime(slot.endAt));
+
+      if (ballboyStart === null || rawBallboyEnd === null) {
+        return false;
+      }
+
+      const ballboyEnd = normalizeEndMinutes(ballboyStart, rawBallboyEnd);
+      return ballboyStart <= selectedStart && ballboyEnd >= selectedEnd;
+    });
+  }, [ballboyAvailabilityData, bookingItems.length, selectedAddOnDate, selectedAddOnTimeSlot]);
+
   // Helper function to check if coach is available for any of the booked dates/slots
   // If no bookings, check against selected add-on date/time
   const isCoachAvailableForBookings = (coach: { id: string }) => {
@@ -527,9 +563,9 @@ export default function BookingAddOns() {
 
   const handleBallboySelect = (
     ballboySlot: NonNullable<typeof ballboyAvailabilityData>[number],
-    booking: (typeof bookingItems)[number]
+    booking?: (typeof bookingItems)[number]
   ) => {
-    if (courtSport !== 'TENNIS') {
+    if (!canBookBallboy) {
       toast.error('Ballboy hanya tersedia untuk tennis.');
       return;
     }
@@ -539,15 +575,19 @@ export default function BookingAddOns() {
       return;
     }
 
-    const selectedForCourt = selectedBallboys.find((b) => b.courtSlotId === booking.slotId);
+    const selectedForCourt = booking
+      ? selectedBallboys.find((b) => b.courtSlotId === booking.slotId)
+      : selectedBallboys.find((b) => b.slotId === ballboySlot.slotId && !b.courtSlotId);
     if (selectedForCourt?.slotId === ballboySlot.slotId) {
       removeBallboy(ballboySlot.ballboy.id, selectedForCourt.timeSlot, ballboySlot.slotId);
-      toast.success(`Removed ${ballboySlot.ballboy.name ?? 'Ballboy'} from ${booking.timeSlot}`);
+      toast.success(
+        `Removed ${ballboySlot.ballboy.name ?? 'Ballboy'} from ${booking?.timeSlot ?? getTimeRangeLocal(ballboySlot.startAt, ballboySlot.endAt)}`
+      );
       return;
     }
 
     const selectedBySlot = selectedBallboys.find((b) => b.slotId === ballboySlot.slotId);
-    if (selectedBySlot && selectedBySlot.courtSlotId !== booking.slotId) {
+    if (selectedBySlot && selectedBySlot.courtSlotId !== booking?.slotId) {
       toast.error('Ballboy ini sudah dipilih untuk lapangan lain di jam yang sama.');
       return;
     }
@@ -565,15 +605,19 @@ export default function BookingAddOns() {
       price: ballboySlot.price ?? 0,
       date: getISODate(ballboySlot.startAt),
       slotId: ballboySlot.slotId,
-      courtId: booking.courtId,
-      courtName: booking.courtName,
-      courtSlotId: booking.slotId,
+      courtId: booking?.courtId,
+      courtName: booking?.courtName,
+      courtSlotId: booking?.slotId,
       startAt: ballboySlot.startAt,
       endAt: ballboySlot.endAt
     });
 
     toast.success(
-      `Added ${ballboySlot.ballboy.name ?? 'Ballboy'} for ${dayjs(booking.date).format('DD MMM')} ${booking.timeSlot}`
+      `Added ${ballboySlot.ballboy.name ?? 'Ballboy'} for ${
+        booking
+          ? `${dayjs(booking.date).format('DD MMM')} ${booking.timeSlot}`
+          : `${dayjs(getISODate(ballboySlot.startAt)).format('DD MMM')} ${timeSlot}`
+      }`
     );
   };
 
@@ -627,11 +671,15 @@ export default function BookingAddOns() {
     const courtSlots = bookingItems.map((b) => b.slotId).filter(Boolean);
     const coachSlots = selectedCoaches.map((c) => c.slotId).filter(Boolean) as string[];
     const ballboySlots = selectedBallboys
-      .filter((b) => b.slotId && b.courtSlotId)
-      .map((b) => ({
-        slotId: b.slotId as string,
-        courtSlotId: b.courtSlotId as string
-      }));
+      .filter((b) => b.slotId)
+      .map((b) =>
+        b.courtSlotId
+          ? {
+              slotId: b.slotId as string,
+              courtSlotId: b.courtSlotId as string
+            }
+          : (b.slotId as string)
+      );
     const inventories = selectedInventories
       .filter((i) => i.quantity > 0)
       .map((i) => ({ inventoryId: i.inventoryId, quantity: i.quantity }));
@@ -834,7 +882,7 @@ export default function BookingAddOns() {
                 </Badge>
               )}
             </Button>
-            {courtSport === 'TENNIS' && (
+            {canBookBallboy && (
               <Button
                 variant={activeTab === 'ballboys' ? 'default' : 'ghost'}
                 className="flex-1"
@@ -1063,16 +1111,18 @@ export default function BookingAddOns() {
           )}
 
           {/* Ballboys Tab */}
-          {activeTab === 'ballboys' && courtSport === 'TENNIS' && (
+          {activeTab === 'ballboys' && canBookBallboy && (
             <div className="space-y-4">
               <div className="rounded-md border bg-white p-3 sm:p-4">
                 <div className="mb-2 flex items-center justify-between">
                   <p className="text-sm font-medium">Select ballboys</p>
                   <Badge variant="outline" className="text-[10px] sm:text-xs">
-                    {ballboyAvailableForBookings.reduce(
-                      (acc, group) => acc + group.slots.length,
-                      0
-                    )}{' '}
+                    {bookingItems.length > 0
+                      ? ballboyAvailableForBookings.reduce(
+                          (acc, group) => acc + group.slots.length,
+                          0
+                        )
+                      : ballboyAvailableForAddOn.length}{' '}
                     slots
                   </Badge>
                 </div>
@@ -1084,19 +1134,26 @@ export default function BookingAddOns() {
                         {info.timeSlots.join(', ')}
                       </span>
                     ))
+                  ) : selectedAddOnTimeSlot ? (
+                    <span>
+                      <span className="font-medium">
+                        {dayjs(selectedAddOnDate).format('ddd, DD MMM')}:
+                      </span>{' '}
+                      {selectedAddOnTimeSlot}
+                    </span>
                   ) : (
                     <span className="text-amber-600">
-                      Ballboy hanya bisa dipilih bersama booking lapangan tennis.
+                      Pilih tanggal dan jam add-on terlebih dahulu.
                     </span>
                   )}
                 </div>
               </div>
 
-              {bookingItems.length === 0 && (
+              {bookingItems.length === 0 && !selectedAddOnTimeSlot && (
                 <Card>
                   <CardContent className="p-4">
                     <p className="text-muted-foreground text-sm">
-                      Tambahkan booking lapangan tennis terlebih dahulu untuk memilih ballboy.
+                      Pilih tanggal dan jam terlebih dahulu untuk melihat ketersediaan ballboy.
                     </p>
                   </CardContent>
                 </Card>
@@ -1112,7 +1169,70 @@ export default function BookingAddOns() {
                 </Card>
               )}
 
+              {bookingItems.length === 0 &&
+                selectedAddOnTimeSlot &&
+                ballboyAvailableForAddOn.length === 0 && (
+                  <Card>
+                    <CardContent className="p-4">
+                      <p className="text-muted-foreground text-sm">
+                        Ballboy tidak tersedia untuk jadwal yang dipilih.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+
               <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                {bookingItems.length === 0 && ballboyAvailableForAddOn.length > 0 && (
+                  <Card className="border-muted lg:col-span-2">
+                    <CardContent className="space-y-3 p-3 sm:p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h3 className="truncate text-sm font-semibold">Booking Ballboy</h3>
+                          <p className="text-muted-foreground text-xs">
+                            {dayjs(selectedAddOnDate).format('ddd, DD MMM')} •{' '}
+                            {selectedAddOnTimeSlot}
+                          </p>
+                        </div>
+                        {selectedBallboys.some((b) => !b.courtSlotId) && <Badge>Dipilih</Badge>}
+                      </div>
+
+                      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                        {ballboyAvailableForAddOn.map((slot) => {
+                          const isSelected = selectedBallboys.some(
+                            (b) => b.slotId === slot.slotId && !b.courtSlotId
+                          );
+                          const isUsedElsewhere = selectedBallboys.some(
+                            (b) => b.slotId === slot.slotId && b.courtSlotId
+                          );
+
+                          return (
+                            <Button
+                              key={slot.slotId}
+                              type="button"
+                              variant={isSelected ? 'default' : 'outline'}
+                              className="h-auto justify-between gap-3 px-3 py-2"
+                              disabled={isUsedElsewhere}
+                              onClick={() => handleBallboySelect(slot)}
+                            >
+                              <span className="min-w-0 text-left">
+                                <span className="block truncate">
+                                  {slot.ballboy?.name ?? 'Ballboy'}
+                                </span>
+                                <span className="text-xs opacity-75">
+                                  Rp {Number(slot.price ?? 0).toLocaleString('id-ID')}/hr
+                                </span>
+                              </span>
+                              {isUsedElsewhere && (
+                                <span className="text-[11px] opacity-70">Terpakai</span>
+                              )}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
                 {ballboyAvailableForBookings.map(({ booking, slots }) => {
                   const selectedForCourt = selectedBallboys.find(
                     (b) => b.courtSlotId === booking.slotId
@@ -1228,16 +1348,35 @@ export default function BookingAddOns() {
                         (inventory.timeSlot ?? 'default') === 'default'
                     )?.quantity ?? 0;
                   const availableQuantity = item.availableQuantity ?? 0;
+                  const itemImage = resolveMediaUrl(item.image);
 
                   return (
                     <Card key={item.id} className="overflow-hidden">
                       <CardContent className="p-4">
                         <div className="space-y-3">
-                          <div>
-                            <h3 className="font-semibold">{item.name}</h3>
-                            <p className="text-muted-foreground line-clamp-2 text-xs">
-                              {item.description || 'Available for rent'}
-                            </p>
+                          <div className="flex items-start gap-3">
+                            <div className="bg-muted relative h-16 w-16 shrink-0 overflow-hidden rounded-md border">
+                              {itemImage ? (
+                                <Image
+                                  src={itemImage}
+                                  alt={item.name}
+                                  fill
+                                  sizes="64px"
+                                  className="object-cover"
+                                  unoptimized
+                                />
+                              ) : (
+                                <div className="text-muted-foreground flex h-full w-full items-center justify-center">
+                                  <IconShoppingCart className="h-6 w-6" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <h3 className="truncate font-semibold">{item.name}</h3>
+                              <p className="text-muted-foreground line-clamp-2 text-xs">
+                                {item.description || 'Available for rent'}
+                              </p>
+                            </div>
                           </div>
 
                           <div className="flex items-center justify-between">

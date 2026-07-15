@@ -41,6 +41,7 @@ export type Inventory = {
   id: string;
   name: string;
   description: string;
+  image?: string | null;
   sport: 'PADEL' | 'TENNIS';
   quantity: number;
   price: number;
@@ -53,6 +54,7 @@ export type InventoryAvailability = {
   id: string;
   name: string;
   description: string;
+  image?: string | null;
   sport: 'PADEL' | 'TENNIS';
   price: number;
   totalQuantity: number;
