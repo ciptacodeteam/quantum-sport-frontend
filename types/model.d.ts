@@ -516,7 +516,9 @@ export type BookingInventory = {
 
 export type BookingBallboy = Omit<BookingInventory, 'inventory', 'inventoryId', 'quantity'> & {
   slotId: string;
+  courtSlotId?: string | null;
   slot?: Slot;
+  courtSlot?: Slot;
 };
 
 export type BookingCoachType = {

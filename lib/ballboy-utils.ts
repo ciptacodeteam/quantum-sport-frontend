@@ -23,9 +23,7 @@ export function getCourtNameForSlot(
     const courtStart = dayjs(courtSlot.slot.startAt);
     const courtEnd = dayjs(courtSlot.slot.endAt);
 
-    return (
-      slotStart.valueOf() <= courtStart.valueOf() && slotEnd.valueOf() >= courtEnd.valueOf()
-    );
+    return slotStart.valueOf() <= courtStart.valueOf() && slotEnd.valueOf() >= courtEnd.valueOf();
   });
 
   const names = [
@@ -47,6 +45,10 @@ export function getBallboyCourtName(
   ballboy: BookingBallboy,
   details?: BookingDetail[]
 ): string | undefined {
+  if (ballboy.courtSlot?.court?.name) {
+    return ballboy.courtSlot.court.name;
+  }
+
   return getCourtNameForSlot(ballboy.slot, details);
 }
 

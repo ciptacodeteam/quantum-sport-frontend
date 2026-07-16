@@ -114,6 +114,18 @@ const getBookingDetailChargedPrice = (detail: BookingDetail) => detail.price;
 const getBookingCourtTotal = (booking: Booking) =>
   booking.details?.reduce((total, detail) => total + getBookingDetailChargedPrice(detail), 0) ?? 0;
 
+const mergeBallboys = (
+  current: BookingBallboy[] | undefined,
+  incoming: BookingBallboy[]
+): BookingBallboy[] => {
+  const map = new Map<string, BookingBallboy>();
+
+  current?.forEach((ballboy) => map.set(ballboy.id, ballboy));
+  incoming.forEach((ballboy) => map.set(ballboy.id, ballboy));
+
+  return Array.from(map.values());
+};
+
 // Helper to format date with time
 const formatDateTime = (date: Date | string, format: string): string => {
   const dayjsDate = dayjs(date);
@@ -199,11 +211,17 @@ export default function SchedulePage() {
   // Filter bookings that have slots on the selected date
   const bookings = useMemo(() => {
     return allBookings.filter((booking) => {
-      if (!booking.details || booking.details.length === 0) return false;
-
-      return booking.details.some((detail) => {
+      const hasCourtSlotOnDate = booking.details?.some((detail) => {
         if (!detail.slot) return false;
         const slotDate = getDateStringFromISO(detail.slot.startAt);
+        return slotDate === selectedDateString;
+      });
+
+      if (hasCourtSlotOnDate) return true;
+
+      return booking.ballboys?.some((ballboy) => {
+        if (!ballboy.courtSlot?.startAt) return false;
+        const slotDate = getDateStringFromISO(ballboy.courtSlot.startAt);
         return slotDate === selectedDateString;
       });
     });
@@ -286,9 +304,7 @@ export default function SchedulePage() {
     });
 
     sortedBookings.forEach((booking) => {
-      if (!booking.details || booking.details.length === 0) return;
-
-      booking.details.forEach((detail) => {
+      booking.details?.forEach((detail) => {
         if (!detail.slot || !detail.court) return;
 
         const slotDate = getDateStringFromISO(detail.slot.startAt);
@@ -338,6 +354,50 @@ export default function SchedulePage() {
               });
             }
           }
+        });
+      });
+    });
+
+    sortedBookings.forEach((booking) => {
+      const status = getBookingStatus(booking.status as number | BookingStatus);
+      if (status === BookingStatus.CANCELLED) return;
+
+      booking.ballboys?.forEach((ballboy) => {
+        const courtSlot = ballboy.courtSlot;
+        const court = courtSlot?.court;
+
+        if (!courtSlot?.startAt || !courtSlot.endAt || !court?.id) return;
+
+        const slotDate = getDateStringFromISO(courtSlot.startAt);
+        if (slotDate !== selectedDateString) return;
+
+        const slotStart = parseDatetime(courtSlot.startAt);
+        const slotEnd = parseDatetime(courtSlot.endAt);
+
+        if (!map.has(court.id)) {
+          map.set(court.id, new Map());
+        }
+
+        timeSlotRanges.forEach(({ startTime }) => {
+          const timeSlotDateTime = parseDatetime(`${selectedDateString} ${startTime}:00`);
+          const isWithinRange =
+            (timeSlotDateTime.isSame(slotStart) || timeSlotDateTime.isAfter(slotStart)) &&
+            timeSlotDateTime.isBefore(slotEnd);
+
+          if (!isWithinRange) return;
+
+          const existingCell = map.get(court.id)!.get(startTime);
+          if (!existingCell) return;
+
+          map.get(court.id)!.set(startTime, {
+            ...existingCell,
+            booking: {
+              ...existingCell.booking,
+              ballboys: mergeBallboys((existingCell.booking.ballboys || []) as BookingBallboy[], [
+                ballboy as BookingBallboy
+              ])
+            }
+          });
         });
       });
     });
