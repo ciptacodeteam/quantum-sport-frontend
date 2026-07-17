@@ -44,7 +44,8 @@ import { useMemo, useState } from 'react';
 import type { DateRange } from 'react-day-picker';
 
 const currency = (n: number) => `Rp ${new Intl.NumberFormat('id-ID').format(n)}`;
-const BALLBOY_SYSTEM_FEE_PER_SESSION = 15000;
+const BALLBOY_PAYOUT_PER_SESSION = 30000;
+const BALLBOY_QUANTUM_FEE_PER_SESSION = 15000;
 
 const CATEGORY_LABELS: Record<string, string> = {
   all: 'Semua',
@@ -275,7 +276,8 @@ const BookedInventoryTable = () => {
         name: string;
         phone?: string | null;
         sessionHours: number;
-        totalAmount: number;
+        ballboyAmount: number;
+        quantumAmount: number;
         bookingCount: number;
       }
     >();
@@ -294,12 +296,14 @@ const BookedInventoryTable = () => {
           name: item.serviceStaff?.name || item.inventory.name.replace(/^Ballboy - /, ''),
           phone: item.serviceStaff?.phone,
           sessionHours: 0,
-          totalAmount: 0,
+          ballboyAmount: 0,
+          quantumAmount: 0,
           bookingCount: 0
         };
 
         existing.sessionHours += durationHours;
-        existing.totalAmount += durationHours * BALLBOY_SYSTEM_FEE_PER_SESSION;
+        existing.ballboyAmount += durationHours * BALLBOY_PAYOUT_PER_SESSION;
+        existing.quantumAmount += durationHours * BALLBOY_QUANTUM_FEE_PER_SESSION;
         existing.bookingCount += 1;
         summary.set(key, existing);
       });
@@ -322,7 +326,7 @@ const BookedInventoryTable = () => {
                 </div>
                 <Badge variant="outline">{item.bookingCount} booking</Badge>
               </div>
-              <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+              <div className="mt-3 grid gap-3 text-sm sm:grid-cols-3">
                 <div>
                   <p className="text-muted-foreground">Sesi</p>
                   <p className="text-lg font-semibold">
@@ -332,8 +336,12 @@ const BookedInventoryTable = () => {
                   </p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Fee Sistem</p>
-                  <p className="text-lg font-semibold">{currency(item.totalAmount)}</p>
+                  <p className="text-muted-foreground">Ballboy</p>
+                  <p className="text-lg font-semibold">{currency(item.ballboyAmount)}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Quantum</p>
+                  <p className="text-lg font-semibold">{currency(item.quantumAmount)}</p>
                 </div>
               </div>
             </div>
