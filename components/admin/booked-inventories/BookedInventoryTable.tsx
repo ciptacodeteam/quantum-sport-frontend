@@ -24,6 +24,7 @@ import { useConfirmMutation } from '@/hooks/useConfirmDialog';
 import {
   BOOKING_STATUS_BADGE_VARIANT,
   BOOKING_STATUS_MAP,
+  ROLE,
   getCoachTypeLabel
 } from '@/lib/constants';
 import { formatSlotTime } from '@/lib/time-utils';
@@ -34,6 +35,7 @@ import {
   type AdminBookedInventoryDetail,
   type AdminBookedInventoryListItem
 } from '@/queries/admin/bookedInventory';
+import useAuthStore from '@/stores/useAuthStore';
 import { IconEye, IconX } from '@tabler/icons-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
@@ -56,6 +58,9 @@ const BookedInventoryTable = () => {
   const [source, setSource] = useState<string>('');
   const [category, setCategory] = useState<string>('all');
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const currentUser = useAuthStore((state) => state.user);
+  const currentUserRole = (currentUser as { role?: string } | null)?.role;
+  const isCashier = currentUserRole?.toUpperCase?.() === ROLE.CASHIER;
   const queryClient = useQueryClient();
 
   const { confirmAndMutate: cancelBookedInventory } = useConfirmMutation(
@@ -303,7 +308,7 @@ const BookedInventoryTable = () => {
 
   return (
     <div className="space-y-4">
-      {ballboySummary.length > 0 && (
+      {!isCashier && ballboySummary.length > 0 && (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {ballboySummary.map((item) => (
             <div key={item.name} className="rounded-md border bg-white p-4">
