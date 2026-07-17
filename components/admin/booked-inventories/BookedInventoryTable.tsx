@@ -44,6 +44,7 @@ import { useMemo, useState } from 'react';
 import type { DateRange } from 'react-day-picker';
 
 const currency = (n: number) => `Rp ${new Intl.NumberFormat('id-ID').format(n)}`;
+const BALLBOY_SYSTEM_FEE_PER_SESSION = 15000;
 
 const CATEGORY_LABELS: Record<string, string> = {
   all: 'Semua',
@@ -298,7 +299,7 @@ const BookedInventoryTable = () => {
         };
 
         existing.sessionHours += durationHours;
-        existing.totalAmount += item.totalPrice;
+        existing.totalAmount += durationHours * BALLBOY_SYSTEM_FEE_PER_SESSION;
         existing.bookingCount += 1;
         summary.set(key, existing);
       });
@@ -331,7 +332,7 @@ const BookedInventoryTable = () => {
                   </p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Total</p>
+                  <p className="text-muted-foreground">Fee Sistem</p>
                   <p className="text-lg font-semibold">{currency(item.totalAmount)}</p>
                 </div>
               </div>
