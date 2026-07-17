@@ -381,7 +381,7 @@ export default function SchedulePage() {
         const ballboySlot = ballboy.slot;
         if (!ballboySlot?.startAt || !ballboySlot.endAt) return;
 
-        const placements =
+        let placements =
           ballboy.courtSlot?.court?.id && ballboy.courtSlot.startAt && ballboy.courtSlot.endAt
             ? [
                 {
@@ -399,6 +399,45 @@ export default function SchedulePage() {
                   courtId: detail.court!.id,
                   slot: detail.slot!
                 }));
+
+        if (placements.length === 0) {
+          const inferredPlacements: Array<{
+            courtId: string;
+            slot: NonNullable<BookingDetail['slot']>;
+          }> = [];
+          const ballboyUserId = booking.userId ?? booking.user?.id;
+          const ballboyPhone = booking.user?.phone;
+
+          map.forEach((courtCells, courtId) => {
+            courtCells.forEach((cell) => {
+              const cellUserId = cell.booking.userId ?? cell.booking.user?.id;
+              const cellPhone = cell.booking.user?.phone;
+              const sameCustomer =
+                (ballboyUserId && cellUserId && ballboyUserId === cellUserId) ||
+                (ballboyPhone && cellPhone && ballboyPhone === cellPhone);
+
+              if (!sameCustomer || !cell.detail.slot || !cell.detail.court) return;
+              if (cell.detail.court.sport !== courtSport) return;
+              if (!timeRangesOverlap(ballboySlot, cell.detail.slot)) return;
+
+              if (
+                inferredPlacements.some(
+                  (placement) =>
+                    placement.courtId === courtId && placement.slot.id === cell.detail.slot?.id
+                )
+              ) {
+                return;
+              }
+
+              inferredPlacements.push({
+                courtId,
+                slot: cell.detail.slot
+              });
+            });
+          });
+
+          placements = inferredPlacements;
+        }
 
         placements.forEach(({ courtId, slot }) => {
           if (!slot.startAt || !slot.endAt) return;
