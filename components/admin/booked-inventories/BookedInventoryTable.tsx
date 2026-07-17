@@ -25,6 +25,7 @@ import {
   BOOKING_STATUS_MAP,
   getCoachTypeLabel
 } from '@/lib/constants';
+import { formatSlotTime } from '@/lib/time-utils';
 import { formatPhone } from '@/lib/utils';
 import {
   adminBookedInventoriesQueryOptions,
@@ -163,10 +164,10 @@ const BookedInventoryTable = () => {
               endAt: d.slot?.endAt ?? d.endAt,
               date: d.date
                 ? String(d.date)
-                : dayjs(d.slot?.startAt ?? d.startAt).format('YYYY-MM-DD'),
+                : formatSlotTime(d.slot?.startAt ?? d.startAt, 'YYYY-MM-DD'),
               time:
                 (d.time as string) ||
-                `${dayjs(d.slot?.startAt ?? d.startAt).format('HH:mm')} - ${dayjs(d.slot?.endAt ?? d.endAt).format('HH:mm')}`
+                `${formatSlotTime(d.slot?.startAt ?? d.startAt)} - ${formatSlotTime(d.slot?.endAt ?? d.endAt)}`
             }));
           }
           if (slots.length === 0) return '-';
@@ -180,7 +181,7 @@ const BookedInventoryTable = () => {
                   <span
                     className={`text-xs ${isExpired ? 'text-destructive' : 'text-muted-foreground'}`}
                   >
-                    {dayjs(first.startAt).format('DD MMM YYYY')} · {first.time}
+                    {first.date || formatSlotTime(first.startAt, 'DD MMM YYYY')} · {first.time}
                   </span>
                   {slots.length > 1 && (
                     <span className="text-muted-foreground text-xs">+{slots.length - 1} slot</span>
@@ -191,7 +192,7 @@ const BookedInventoryTable = () => {
                 <div className="space-y-1">
                   {slots.slice(0, 4).map((s, idx) => (
                     <div key={idx} className="text-xs">
-                      {dayjs(s.startAt).format('DD MMM')} — {s.court?.name || '-'} ({s.time})
+                      {s.date || formatSlotTime(s.startAt, 'DD MMM')} - {s.court?.name || '-'} ({s.time})
                     </div>
                   ))}
                   {slots.length > 4 && (
@@ -365,8 +366,8 @@ const ServiceDetail = ({ item }: { item: AdminBookedInventoryListItem }) => {
           <div className="bg-muted/50 rounded-lg border p-3">
             <p className="font-medium">{item.serviceStaff?.name || item.inventory.name}</p>
             <p className="text-muted-foreground text-sm">
-              {dayjs(item.slot.startAt).format('DD MMM YYYY')} ·{' '}
-              {dayjs(item.slot.startAt).format('HH:mm')} - {dayjs(item.slot.endAt).format('HH:mm')}
+              {formatSlotTime(item.slot.startAt, 'DD MMM YYYY')} ·{' '}
+              {formatSlotTime(item.slot.startAt)} - {formatSlotTime(item.slot.endAt)}
             </p>
             {item.serviceStaff?.phone && (
               <p className="text-muted-foreground text-xs">{formatPhone(item.serviceStaff.phone)}</p>
@@ -383,7 +384,7 @@ const ServiceDetail = ({ item }: { item: AdminBookedInventoryListItem }) => {
               <div key={idx} className="bg-muted/50 rounded-lg border p-3">
                 <p className="font-medium">{cs.court?.name || '-'}</p>
                 <p className="text-muted-foreground text-sm">
-                  {dayjs(cs.startAt).format('DD MMM YYYY')} · {cs.time}
+                  {cs.date || formatSlotTime(cs.startAt, 'DD MMM YYYY')} · {cs.time}
                 </p>
               </div>
             ))}
@@ -483,12 +484,13 @@ const InventoryDetail = ({ id }: { id: string }) => {
                     <p className="font-medium">{(cs.court as any)?.name || '-'}</p>
                     {cs.slot ? (
                       <p className="text-muted-foreground text-sm">
-                        {dayjs(cs.slot.startAt).format('DD MMM YYYY')} · {cs.slot.startTime} -{' '}
-                        {cs.slot.endTime}
+                        {cs.slot.date || formatSlotTime(cs.slot.startAt, 'DD MMM YYYY')} ·{' '}
+                        {cs.slot.startTime || formatSlotTime(cs.slot.startAt)} -{' '}
+                        {cs.slot.endTime || formatSlotTime(cs.slot.endAt)}
                       </p>
                     ) : (
                       <p className="text-muted-foreground text-sm">
-                        {dayjs(cs.startAt).format('DD MMM YYYY')} · {cs.time}
+                        {cs.date || formatSlotTime(cs.startAt, 'DD MMM YYYY')} · {cs.time}
                       </p>
                     )}
                   </div>
@@ -508,7 +510,7 @@ const InventoryDetail = ({ id }: { id: string }) => {
                 <p className="font-medium">{c.staff.name}</p>
                 <p className="text-muted-foreground text-sm">
                   {(c as any).coachType?.name ?? getCoachTypeLabel(c.coachType)} ·{' '}
-                  {dayjs(c.slot.startAt).format('HH:mm')} - {dayjs(c.slot.endAt).format('HH:mm')}
+                  {formatSlotTime(c.slot.startAt)} - {formatSlotTime(c.slot.endAt)}
                 </p>
               </div>
             ))}
@@ -524,7 +526,7 @@ const InventoryDetail = ({ id }: { id: string }) => {
               <div key={idx} className="bg-muted/50 rounded-lg border p-3">
                 <p className="font-medium">{b.staff.name}</p>
                 <p className="text-muted-foreground text-sm">
-                  {dayjs(b.slot.startAt).format('HH:mm')} - {dayjs(b.slot.endAt).format('HH:mm')}
+                  {formatSlotTime(b.slot.startAt)} - {formatSlotTime(b.slot.endAt)}
                 </p>
               </div>
             ))}

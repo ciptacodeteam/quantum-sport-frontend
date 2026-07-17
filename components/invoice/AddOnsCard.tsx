@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getCourtNameForSlot } from '@/lib/ballboy-utils';
-import dayjs from 'dayjs';
+import { formatSlotTime } from '@/lib/time-utils';
 
 type Props = {
   coaches: any[];
@@ -35,7 +35,7 @@ export default function AddOnsCard({
                   <p className="font-medium">{coach.slot?.staff?.name || 'Pelatih'}</p>
                   <p className="text-sm text-gray-600">
                     {coach.bookingCoachType?.name} -{' '}
-                    {dayjs(coach.slot?.startAt).format('DD MMM YYYY, HH:mm')}
+                    {formatSlotTime(coach.slot?.startAt, 'DD MMM YYYY, HH:mm')}
                   </p>
                 </div>
                 <span className="font-semibold">
@@ -66,8 +66,8 @@ export default function AddOnsCard({
                     <p className="text-sm text-gray-600">
                       {courtName ? `${courtName} - ` : ''}
                       {startAt
-                        ? `${dayjs(startAt).format('DD MMM YYYY, HH:mm')}${
-                            endAt ? ` - ${dayjs(endAt).format('HH:mm')}` : ''
+                        ? `${formatSlotTime(startAt, 'DD MMM YYYY, HH:mm')}${
+                            endAt ? ` - ${formatSlotTime(endAt)}` : ''
                           }`
                         : 'Jadwal ballboy'}
                     </p>
