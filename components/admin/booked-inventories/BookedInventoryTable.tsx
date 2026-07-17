@@ -40,8 +40,18 @@ import { useMemo, useState } from 'react';
 
 const currency = (n: number) => `Rp ${new Intl.NumberFormat('id-ID').format(n)}`;
 
+const CATEGORY_LABELS: Record<string, string> = {
+  all: 'Semua',
+  bola: 'Bola',
+  raket: 'Raket',
+  ballboy: 'Ballboy',
+  coach: 'Coach',
+  inventory: 'Inventori Lain'
+};
+
 const BookedInventoryTable = () => {
   const [source, setSource] = useState<string>('');
+  const [category, setCategory] = useState<string>('all');
   const queryClient = useQueryClient();
 
   const { confirmAndMutate: cancelBookedInventory } = useConfirmMutation(
@@ -67,9 +77,16 @@ const BookedInventoryTable = () => {
 
   const columns = useMemo(
     () => [
+      colHelper.accessor((row) => row.category || row.itemType || 'inventory', {
+        id: 'category',
+        header: 'Kategori',
+        cell: (info) => (
+          <Badge variant="outline">{CATEGORY_LABELS[info.getValue()] || 'Inventori'}</Badge>
+        )
+      }),
       colHelper.accessor((row) => row.inventory.name, {
         id: 'inventoryName',
-        header: 'Inventori',
+        header: 'Item',
         cell: (info) => <span className="font-medium">{info.getValue()}</span>
       }),
       colHelper.accessor('quantity', {
@@ -205,19 +222,25 @@ const BookedInventoryTable = () => {
                 </DialogTrigger>
                 <DialogContent className="max-w-2xl">
                   <DialogHeader className="mb-4">
-                    <DialogTitle>Detail Inventori</DialogTitle>
+                    <DialogTitle>Detail Add-on</DialogTitle>
                   </DialogHeader>
-                  <InventoryDetail id={item.id} />
+                  {item.itemType && item.itemType !== 'inventory' ? (
+                    <ServiceDetail item={item} />
+                  ) : (
+                    <InventoryDetail id={item.id} />
+                  )}
                 </DialogContent>
               </ManagedDialog>
-              <Button
-                size="icon"
-                variant="destructive"
-                onClick={() => cancelBookedInventory(item.id)}
-                title="Batalkan Inventori"
-              >
-                <IconX />
-              </Button>
+              {(!item.itemType || item.itemType === 'inventory') && (
+                <Button
+                  size="icon"
+                  variant="destructive"
+                  onClick={() => cancelBookedInventory(item.id)}
+                  title="Batalkan Inventori"
+                >
+                  <IconX />
+                </Button>
+              )}
             </div>
           );
         }
@@ -227,7 +250,10 @@ const BookedInventoryTable = () => {
   );
 
   const { data, isPending } = useQuery(
-    adminBookedInventoriesQueryOptions(source && source !== 'all' ? { source } : {})
+    adminBookedInventoriesQueryOptions({
+      ...(source && source !== 'all' ? { source } : {}),
+      ...(category && category !== 'all' ? { category } : {})
+    })
   );
 
   return (
@@ -236,25 +262,134 @@ const BookedInventoryTable = () => {
         loading={isPending}
         data={data || []}
         rightActions={
-          <div className="flex items-center gap-2">
-            <label htmlFor="source-filter" className="text-sm font-medium">
-              Filter Sumber:
-            </label>
-            <Select value={source || 'all'} onValueChange={setSource}>
-              <SelectTrigger id="source-filter" className="w-[180px]">
-                <SelectValue placeholder="Semua" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua</SelectItem>
-                <SelectItem value="cashier">Cashier</SelectItem>
-                <SelectItem value="online">Online</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2">
+              <label htmlFor="category-filter" className="text-sm font-medium">
+                Kategori:
+              </label>
+              <Select value={category || 'all'} onValueChange={setCategory}>
+                <SelectTrigger id="category-filter" className="w-[170px]">
+                  <SelectValue placeholder="Semua" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua</SelectItem>
+                  <SelectItem value="bola">Bola</SelectItem>
+                  <SelectItem value="raket">Raket</SelectItem>
+                  <SelectItem value="ballboy">Ballboy</SelectItem>
+                  <SelectItem value="coach">Coach</SelectItem>
+                  <SelectItem value="inventory">Inventori Lain</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <label htmlFor="source-filter" className="text-sm font-medium">
+                Sumber:
+              </label>
+              <Select value={source || 'all'} onValueChange={setSource}>
+                <SelectTrigger id="source-filter" className="w-[160px]">
+                  <SelectValue placeholder="Semua" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua</SelectItem>
+                  <SelectItem value="cashier">Cashier</SelectItem>
+                  <SelectItem value="online">Online</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         }
         columns={columns}
         enableRowSelection={false}
       />
+    </div>
+  );
+};
+
+const ServiceDetail = ({ item }: { item: AdminBookedInventoryListItem }) => {
+  const customer = item.booking?.customer ?? null;
+  const invoice = item.booking?.invoice ?? null;
+  const bookingCourtSlots = item.booking?.courtSlots ?? [];
+  const categoryLabel = CATEGORY_LABELS[item.category || item.itemType || 'inventory'] || 'Add-on';
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <p className="text-muted-foreground text-sm">Kategori</p>
+          <Badge variant="outline">{categoryLabel}</Badge>
+        </div>
+        <div>
+          <p className="text-muted-foreground text-sm">Item</p>
+          <p className="font-medium">{item.inventory.name}</p>
+          {item.inventory.description && (
+            <p className="text-muted-foreground mt-1 text-xs">{item.inventory.description}</p>
+          )}
+        </div>
+        <div>
+          <p className="text-muted-foreground text-sm">Pelanggan</p>
+          <p className="font-medium">{customer?.name || '-'}</p>
+          {customer?.phone && (
+            <p className="text-muted-foreground text-xs">{formatPhone(customer.phone)}</p>
+          )}
+        </div>
+        <div>
+          <p className="text-muted-foreground text-sm">Total</p>
+          <p className="font-medium">{currency(item.totalPrice)}</p>
+        </div>
+        <div>
+          <p className="text-muted-foreground text-sm">Status Pemesanan</p>
+          <Badge
+            variant={
+              BOOKING_STATUS_BADGE_VARIANT[item.booking.status as keyof typeof BOOKING_STATUS_MAP]
+            }
+          >
+            {BOOKING_STATUS_MAP[item.booking.status as keyof typeof BOOKING_STATUS_MAP]}
+          </Badge>
+        </div>
+        <div>
+          <p className="text-muted-foreground text-sm">Invoice</p>
+          {invoice ? (
+            <div className="flex flex-col">
+              <span className="font-medium">{invoice.number}</span>
+              <span className="text-muted-foreground text-xs">{invoice.status}</span>
+            </div>
+          ) : (
+            <span className="text-muted-foreground">-</span>
+          )}
+        </div>
+      </div>
+
+      {item.slot && (
+        <div>
+          <p className="mb-2 text-sm font-medium">Slot Add-on</p>
+          <div className="bg-muted/50 rounded-lg border p-3">
+            <p className="font-medium">{item.serviceStaff?.name || item.inventory.name}</p>
+            <p className="text-muted-foreground text-sm">
+              {dayjs(item.slot.startAt).format('DD MMM YYYY')} ·{' '}
+              {dayjs(item.slot.startAt).format('HH:mm')} - {dayjs(item.slot.endAt).format('HH:mm')}
+            </p>
+            {item.serviceStaff?.phone && (
+              <p className="text-muted-foreground text-xs">{formatPhone(item.serviceStaff.phone)}</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {bookingCourtSlots?.length > 0 && (
+        <div>
+          <p className="mb-2 text-sm font-medium">Slot Lapangan</p>
+          <div className="space-y-2">
+            {bookingCourtSlots.map((cs, idx) => (
+              <div key={idx} className="bg-muted/50 rounded-lg border p-3">
+                <p className="font-medium">{cs.court?.name || '-'}</p>
+                <p className="text-muted-foreground text-sm">
+                  {dayjs(cs.startAt).format('DD MMM YYYY')} · {cs.time}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

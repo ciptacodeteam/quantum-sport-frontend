@@ -4,6 +4,8 @@ import type { SearchParamsData } from '@/types';
 
 export type AdminBookedInventoryListItem = {
   id: string;
+  itemType?: 'inventory' | 'ballboy' | 'coach';
+  category?: 'bola' | 'raket' | 'ballboy' | 'coach' | 'inventory';
   inventory: {
     id: string;
     name: string;
@@ -40,6 +42,21 @@ export type AdminBookedInventoryListItem = {
       time: string;
     }>;
     createdAt?: string;
+  };
+  serviceStaff?: {
+    id: string;
+    name: string;
+    email?: string | null;
+    phone?: string | null;
+  } | null;
+  coachType?: {
+    id: string;
+    name: string;
+    description?: string | null;
+  } | null;
+  slot?: {
+    startAt: string;
+    endAt: string;
   };
   createdAt: string;
   updatedAt: string;

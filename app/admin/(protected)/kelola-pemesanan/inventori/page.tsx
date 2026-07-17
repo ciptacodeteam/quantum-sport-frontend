@@ -12,8 +12,8 @@ export default function Page() {
     <main>
       <Section>
         <SectionHeader>
-          <SectionTitle title="Kelola Pemesanan Inventori" />
-          <SectionDescription description="Daftar inventori yang dipesan oleh pelanggan." />
+          <SectionTitle title="Kelola Pemesanan Add-on" />
+          <SectionDescription description="Daftar bola, raket, ballboy, dan coach yang dipesan oleh pelanggan." />
         </SectionHeader>
         <SectionContent>
           <BookedInventoryTable />
