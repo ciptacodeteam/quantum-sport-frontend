@@ -114,6 +114,20 @@ const getBookingDetailChargedPrice = (detail: BookingDetail) => detail.price;
 const getBookingCourtTotal = (booking: Booking) =>
   booking.details?.reduce((total, detail) => total + getBookingDetailChargedPrice(detail), 0) ?? 0;
 
+const timeRangesOverlap = (
+  first: { startAt?: string | Date | null; endAt?: string | Date | null },
+  second: { startAt?: string | Date | null; endAt?: string | Date | null }
+) => {
+  if (!first.startAt || !first.endAt || !second.startAt || !second.endAt) return false;
+
+  const firstStart = parseDatetime(first.startAt);
+  const firstEnd = parseDatetime(first.endAt);
+  const secondStart = parseDatetime(second.startAt);
+  const secondEnd = parseDatetime(second.endAt);
+
+  return firstStart.isBefore(secondEnd) && firstEnd.isAfter(secondStart);
+};
+
 const mergeBallboys = (
   current: BookingBallboy[] | undefined,
   incoming: BookingBallboy[]
@@ -220,8 +234,9 @@ export default function SchedulePage() {
       if (hasCourtSlotOnDate) return true;
 
       return booking.ballboys?.some((ballboy) => {
-        if (!ballboy.courtSlot?.startAt) return false;
-        const slotDate = getDateStringFromISO(ballboy.courtSlot.startAt);
+        const scheduleSlot = ballboy.courtSlot ?? ballboy.slot;
+        if (!scheduleSlot?.startAt) return false;
+        const slotDate = getDateStringFromISO(scheduleSlot.startAt);
         return slotDate === selectedDateString;
       });
     });
@@ -363,40 +378,62 @@ export default function SchedulePage() {
       if (status === BookingStatus.CANCELLED) return;
 
       booking.ballboys?.forEach((ballboy) => {
-        const courtSlot = ballboy.courtSlot;
-        const court = courtSlot?.court;
+        const ballboySlot = ballboy.slot;
+        if (!ballboySlot?.startAt || !ballboySlot.endAt) return;
 
-        if (!courtSlot?.startAt || !courtSlot.endAt || !court?.id) return;
+        const placements =
+          ballboy.courtSlot?.court?.id && ballboy.courtSlot.startAt && ballboy.courtSlot.endAt
+            ? [
+                {
+                  courtId: ballboy.courtSlot.court.id,
+                  slot: ballboy.courtSlot
+                }
+              ]
+            : (booking.details || [])
+                .filter((detail) => {
+                  if (!detail.court?.id || !detail.slot) return false;
+                  if (detail.court.sport !== courtSport) return false;
+                  return timeRangesOverlap(ballboySlot, detail.slot);
+                })
+                .map((detail) => ({
+                  courtId: detail.court!.id,
+                  slot: detail.slot!
+                }));
 
-        const slotDate = getDateStringFromISO(courtSlot.startAt);
-        if (slotDate !== selectedDateString) return;
+        placements.forEach(({ courtId, slot }) => {
+          if (!slot.startAt || !slot.endAt) return;
 
-        const slotStart = parseDatetime(courtSlot.startAt);
-        const slotEnd = parseDatetime(courtSlot.endAt);
+          const slotDate = getDateStringFromISO(slot.startAt);
+          if (slotDate !== selectedDateString) return;
 
-        if (!map.has(court.id)) {
-          map.set(court.id, new Map());
-        }
+          const slotStart = parseDatetime(slot.startAt);
+          const slotEnd = parseDatetime(slot.endAt);
 
-        timeSlotRanges.forEach(({ startTime }) => {
-          const timeSlotDateTime = parseDatetime(`${selectedDateString} ${startTime}:00`);
-          const isWithinRange =
-            (timeSlotDateTime.isSame(slotStart) || timeSlotDateTime.isAfter(slotStart)) &&
-            timeSlotDateTime.isBefore(slotEnd);
+          if (!map.has(courtId)) {
+            map.set(courtId, new Map());
+          }
 
-          if (!isWithinRange) return;
+          timeSlotRanges.forEach(({ startTime }) => {
+            const timeSlotDateTime = parseDatetime(`${selectedDateString} ${startTime}:00`);
+            const isWithinRange =
+              (timeSlotDateTime.isSame(slotStart) || timeSlotDateTime.isAfter(slotStart)) &&
+              timeSlotDateTime.isBefore(slotEnd);
 
-          const existingCell = map.get(court.id)!.get(startTime);
-          if (!existingCell) return;
+            if (!isWithinRange) return;
 
-          map.get(court.id)!.set(startTime, {
-            ...existingCell,
-            booking: {
-              ...existingCell.booking,
-              ballboys: mergeBallboys((existingCell.booking.ballboys || []) as BookingBallboy[], [
-                ballboy as BookingBallboy
-              ])
-            }
+            const existingCell = map.get(courtId)!.get(startTime);
+            if (!existingCell) return;
+
+            map.get(courtId)!.set(startTime, {
+              ...existingCell,
+              booking: {
+                ...existingCell.booking,
+                ballboys: mergeBallboys(
+                  (existingCell.booking.ballboys || []) as BookingBallboy[],
+                  [ballboy as BookingBallboy]
+                )
+              }
+            });
           });
         });
       });
