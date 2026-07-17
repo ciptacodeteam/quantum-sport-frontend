@@ -4,6 +4,7 @@ import { cancelBookedInventoryApi } from '@/api/admin/bookedInventory';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
+import DateRangeInput from '@/components/ui/date-range-input';
 import {
   Select,
   SelectContent,
@@ -38,6 +39,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
 import { useMemo, useState } from 'react';
+import type { DateRange } from 'react-day-picker';
 
 const currency = (n: number) => `Rp ${new Intl.NumberFormat('id-ID').format(n)}`;
 
@@ -53,6 +55,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 const BookedInventoryTable = () => {
   const [source, setSource] = useState<string>('');
   const [category, setCategory] = useState<string>('all');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const queryClient = useQueryClient();
 
   const { confirmAndMutate: cancelBookedInventory } = useConfirmMutation(
@@ -253,17 +256,100 @@ const BookedInventoryTable = () => {
   const { data, isPending } = useQuery(
     adminBookedInventoriesQueryOptions({
       ...(source && source !== 'all' ? { source } : {}),
-      ...(category && category !== 'all' ? { category } : {})
+      ...(category && category !== 'all' ? { category } : {}),
+      ...(dateRange?.from ? { from: dayjs(dateRange.from).startOf('day').toISOString() } : {}),
+      ...(dateRange?.to ? { to: dayjs(dateRange.to).endOf('day').toISOString() } : {})
     })
   );
 
+  const ballboySummary = useMemo(() => {
+    const summary = new Map<
+      string,
+      {
+        name: string;
+        phone?: string | null;
+        sessionHours: number;
+        totalAmount: number;
+        bookingCount: number;
+      }
+    >();
+
+    (data || [])
+      .filter((item) => item.itemType === 'ballboy' || item.category === 'ballboy')
+      .forEach((item) => {
+        const key = item.serviceStaff?.id || item.inventory.id || item.id;
+        const start = item.slot?.startAt ? dayjs(item.slot.startAt) : null;
+        const end = item.slot?.endAt ? dayjs(item.slot.endAt) : null;
+        const durationHours =
+          start?.isValid() && end?.isValid()
+            ? Math.max(end.diff(start, 'minute') / 60, 1)
+            : 1;
+        const existing = summary.get(key) || {
+          name: item.serviceStaff?.name || item.inventory.name.replace(/^Ballboy - /, ''),
+          phone: item.serviceStaff?.phone,
+          sessionHours: 0,
+          totalAmount: 0,
+          bookingCount: 0
+        };
+
+        existing.sessionHours += durationHours;
+        existing.totalAmount += item.totalPrice;
+        existing.bookingCount += 1;
+        summary.set(key, existing);
+      });
+
+    return Array.from(summary.values()).sort((a, b) => b.sessionHours - a.sessionHours);
+  }, [data]);
+
   return (
     <div className="space-y-4">
+      {ballboySummary.length > 0 && (
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {ballboySummary.map((item) => (
+            <div key={item.name} className="rounded-md border bg-white p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-medium">{item.name}</p>
+                  {item.phone && (
+                    <p className="text-muted-foreground text-xs">{formatPhone(item.phone)}</p>
+                  )}
+                </div>
+                <Badge variant="outline">{item.bookingCount} booking</Badge>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Sesi</p>
+                  <p className="text-lg font-semibold">
+                    {new Intl.NumberFormat('id-ID', {
+                      maximumFractionDigits: 1
+                    }).format(item.sessionHours)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Total</p>
+                  <p className="text-lg font-semibold">{currency(item.totalAmount)}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
       <DataTable
         loading={isPending}
         data={data || []}
         rightActions={
           <div className="flex flex-wrap items-center gap-2">
+            <DateRangeInput
+              value={dateRange}
+              onValueChange={(range) => setDateRange(range ?? undefined)}
+              className="sm:w-[260px]"
+              placeholder="Range sesi"
+            />
+            {dateRange?.from && (
+              <Button type="button" variant="outline" onClick={() => setDateRange(undefined)}>
+                Reset Tanggal
+              </Button>
+            )}
             <div className="flex items-center gap-2">
               <label htmlFor="category-filter" className="text-sm font-medium">
                 Kategori:
