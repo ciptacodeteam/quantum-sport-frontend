@@ -140,6 +140,30 @@ const mergeBallboys = (
   return Array.from(map.values());
 };
 
+const getBallboysForBookingCell = (bookingCell: BookingCell): BookingBallboy[] => {
+  const ballboys = (bookingCell.booking.ballboys || []) as BookingBallboy[];
+  const detailSlot = bookingCell.detail.slot;
+  const detailCourtId = bookingCell.detail.court?.id;
+
+  if (!detailSlot) return [];
+
+  return ballboys.filter((ballboy) => {
+    if (!ballboy.slot || !timeRangesOverlap(ballboy.slot, detailSlot)) {
+      return false;
+    }
+
+    if (ballboy.courtSlot?.court?.id) {
+      return ballboy.courtSlot.court.id === detailCourtId;
+    }
+
+    if (ballboy.courtSlot) {
+      return timeRangesOverlap(ballboy.courtSlot, detailSlot);
+    }
+
+    return true;
+  });
+};
+
 // Helper to format date with time
 const formatDateTime = (date: Date | string, format: string): string => {
   const dayjsDate = dayjs(date);
@@ -717,8 +741,7 @@ export default function SchedulePage() {
                                                 const hasCoaches = coachNames.length > 0;
                                                 const hasInventories = inventoryNames.length > 0;
                                                 const ballboyNames = getBallboyNames(
-                                                  (bookingCell.booking.ballboys ||
-                                                    []) as BookingBallboy[]
+                                                  getBallboysForBookingCell(bookingCell)
                                                 );
                                                 const hasBallboys = ballboyNames.length > 0;
 
@@ -1062,10 +1085,7 @@ export default function SchedulePage() {
                                             })()}
 
                                             <BookingBallboySection
-                                              ballboys={
-                                                (bookingCell.booking.ballboys ||
-                                                  []) as BookingBallboy[]
-                                              }
+                                              ballboys={getBallboysForBookingCell(bookingCell)}
                                               details={bookingCell.booking.details}
                                             />
 
