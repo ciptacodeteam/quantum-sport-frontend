@@ -4,6 +4,10 @@ import type { SearchParamsData } from '@/types';
 
 export type AdminBookedBallboyListItem = {
   id: string;
+  status?: string;
+  ballboyStatus?: string;
+  cancelledAt?: string | null;
+  cancellationReason?: string | null;
   staff?: {
     id: string;
     name: string;

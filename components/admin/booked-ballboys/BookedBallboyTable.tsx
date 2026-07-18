@@ -93,6 +93,9 @@ const getCustomerSearchText = (item: AdminBookedBallboyListItem) => {
   return [customer?.name, customer?.phone, customer?.email].filter(Boolean).join(' ');
 };
 
+const getBallboyStatus = (item: AdminBookedBallboyListItem) =>
+  (item.status || item.ballboyStatus || item.booking?.status || 'HOLD') as keyof typeof BOOKING_STATUS_MAP;
+
 const isInDateRange = (item: AdminBookedBallboyListItem, range?: DateRange) => {
   if (!range?.from) return true;
   const slotDate = item.slot?.startAt ? dayjs(item.slot.startAt) : null;
@@ -144,9 +147,9 @@ const BookedBallboyTable = () => {
         header: 'Ballboy',
         cell: (info) => <span className="font-medium">{info.getValue()}</span>
       }),
-      colHelper.accessor((row) => row.booking?.status, {
+      colHelper.accessor((row) => getBallboyStatus(row), {
         id: 'bookingStatus',
-        header: 'Status Pemesanan',
+        header: 'Status Ballboy',
         cell: (info) => {
           const bookingStatus = (info.getValue() || 'HOLD') as keyof typeof BOOKING_STATUS_MAP;
           return (
@@ -261,7 +264,7 @@ const BookedBallboyTable = () => {
         header: 'Aksi',
         cell: ({ row }) => {
           const item = row.original;
-          const canCancel = item.booking.status !== 'CANCELLED';
+          const canCancel = getBallboyStatus(item) !== 'CANCELLED';
           return (
             <div className="flex items-center gap-2">
               <ManagedDialog id={`view-booked-ballboy-${item.id}`}>
@@ -434,12 +437,20 @@ const BallboyDetail = ({ id }: { id: string }) => {
           <Badge
             variant={
               BOOKING_STATUS_BADGE_VARIANT[
-                detail.booking?.status as keyof typeof BOOKING_STATUS_MAP
+                getBallboyStatus(detail)
               ]
             }
           >
-            {BOOKING_STATUS_MAP[detail.booking?.status as keyof typeof BOOKING_STATUS_MAP]}
+            {BOOKING_STATUS_MAP[getBallboyStatus(detail)]}
           </Badge>
+          {detail.cancelledAt && (
+            <p className="text-muted-foreground mt-1 text-xs">
+              Dibatalkan {dayjs(detail.cancelledAt).format('DD/MM/YYYY HH:mm')}
+            </p>
+          )}
+          {detail.cancellationReason && (
+            <p className="text-muted-foreground text-xs">{detail.cancellationReason}</p>
+          )}
         </div>
         <div>
           <p className="text-muted-foreground text-sm">Invoice</p>
