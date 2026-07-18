@@ -85,6 +85,14 @@ const getSlotTimeText = (slot?: AdminBookedBallboyListItem['slot']) => {
   return `${dayjs(slot.startAt).format('DD MMM YYYY')} · ${startTime} - ${endTime}`;
 };
 
+const getCustomer = (item: AdminBookedBallboyListItem) =>
+  item.booking?.customer ?? item.booking?.user ?? null;
+
+const getCustomerSearchText = (item: AdminBookedBallboyListItem) => {
+  const customer = getCustomer(item);
+  return [customer?.name, customer?.phone, customer?.email].filter(Boolean).join(' ');
+};
+
 const isInDateRange = (item: AdminBookedBallboyListItem, range?: DateRange) => {
   if (!range?.from) return true;
   const slotDate = item.slot?.startAt ? dayjs(item.slot.startAt) : null;
@@ -148,11 +156,11 @@ const BookedBallboyTable = () => {
           );
         }
       }),
-      colHelper.accessor((row) => row.booking?.customer ?? row.booking?.user ?? null, {
+      colHelper.accessor((row) => getCustomerSearchText(row), {
         id: 'customer',
         header: 'Pelanggan',
-        cell: (info) => {
-          const customer = info.getValue();
+        cell: ({ row }) => {
+          const customer = getCustomer(row.original);
           if (!customer) return '-';
           return (
             <div className="flex flex-col">
