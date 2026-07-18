@@ -44,6 +44,7 @@ type CourtSlotDisplay = {
     id?: string;
     startAt: string;
     endAt: string;
+    date?: string;
     startTime?: string;
     endTime?: string;
   } | null;
@@ -82,7 +83,15 @@ const getSlotTimeText = (slot?: AdminBookedBallboyListItem['slot']) => {
   if (!slot) return '-';
   const startTime = slot.startTime || dayjs(slot.startAt).format('HH:mm');
   const endTime = slot.endTime || dayjs(slot.endAt).format('HH:mm');
-  return `${dayjs(slot.startAt).format('DD MMM YYYY')} · ${startTime} - ${endTime}`;
+  const date = slot.date || dayjs(slot.startAt).format('YYYY-MM-DD');
+  return `${dayjs(date).format('DD MMM YYYY')} · ${startTime} - ${endTime}`;
+};
+
+const getCourtSlotDate = (slot: CourtSlotDisplay) => {
+  const date = slot.slot?.date || slot.date;
+  if (date) return dayjs(date);
+  const startAt = slot.slot?.startAt ?? slot.startAt;
+  return dayjs(startAt);
 };
 
 const getCustomer = (item: AdminBookedBallboyListItem) =>
@@ -98,7 +107,11 @@ const getBallboyStatus = (item: AdminBookedBallboyListItem) =>
 
 const isInDateRange = (item: AdminBookedBallboyListItem, range?: DateRange) => {
   if (!range?.from) return true;
-  const slotDate = item.slot?.startAt ? dayjs(item.slot.startAt) : null;
+  const slotDate = item.slot?.date
+    ? dayjs(item.slot.date)
+    : item.slot?.startAt
+      ? dayjs(item.slot.startAt)
+      : null;
   if (!slotDate?.isValid()) return false;
 
   const from = dayjs(range.from).startOf('day');
@@ -213,7 +226,7 @@ const BookedBallboyTable = () => {
                   <span
                     className={`text-xs ${isExpired ? 'text-destructive' : 'text-muted-foreground'}`}
                   >
-                    {dayjs(startAt).format('DD MMM YYYY')} · {time}
+                    {getCourtSlotDate(first).format('DD MMM YYYY')} · {time}
                   </span>
                   {slots.length > 1 && (
                     <span className="text-muted-foreground text-xs">+{slots.length - 1} slot</span>
@@ -232,7 +245,7 @@ const BookedBallboyTable = () => {
                       }`;
                     return (
                       <div key={idx} className="text-xs">
-                        {dayjs(slotStartAt).format('DD MMM')} - {slot.court?.name || '-'} (
+                        {getCourtSlotDate(slot).format('DD MMM')} - {slot.court?.name || '-'} (
                         {slotTime})
                       </div>
                     );
@@ -494,7 +507,7 @@ const BallboyDetail = ({ id }: { id: string }) => {
                 <div key={idx} className="bg-muted/50 rounded-lg border p-3">
                   <p className="font-medium">{courtSlot.court?.name || '-'}</p>
                   <p className="text-muted-foreground text-sm">
-                    {dayjs(startAt).format('DD MMM YYYY')} · {time}
+                    {getCourtSlotDate(courtSlot).format('DD MMM YYYY')} · {time}
                   </p>
                 </div>
               );
