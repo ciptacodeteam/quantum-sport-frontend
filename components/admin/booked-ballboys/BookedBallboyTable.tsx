@@ -4,6 +4,7 @@ import { cancelBookedBallboyApi } from '@/api/admin/bookedBallboy';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
+import DateRangeInput from '@/components/ui/date-range-input';
 import {
   DialogContent,
   DialogHeader,
@@ -13,7 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useConfirmMutation } from '@/hooks/useConfirmDialog';
-import { BOOKING_STATUS_BADGE_VARIANT, BOOKING_STATUS_MAP } from '@/lib/constants';
+import { BOOKING_STATUS_BADGE_VARIANT, BOOKING_STATUS_MAP, ROLE } from '@/lib/constants';
 import { formatPhone } from '@/lib/utils';
 import {
   adminBookedBallboyQueryOptions,
@@ -21,13 +22,17 @@ import {
   type AdminBookedBallboyDetail,
   type AdminBookedBallboyListItem
 } from '@/queries/admin/bookedBallboy';
+import useAuthStore from '@/stores/useAuthStore';
 import { IconEye, IconX } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import type { DateRange } from 'react-day-picker';
 
 const currency = (n: number) => `Rp ${new Intl.NumberFormat('id-ID').format(n)}`;
+const BALLBOY_PAYOUT_PER_SESSION = 30000;
+const BALLBOY_QUANTUM_FEE_PER_SESSION = 15000;
 
 type CourtSlotDisplay = {
   court: { id: string; name: string; sport?: string } | null;
@@ -80,7 +85,23 @@ const getSlotTimeText = (slot?: AdminBookedBallboyListItem['slot']) => {
   return `${dayjs(slot.startAt).format('DD MMM YYYY')} · ${startTime} - ${endTime}`;
 };
 
+const isInDateRange = (item: AdminBookedBallboyListItem, range?: DateRange) => {
+  if (!range?.from) return true;
+  const slotDate = item.slot?.startAt ? dayjs(item.slot.startAt) : null;
+  if (!slotDate?.isValid()) return false;
+
+  const from = dayjs(range.from).startOf('day');
+  const to = range.to ? dayjs(range.to).endOf('day') : dayjs(range.from).endOf('day');
+
+  return !slotDate.isBefore(from) && !slotDate.isAfter(to);
+};
+
 const BookedBallboyTable = () => {
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const currentUser = useAuthStore((state) => state.user);
+  const currentUserRole = (currentUser as { role?: string } | null)?.role;
+  const isCashier = currentUserRole?.toUpperCase?.() === ROLE.CASHIER;
+
   const { confirmAndMutate: cancelBookedBallboy } = useConfirmMutation(
     {
       mutationFn: (id: string) => cancelBookedBallboyApi(id, 'Cancelled by admin')
@@ -232,6 +253,7 @@ const BookedBallboyTable = () => {
         header: 'Aksi',
         cell: ({ row }) => {
           const item = row.original;
+          const canCancel = item.booking.status !== 'CANCELLED';
           return (
             <div className="flex items-center gap-2">
               <ManagedDialog id={`view-booked-ballboy-${item.id}`}>
@@ -247,14 +269,16 @@ const BookedBallboyTable = () => {
                   <BallboyDetail id={item.id} />
                 </DialogContent>
               </ManagedDialog>
-              <Button
-                size="icon"
-                variant="destructive"
-                onClick={() => cancelBookedBallboy(item.id)}
-                title="Batalkan Ballboy"
-              >
-                <IconX />
-              </Button>
+              {canCancel && (
+                <Button
+                  size="icon"
+                  variant="destructive"
+                  onClick={() => cancelBookedBallboy(item.id)}
+                  title="Batalkan Ballboy"
+                >
+                  <IconX />
+                </Button>
+              )}
             </div>
           );
         }
@@ -264,14 +288,107 @@ const BookedBallboyTable = () => {
   );
 
   const { data, isPending } = useQuery(adminBookedBallboysQueryOptions({}));
+  const filteredData = useMemo(
+    () => (data || []).filter((item) => isInDateRange(item, dateRange)),
+    [data, dateRange]
+  );
+  const ballboySummary = useMemo(() => {
+    const summary = new Map<
+      string,
+      {
+        name: string;
+        phone?: string | null;
+        sessionHours: number;
+        ballboyAmount: number;
+        quantumAmount: number;
+        bookingCount: number;
+      }
+    >();
+
+    filteredData.forEach((item) => {
+      const key = item.staff?.id || item.id;
+      const start = item.slot?.startAt ? dayjs(item.slot.startAt) : null;
+      const end = item.slot?.endAt ? dayjs(item.slot.endAt) : null;
+      const durationHours =
+        start?.isValid() && end?.isValid() ? Math.max(end.diff(start, 'minute') / 60, 1) : 1;
+      const existing = summary.get(key) || {
+        name: item.staff?.name || 'Ballboy',
+        phone: item.staff?.phone,
+        sessionHours: 0,
+        ballboyAmount: 0,
+        quantumAmount: 0,
+        bookingCount: 0
+      };
+
+      existing.sessionHours += durationHours;
+      existing.ballboyAmount += durationHours * BALLBOY_PAYOUT_PER_SESSION;
+      existing.quantumAmount += durationHours * BALLBOY_QUANTUM_FEE_PER_SESSION;
+      existing.bookingCount += 1;
+      summary.set(key, existing);
+    });
+
+    return Array.from(summary.values()).sort((a, b) => b.sessionHours - a.sessionHours);
+  }, [filteredData]);
 
   return (
-    <DataTable
-      loading={isPending}
-      data={data || []}
-      columns={columns}
-      enableRowSelection={false}
-    />
+    <div className="space-y-4">
+      {!isCashier && ballboySummary.length > 0 && (
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {ballboySummary.map((item) => (
+            <div key={item.name} className="rounded-md border bg-white p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-medium">{item.name}</p>
+                  {item.phone && (
+                    <p className="text-muted-foreground text-xs">{formatPhone(item.phone)}</p>
+                  )}
+                </div>
+                <Badge variant="outline">{item.bookingCount} booking</Badge>
+              </div>
+              <div className="mt-3 grid gap-3 text-sm sm:grid-cols-3">
+                <div>
+                  <p className="text-muted-foreground">Sesi</p>
+                  <p className="text-lg font-semibold">
+                    {new Intl.NumberFormat('id-ID', {
+                      maximumFractionDigits: 1
+                    }).format(item.sessionHours)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Ballboy</p>
+                  <p className="text-lg font-semibold">{currency(item.ballboyAmount)}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Quantum</p>
+                  <p className="text-lg font-semibold">{currency(item.quantumAmount)}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      <DataTable
+        loading={isPending}
+        data={filteredData}
+        rightActions={
+          <div className="flex flex-wrap items-center gap-2">
+            <DateRangeInput
+              value={dateRange}
+              onValueChange={(range) => setDateRange(range ?? undefined)}
+              className="sm:w-[260px]"
+              placeholder="Range sesi"
+            />
+            {dateRange?.from && (
+              <Button type="button" variant="outline" onClick={() => setDateRange(undefined)}>
+                Reset Tanggal
+              </Button>
+            )}
+          </div>
+        }
+        columns={columns}
+        enableRowSelection={false}
+      />
+    </div>
   );
 };
 

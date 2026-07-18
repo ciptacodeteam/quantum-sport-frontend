@@ -4,7 +4,6 @@ import { cancelBookedInventoryApi } from '@/api/admin/bookedInventory';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
-import DateRangeInput from '@/components/ui/date-range-input';
 import {
   Select,
   SelectContent,
@@ -21,12 +20,7 @@ import {
 } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useConfirmMutation } from '@/hooks/useConfirmDialog';
-import {
-  BOOKING_STATUS_BADGE_VARIANT,
-  BOOKING_STATUS_MAP,
-  ROLE,
-  getCoachTypeLabel
-} from '@/lib/constants';
+import { BOOKING_STATUS_BADGE_VARIANT, BOOKING_STATUS_MAP, getCoachTypeLabel } from '@/lib/constants';
 import { formatSlotTime } from '@/lib/time-utils';
 import { formatPhone } from '@/lib/utils';
 import {
@@ -35,35 +29,28 @@ import {
   type AdminBookedInventoryDetail,
   type AdminBookedInventoryListItem
 } from '@/queries/admin/bookedInventory';
-import useAuthStore from '@/stores/useAuthStore';
 import { IconEye, IconX } from '@tabler/icons-react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
 import { useMemo, useState } from 'react';
-import type { DateRange } from 'react-day-picker';
 
 const currency = (n: number) => `Rp ${new Intl.NumberFormat('id-ID').format(n)}`;
-const BALLBOY_PAYOUT_PER_SESSION = 30000;
-const BALLBOY_QUANTUM_FEE_PER_SESSION = 15000;
 
 const CATEGORY_LABELS: Record<string, string> = {
   all: 'Semua',
   bola: 'Bola',
   raket: 'Raket',
-  ballboy: 'Ballboy',
   coach: 'Coach',
   inventory: 'Inventori Lain'
 };
 
+const isBallboyItem = (item: AdminBookedInventoryListItem) =>
+  item.itemType === 'ballboy' || item.category === 'ballboy';
+
 const BookedInventoryTable = () => {
   const [source, setSource] = useState<string>('');
   const [category, setCategory] = useState<string>('all');
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const currentUser = useAuthStore((state) => state.user);
-  const currentUserRole = (currentUser as { role?: string } | null)?.role;
-  const isCashier = currentUserRole?.toUpperCase?.() === ROLE.CASHIER;
-  const queryClient = useQueryClient();
 
   const { confirmAndMutate: cancelBookedInventory } = useConfirmMutation(
     {
@@ -223,6 +210,8 @@ const BookedInventoryTable = () => {
         header: 'Aksi',
         cell: ({ row }) => {
           const item = row.original;
+          const canCancel =
+            (!item.itemType || item.itemType === 'inventory') && item.booking.status !== 'CANCELLED';
           return (
             <div className="flex items-center gap-2">
               <ManagedDialog id={`view-booked-inventory-${item.id}`}>
@@ -242,7 +231,7 @@ const BookedInventoryTable = () => {
                   )}
                 </DialogContent>
               </ManagedDialog>
-              {(!item.itemType || item.itemType === 'inventory') && (
+              {canCancel && (
                 <Button
                   size="icon"
                   variant="destructive"
@@ -263,107 +252,19 @@ const BookedInventoryTable = () => {
   const { data, isPending } = useQuery(
     adminBookedInventoriesQueryOptions({
       ...(source && source !== 'all' ? { source } : {}),
-      ...(category && category !== 'all' ? { category } : {}),
-      ...(dateRange?.from ? { from: dayjs(dateRange.from).startOf('day').toISOString() } : {}),
-      ...(dateRange?.to ? { to: dayjs(dateRange.to).endOf('day').toISOString() } : {})
+      ...(category && category !== 'all' ? { category } : {})
     })
   );
 
-  const ballboySummary = useMemo(() => {
-    const summary = new Map<
-      string,
-      {
-        name: string;
-        phone?: string | null;
-        sessionHours: number;
-        ballboyAmount: number;
-        quantumAmount: number;
-        bookingCount: number;
-      }
-    >();
-
-    (data || [])
-      .filter((item) => item.itemType === 'ballboy' || item.category === 'ballboy')
-      .forEach((item) => {
-        const key = item.serviceStaff?.id || item.inventory.id || item.id;
-        const start = item.slot?.startAt ? dayjs(item.slot.startAt) : null;
-        const end = item.slot?.endAt ? dayjs(item.slot.endAt) : null;
-        const durationHours =
-          start?.isValid() && end?.isValid()
-            ? Math.max(end.diff(start, 'minute') / 60, 1)
-            : 1;
-        const existing = summary.get(key) || {
-          name: item.serviceStaff?.name || item.inventory.name.replace(/^Ballboy - /, ''),
-          phone: item.serviceStaff?.phone,
-          sessionHours: 0,
-          ballboyAmount: 0,
-          quantumAmount: 0,
-          bookingCount: 0
-        };
-
-        existing.sessionHours += durationHours;
-        existing.ballboyAmount += durationHours * BALLBOY_PAYOUT_PER_SESSION;
-        existing.quantumAmount += durationHours * BALLBOY_QUANTUM_FEE_PER_SESSION;
-        existing.bookingCount += 1;
-        summary.set(key, existing);
-      });
-
-    return Array.from(summary.values()).sort((a, b) => b.sessionHours - a.sessionHours);
-  }, [data]);
+  const inventoryData = useMemo(() => (data || []).filter((item) => !isBallboyItem(item)), [data]);
 
   return (
     <div className="space-y-4">
-      {!isCashier && ballboySummary.length > 0 && (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {ballboySummary.map((item) => (
-            <div key={item.name} className="rounded-md border bg-white p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-medium">{item.name}</p>
-                  {item.phone && (
-                    <p className="text-muted-foreground text-xs">{formatPhone(item.phone)}</p>
-                  )}
-                </div>
-                <Badge variant="outline">{item.bookingCount} booking</Badge>
-              </div>
-              <div className="mt-3 grid gap-3 text-sm sm:grid-cols-3">
-                <div>
-                  <p className="text-muted-foreground">Sesi</p>
-                  <p className="text-lg font-semibold">
-                    {new Intl.NumberFormat('id-ID', {
-                      maximumFractionDigits: 1
-                    }).format(item.sessionHours)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Ballboy</p>
-                  <p className="text-lg font-semibold">{currency(item.ballboyAmount)}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Quantum</p>
-                  <p className="text-lg font-semibold">{currency(item.quantumAmount)}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
       <DataTable
         loading={isPending}
-        data={data || []}
+        data={inventoryData}
         rightActions={
           <div className="flex flex-wrap items-center gap-2">
-            <DateRangeInput
-              value={dateRange}
-              onValueChange={(range) => setDateRange(range ?? undefined)}
-              className="sm:w-[260px]"
-              placeholder="Range sesi"
-            />
-            {dateRange?.from && (
-              <Button type="button" variant="outline" onClick={() => setDateRange(undefined)}>
-                Reset Tanggal
-              </Button>
-            )}
             <div className="flex items-center gap-2">
               <label htmlFor="category-filter" className="text-sm font-medium">
                 Kategori:
@@ -376,7 +277,6 @@ const BookedInventoryTable = () => {
                   <SelectItem value="all">Semua</SelectItem>
                   <SelectItem value="bola">Bola</SelectItem>
                   <SelectItem value="raket">Raket</SelectItem>
-                  <SelectItem value="ballboy">Ballboy</SelectItem>
                   <SelectItem value="coach">Coach</SelectItem>
                   <SelectItem value="inventory">Inventori Lain</SelectItem>
                 </SelectContent>
@@ -618,21 +518,6 @@ const InventoryDetail = ({ id }: { id: string }) => {
         </div>
       )}
 
-      {detail.ballboys?.length > 0 && (
-        <div>
-          <p className="mb-2 text-sm font-medium">Ballboy</p>
-          <div className="space-y-2">
-            {detail.ballboys.map((b, idx) => (
-              <div key={idx} className="bg-muted/50 rounded-lg border p-3">
-                <p className="font-medium">{b.staff.name}</p>
-                <p className="text-muted-foreground text-sm">
-                  {formatSlotTime(b.slot.startAt)} - {formatSlotTime(b.slot.endAt)}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 };
