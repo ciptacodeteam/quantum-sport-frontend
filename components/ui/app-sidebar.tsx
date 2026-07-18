@@ -110,6 +110,10 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
           url: '/admin/kelola-pemesanan/coach'
         },
         {
+          title: 'Ballboy',
+          url: '/admin/kelola-pemesanan/ballboy'
+        },
+        {
           title: 'Value Pack',
           url: '/admin/kelola-pemesanan/membership'
         }
@@ -293,6 +297,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             {
               title: 'Coach',
               url: '/admin/kelola-pemesanan/coach'
+            },
+            {
+              title: 'Ballboy',
+              url: '/admin/kelola-pemesanan/ballboy'
             }
           ]
         },
