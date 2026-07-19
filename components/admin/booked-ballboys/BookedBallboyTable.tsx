@@ -105,6 +105,9 @@ const getCustomerSearchText = (item: AdminBookedBallboyListItem) => {
 const getBallboyStatus = (item: AdminBookedBallboyListItem) =>
   (item.status || item.ballboyStatus || item.booking?.status || 'HOLD') as keyof typeof BOOKING_STATUS_MAP;
 
+const isActiveBallboyBooking = (item: AdminBookedBallboyListItem) =>
+  getBallboyStatus(item) !== 'CANCELLED';
+
 const isInDateRange = (item: AdminBookedBallboyListItem, range?: DateRange) => {
   if (!range?.from) return true;
   const slotDate = item.slot?.date
@@ -329,7 +332,7 @@ const BookedBallboyTable = () => {
       }
     >();
 
-    filteredData.forEach((item) => {
+    filteredData.filter(isActiveBallboyBooking).forEach((item) => {
       const key = item.staff?.id || item.id;
       const start = item.slot?.startAt ? dayjs(item.slot.startAt) : null;
       const end = item.slot?.endAt ? dayjs(item.slot.endAt) : null;
