@@ -87,8 +87,10 @@ const BookedCoachTable = () => {
       colHelper.accessor((row) => row.booking?.status, {
         id: 'bookingStatus',
         header: 'Status Pemesanan',
-        cell: (info) => {
-          const status = (info.getValue() || 'HOLD') as keyof typeof BOOKING_STATUS_MAP;
+        cell: ({ row }) => {
+          const status = (row.original.status ||
+            row.original.booking?.status ||
+            'HOLD') as keyof typeof BOOKING_STATUS_MAP;
           return (
             <Badge variant={BOOKING_STATUS_BADGE_VARIANT[status]}>
               {BOOKING_STATUS_MAP[status]}
@@ -220,6 +222,7 @@ const BookedCoachTable = () => {
         header: 'Aksi',
         cell: ({ row }) => {
           const item = row.original;
+          const isCancelled = item.status === 'CANCELLED' || item.booking?.status === 'CANCELLED';
           return (
             <div className="flex items-center gap-2">
               <ManagedDialog id={`view-booked-coach-${item.id}`}>
@@ -240,6 +243,7 @@ const BookedCoachTable = () => {
                 variant="destructive"
                 onClick={() => cancelBookedCoach(item.id)}
                 title="Batalkan Coach"
+                disabled={isCancelled}
               >
                 <IconX />
               </Button>

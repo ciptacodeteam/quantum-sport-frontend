@@ -140,6 +140,30 @@ const mergeBallboys = (
   return Array.from(map.values());
 };
 
+const mergeCoaches = (
+  current: BookingCoach[] | undefined,
+  incoming: BookingCoach[]
+): BookingCoach[] => {
+  const map = new Map<string, BookingCoach>();
+
+  current?.forEach((coach) => map.set(coach.id, coach));
+  incoming.forEach((coach) => map.set(coach.id, coach));
+
+  return Array.from(map.values());
+};
+
+const getCoachesForBookingCell = (bookingCell: BookingCell): BookingCoach[] => {
+  const coaches = (bookingCell.booking.coaches || []) as BookingCoach[];
+  const detailSlot = bookingCell.detail.slot;
+
+  if (!detailSlot) return [];
+
+  return coaches.filter((coach) => {
+    if (!coach.slot) return false;
+    return timeRangesOverlap(coach.slot, detailSlot);
+  });
+};
+
 const getBallboysForBookingCell = (bookingCell: BookingCell): BookingBallboy[] => {
   const ballboys = (bookingCell.booking.ballboys || []) as BookingBallboy[];
   const detailSlot = bookingCell.detail.slot;
@@ -257,10 +281,18 @@ export default function SchedulePage() {
 
       if (hasCourtSlotOnDate) return true;
 
-      return booking.ballboys?.some((ballboy) => {
+      const hasBallboySlotOnDate = booking.ballboys?.some((ballboy) => {
         const scheduleSlot = ballboy.courtSlot ?? ballboy.slot;
         if (!scheduleSlot?.startAt) return false;
         const slotDate = getDateStringFromISO(scheduleSlot.startAt);
+        return slotDate === selectedDateString;
+      });
+
+      if (hasBallboySlotOnDate) return true;
+
+      return booking.coaches?.some((coach) => {
+        if (!('slot' in coach) || !coach.slot?.startAt) return false;
+        const slotDate = getDateStringFromISO(coach.slot.startAt);
         return slotDate === selectedDateString;
       });
     });
@@ -401,6 +433,101 @@ export default function SchedulePage() {
       const status = getBookingStatus(booking.status as number | BookingStatus);
       if (status === BookingStatus.CANCELLED) return;
 
+      const bookingCoaches = (booking.coaches || []).filter(
+        (coach): coach is BookingCoach => 'slot' in coach
+      );
+
+      bookingCoaches.forEach((coach) => {
+        const coachSlot = coach.slot;
+        if (!coachSlot?.startAt || !coachSlot.endAt) return;
+
+        let placements = (booking.details || [])
+          .filter((detail) => {
+            if (!detail.court?.id || !detail.slot) return false;
+            if (detail.court.sport !== courtSport) return false;
+            return timeRangesOverlap(coachSlot, detail.slot);
+          })
+          .map((detail) => ({
+            courtId: detail.court!.id,
+            slot: detail.slot!
+          }));
+
+        if (placements.length === 0) {
+          const inferredPlacements: Array<{
+            courtId: string;
+            slot: NonNullable<BookingDetail['slot']>;
+          }> = [];
+          const coachUserId = booking.userId ?? booking.user?.id;
+          const coachPhone = booking.user?.phone;
+
+          map.forEach((courtCells, courtId) => {
+            courtCells.forEach((cell) => {
+              const cellUserId = cell.booking.userId ?? cell.booking.user?.id;
+              const cellPhone = cell.booking.user?.phone;
+              const sameCustomer =
+                (coachUserId && cellUserId && coachUserId === cellUserId) ||
+                (coachPhone && cellPhone && coachPhone === cellPhone);
+
+              if (!sameCustomer || !cell.detail.slot || !cell.detail.court) return;
+              if (cell.detail.court.sport !== courtSport) return;
+              if (!timeRangesOverlap(coachSlot, cell.detail.slot)) return;
+
+              if (
+                inferredPlacements.some(
+                  (placement) =>
+                    placement.courtId === courtId && placement.slot.id === cell.detail.slot?.id
+                )
+              ) {
+                return;
+              }
+
+              inferredPlacements.push({
+                courtId,
+                slot: cell.detail.slot
+              });
+            });
+          });
+
+          placements = inferredPlacements;
+        }
+
+        placements.forEach(({ courtId, slot }) => {
+          if (!slot.startAt || !slot.endAt) return;
+
+          const slotDate = getDateStringFromISO(slot.startAt);
+          if (slotDate !== selectedDateString) return;
+
+          const slotStart = parseDatetime(slot.startAt);
+          const slotEnd = parseDatetime(slot.endAt);
+
+          if (!map.has(courtId)) {
+            map.set(courtId, new Map());
+          }
+
+          timeSlotRanges.forEach(({ startTime }) => {
+            const timeSlotDateTime = parseDatetime(`${selectedDateString} ${startTime}:00`);
+            const isWithinRange =
+              (timeSlotDateTime.isSame(slotStart) || timeSlotDateTime.isAfter(slotStart)) &&
+              timeSlotDateTime.isBefore(slotEnd);
+
+            if (!isWithinRange) return;
+
+            const existingCell = map.get(courtId)!.get(startTime);
+            if (!existingCell) return;
+
+            map.get(courtId)!.set(startTime, {
+              ...existingCell,
+              booking: {
+                ...existingCell.booking,
+                coaches: mergeCoaches((existingCell.booking.coaches || []) as BookingCoach[], [
+                  coach
+                ])
+              }
+            });
+          });
+        });
+      });
+
       booking.ballboys?.forEach((ballboy) => {
         const ballboySlot = ballboy.slot;
         if (!ballboySlot?.startAt || !ballboySlot.endAt) return;
@@ -491,10 +618,9 @@ export default function SchedulePage() {
               ...existingCell,
               booking: {
                 ...existingCell.booking,
-                ballboys: mergeBallboys(
-                  (existingCell.booking.ballboys || []) as BookingBallboy[],
-                  [ballboy as BookingBallboy]
-                )
+                ballboys: mergeBallboys((existingCell.booking.ballboys || []) as BookingBallboy[], [
+                  ballboy as BookingBallboy
+                ])
               }
             });
           });
@@ -503,7 +629,7 @@ export default function SchedulePage() {
     });
 
     return map;
-  }, [bookings, selectedDateString, timeSlotRanges]);
+  }, [bookings, courtSport, selectedDateString, timeSlotRanges]);
 
   const isLoading = isCourtsLoading || isBookingsLoading || isSlotsLoading;
 
@@ -690,7 +816,7 @@ export default function SchedulePage() {
                                                   coachesArray.length > 0 &&
                                                   'slot' in coachesArray[0];
                                                 const bookingCoaches = isBookingCoachArray
-                                                  ? (coachesArray as any[] as BookingCoach[])
+                                                  ? getCoachesForBookingCell(bookingCell)
                                                   : bookingCell.booking.bookingCoaches || [];
                                                 const staffCoaches = !isBookingCoachArray
                                                   ? (coachesArray as any[] as Staff[])
@@ -933,7 +1059,7 @@ export default function SchedulePage() {
                                                 coachesArray.length > 0 &&
                                                 'slot' in coachesArray[0];
                                               const bookingCoaches = isBookingCoachArray
-                                                ? (coachesArray as any[] as BookingCoach[])
+                                                ? getCoachesForBookingCell(bookingCell)
                                                 : bookingCell.booking.bookingCoaches || [];
                                               const staffCoaches = !isBookingCoachArray
                                                 ? (coachesArray as any[] as Staff[])

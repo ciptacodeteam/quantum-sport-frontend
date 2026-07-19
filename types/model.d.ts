@@ -551,6 +551,9 @@ export type BookingCoach = {
   slotId: string;
   bookingCoachTypeId: string;
   price: number;
+  status?: BookingStatus;
+  cancelledAt?: Date | null;
+  cancellationReason?: string | null;
   createdAt: Date;
   updatedAt: Date;
 
