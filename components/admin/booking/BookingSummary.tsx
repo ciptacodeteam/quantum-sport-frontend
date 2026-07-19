@@ -210,9 +210,12 @@ const calculateBundleDiscount = (courts: BookingItem[], coaches: SelectedCoach[]
 
     if (Number.isNaN(hour)) return;
 
-    // Happy hour: 06–14, Peak hour: 15–23
+    // Tennis bundled court + coach always gets Rp100.000 off per matching slot.
+    // Padel keeps the existing happy/peak hour bundled discount.
     let slotDiscount = 0;
-    if (hour >= 6 && hour <= 14) {
+    if (booking.sport === 'TENNIS') {
+      slotDiscount = 100_000;
+    } else if (hour >= 6 && hour <= 14) {
       slotDiscount = 100_000;
     } else if (hour >= 15 && hour <= 23) {
       slotDiscount = 70_000;
