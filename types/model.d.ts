@@ -825,6 +825,12 @@ export type TopCourt = {
   bookings: number;
 };
 
+export type CourtBookedHours = {
+  court: { id: string; name: string; sport: string };
+  bookedHours: number;
+  bookingCount: number;
+};
+
 export type TopHour = {
   hour: string;
   count: number;
@@ -845,7 +851,9 @@ export type BusinessInsightsResponse = {
     total: number;
     booked: number;
     utilization: string;
+    totalBookedHours: number;
     topCourts: TopCourt[];
+    courtHours: CourtBookedHours[];
     topHours: TopHour[];
     topDays: TopDay[];
   };

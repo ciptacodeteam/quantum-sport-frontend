@@ -33,8 +33,17 @@ const chartConfig = {
   days: {
     label: 'Bookings',
     color: 'hsl(var(--primary))'
+  },
+  courtHours: {
+    label: 'Hours',
+    color: 'hsl(var(--primary))'
   }
 } satisfies ChartConfig;
+
+const formatHours = (hours: number) =>
+  new Intl.NumberFormat('id-ID', {
+    maximumFractionDigits: 1
+  }).format(hours);
 
 export default function BusinessInsightsSection({ data, isLoading }: BusinessInsightsSectionProps) {
   if (isLoading) {
@@ -77,7 +86,11 @@ export default function BusinessInsightsSection({ data, isLoading }: BusinessIns
       stats: [
         { label: 'Total Courts', value: courts.total || 0 },
         { label: 'Booked Courts', value: courts.booked || 0 },
-        { label: 'Utilization Rate', value: courts.utilization || '0%' }
+        { label: 'Utilization Rate', value: courts.utilization || '0%' },
+        {
+          label: 'Total Booked Hours',
+          value: `${formatHours(courts.totalBookedHours || 0)} jam`
+        }
       ]
     },
     {
@@ -235,6 +248,70 @@ export default function BusinessInsightsSection({ data, isLoading }: BusinessIns
           </Card>
         )}
       </div>
+
+      {courts.courtHours && courts.courtHours.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Court Booked Hours</CardTitle>
+            <CardDescription>
+              Total hours booked per court based on session dates in this period
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <ChartContainer config={chartConfig} className="min-h-60 w-full">
+              <BarChart
+                accessibilityLayer
+                data={courts.courtHours.map((item) => ({
+                  name: item.court.name,
+                  hours: item.bookedHours
+                }))}
+              >
+                <CartesianGrid vertical={false} />
+                <XAxis
+                  dataKey="name"
+                  tickLine={false}
+                  tickMargin={10}
+                  axisLine={false}
+                  interval={0}
+                  angle={-20}
+                  textAnchor="end"
+                  height={70}
+                />
+                <YAxis tickLine={false} axisLine={false} tickMargin={10} />
+                <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+                <Bar dataKey="hours" fill="var(--color-courtHours)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ChartContainer>
+
+            <div className="overflow-x-auto rounded-md border">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-muted/50 border-b">
+                    <th className="px-4 py-3 text-left font-medium">Court</th>
+                    <th className="px-4 py-3 text-left font-medium">Sport</th>
+                    <th className="px-4 py-3 text-right font-medium">Bookings</th>
+                    <th className="px-4 py-3 text-right font-medium">Hours Booked</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {courts.courtHours.map((item) => (
+                    <tr key={item.court.id} className="border-b last:border-b-0">
+                      <td className="px-4 py-3 font-medium">{item.court.name}</td>
+                      <td className="text-muted-foreground px-4 py-3 capitalize">
+                        {item.court.sport.toLowerCase()}
+                      </td>
+                      <td className="px-4 py-3 text-right">{item.bookingCount}</td>
+                      <td className="px-4 py-3 text-right font-semibold">
+                        {formatHours(item.bookedHours)} jam
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Top Performers */}
       <div className="grid gap-4 md:grid-cols-2">
