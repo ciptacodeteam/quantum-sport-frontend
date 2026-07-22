@@ -3,10 +3,11 @@
 import { Card } from '@/components/ui/card';
 import { getWhatsappMessageUrl } from '@/lib/utils';
 import { IconBrandInstagram, IconBrandWhatsapp } from '@tabler/icons-react';
-import { Calendar, FileText, Headphones, MapPin, MessageCircle } from 'lucide-react';
+import { Calendar, FileText, Headphones, MapPin } from 'lucide-react';
 import Link from 'next/link';
 
 import Image from 'next/image';
+import srLogo from '@/assets/icons/menus/sr.webp';
 import logowhite from '@/public/assets/img/logowhite.webp';
 
 export default function InformationsPage() {
@@ -15,7 +16,7 @@ export default function InformationsPage() {
       title: 'Book Court',
       description: 'Reserve your court at Quantum Social Club',
       icon: Calendar,
-      href: 'https://www.quantumsocialclub.id/booking',
+      href: '/',
       color: 'from-blue-500 to-cyan-500',
       external: false
     },
@@ -28,9 +29,9 @@ export default function InformationsPage() {
       external: true
     },
     {
-      title: 'Book Coaching Session',
+      title: 'Admin Coaching (SR Academy)',
       description: 'Schedule a session with our professional coaches',
-      icon: MessageCircle,
+      iconImage: srLogo,
       href: 'https://wa.me/message/675CKY4UOUGII1',
       color: 'from-purple-500 to-pink-500',
       external: true
@@ -44,7 +45,7 @@ export default function InformationsPage() {
       external: true
     },
     {
-      title: 'Customer Service',
+      title: 'Admin Quantum',
       description: 'Contact us for assistance',
       icon: Headphones,
       href: 'https://wa.me/628131626241',
@@ -86,7 +87,15 @@ export default function InformationsPage() {
                       <div
                         className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-white/80 transition-transform duration-300 group-hover:scale-110`}
                       >
-                        <Icon className="size-6 text-[#09331e]" />
+                        {link.iconImage ? (
+                          <Image
+                            src={link.iconImage}
+                            alt=""
+                            className="h-10 w-10 object-contain"
+                          />
+                        ) : Icon ? (
+                          <Icon className="size-6 text-[#09331e]" />
+                        ) : null}
                       </div>
                       <div className="flex-1">
                         <h3 className="group-hover:text-primary text-lg font-semibold text-[#e0d5b7] transition-colors">
