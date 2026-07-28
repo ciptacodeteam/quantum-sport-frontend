@@ -633,7 +633,7 @@ export default function BookingSummary({
                 )}
                 {membershipDiscount.canUseMembership && bookingItems.length > 0 && (
                   <div className="text-primary mt-1 font-medium">
-                    {membershipDiscount.slotsToDeduct} slot akan gratis menggunakan membership
+                    {membershipDiscount.slotsToDeduct} jam akan dipotong dari membership
                   </div>
                 )}
               </div>
@@ -667,10 +667,7 @@ export default function BookingSummary({
                           b.timeSlot === booking.timeSlot &&
                           b.date === booking.date
                       );
-                      const isFree =
-                        membershipDiscount.canUseMembership &&
-                        bookingIndex >= 0 &&
-                        bookingIndex < membershipDiscount.slotsToDeduct;
+                      const isFree = membershipDiscount.canUseMembership && bookingIndex >= 0;
 
                       const { normalPrice, discountPrice, displayPrice } = getPricing(booking);
 
@@ -877,8 +874,7 @@ export default function BookingSummary({
             {membershipDiscount.canUseMembership && membershipDiscount.slotsToDeduct > 0 && (
               <div className="flex items-center justify-between text-xs text-green-600">
                 <span>
-                  Membership Discount ({membershipDiscount.slotsToDeduct} slot
-                  {membershipDiscount.slotsToDeduct > 1 ? 's' : ''})
+                  Membership Discount ({membershipDiscount.slotsToDeduct} jam)
                 </span>
                 <span className="font-medium">
                   - {formatCurrency(membershipDiscount.discountAmount)}

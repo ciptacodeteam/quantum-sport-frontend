@@ -659,10 +659,7 @@ export default function CheckoutPage() {
                         b.timeSlot === slot.timeSlot &&
                         b.date === slot.date
                     );
-                    const isFree =
-                      membershipDiscount.canUseMembership &&
-                      bookingIndex >= 0 &&
-                      bookingIndex < membershipDiscount.slotsToDeduct;
+                    const isFree = membershipDiscount.canUseMembership && bookingIndex >= 0;
 
                     return (
                       <div
@@ -1006,7 +1003,7 @@ export default function CheckoutPage() {
                 </label>
                 {membershipDiscount.canUseMembership && bookingItems.length > 0 && (
                   <div className="text-primary mt-1 font-medium">
-                    {membershipDiscount.slotsToDeduct} slot akan gratis menggunakan membership
+                    {membershipDiscount.slotsToDeduct} jam akan dipotong dari membership
                   </div>
                 )}
                 {!useMembership && (
@@ -1028,8 +1025,7 @@ export default function CheckoutPage() {
               {membershipDiscount.canUseMembership && membershipDiscount.slotsToDeduct > 0 && (
                 <div className="flex items-center justify-between text-green-600">
                   <span>
-                    Membership Discount ({membershipDiscount.slotsToDeduct} slot
-                    {membershipDiscount.slotsToDeduct > 1 ? 's' : ''})
+                    Membership Discount ({membershipDiscount.slotsToDeduct} jam)
                   </span>
                   <span className="font-medium">
                     - {formatCurrency(membershipDiscount.discountAmount)}

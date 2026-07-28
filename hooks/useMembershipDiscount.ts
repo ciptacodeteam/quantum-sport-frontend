@@ -8,6 +8,52 @@ import {
 } from '@/lib/membership-hours';
 import { useMemo } from 'react';
 
+function parseTimeOnDate(date: string, time: string): Date | null {
+  const normalizedTime = time.includes(':') ? time : `${time}:00`;
+  const parsed = new Date(`${date}T${normalizedTime}`);
+
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function calculateBookingItemHours(booking: BookingItem): number {
+  if (booking.startAt && booking.endAt) {
+    const startAt = new Date(booking.startAt);
+    const endAt = new Date(booking.endAt);
+    const durationHours = (endAt.getTime() - startAt.getTime()) / 3_600_000;
+
+    return Math.max(0, durationHours);
+  }
+
+  const [startFromRange, endFromRange] = booking.timeSlot.split(' - ');
+  const start = parseTimeOnDate(booking.date, startFromRange || booking.timeSlot);
+  let end = parseTimeOnDate(booking.date, booking.endTime || endFromRange || '');
+
+  if (!start || !end) {
+    return 1;
+  }
+
+  if (end.getTime() <= start.getTime()) {
+    end = new Date(end.getTime() + 86_400_000);
+  }
+
+  const durationHours = (end.getTime() - start.getTime()) / 3_600_000;
+
+  return Math.max(1, durationHours);
+}
+
+function calculateMembershipSessionsToUse(bookingItems: BookingItem[]): number {
+  const totalHours = bookingItems.reduce(
+    (total, booking) => total + calculateBookingItemHours(booking),
+    0
+  );
+
+  if (totalHours === 0) {
+    return 0;
+  }
+
+  return Math.ceil(totalHours);
+}
+
 export interface ActiveMembership {
   id: string;
   startDate: string;
@@ -78,6 +124,7 @@ export function useMembershipDiscount(
     const allBookingItemsEligible =
       bookingItems.length === 0 || eligibleBookingItems.length === bookingItems.length;
     const remainingSessions = activeMembership?.remainingSessions ?? 0;
+    const sessionsToDeduct = calculateMembershipSessionsToUse(bookingItems);
     const canUseMembership =
       activeMembership &&
       useMembership &&
@@ -85,10 +132,8 @@ export function useMembershipDiscount(
       !activeMembership.isSuspended &&
       isMatchingSport &&
       allBookingItemsEligible &&
-      remainingSessions > 0;
-
-    // Calculate how many slots can be free (1 session = 1 slot)
-    const slotsToDeduct = Math.min(bookingItems.length, remainingSessions);
+      sessionsToDeduct > 0 &&
+      remainingSessions >= sessionsToDeduct;
 
     // Calculate original total
     const originalTotal = bookingItems.reduce((sum, booking) => {
@@ -100,17 +145,8 @@ export function useMembershipDiscount(
 
     // Calculate discount amount
     let discountAmount = 0;
-    if (canUseMembership && slotsToDeduct > 0) {
-      // Sort bookings by date and time to apply discount to earliest slots
-      const sortedBookings = [...bookingItems].sort((a, b) => {
-        const dateCompare = a.date.localeCompare(b.date);
-        if (dateCompare !== 0) return dateCompare;
-        return a.timeSlot.localeCompare(b.timeSlot);
-      });
-
-      // Calculate the price of the first N slots (where N = slotsToDeduct)
-      const slotsToFree = sortedBookings.slice(0, slotsToDeduct);
-      discountAmount = slotsToFree.reduce((sum, booking) => {
+    if (canUseMembership) {
+      discountAmount = bookingItems.reduce((sum, booking) => {
         const normalPrice = booking.normalPrice ?? booking.price;
         return sum + normalPrice;
       }, 0);
@@ -122,7 +158,7 @@ export function useMembershipDiscount(
       activeMembership,
       canUseMembership: !!canUseMembership,
       remainingSessions,
-      slotsToDeduct,
+      slotsToDeduct: sessionsToDeduct,
       discountAmount,
       originalTotal,
       discountedTotal
