@@ -23,7 +23,7 @@ import { toast } from 'sonner';
 import z from 'zod';
 
 const formSchema = z.object({
-  otp: z.string().min(1, 'OTP is required').max(6, 'OTP is too long'),
+  otp: z.string().min(1, 'OTP is required').length(6, 'OTP must be 6 digits'),
   phone: z.string().min(1, 'WhatsApp Number is required').max(15, 'WhatsApp Number is too long'),
   requestId: z.string().min(1, 'Request ID is required')
 });
@@ -110,7 +110,7 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
 
   const onSubmit: SubmitHandler<FormSchema> = useCallback(
     (data) => {
-      if (data.otp.length < 4) {
+      if (data.otp.length < 6) {
         toast.error('Please enter a valid OTP');
         return;
       }
@@ -154,7 +154,7 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
     resendOtp({ phone: formatPhone(phone) });
   };
 
-  const maxLength = 4;
+  const maxLength = 6;
 
   // const handleOtpChange = useCallback(
   //   (value, info: { name?: string }) => {
@@ -205,6 +205,8 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
                       <InputOTPSlot index={1} className="size-14 md:text-xl" />
                       <InputOTPSlot index={2} className="size-14 md:text-xl" />
                       <InputOTPSlot index={3} className="size-14 md:text-xl" />
+                      <InputOTPSlot index={4} className="size-14 md:text-xl" />
+                      <InputOTPSlot index={5} className="size-14 md:text-xl" />
                     </InputOTPGroup>
                   </InputOTP>
                 )}
