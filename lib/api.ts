@@ -13,57 +13,44 @@ export const api = axios.create({
 
 type RetryableConfig = InternalAxiosRequestConfig & { _retry?: boolean };
 
-// ---------- Runtime guards ----------
-const isBrowser = typeof window !== 'undefined';
+// ---------- Single-flight refresh (cookie-based session) ----------
+let refreshPromise: Promise<boolean> | null = null;
 
-// ---------- Local storage helpers (SSR-safe) ----------
-const storage = {
-  get(key: string) {
-    if (!isBrowser) return null;
+async function refreshAccessToken(): Promise<boolean> {
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
     try {
-      return window.localStorage.getItem(key);
+      const res = await refreshTokenApi();
+      const ok = res?.success === true || !!res?.data?.token;
+
+      if (ok) {
+        useAuthStore.getState().setAuth(true);
+        return true;
+      }
+
+      useAuthStore.getState().logout();
+      return false;
     } catch {
-      return null;
+      useAuthStore.getState().logout();
+      return false;
+    } finally {
+      refreshPromise = null;
     }
-  },
-  set(key: string, val: string) {
-    if (!isBrowser) return;
-    try {
-      window.localStorage.setItem(key, val);
-    } catch {
-      // Ignore errors
-    }
-  },
-  remove(key: string) {
-    if (!isBrowser) return;
-    try {
-      window.localStorage.removeItem(key);
-    } catch {
-      // Ignore errors
-    }
-  }
-};
+  })();
+
+  return refreshPromise;
+}
 
 api.interceptors.request.use(
   async (config: RetryableConfig) => {
     config.headers = config.headers ?? {};
 
-    // Auth header
-    const token = storage.get('token') || useAuthStore.getState().token;
+    const token = useAuthStore.getState().token;
 
     if (token) {
       const bearerToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
-
-      const { isJwt } = await isJwtAndDecode(token);
-
-      if (!isJwt) {
-        // Relaxed validation: Don't remove token if it's not a JWT.
-        // The backend might be using opaque tokens or the client decoder might be failing.
-        // Just proceed to send it.
-        // if (process.env.NODE_ENV === 'development') {
-        //   console.warn('Token failed client-side JWT check, but sending anyway:', token);
-        // }
-      }
+      await isJwtAndDecode(token);
       (config.headers as Record<string, string>).Authorization = bearerToken;
     }
 
@@ -72,44 +59,10 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ---------- Single-flight refresh (Zustand-aware) ----------
-let refreshPromise: Promise<string | null> | null = null;
-
-async function refreshAccessToken(): Promise<string | null> {
-  if (refreshPromise) return refreshPromise;
-
-  refreshPromise = (async () => {
-    try {
-      const res = await refreshTokenApi();
-      const newToken = res?.data?.token ?? null;
-
-      if (newToken) {
-        storage.set('token', newToken);
-        useAuthStore.getState().setToken(newToken);
-        return newToken;
-      }
-
-      // Bad payload -> clear
-      storage.remove('token');
-      return null;
-    } catch {
-      // Refresh failed -> clear
-      storage.remove('token');
-      return null;
-    } finally {
-      // allow next attempts
-      refreshPromise = null;
-    }
-  })();
-
-  return refreshPromise;
-}
-
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError<any>) => {
     if (!error.response) {
-      // Network/CORS
       return Promise.reject(error);
     }
 
@@ -127,24 +80,17 @@ api.interceptors.response.use(
       };
     }
 
-    const token = storage.get('token') || useAuthStore.getState().token;
+    if (isAuthError && !isRefreshEndpoint && !originalRequest?._retry) {
+      const refreshed = await refreshAccessToken();
 
-    if (isAuthError && !isRefreshEndpoint && !originalRequest?._retry && !!token) {
-      const newToken = await refreshAccessToken();
-
-      if (newToken) {
+      if (refreshed) {
         originalRequest._retry = true;
-        originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
         return api(originalRequest);
       }
 
-      // Refresh unavailable/failed -> sign out & redirect
-      storage.remove('token');
       useAuthStore.getState().logout();
       useAuthStore.getState().setLoading(false);
     } else if (isAuthError) {
-      // Explicit 401 with no refresh path
-      storage.remove('token');
       useAuthStore.getState().logout();
       useAuthStore.getState().setLoading(false);
     }

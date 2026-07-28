@@ -1,5 +1,6 @@
 import { env } from '@/env';
 import { normalizeApiErrorResponse } from '@/lib/api-error';
+import { clearAdminSessionCookie, setAdminSessionCookie } from '@/lib/admin-session';
 import useAuthStore from '@/stores/useAuthStore';
 import axios, { type AxiosError, HttpStatusCode, type InternalAxiosRequestConfig } from 'axios';
 
@@ -17,6 +18,11 @@ const baseApi = axios.create({
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' }
 });
+
+function adminLogout() {
+  clearAdminSessionCookie();
+  useAuthStore.getState().logout();
+}
 
 adminApi.interceptors.request.use(
   (config: RetryableConfig) => {
@@ -36,31 +42,29 @@ adminApi.interceptors.request.use(
 );
 
 // ---------- Single-flight refresh ----------
-let refreshPromise: Promise<string | null> | null = null;
+let refreshPromise: Promise<boolean> | null = null;
 
-async function refreshAccessToken(): Promise<string | null> {
+async function refreshAccessToken(): Promise<boolean> {
   if (refreshPromise) return refreshPromise;
 
   refreshPromise = (async () => {
     try {
       const { data } = await baseApi.post('/admin/auth/refresh-token');
-      const newToken = data?.data?.token ?? null;
+      const ok = data?.success === true || !!data?.data?.token;
 
-      if (newToken) {
-        useAuthStore.getState().setToken(newToken);
-        return newToken;
+      if (ok) {
+        useAuthStore.getState().setAuth(true);
+        setAdminSessionCookie();
+        return true;
       }
 
-      // Bad payload -> clear
-      useAuthStore.getState().logout();
-      return null;
+      adminLogout();
+      return false;
     } catch (err) {
-      // Refresh failed -> clear
       console.error('Token refresh failed:', err);
-      useAuthStore.getState().logout();
-      return null;
+      adminLogout();
+      return false;
     } finally {
-      // allow next attempts
       refreshPromise = null;
     }
   })();
@@ -90,24 +94,18 @@ adminApi.interceptors.response.use(
       };
     }
 
-    const token = useAuthStore.getState().token;
+    if (isAuthError && !isRefreshEndpoint && !originalRequest?._retry) {
+      const refreshed = await refreshAccessToken();
 
-    // Try to refresh token on 401 errors (except for refresh endpoint itself)
-    if (isAuthError && !isRefreshEndpoint && !originalRequest?._retry && !!token) {
-      const newToken = await refreshAccessToken();
-
-      if (newToken) {
-        // Retry the original request with new token
+      if (refreshed) {
         originalRequest._retry = true;
-        originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
         return adminApi(originalRequest);
       }
 
-      // Refresh failed -> logout
-      useAuthStore.getState().logout();
+      adminLogout();
     } else if (isAuthError) {
       // Explicit 401 with no refresh path (e.g., refresh endpoint failed)
-      useAuthStore.getState().logout();
+      adminLogout();
     }
 
     if (error.response?.status == HttpStatusCode.Forbidden) {

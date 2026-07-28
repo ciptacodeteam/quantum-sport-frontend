@@ -552,8 +552,19 @@ export default function CheckoutPage() {
               console.log('Payment Request created:', cardResult.paymentRequestId);
               console.log('Redirecting to 3DS:', cardResult.actionUrl);
 
-              // Redirect to 3DS authentication
-              router.push(cardResult.actionUrl);
+              sessionStorage.setItem(
+                'payment_3ds_data',
+                JSON.stringify({
+                  invoiceId: response.data?.invoiceId,
+                  invoiceNumber: response.data?.invoiceNumber,
+                  bookingId: response.data?.bookingId,
+                  paymentStatus: 'REQUIRES_ACTION',
+                  paymentUrl: cardResult.actionUrl
+                })
+              );
+
+              // External bank/Xendit URL — full navigation, not Next router
+              window.location.href = cardResult.actionUrl;
             } catch (err: any) {
               console.error('Card collection failed:', err);
 

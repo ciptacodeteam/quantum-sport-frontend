@@ -18,13 +18,7 @@ const nextConfig: NextConfig = {
   },
   /* config options here */
   redirects: async () => {
-    return [
-      {
-        source: '/admin',
-        destination: '/admin/auth/login',
-        permanent: true
-      }
-    ];
+    return [];
   },
   // Add proxy to avoid CORS issues
   async rewrites() {

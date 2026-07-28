@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/sidebar';
 import { getNameInitial, getTwoWordName } from '@/lib/utils';
 import { adminLogoutMutationOptions } from '@/mutations/admin/auth';
+import { clearAdminSessionCookie } from '@/lib/admin-session';
 import { adminProfileQueryOptions } from '@/queries/admin/auth';
 import useAuthStore from '@/stores/useAuthStore';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -40,6 +41,13 @@ export function NavUser() {
   const { mutate: logoutMutate, isPending: isLogoutPending } = useMutation(
     adminLogoutMutationOptions({
       onSuccess: () => {
+        clearAdminSessionCookie();
+        logout();
+        router.push('/admin/auth/login');
+        queryClient.clear();
+      },
+      onError: () => {
+        clearAdminSessionCookie();
         logout();
         router.push('/admin/auth/login');
         queryClient.clear();

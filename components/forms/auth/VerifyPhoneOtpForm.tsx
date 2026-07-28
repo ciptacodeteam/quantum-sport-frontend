@@ -52,7 +52,7 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
   const router = useRouter();
 
   const queryClient = useQueryClient();
-  const setToken = useAuthStore((state) => state.setToken);
+  const setAuth = useAuthStore((state) => state.setAuth);
   const consumeRedirectPath = useAuthRedirectStore((state) => state.consumeRedirectPath);
 
   const clearRegisterData = useRegisterStore((state) => state.clear);
@@ -62,12 +62,12 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
       onSuccess: (res) => {
         const token = res?.data?.token;
 
-        if (!token) {
+        if (!token && res?.success !== true) {
           toast.error('Login failed: No token received.');
           return;
         }
 
-        setToken(token);
+        setAuth(true);
         const redirectPath = consumeRedirectPath();
         router.push(redirectPath ?? '/');
         clearRegisterData();

@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { adminLogoutMutationOptions } from '@/mutations/admin/auth';
+import { clearAdminSessionCookie } from '@/lib/admin-session';
 import useAuthStore from '@/stores/useAuthStore';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Bell, LogOut, User } from 'lucide-react';
@@ -25,6 +26,13 @@ const AppProfileMenu = () => {
   const { mutate: mutateLogout, isPending: isLogoutPending } = useMutation(
     adminLogoutMutationOptions({
       onSuccess: () => {
+        clearAdminSessionCookie();
+        logout();
+        queryClient.clear();
+        router.push('/admin/auth/login');
+      },
+      onError: () => {
+        clearAdminSessionCookie();
         logout();
         queryClient.clear();
         router.push('/admin/auth/login');

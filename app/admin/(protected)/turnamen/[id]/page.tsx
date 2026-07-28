@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { SanitizedHtml } from '@/components/ui/sanitized-html';
 import { Separator } from '@/components/ui/separator';
 import { adminTournamentQueryOptions } from '@/queries/admin/tournament';
 import {
@@ -136,10 +137,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
             <CardTitle>Tournament Rules</CardTitle>
           </CardHeader>
           <CardContent>
-            <div
-              className="prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: tournament.rules }}
-            />
+            <SanitizedHtml className="prose prose-sm max-w-none" html={tournament.rules} />
           </CardContent>
         </Card>
       )}

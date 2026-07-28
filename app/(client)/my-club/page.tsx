@@ -47,7 +47,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 const MyClubPage = () => {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { isAuth, logout, token } = useAuthStore();
+  const { isAuth } = useAuthStore();
   const [isHydrated, setIsHydrated] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -56,15 +56,7 @@ const MyClubPage = () => {
     setIsHydrated(true);
   }, []);
 
-  // Check if token exists - if not, force logout
-  useEffect(() => {
-    if (isHydrated && isAuth && !token) {
-      logout();
-      queryClient.clear();
-    }
-  }, [isHydrated, isAuth, token, logout, queryClient]);
-
-  // Redirect if not authenticated
+  // Redirect if not authenticated (session is httpOnly cookie; do not gate on in-memory token)
   useEffect(() => {
     if (isHydrated && !isAuth) {
       toast.error('Silakan login untuk melihat club Anda');

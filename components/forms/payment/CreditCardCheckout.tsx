@@ -105,7 +105,17 @@ export default function CreditCardCheckout({
                 // Step 3: Redirect to 3DS authentication
                 if (cardResult.actionUrl) {
                   console.log('Redirecting to 3DS:', cardResult.actionUrl);
-                  router.push(cardResult.actionUrl);
+                  sessionStorage.setItem(
+                    'payment_3ds_data',
+                    JSON.stringify({
+                      invoiceId: response.data?.invoiceId,
+                      invoiceNumber: response.data?.invoiceNumber,
+                      bookingId: response.data?.bookingId,
+                      paymentStatus: 'REQUIRES_ACTION',
+                      paymentUrl: cardResult.actionUrl
+                    })
+                  );
+                  window.location.href = cardResult.actionUrl;
                   return;
                 }
               }

@@ -42,7 +42,7 @@ const ClubDetailPage = () => {
   const clubId = params.id as string;
   const queryClient = useQueryClient();
   const router = useRouter();
-  const { isAuth, logout, token } = useAuthStore();
+  const { isAuth } = useAuthStore();
   const [isHydrated, setIsHydrated] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -50,15 +50,6 @@ const ClubDetailPage = () => {
   useEffect(() => {
     setIsHydrated(true);
   }, []);
-
-  // Check if token exists - if not, force logout
-  useEffect(() => {
-    if (isHydrated && isAuth && !token) {
-      // Token was cleared manually, force logout
-      logout();
-      queryClient.clear();
-    }
-  }, [isHydrated, isAuth, token, logout, queryClient]);
 
   // Fetch user profile from backend to validate real user data
   const {

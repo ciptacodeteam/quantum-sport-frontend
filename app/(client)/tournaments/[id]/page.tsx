@@ -3,6 +3,7 @@
 import MainHeader from '@/components/headers/MainHeader';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { SanitizedHtml } from '@/components/ui/sanitized-html';
 import { Button } from '@/components/ui/button';
 import { tournamentDetailQueryOptions } from '@/queries/tournament';
 import { formatNumber, getPlaceholderImageUrl, resolveMediaUrl } from '@/lib/utils';
@@ -102,9 +103,9 @@ const TournamentDetailPage = () => {
                 <Card>
                   <CardContent className="space-y-2 px-4">
                     <h2 className="text-lg font-semibold">Peraturan Turnamen</h2>
-                    <p
-                      className="text-muted-foreground text-sm whitespace-pre-line"
-                      dangerouslySetInnerHTML={{ __html: data.rulesHtml }}
+                    <SanitizedHtml
+                      className="text-muted-foreground prose prose-sm max-w-none text-sm"
+                      html={data.rulesHtml ?? ''}
                     />
                   </CardContent>
                 </Card>

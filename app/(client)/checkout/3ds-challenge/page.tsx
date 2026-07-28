@@ -3,13 +3,13 @@
 import { Suspense } from 'react';
 import { use3DSChallenge } from '@/hooks/use3DSChallenge';
 import { Spinner } from '@/components/ui/spinner';
+import { Button } from '@/components/ui/button';
 import { AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
-/**
- * 3DS Challenge Loading Content
- */
 function Challenge3DSContent() {
-  const { isLoading, error, status, paymentData } = use3DSChallenge();
+  const router = useRouter();
+  const { isLoading, error, status, paymentData, invoiceHref } = use3DSChallenge();
 
   if (isLoading) {
     return (
@@ -43,14 +43,16 @@ function Challenge3DSContent() {
           <div>
             <h1 className="mb-2 text-2xl font-bold text-slate-900">Payment Successful!</h1>
             <p className="text-slate-600">
-              Your payment has been authenticated and your booking is confirmed.
+              Your payment has been authenticated and confirmed.
             </p>
           </div>
           <div className="rounded-lg border border-green-200 bg-green-50 p-4">
-            <p className="text-sm text-green-700">Invoice #{paymentData?.invoiceNumber || 'N/A'}</p>
+            <p className="text-sm text-green-700">
+              Invoice #{paymentData?.invoiceNumber || paymentData?.invoiceId || 'N/A'}
+            </p>
           </div>
           <div className="pt-4">
-            <p className="text-sm text-slate-500">Redirecting to your booking...</p>
+            <p className="text-sm text-slate-500">Redirecting to payment confirmation...</p>
           </div>
         </div>
       </div>
@@ -67,26 +69,28 @@ function Challenge3DSContent() {
           <div>
             <h1 className="mb-2 text-2xl font-bold text-slate-900">Confirming Payment</h1>
             <p className="text-slate-600">
-              Your payment is being processed. Please wait while we confirm the transaction with
-              your bank.
+              Your payment is still processing. Please check your invoice status shortly — do not
+              pay again until it is confirmed.
             </p>
-          </div>
-          <div className="space-y-3">
-            <div className="animate-pulse">
-              <div className="h-2 rounded-full bg-slate-200"></div>
-            </div>
           </div>
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
             <p className="text-sm text-amber-700">
-              This may take up to 2 minutes. Please do not close this window.
+              Bank confirmation can take a short while after 3D Secure.
             </p>
+          </div>
+          <div className="flex flex-col gap-3 pt-4">
+            <Button className="w-full" onClick={() => router.push(invoiceHref || '/invoice')}>
+              Check Invoice Status
+            </Button>
+            <Button variant="outline" className="w-full" onClick={() => router.push('/')}>
+              Go Home
+            </Button>
           </div>
         </div>
       </div>
     );
   }
 
-  // Error state
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="mx-4 w-full max-w-md space-y-6 rounded-xl bg-white p-8 text-center shadow-lg">
@@ -106,28 +110,22 @@ function Challenge3DSContent() {
           </p>
         </div>
         <div className="flex gap-3 pt-4">
-          <button
-            onClick={() => (window.location.href = '/checkout')}
-            className="flex-1 rounded-lg bg-slate-100 px-4 py-2 font-medium text-slate-900 transition-colors hover:bg-slate-200"
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={() => router.push(invoiceHref || '/checkout')}
           >
-            Back to Checkout
-          </button>
-          <button
-            onClick={() => (window.location.href = '/')}
-            className="bg-primary hover:bg-primary/90 flex-1 rounded-lg px-4 py-2 font-medium text-white transition-colors"
-          >
+            {invoiceHref ? 'View Invoice' : 'Back to Checkout'}
+          </Button>
+          <Button className="flex-1" onClick={() => router.push('/')}>
             Go Home
-          </button>
+          </Button>
         </div>
       </div>
     </div>
   );
 }
 
-/**
- * 3DS Challenge Page
- * Handles user redirect from Xendit 3DS authentication
- */
 export default function ThreeDSChallengePage() {
   return (
     <Suspense

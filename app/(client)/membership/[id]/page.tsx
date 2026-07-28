@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import BottomNavigationWrapper from '@/components/ui/BottomNavigationWrapper';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { SanitizedHtml } from '@/components/ui/sanitized-html';
 import { Skeleton } from '@/components/ui/skeleton';
 import { STATUS_BADGE_VARIANT, STATUS_MAP } from '@/lib/constants';
 import { membershipTypeDescriptions, membershipTypeLabels } from '@/lib/membership-hours';
@@ -246,10 +247,10 @@ export default function MembershipDetailPage({ params }: { params: Promise<{ id:
               </CardTitle>
             </CardHeader>
             <CardContent className="mt-2">
-              <div
+              <SanitizedHtml
                 className="prose prose-sm max-w-none text-sm"
-                dangerouslySetInnerHTML={{ __html: membership?.contentHtml ?? '' }}
-              ></div>
+                html={membership?.contentHtml ?? ''}
+              />
             </CardContent>
           </Card>
         )}

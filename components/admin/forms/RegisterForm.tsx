@@ -7,6 +7,7 @@ import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from '@/component
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
 import { adminRegisterMutationOptions } from '@/mutations/admin/auth';
+import { setAdminSessionCookie } from '@/lib/admin-session';
 import useAuthStore from '@/stores/useAuthStore';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
@@ -36,19 +37,20 @@ const RegisterForm = () => {
   });
 
   const router = useRouter();
-  const setToken = useAuthStore((state) => state.setToken);
+  const setAuth = useAuthStore((state) => state.setAuth);
 
   const { mutate, isPending } = useMutation(
     adminRegisterMutationOptions({
       onSuccess: (res) => {
         const token = res?.data?.token;
 
-        if (!token) {
+        if (!token && res?.success !== true) {
           toast.error('Login failed: No token received.');
           return;
         }
 
-        setToken(token);
+        setAuth(true);
+        setAdminSessionCookie();
         form.reset();
         router.push('/admin/dashboard');
       },

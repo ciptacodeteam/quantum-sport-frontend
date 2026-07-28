@@ -61,6 +61,7 @@
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
     "input-otp": "^1.4.2",
+    "isomorphic-dompurify": "^3.19.0",
     "jwt-decode": "^4.0.0",
     "lexical": "^0.39.0",
     "lucide-react": "^0.562.0",

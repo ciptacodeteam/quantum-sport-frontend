@@ -98,25 +98,21 @@ const LoginForm = ({ onRegisterClick, openVerifyPhoneOtpModal, onLoginSuccess }:
   );
 
   const queryClient = useQueryClient();
-  const setToken = useAuthStore((state) => state.setToken);
+  const setAuth = useAuthStore((state) => state.setAuth);
   const consumeRedirectPath = useAuthRedirectStore((state) => state.consumeRedirectPath);
 
   const { mutate: login, isPending: isLoginPending } = useMutation(
     loginMutationOptions({
       queryClient: queryClient,
       onSuccess: (res) => {
-        // Robust token extraction: check data.token first, then fallback to root token property
-        const token = res?.data?.token || (res as any)?.token;
+        const token = res?.data?.token || (res as { token?: string })?.token;
 
-        console.log('Login response:', res); // Debug log
-
-        if (!token) {
-          console.error('Login successful but no token found in response:', res);
+        if (!token && res?.success !== true) {
           toast.error('Login failed. Please try again.');
           return;
         }
 
-        setToken(token);
+        setAuth(true);
         form.reset();
         const redirectPath = consumeRedirectPath();
         if (redirectPath) {

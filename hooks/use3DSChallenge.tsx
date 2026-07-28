@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { CheckoutResponse } from '@/types/model';
+import { getInvoiceApi } from '@/api/booking';
 import { toast } from 'sonner';
 
 interface Use3DSChallengeResult {
@@ -8,17 +9,39 @@ interface Use3DSChallengeResult {
   error: string | null;
   status: 'pending' | 'success' | 'failed' | null;
   paymentData: CheckoutResponse | null;
+  invoiceHref: string | null;
+}
+
+type InvoiceApiResponse = {
+  success?: boolean;
+  data?: {
+    id: string;
+    number: string;
+    status: string;
+  } | null;
+};
+
+const TERMINAL_FAILURE_STATUSES = new Set(['FAILED', 'EXPIRED', 'CANCELLED']);
+const POLL_ATTEMPTS = 15;
+const POLL_INTERVAL_MS = 2000;
+
+function buildInvoiceHref(invoiceId?: string | null, invoiceNumber?: string | null) {
+  const lookup = invoiceNumber || invoiceId;
+  return lookup ? `/invoice/${lookup}` : '/invoice';
+}
+
+function buildPaymentSuccessHref(invoiceId?: string | null, invoiceNumber?: string | null) {
+  const params = new URLSearchParams();
+  if (invoiceNumber) params.set('invoice_number', invoiceNumber);
+  else if (invoiceId) params.set('invoice_id', invoiceId);
+  const query = params.toString();
+  return query ? `/payment/success?${query}` : '/payment/success';
 }
 
 /**
- * Hook to handle 3DS authentication challenge flow
- *
- * Usage:
- * - After redirect from 3DS challenge URL, this hook will:
- *   1. Check for authentication completion
- *   2. Verify payment status via webhook or polling
- *   3. Update booking/invoice status
- *   4. Redirect to success/failure pages
+ * Hook to handle 3DS authentication challenge return flow.
+ * Polls the real invoice API until PAID / failed / timeout, then routes to
+ * the verified payment success page (or shows failure).
  */
 export const use3DSChallenge = (): Use3DSChallengeResult => {
   const router = useRouter();
@@ -27,116 +50,125 @@ export const use3DSChallenge = (): Use3DSChallengeResult => {
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<'pending' | 'success' | 'failed' | null>(null);
   const [paymentData, setPaymentData] = useState<CheckoutResponse | null>(null);
+  const [invoiceHref, setInvoiceHref] = useState<string | null>(null);
+  const startedRef = useRef(false);
 
-  // Check if we're returning from 3DS challenge
-  const isReturningFromChallenge = useCallback(() => {
-    if (typeof window === 'undefined') return false;
+  const pollPaymentStatus = useCallback(
+    async (invoiceLookup: string, maxAttempts = POLL_ATTEMPTS) => {
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        try {
+          const response = (await getInvoiceApi(invoiceLookup)) as InvoiceApiResponse;
+          const invoice = response?.data;
 
-    // Check for Xendit callback parameters
-    const paymentId = searchParams.get('payment_id');
-    const status = searchParams.get('status');
-
-    // Or check for stored 3DS data
-    const storedData = sessionStorage.getItem('payment_3ds_data');
-
-    return !!(paymentId || status || storedData);
-  }, [searchParams]);
-
-  // Poll for payment status (for webhook delays)
-  const pollPaymentStatus = useCallback(async (invoiceId: string | undefined, maxAttempts = 10) => {
-    if (!invoiceId) return null;
-
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      try {
-        // This would typically fetch invoice status from your API
-        const response = await fetch(`/api/invoices/${invoiceId}`, {
-          headers: {
-            Authorization: `Bearer ${sessionStorage.getItem('token')}`
+          if (!invoice) {
+            if (attempt === maxAttempts - 1) {
+              return { status: 'failed' as const, data: null };
+            }
+            await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+            continue;
           }
-        });
 
-        if (!response.ok) {
+          if (invoice.status === 'PAID') {
+            return { status: 'success' as const, data: invoice };
+          }
+
+          if (TERMINAL_FAILURE_STATUSES.has(invoice.status)) {
+            return { status: 'failed' as const, data: invoice };
+          }
+
+          if (attempt < maxAttempts - 1) {
+            await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+          }
+        } catch (err) {
+          console.error('Error polling payment status:', err);
           if (attempt === maxAttempts - 1) {
-            throw new Error('Failed to fetch payment status');
+            throw err;
           }
-          // Wait before retrying
-          await new Promise((resolve) => setTimeout(resolve, 2000));
-          continue;
+          await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
         }
-
-        const data = await response.json();
-
-        // Check if payment is confirmed
-        if (data?.data?.paymentStatus === 'PAID' || data?.data?.status === 'CONFIRMED') {
-          return { status: 'success', data: data?.data };
-        }
-
-        if (data?.data?.paymentStatus === 'FAILED') {
-          return { status: 'failed', data: data?.data };
-        }
-
-        // Still pending, wait and retry
-        if (attempt < maxAttempts - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 2000));
-        }
-      } catch (err) {
-        console.error('Error polling payment status:', err);
-        if (attempt === maxAttempts - 1) {
-          throw err;
-        }
-        await new Promise((resolve) => setTimeout(resolve, 2000));
       }
-    }
 
-    return null;
-  }, []);
+      return { status: 'pending' as const, data: null };
+    },
+    []
+  );
 
-  // Main effect to handle 3DS flow
   useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+
     const handle3DSFlow = async () => {
       try {
         setIsLoading(true);
         setError(null);
 
-        // Check if we have stored 3DS data
-        const storedData = sessionStorage.getItem('payment_3ds_data');
-        if (storedData) {
-          const data: CheckoutResponse = JSON.parse(storedData);
-          setPaymentData(data);
+        const queryInvoiceId = searchParams.get('invoice_id');
+        const queryInvoiceNumber = searchParams.get('invoice_number');
+        const queryStatus = searchParams.get('status');
 
-          // Poll for payment completion
-          const pollResult = await pollPaymentStatus(data.invoiceId);
-
-          if (pollResult?.status === 'success') {
-            setStatus('success');
-            setIsLoading(false);
-
-            // Redirect to success page after brief delay
-            setTimeout(() => {
-              const invoiceId = data.invoiceId || data.membershipUserId;
-              router.push(`/checkout/success?invoiceId=${invoiceId}`);
-            }, 2000);
-          } else if (pollResult?.status === 'failed') {
-            setStatus('failed');
-            setError('Payment was declined. Please try again with a different card.');
-            setIsLoading(false);
-          } else {
-            // Status still pending after polling
-            setStatus('pending');
-            setIsLoading(false);
-
-            // Show message to user
-            toast.info('Waiting for payment confirmation...');
+        let stored: CheckoutResponse | null = null;
+        const rawStored = sessionStorage.getItem('payment_3ds_data');
+        if (rawStored) {
+          try {
+            stored = JSON.parse(rawStored) as CheckoutResponse;
+            setPaymentData(stored);
+          } catch {
+            stored = null;
           }
+        }
 
-          // Clean up stored data
-          sessionStorage.removeItem('payment_3ds_data');
-        } else {
-          // No 3DS data found - this shouldn't happen on the challenge page
+        const invoiceLookup =
+          queryInvoiceNumber ||
+          queryInvoiceId ||
+          stored?.invoiceNumber ||
+          stored?.invoiceId ||
+          null;
+
+        setInvoiceHref(buildInvoiceHref(stored?.invoiceId, stored?.invoiceNumber || invoiceLookup));
+
+        if (!invoiceLookup) {
           setStatus('failed');
           setError('No payment information found. Please start checkout again.');
           setIsLoading(false);
+          return;
         }
+
+        if (queryStatus && ['FAILED', 'EXPIRED', 'CANCELLED'].includes(queryStatus.toUpperCase())) {
+          setStatus('failed');
+          setError('Payment was declined. Please try again with a different card.');
+          setIsLoading(false);
+          sessionStorage.removeItem('payment_3ds_data');
+          return;
+        }
+
+        const pollResult = await pollPaymentStatus(invoiceLookup);
+
+        if (pollResult.status === 'success') {
+          setStatus('success');
+          setIsLoading(false);
+          sessionStorage.removeItem('payment_3ds_data');
+
+          const successInvoiceNumber = pollResult.data?.number || stored?.invoiceNumber;
+          const successInvoiceId = pollResult.data?.id || stored?.invoiceId || queryInvoiceId;
+
+          setTimeout(() => {
+            router.replace(buildPaymentSuccessHref(successInvoiceId, successInvoiceNumber));
+          }, 1200);
+          return;
+        }
+
+        if (pollResult.status === 'failed') {
+          setStatus('failed');
+          setError('Payment was declined. Please try again with a different card.');
+          setIsLoading(false);
+          sessionStorage.removeItem('payment_3ds_data');
+          return;
+        }
+
+        setStatus('pending');
+        setIsLoading(false);
+        toast.info('Waiting for payment confirmation. Check your invoice status shortly.');
+        sessionStorage.removeItem('payment_3ds_data');
       } catch (err) {
         console.error('3DS challenge error:', err);
         setStatus('failed');
@@ -149,17 +181,14 @@ export const use3DSChallenge = (): Use3DSChallengeResult => {
       }
     };
 
-    if (isReturningFromChallenge()) {
-      handle3DSFlow();
-    } else {
-      setIsLoading(false);
-    }
-  }, [isReturningFromChallenge, pollPaymentStatus, router]);
+    void handle3DSFlow();
+  }, [pollPaymentStatus, router, searchParams]);
 
   return {
     isLoading,
     error,
     status,
-    paymentData
+    paymentData,
+    invoiceHref
   };
 };
