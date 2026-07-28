@@ -1,6 +1,5 @@
 'use client';
 
-import { updateProfileApi } from '@/api/auth';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -14,17 +13,17 @@ import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from '@/component
 import { Input } from '@/components/ui/input';
 import { InputGroup, InputGroupText } from '@/components/ui/input-group';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { useResendCountdown } from '@/hooks/useResendCountdown';
 import { formatPhone } from '@/lib/utils';
-import { verifyPhoneOtpMutationOptions } from '@/mutations/auth';
-import { sendPhoneOtpMutationOptions } from '@/mutations/phone';
+import {
+  sendVerificationOtpMutationOptions,
+  verifyVerificationOtpMutationOptions
+} from '@/mutations/verification';
 import { profileQueryOptions } from '@/queries/profile';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Phone } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { toast } from 'sonner';
 import { z } from 'zod';
 import { ResendOtpButton } from '../buttons/ResendOtpButton';
 
@@ -49,7 +48,7 @@ type Props = {
 export default function PhoneChangeModal({ open, phone, onOpenChange, onSuccess }: Props) {
   const qc = useQueryClient();
   const [otpSent, setOtpSent] = useState(false);
-  const cooldown = useResendCountdown({ seconds: 60, persistKey: 'phone-otp-cd' });
+  const [requestId, setRequestId] = useState<string | null>(null);
 
   const phoneForm = useForm<PhoneFormData>({
     resolver: zodResolver(phoneSchema),
@@ -71,35 +70,24 @@ export default function PhoneChangeModal({ open, phone, onOpenChange, onSuccess 
     }
   }, [phone, phoneForm, open]);
 
-  const { mutate: updateProfile, isPending: isUpdating } = useMutation({
-    mutationFn: async (payload: { phone: string }) => {
-      const form = new FormData();
-      form.append('phone', payload.phone);
-      return updateProfileApi(form);
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: profileQueryOptions.queryKey });
-    },
-    onError: (err: any) => toast.error(err?.message || 'Failed to update WhatsApp Number')
-  });
-
   const { mutate: sendOtp, isPending: isSending } = useMutation(
-    sendPhoneOtpMutationOptions({
-      onSuccess: () => {
-        cooldown.start();
+    sendVerificationOtpMutationOptions({
+      onSuccess: (res) => {
+        const id = res?.data?.requestId;
+        if (!id) return;
+        setRequestId(id);
         setOtpSent(true);
-        toast.success('OTP sent to WhatsApp Number');
       }
     })
   );
 
   const { mutate: verifyOtp, isPending: isVerifying } = useMutation(
-    verifyPhoneOtpMutationOptions({
+    verifyVerificationOtpMutationOptions({
       onSuccess: () => {
-        toast.success('WhatsApp Number verified');
         qc.invalidateQueries({ queryKey: profileQueryOptions.queryKey });
         otpForm.reset();
         setOtpSent(false);
+        setRequestId(null);
         onOpenChange(false);
         onSuccess?.();
       }
@@ -108,23 +96,20 @@ export default function PhoneChangeModal({ open, phone, onOpenChange, onSuccess 
 
   const handlePhoneSubmit = (data: PhoneFormData) => {
     const formatted = formatPhone(data.phone);
-    updateProfile({ phone: formatted });
-    sendOtp({ phone: formatted });
+    sendOtp({ type: 'phone', phone: formatted });
   };
 
   const handleOtpSubmit = useCallback(
     (data: OtpFormData) => {
-      const phoneVal = phoneForm.getValues('phone');
-      const formatted = formatPhone(phoneVal);
-      verifyOtp({ phone: formatted, otp: data.otp });
+      if (!requestId) return;
+      verifyOtp({ type: 'phone', requestId, code: data.otp });
     },
-    [phoneForm, verifyOtp]
+    [requestId, verifyOtp]
   );
 
   const handleResendOtp = () => {
-    if (cooldown.isCoolingDown) return;
-    const phone = phoneForm.getValues('phone');
-    sendOtp({ phone });
+    const phoneVal = phoneForm.getValues('phone');
+    sendOtp({ type: 'phone', phone: formatPhone(phoneVal) });
   };
 
   return (
@@ -135,6 +120,7 @@ export default function PhoneChangeModal({ open, phone, onOpenChange, onSuccess 
           phoneForm.reset();
           otpForm.reset();
           setOtpSent(false);
+          setRequestId(null);
         }
         onOpenChange(o);
       }}
@@ -185,11 +171,7 @@ export default function PhoneChangeModal({ open, phone, onOpenChange, onSuccess 
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                   Batal
                 </Button>
-                <Button
-                  type="submit"
-                  loading={isUpdating || isSending}
-                  disabled={isUpdating || isSending}
-                >
+                <Button type="submit" loading={isSending} disabled={isSending}>
                   Konfirmasi
                 </Button>
               </DialogFooter>
@@ -219,7 +201,7 @@ export default function PhoneChangeModal({ open, phone, onOpenChange, onSuccess 
                           value={field.value}
                           onChange={(value) => {
                             field.onChange(value);
-                            if (value.length === 4) {
+                            if (value.length === 4 && requestId) {
                               otpForm.handleSubmit(handleOtpSubmit)();
                             }
                           }}
