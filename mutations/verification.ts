@@ -6,7 +6,7 @@ import {
 } from '@/api/verification';
 import type { MutationFuncProps } from '@/types';
 import { mutationOptions } from '@tanstack/react-query';
-import { handleMutationError } from '@/lib/handle-mutation-error';
+import { getApiErrorMessage } from '@/lib/api-error';
 import { toast } from 'sonner';
 
 export const sendVerificationOtpMutationOptions = ({
@@ -20,10 +20,9 @@ export const sendVerificationOtpMutationOptions = ({
       toast.success(`OTP dikirim ke ${target}`);
       onSuccess?.(res);
     },
-    onError: (error: any) => {
-      const msg = error?.response?.data?.message || 'Gagal mengirim OTP';
-      toast.error(msg);
-      onError?.(error);
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Gagal mengirim OTP'));
+      onError?.(error as any);
     }
   });
 
@@ -38,9 +37,8 @@ export const verifyVerificationOtpMutationOptions = ({
       toast.success(`${label} berhasil diverifikasi`);
       onSuccess?.(res);
     },
-    onError: (error: any) => {
-      const msg = error?.response?.data?.message || 'Kode OTP salah atau kadaluarsa';
-      toast.error(msg);
-      onError?.(error);
+    onError: (error: unknown) => {
+      toast.error(getApiErrorMessage(error, 'Kode OTP salah atau kadaluarsa'));
+      onError?.(error as any);
     }
   });
