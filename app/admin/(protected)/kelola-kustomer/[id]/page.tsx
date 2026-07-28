@@ -28,10 +28,11 @@ const EditCustomerPage = ({ params }: { params: Promise<IdParams> }) => {
   const param = use(params);
   const { data: me } = useQuery(adminProfileQueryOptions);
   const { data: customer } = useQuery(adminCustomerQueryOptions(param.id));
-  const isCashier = me?.role?.toUpperCase?.() === ROLE.CASHIER;
+  const role = me?.role?.toUpperCase?.();
+  const canEditCustomer = role === ROLE.ADMIN || role === ROLE.CASHIER;
+  const canManageCustomerAccess = role === ROLE.ADMIN;
 
-  if (isCashier) {
-    // View-only mode for CASHIER
+  if (!canEditCustomer) {
     return (
       <main>
         <Section>
@@ -120,7 +121,7 @@ const EditCustomerPage = ({ params }: { params: Promise<IdParams> }) => {
                 </CardContent>
               </Card>
 
-              <ResetCustomerPassword customerId={param.id} />
+              {canManageCustomerAccess && <ResetCustomerPassword customerId={param.id} />}
             </div>
           </SectionContent>
         </Section>
@@ -128,7 +129,6 @@ const EditCustomerPage = ({ params }: { params: Promise<IdParams> }) => {
     );
   }
 
-  // Full edit mode for ADMIN
   return (
     <main>
       <Section>
@@ -145,8 +145,12 @@ const EditCustomerPage = ({ params }: { params: Promise<IdParams> }) => {
             <VerifyCustomerWhatsApp customerId={param.id} />
             <Separator className="my-4" />
             <ResetCustomerPassword customerId={param.id} />
-            <Separator className="my-4" />
-            <BanCustomerAccess customerId={param.id} />
+            {canManageCustomerAccess && (
+              <>
+                <Separator className="my-4" />
+                <BanCustomerAccess customerId={param.id} />
+              </>
+            )}
           </div>
         </SectionContent>
       </Section>

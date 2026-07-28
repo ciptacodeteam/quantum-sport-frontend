@@ -32,7 +32,8 @@ const CUSTOMER_SOURCE_BADGE_VARIANT = {
 
 const CustomerTable = () => {
   const { data: me } = useQuery(adminProfileQueryOptions);
-  const isCashier = me?.role?.toUpperCase?.() === 'CASHIER';
+  const role = me?.role?.toUpperCase?.();
+  const canEditCustomer = role === ROLE.ADMIN || role === ROLE.CASHIER;
 
   // const { confirmAndMutate } = useConfirmMutation(
   //   {
@@ -130,15 +131,15 @@ const CustomerTable = () => {
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
             <Link href={`/admin/kelola-kustomer/${row.original.id}`} prefetch>
-              <Button size="icon" variant={isCashier ? 'lightInfo' : 'lightInfo'}>
-                {isCashier ? <IconEye /> : <IconPencil />}
+              <Button size="icon" variant="lightInfo">
+                {canEditCustomer ? <IconPencil /> : <IconEye />}
               </Button>
             </Link>
           </div>
         )
       })
     ],
-    [colHelper, isCashier]
+    [canEditCustomer, colHelper]
   );
 
   const { data, isPending } = useQuery(adminCustomersQueryOptions);
