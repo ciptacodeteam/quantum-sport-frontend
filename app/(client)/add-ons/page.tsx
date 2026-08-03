@@ -746,7 +746,7 @@ export default function AddOnsPage() {
           </div>
         )} */}
 
-        {/* === RAKET === */}
+        {/* === INVENTORY === */}
         {activeTab === 'inventory' && (
           <div className="flex flex-col gap-3 pb-24">
             {isInventoryPending && (
@@ -770,7 +770,7 @@ export default function AddOnsPage() {
                 <div className="px-4 py-3">
                   <p className="text-muted-foreground text-sm">
                     {courtSport === 'TENNIS' && hasBookingSelection
-                      ? 'Raket di jam tersebut tidak tersedia.'
+                      ? 'Peralatan di jam tersebut tidak tersedia.'
                       : 'Inventori tidak tersedia.'}
                   </p>
                 </div>
@@ -870,7 +870,7 @@ export default function AddOnsPage() {
                                       ? 'Tidak tersedia di sesi ini'
                                       : isLocallyUnavailable
                                         ? 'Sudah dipakai di lapangan lain'
-                                        : `${remainingQty} racket tersisa`}
+                                        : `${remainingQty} buah tersedia`}
                                   </p>
                                   <div className="mt-2 flex flex-wrap items-baseline gap-x-1">
                                     <span className="text-primary text-sm font-semibold">

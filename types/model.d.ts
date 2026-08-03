@@ -664,8 +664,10 @@ export type OngoingBookingCoach = {
 export type OngoingBookingBallboy = {
   ballboyId?: string;
   ballboyName: string;
+  ballboyImage?: string;
   slotStart: string;
   slotEnd: string;
+  price?: number;
 };
 
 export type OngoingBookingInventory = {

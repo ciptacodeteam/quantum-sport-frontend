@@ -1509,7 +1509,7 @@ export default function BookingAddOns() {
                   <CardContent className="p-4">
                     <p className="text-muted-foreground text-sm">
                       {courtSport === 'TENNIS' && bookingItems.length > 0
-                        ? 'Raket di jam tersebut tidak tersedia.'
+                        ? 'Peralatan di jam tersebut tidak tersedia.'
                         : 'Inventory tidak tersedia.'}
                     </p>
                   </CardContent>
