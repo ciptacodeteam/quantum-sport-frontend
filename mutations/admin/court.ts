@@ -1,4 +1,6 @@
 import {
+  bulkUpdateCourtSlotPricingApi,
+  type BulkUpdateCourtSlotPricingPayload,
   createCourtApi,
   createCourtCostApi,
   updateCourtApi,
@@ -113,5 +115,27 @@ export const adminUpdateSlotPriceMutationOptions = ({
       handleMutationError(error, {
         onError,
         fallbackMessage: 'Gagal memperbarui harga slot. Silakan coba lagi.'
+      })
+  });
+
+export const adminBulkUpdateCourtSlotPricingMutationOptions = ({
+  onSuccess,
+  onError
+}: MutationFuncProps = {}) =>
+  mutationOptions({
+    mutationFn: ({ courtId, data }: { courtId: string; data: BulkUpdateCourtSlotPricingPayload }) =>
+      bulkUpdateCourtSlotPricingApi(courtId, data),
+    onSuccess: (data) => {
+      const result = data?.data;
+      const skipped = result?.skippedBookedCount
+        ? ` ${result.skippedBookedCount} slot dibooking dilewati.`
+        : '';
+      toast.success(`Bulk harga berhasil diperbarui.${skipped}`);
+      onSuccess?.(data);
+    },
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Gagal bulk update harga slot. Silakan coba lagi.'
       })
   });

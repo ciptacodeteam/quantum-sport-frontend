@@ -88,3 +88,21 @@ export async function updateSlotPriceApi(
   const { data } = await adminApi.put(`/courts/slots/${slotId}/pricing`, payload);
   return data;
 }
+
+export type BulkUpdateCourtSlotPricingPayload = {
+  fromDate: string;
+  toDate: string;
+  days: number[];
+  startHour: number;
+  endHour: number;
+  price: number;
+  discountPrice?: number;
+};
+
+export async function bulkUpdateCourtSlotPricingApi(
+  courtId: string,
+  payload: BulkUpdateCourtSlotPricingPayload
+) {
+  const { data } = await adminApi.put(`/courts/${courtId}/slots/bulk-pricing`, payload);
+  return data;
+}
