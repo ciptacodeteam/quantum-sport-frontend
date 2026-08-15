@@ -152,6 +152,18 @@ const mergeCoaches = (
   return Array.from(map.values());
 };
 
+const mergeInventories = (
+  current: BookingInventory[] | undefined,
+  incoming: BookingInventory[]
+): BookingInventory[] => {
+  const map = new Map<string, BookingInventory>();
+
+  current?.forEach((inventory) => map.set(inventory.id, inventory));
+  incoming.forEach((inventory) => map.set(inventory.id, inventory));
+
+  return Array.from(map.values());
+};
+
 const getCoachesForBookingCell = (bookingCell: BookingCell): BookingCoach[] => {
   const coaches = (bookingCell.booking.coaches || []) as BookingCoach[];
   const detailSlot = bookingCell.detail.slot;
@@ -161,6 +173,18 @@ const getCoachesForBookingCell = (bookingCell: BookingCell): BookingCoach[] => {
   return coaches.filter((coach) => {
     if (!coach.slot) return false;
     return timeRangesOverlap(coach.slot, detailSlot);
+  });
+};
+
+const getInventoriesForBookingCell = (bookingCell: BookingCell): BookingInventory[] => {
+  const inventories = (bookingCell.booking.inventories || []) as BookingInventory[];
+  const detailSlot = bookingCell.detail.slot;
+
+  if (!detailSlot) return [];
+
+  return inventories.filter((inventory) => {
+    if (!inventory.slot) return true;
+    return timeRangesOverlap(inventory.slot, detailSlot);
   });
 };
 
@@ -626,6 +650,99 @@ export default function SchedulePage() {
           });
         });
       });
+
+      booking.inventories?.forEach((inventory) => {
+        const inventorySlot = inventory.slot;
+        if (!inventorySlot?.startAt || !inventorySlot.endAt) return;
+        if (inventory.inventory?.sport && inventory.inventory.sport !== courtSport) return;
+
+        let placements = (booking.details || [])
+          .filter((detail) => {
+            if (!detail.court?.id || !detail.slot) return false;
+            if (detail.court.sport !== courtSport) return false;
+            return timeRangesOverlap(inventorySlot, detail.slot);
+          })
+          .map((detail) => ({
+            courtId: detail.court!.id,
+            slot: detail.slot!
+          }));
+
+        if (placements.length === 0) {
+          const inferredPlacements: Array<{
+            courtId: string;
+            slot: NonNullable<BookingDetail['slot']>;
+          }> = [];
+          const inventoryUserId = booking.userId ?? booking.user?.id;
+          const inventoryPhone = booking.user?.phone;
+
+          map.forEach((courtCells, courtId) => {
+            courtCells.forEach((cell) => {
+              const cellUserId = cell.booking.userId ?? cell.booking.user?.id;
+              const cellPhone = cell.booking.user?.phone;
+              const sameCustomer =
+                (inventoryUserId && cellUserId && inventoryUserId === cellUserId) ||
+                (inventoryPhone && cellPhone && inventoryPhone === cellPhone);
+
+              if (!sameCustomer || !cell.detail.slot || !cell.detail.court) return;
+              if (cell.detail.court.sport !== courtSport) return;
+              if (!timeRangesOverlap(inventorySlot, cell.detail.slot)) return;
+
+              if (
+                inferredPlacements.some(
+                  (placement) =>
+                    placement.courtId === courtId && placement.slot.id === cell.detail.slot?.id
+                )
+              ) {
+                return;
+              }
+
+              inferredPlacements.push({
+                courtId,
+                slot: cell.detail.slot
+              });
+            });
+          });
+
+          placements = inferredPlacements;
+        }
+
+        placements.forEach(({ courtId, slot }) => {
+          if (!slot.startAt || !slot.endAt) return;
+
+          const slotDate = getDateStringFromISO(slot.startAt);
+          if (slotDate !== selectedDateString) return;
+
+          const slotStart = parseDatetime(slot.startAt);
+          const slotEnd = parseDatetime(slot.endAt);
+
+          if (!map.has(courtId)) {
+            map.set(courtId, new Map());
+          }
+
+          timeSlotRanges.forEach(({ startTime }) => {
+            const timeSlotDateTime = parseDatetime(`${selectedDateString} ${startTime}:00`);
+            const isWithinRange =
+              (timeSlotDateTime.isSame(slotStart) || timeSlotDateTime.isAfter(slotStart)) &&
+              timeSlotDateTime.isBefore(slotEnd);
+
+            if (!isWithinRange) return;
+
+            const existingCell = map.get(courtId)!.get(startTime);
+            if (!existingCell) return;
+
+            map.get(courtId)!.set(startTime, {
+              ...existingCell,
+              booking: {
+                ...existingCell.booking,
+                inventories: mergeInventories(
+                  (existingCell.booking.inventories || []) as BookingInventory[],
+                  [inventory as BookingInventory]
+                )
+              }
+            });
+          });
+        });
+      });
     });
 
     return map;
@@ -838,7 +955,7 @@ export default function SchedulePage() {
 
                                                 // Get inventory names
                                                 const inventoriesArray =
-                                                  bookingCell.booking.inventories || [];
+                                                  getInventoriesForBookingCell(bookingCell);
                                                 const isBookingInventoryArray =
                                                   inventoriesArray.length > 0 &&
                                                   'inventory' in inventoriesArray[0];
@@ -1218,7 +1335,7 @@ export default function SchedulePage() {
                                             {/* Inventories Section */}
                                             {(() => {
                                               const inventoriesArray =
-                                                bookingCell.booking.inventories || [];
+                                                getInventoriesForBookingCell(bookingCell);
                                               if (inventoriesArray.length === 0) return null;
 
                                               // Check if inventories is BookingInventory[] or Inventory[]

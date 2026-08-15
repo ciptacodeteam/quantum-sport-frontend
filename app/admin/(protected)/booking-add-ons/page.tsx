@@ -181,6 +181,15 @@ export default function BookingAddOns() {
     const bookingsWithSlotRange = bookingItems.filter((item) => item.startAt && item.endAt);
 
     if (bookingsWithSlotRange.length === 0) {
+      if (selectedAddOnTimeSlot) {
+        const [startTime, endTime] = selectedAddOnTimeSlot.split(' - ');
+
+        return {
+          startAt: `${selectedAddOnDate}T${startTime}:00`,
+          endAt: `${selectedAddOnDate}T${endTime}:00`
+        };
+      }
+
       return dateRange;
     }
 
@@ -191,7 +200,7 @@ export default function BookingAddOns() {
       startAt: sortedStarts[0],
       endAt: sortedEnds[sortedEnds.length - 1]
     };
-  }, [bookingItems, dateRange]);
+  }, [bookingItems, dateRange, selectedAddOnDate, selectedAddOnTimeSlot]);
 
   // Helpers to avoid timezone shifts; use local time parts from ISO strings (same as court slots)
   const getISODate = (isoString?: string | null) => (isoString ? isoString.slice(0, 10) : '');
@@ -249,6 +258,18 @@ export default function BookingAddOns() {
     return {
       start,
       end: rawEnd <= start ? rawEnd + 24 * 60 * 60 * 1000 : rawEnd
+    };
+  };
+  const getAddOnTimeRange = (date = selectedAddOnDate, timeSlot = selectedAddOnTimeSlot) => {
+    const [startTime, endTime] = timeSlot.split(' - ');
+
+    if (!startTime || !endTime) {
+      return { startAt: undefined, endAt: undefined };
+    }
+
+    return {
+      startAt: `${date}T${startTime}:00`,
+      endAt: `${date}T${endTime}:00`
     };
   };
   const getInventorySelectionRangeMs = (inventory: (typeof selectedInventories)[number]) => {
@@ -765,6 +786,14 @@ export default function BookingAddOns() {
         ? Math.max(0, availableQuantityOverride - overlappingSelectedQty)
         : quantity;
     const safeQuantity = Math.max(0, Math.min(quantity, maxSelectableQty));
+    const standaloneRange = booking
+      ? { startAt: undefined as string | undefined, endAt: undefined as string | undefined }
+      : getAddOnTimeRange(date, timeSlot);
+
+    if (!booking && (!standaloneRange.startAt || !standaloneRange.endAt)) {
+      toast.error('Pilih tanggal dan jam add-on terlebih dahulu.');
+      return;
+    }
 
     if (safeQuantity > 0) {
       addInventory({
@@ -777,8 +806,9 @@ export default function BookingAddOns() {
         courtId: booking?.courtId,
         courtName: booking?.courtName,
         courtSlotId: booking?.slotId,
-        startAt: booking?.startAt,
-        endAt: booking?.endAt
+        startAt: booking?.startAt ?? standaloneRange?.startAt,
+        endAt: booking?.endAt ?? standaloneRange?.endAt,
+        courtSport: booking?.sport ?? selectedEquipmentSport
       });
     } else {
       removeInventory(inventoryId, timeSlot);
@@ -826,7 +856,14 @@ export default function BookingAddOns() {
       .map((i) => ({
         inventoryId: i.inventoryId,
         quantity: i.quantity,
-        ...(i.courtSlotId ? { courtSlotId: i.courtSlotId } : {})
+        ...(i.courtSlotId ? { courtSlotId: i.courtSlotId } : {}),
+        ...(!i.courtSlotId && i.startAt && i.endAt
+          ? {
+              startAt: i.startAt,
+              endAt: i.endAt,
+              courtSport: i.courtSport
+            }
+          : {})
       }));
 
     // Validate at least one of the items exists
@@ -1042,19 +1079,48 @@ export default function BookingAddOns() {
                 )}
               </Button>
             )}
-            <Button
-              variant={activeTab === 'inventory' ? 'default' : 'ghost'}
-              className="flex-1"
-              onClick={() => setActiveTab('inventory')}
-            >
-              <IconShoppingCart className="mr-2 h-4 w-4" />
-              Equipment
-              {selectedInventories.length > 0 && (
-                <Badge variant="secondary" className="ml-2">
-                  {selectedInventories.length}
-                </Badge>
-              )}
-            </Button>
+            {bookingItems.length > 0 ? (
+              <Button
+                variant={activeTab === 'inventory' ? 'default' : 'ghost'}
+                className="flex-1"
+                onClick={() => {
+                  setSelectedEquipmentSport(courtSport);
+                  setActiveTab('inventory');
+                }}
+              >
+                <IconShoppingCart className="mr-2 h-4 w-4" />
+                Equipment
+                {selectedInventories.length > 0 && (
+                  <Badge variant="secondary" className="ml-2">
+                    {selectedInventories.length}
+                  </Badge>
+                )}
+              </Button>
+            ) : (
+              (['PADEL', 'TENNIS'] as const).map((sport) => (
+                <Button
+                  key={sport}
+                  variant={
+                    activeTab === 'inventory' && selectedEquipmentSport === sport
+                      ? 'default'
+                      : 'ghost'
+                  }
+                  className="flex-1"
+                  onClick={() => {
+                    setSelectedEquipmentSport(sport);
+                    setActiveTab('inventory');
+                  }}
+                >
+                  <IconShoppingCart className="mr-2 h-4 w-4" />
+                  Equipment {sport === 'TENNIS' ? 'Tennis' : 'Padel'}
+                  {selectedInventories.filter((item) => item.courtSport === sport).length > 0 && (
+                    <Badge variant="secondary" className="ml-2">
+                      {selectedInventories.filter((item) => item.courtSport === sport).length}
+                    </Badge>
+                  )}
+                </Button>
+              ))
+            )}
           </div>
 
           {/* Coaches Tab */}
@@ -1456,21 +1522,11 @@ export default function BookingAddOns() {
                     Select {selectedEquipmentSport === 'TENNIS' ? 'tennis' : 'padel'} equipment for
                     your booked dates and times
                   </p>
-                  <div className="grid grid-cols-2 gap-1 rounded-md bg-white p-1 sm:w-56">
-                    {(['PADEL', 'TENNIS'] as const).map((sport) => (
-                      <Button
-                        key={sport}
-                        type="button"
-                        size="sm"
-                        variant={selectedEquipmentSport === sport ? 'default' : 'ghost'}
-                        className="h-8"
-                        disabled={bookingItems.length > 0 && courtSport !== sport}
-                        onClick={() => setSelectedEquipmentSport(sport)}
-                      >
-                        {sport === 'TENNIS' ? 'Tennis' : 'Padel'}
-                      </Button>
-                    ))}
-                  </div>
+                  {bookingItems.length > 0 && (
+                    <Badge variant="outline">
+                      {selectedEquipmentSport === 'TENNIS' ? 'Tennis' : 'Padel'}
+                    </Badge>
+                  )}
                 </div>
                 <div className="text-muted-foreground mb-2 text-xs">
                   {bookingItems.length > 0 ? (
@@ -1700,11 +1756,12 @@ export default function BookingAddOns() {
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                   {inventoryItems.map((item) => {
                     const selectedDateForInventory = selectedAddOnDate;
+                    const inventoryTimeSlot = selectedAddOnTimeSlot || 'default';
                     const currentQuantity =
                       selectedInventories.find(
                         (inventory) =>
                           inventory.inventoryId === item.id &&
-                          (inventory.timeSlot ?? 'default') === 'default'
+                          (inventory.timeSlot ?? 'default') === inventoryTimeSlot
                       )?.quantity ?? 0;
                     const availableQuantity = item.availableQuantity ?? 0;
                     const itemImage = resolveMediaUrl(item.image);
@@ -1777,7 +1834,7 @@ export default function BookingAddOns() {
                                 handleInventoryQuantityChange(
                                   item.id,
                                   item.name,
-                                  'default',
+                                  inventoryTimeSlot,
                                   selectedDateForInventory,
                                   Math.max(0, currentQuantity - 1),
                                   item.price
@@ -1797,7 +1854,7 @@ export default function BookingAddOns() {
                                 handleInventoryQuantityChange(
                                   item.id,
                                   item.name,
-                                  'default',
+                                  inventoryTimeSlot,
                                   selectedDateForInventory,
                                   Math.min(
                                     availableQuantity,
@@ -1818,7 +1875,7 @@ export default function BookingAddOns() {
                                 handleInventoryQuantityChange(
                                   item.id,
                                   item.name,
-                                  'default',
+                                  inventoryTimeSlot,
                                   selectedDateForInventory,
                                   Math.min(availableQuantity, currentQuantity + 1),
                                   item.price

@@ -433,7 +433,8 @@ enum PaymentStatus {
 enum SlotType {
   COURT,
   COACH,
-  BALLBOY
+  BALLBOY,
+  INVENTORY
 }
 
 export type Slot = {
@@ -509,9 +510,11 @@ export type BookingInventory = {
   price: number;
   createdAt: Date;
   updatedAt: Date;
+  slotId?: string | null;
 
   booking?: Booking;
   inventory?: Inventory;
+  slot?: Slot;
 };
 
 export type BookingBallboy = Omit<BookingInventory, 'inventory', 'inventoryId', 'quantity'> & {

@@ -106,6 +106,7 @@ export interface SelectedInventory {
   courtSlotId?: string;
   startAt?: string;
   endAt?: string;
+  courtSport?: 'PADEL' | 'TENNIS';
 }
 
 interface BookingState {
