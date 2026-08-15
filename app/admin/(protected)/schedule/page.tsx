@@ -128,6 +128,16 @@ const timeRangesOverlap = (
   return firstStart.isBefore(secondEnd) && firstEnd.isAfter(secondStart);
 };
 
+const coachMatchesCourtSport = (coach: BookingCoach, courtSport: 'PADEL' | 'TENNIS') => {
+  const coachType = coach.slot?.staff?.coachType;
+
+  if (!coachType || coachType === 'PADEL_TENNIS') {
+    return true;
+  }
+
+  return coachType === courtSport;
+};
+
 const mergeBallboys = (
   current: BookingBallboy[] | undefined,
   incoming: BookingBallboy[]
@@ -464,6 +474,7 @@ export default function SchedulePage() {
       bookingCoaches.forEach((coach) => {
         const coachSlot = coach.slot;
         if (!coachSlot?.startAt || !coachSlot.endAt) return;
+        if (!coachMatchesCourtSport(coach, courtSport)) return;
 
         let placements = (booking.details || [])
           .filter((detail) => {
