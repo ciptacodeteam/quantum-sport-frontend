@@ -76,6 +76,7 @@ export default function BookingAddOns() {
   // Selected date and time for add-ons when no court bookings exist
   const [selectedAddOnDate, setSelectedAddOnDate] = useState<string>(dayjs().format('YYYY-MM-DD'));
   const [selectedAddOnTimeSlot, setSelectedAddOnTimeSlot] = useState<string>('');
+  const [selectedCoachSport, setSelectedCoachSport] = useState<'PADEL' | 'TENNIS'>('PADEL');
   const [selectedEquipmentSport, setSelectedEquipmentSport] = useState<'PADEL' | 'TENNIS'>('PADEL');
   const [useMembership, setUseMembership] = useState(true);
   const courtSport = useMemo<'PADEL' | 'TENNIS'>(
@@ -87,6 +88,7 @@ export default function BookingAddOns() {
 
   useEffect(() => {
     if (bookingItems.length > 0) {
+      setSelectedCoachSport(courtSport);
       setSelectedEquipmentSport(courtSport);
     }
   }, [bookingItems.length, courtSport]);
@@ -169,7 +171,11 @@ export default function BookingAddOns() {
 
   // Fetch coach availability
   const { data: coachAvailabilityData } = useQuery(
-    adminCoachAvailabilityQueryOptions(dateRange?.startAt, dateRange?.endAt, courtSport)
+    adminCoachAvailabilityQueryOptions(
+      dateRange?.startAt,
+      dateRange?.endAt,
+      bookingItems.length > 0 ? courtSport : selectedCoachSport
+    )
   );
 
   // Fetch ballboy availability. Ballboy is only available for tennis bookings.
@@ -701,7 +707,8 @@ export default function BookingAddOns() {
         date: date,
         slotId: matchingSlot?.id,
         startAt: matchingSlot?.startAt,
-        endAt: matchingSlot?.endAt
+        endAt: matchingSlot?.endAt,
+        courtSport: bookingItems.length > 0 ? courtSport : selectedCoachSport
       });
       toast.success(`Added ${coachName} for ${timeSlot} on ${dayjs(date).format('DD MMM')}`);
     }
@@ -1051,19 +1058,46 @@ export default function BookingAddOns() {
 
           {/* Tabs */}
           <div className="bg-muted flex gap-2 rounded-lg p-1">
-            <Button
-              variant={activeTab === 'coaches' ? 'default' : 'ghost'}
-              className="flex-1"
-              onClick={() => setActiveTab('coaches')}
-            >
-              <IconUser className="mr-2 h-4 w-4" />
-              Coaches
-              {selectedCoaches.length > 0 && (
-                <Badge variant="secondary" className="ml-2">
-                  {selectedCoaches.length}
-                </Badge>
-              )}
-            </Button>
+            {bookingItems.length > 0 ? (
+              <Button
+                variant={activeTab === 'coaches' ? 'default' : 'ghost'}
+                className="flex-1"
+                onClick={() => {
+                  setSelectedCoachSport(courtSport);
+                  setActiveTab('coaches');
+                }}
+              >
+                <IconUser className="mr-2 h-4 w-4" />
+                Coaches
+                {selectedCoaches.length > 0 && (
+                  <Badge variant="secondary" className="ml-2">
+                    {selectedCoaches.length}
+                  </Badge>
+                )}
+              </Button>
+            ) : (
+              (['PADEL', 'TENNIS'] as const).map((sport) => (
+                <Button
+                  key={sport}
+                  variant={
+                    activeTab === 'coaches' && selectedCoachSport === sport ? 'default' : 'ghost'
+                  }
+                  className="flex-1"
+                  onClick={() => {
+                    setSelectedCoachSport(sport);
+                    setActiveTab('coaches');
+                  }}
+                >
+                  <IconUser className="mr-2 h-4 w-4" />
+                  Coach {sport === 'TENNIS' ? 'Tennis' : 'Padel'}
+                  {selectedCoaches.filter((item) => item.courtSport === sport).length > 0 && (
+                    <Badge variant="secondary" className="ml-2">
+                      {selectedCoaches.filter((item) => item.courtSport === sport).length}
+                    </Badge>
+                  )}
+                </Button>
+              ))
+            )}
             {canBookBallboy && (
               <Button
                 variant={activeTab === 'ballboys' ? 'default' : 'ghost'}

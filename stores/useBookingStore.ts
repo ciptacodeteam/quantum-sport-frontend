@@ -78,6 +78,7 @@ export interface SelectedCoach {
   coachTypeId?: string | null;
   startAt?: string;
   endAt?: string;
+  courtSport?: 'PADEL' | 'TENNIS';
 }
 
 export interface SelectedBallboy {
