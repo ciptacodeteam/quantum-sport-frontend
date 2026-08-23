@@ -1038,7 +1038,7 @@ export default function BookingAddOns() {
                   </div>
                   <div>
                     <label className="mb-2 block text-sm font-medium">Time Slot</label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                       {availableTimeSlots.map((slot) => (
                         <Button
                           key={slot}

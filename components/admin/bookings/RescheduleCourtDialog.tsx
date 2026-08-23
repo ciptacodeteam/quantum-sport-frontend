@@ -320,7 +320,7 @@ export function RescheduleCourtDialog({
                         </div>
                       ) : (
                         <div className="max-h-[500px] overflow-y-auto rounded-md border p-2">
-                          <div className="grid grid-cols-3 gap-1.5">
+                          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
                             {selectedCourtSlots.map((slot) => {
                               const isPast = dayjs(slot.startAt).isBefore(dayjs());
                               const isSelectable =

@@ -69,7 +69,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
           <Separator />
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex items-start gap-3">
               <IconCalendar className="text-muted-foreground mt-0.5 size-5" />
               <div>

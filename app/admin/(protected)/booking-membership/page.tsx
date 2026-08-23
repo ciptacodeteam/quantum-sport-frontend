@@ -185,7 +185,7 @@ const BookingMembershipPage = () => {
               value={selectedSport}
               onValueChange={(value) => setSelectedSport(value as MembershipSport)}
             >
-              <TabsList className="grid h-10 w-[220px] grid-cols-2">
+              <TabsList className="grid h-10 w-full grid-cols-2 sm:w-[220px]">
                 <TabsTrigger value="PADEL">Padel</TabsTrigger>
                 <TabsTrigger value="TENNIS">Tennis</TabsTrigger>
               </TabsList>

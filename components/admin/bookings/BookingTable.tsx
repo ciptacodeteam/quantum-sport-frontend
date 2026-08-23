@@ -370,7 +370,7 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
                     <DialogTitle>Detail Pemesanan</DialogTitle>
                   </DialogHeader>
                   <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div>
                         <p className="text-muted-foreground text-sm">ID Pemesanan</p>
                         <div className="flex items-center gap-2">
@@ -533,7 +533,7 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
                           </Badge>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3 pt-2">
+                        <div className="grid grid-cols-1 gap-3 pt-2 sm:grid-cols-2">
                           <div>
                             <p className="text-muted-foreground text-xs">Pelanggan</p>
                             <p className="text-sm font-medium">{booking.user?.name || '-'}</p>
