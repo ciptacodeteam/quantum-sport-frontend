@@ -18,7 +18,7 @@ import useAuthRedirectStore from '@/stores/useAuthRedirectStore';
 import { useBookingStore } from '@/stores/useBookingStore';
 import type { PaymentMethod, CreditCard } from '@/types/model';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import dayjs from 'dayjs';
+import dayjs, { nowJakarta } from '@/lib/dayjs';
 import 'dayjs/locale/id';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { X } from 'lucide-react';
@@ -65,6 +65,17 @@ const getSlotDisplayRange = (timeSlot: string) => {
   const end = parsed.add(1, 'hour').format('HH:mm');
 
   return { start, end };
+};
+
+const getBookingItemStart = (item: { date: string; timeSlot: string; startAt?: string }) => {
+  const date = dayjs(item.date, 'YYYY-MM-DD', true);
+  const time = parseSlotTime(item.timeSlot);
+
+  if (date.isValid() && time) {
+    return dayjs.tz(`${date.format('YYYY-MM-DD')}T${time.format('HH:mm')}:00`, 'Asia/Jakarta');
+  }
+
+  return item.startAt ? dayjs(item.startAt) : null;
 };
 
 export default function CheckoutPage() {
@@ -447,6 +458,19 @@ export default function CheckoutPage() {
     }
 
     if (selectedPaymentMethod.channel === 'CARDS' && selectedCard && !selectedCardCvv) {
+      return;
+    }
+
+    const checkoutTime = nowJakarta();
+    const hasExpiredCourtSlot = bookingItems.some((item) => {
+      const slotStart = getBookingItemStart(item);
+      return !slotStart || !slotStart.isAfter(checkoutTime);
+    });
+
+    if (hasExpiredCourtSlot) {
+      useBookingStore.getState().clearAll();
+      toast.error('Salah satu slot sudah lewat. Silakan pilih ulang jadwal booking.');
+      router.push(bookingHref);
       return;
     }
 
@@ -1024,9 +1048,7 @@ export default function CheckoutPage() {
               </div>
               {membershipDiscount.canUseMembership && membershipDiscount.slotsToDeduct > 0 && (
                 <div className="flex items-center justify-between text-green-600">
-                  <span>
-                    Membership Discount ({membershipDiscount.slotsToDeduct} jam)
-                  </span>
+                  <span>Membership Discount ({membershipDiscount.slotsToDeduct} jam)</span>
                   <span className="font-medium">
                     - {formatCurrency(membershipDiscount.discountAmount)}
                   </span>

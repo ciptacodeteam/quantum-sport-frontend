@@ -99,6 +99,7 @@ export default function BookingPage() {
   } = useBookingStore();
 
   const hasMounted = useHasMounted();
+  const [currentTime, setCurrentTime] = useState(() => nowJakarta());
   const [selectedDate, setSelectedDate] = useState(() => nowJakarta().format('YYYY-MM-DD'));
   const [dateList, setDateList] = useState<
     { label: string; date: string; fullDate: string; active?: boolean }[]
@@ -133,9 +134,11 @@ export default function BookingPage() {
     [selectedFullDate, courtSport]
   );
 
-  const { data: slotsData, isLoading: isSlotsLoading } = useQuery(
-    courtsSlotsQueryOptions(slotQueryParams)
-  );
+  const { data: slotsData, isLoading: isSlotsLoading } = useQuery({
+    ...courtsSlotsQueryOptions(slotQueryParams),
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true
+  });
   const { data: userMembershipData } = useQuery({
     ...myMembershipQueryOptions,
     enabled: isAuthenticated
@@ -152,19 +155,59 @@ export default function BookingPage() {
   const availableTimeSlots = useMemo(() => {
     if (!hasMounted) return timeSlots;
 
-    const isToday = dayjs(selectedFullDate).isSame(nowJakarta(), 'day');
+    const isToday = dayjs(selectedFullDate).isSame(currentTime, 'day');
     const membershipFilteredSlots = activeMembershipType
       ? timeSlots.filter((time) => isTimeAllowedForMembershipType(activeMembershipType, time))
       : timeSlots;
 
     if (!isToday) return membershipFilteredSlots;
 
-    const currentHour = nowJakarta().hour();
+    const currentHour = currentTime.hour();
     return membershipFilteredSlots.filter((time) => {
       const slotHour = parseInt(time.split(':')[0], 10);
       return slotHour > currentHour;
     });
-  }, [selectedFullDate, hasMounted, activeMembershipType]);
+  }, [selectedFullDate, hasMounted, activeMembershipType, currentTime]);
+
+  useEffect(() => {
+    const updateCurrentTime = () => setCurrentTime(nowJakarta());
+    const intervalId = window.setInterval(updateCurrentTime, 60_000);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') updateCurrentTime();
+    };
+
+    window.addEventListener('focus', updateCurrentTime);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', updateCurrentTime);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
+  // Remove selections that expired while this page/tab was left open.
+  useEffect(() => {
+    if (!hasMounted) return;
+
+    setSelectionsByDate((previous) => {
+      let changed = false;
+      const next: Record<string, SelectedCell[]> = {};
+
+      Object.entries(previous).forEach(([dateKey, selections]) => {
+        const validSelections = selections.filter((selection) => {
+          const slotStart = dayjs.tz(`${selection.dateKey}T${selection.time}:00`, 'Asia/Jakarta');
+          const isValid = slotStart.isAfter(currentTime);
+          if (!isValid) changed = true;
+          return isValid;
+        });
+
+        if (validSelections.length > 0) next[dateKey] = validSelections;
+      });
+
+      return changed ? next : previous;
+    });
+  }, [currentTime, hasMounted, selectionsByDate]);
 
   const courts = useMemo(() => {
     const map = new Map<string, { id: string; name: string; image?: string | null }>();
