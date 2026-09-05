@@ -762,14 +762,14 @@ export default function SchedulePage() {
   const isLoading = isCourtsLoading || isBookingsLoading || isSlotsLoading;
 
   return (
-    <main>
-      <Section>
+    <div className="min-w-0">
+      <Section className="min-w-0">
         <SectionHeader>
           <SectionTitle title="Jadwal Lapangan" />
           <SectionDescription description="Lihat jadwal pemesanan lapangan untuk tanggal tertentu." />
         </SectionHeader>
-        <SectionContent>
-          <div className="space-y-6">
+        <SectionContent className="min-w-0">
+          <div className="min-w-0 space-y-6">
             {/* Date Filter */}
             <Card>
               <CardHeader>
@@ -812,6 +812,7 @@ export default function SchedulePage() {
             {/* Schedule Table */}
             <Card
               className={cn(
+                'min-w-0',
                 isFullScreen &&
                   'fade-in-0 zoom-in-95 animate-in fixed inset-0 z-50 h-screen w-screen overflow-auto rounded-none p-4 shadow-none duration-200'
               )}
@@ -834,13 +835,13 @@ export default function SchedulePage() {
                   )}
                 </Button>
               </CardHeader>
-              <CardContent>
+              <CardContent className="min-w-0">
                 {isLoading ? (
                   <div className="py-8 text-center">
                     <p className="text-muted-foreground text-sm">Memuat jadwal...</p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
+                  <div className="w-full max-w-full overflow-x-auto">
                     {courts.length === 0 ? (
                       <div className="py-4 text-center">
                         <p className="text-muted-foreground mb-4 text-sm">
@@ -867,7 +868,7 @@ export default function SchedulePage() {
                         </table>
                       </div>
                     ) : (
-                      <table className="w-full border-collapse">
+                      <table className="w-max min-w-full border-collapse">
                         <thead>
                           <tr>
                             <th className="border-border bg-muted sticky left-0 z-10 w-[150px] max-w-[150px] min-w-[150px] border px-4 py-2 text-left text-sm font-semibold">
@@ -1508,6 +1509,6 @@ export default function SchedulePage() {
           </div>
         </SectionContent>
       </Section>
-    </main>
+    </div>
   );
 }

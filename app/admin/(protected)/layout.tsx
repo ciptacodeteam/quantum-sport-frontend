@@ -89,7 +89,9 @@ const AdminDashboardLayout = ({ children }: PropsWithChildren) => {
       <AppSidebar />
       <SidebarInset>
         <AppDashboardHeader />
-        <main className="flex flex-1 flex-col gap-4 p-4 lg:p-6">{children}</main>
+        <main className="flex min-w-0 flex-1 flex-col gap-4 overflow-x-hidden p-4 lg:p-6">
+          {children}
+        </main>
       </SidebarInset>
     </SidebarProvider>
   );
