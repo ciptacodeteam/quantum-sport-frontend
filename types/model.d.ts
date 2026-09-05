@@ -476,6 +476,8 @@ export type Booking = {
   cancelledAt: Date | null;
   cancellationReason: string | null;
   adminNote?: string | null;
+  membershipUserId?: string | null;
+  membershipSessionsUsed?: number;
 
   user?: UserProfile;
   cashier?: Cashier;

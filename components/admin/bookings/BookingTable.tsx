@@ -389,6 +389,19 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
                         </Badge>
                       </div>
                       <div>
+                        <p className="text-muted-foreground text-sm">Membership</p>
+                        {booking.membershipUserId ? (
+                          <>
+                            <Badge variant="success">Ya</Badge>
+                            <p className="text-muted-foreground mt-1 text-xs">
+                              Sesi digunakan: {booking.membershipSessionsUsed ?? 0}
+                            </p>
+                          </>
+                        ) : (
+                          <Badge variant="secondary">Tidak</Badge>
+                        )}
+                      </div>
+                      <div>
                         <p className="text-muted-foreground text-sm">Pelanggan</p>
                         <p className="font-medium">{booking.user?.name || '-'}</p>
                         {booking.user?.phone && (

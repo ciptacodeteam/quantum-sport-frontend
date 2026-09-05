@@ -1064,6 +1064,23 @@ export default function SchedulePage() {
                                               </div>
                                               <div>
                                                 <p className="text-muted-foreground text-sm">
+                                                  Membership
+                                                </p>
+                                                {bookingCell.booking.membershipUserId ? (
+                                                  <>
+                                                    <Badge variant="success">Ya</Badge>
+                                                    <p className="text-muted-foreground mt-1 text-xs">
+                                                      Sesi digunakan:{' '}
+                                                      {bookingCell.booking.membershipSessionsUsed ??
+                                                        0}
+                                                    </p>
+                                                  </>
+                                                ) : (
+                                                  <Badge variant="secondary">Tidak</Badge>
+                                                )}
+                                              </div>
+                                              <div>
+                                                <p className="text-muted-foreground text-sm">
                                                   Pelanggan
                                                 </p>
                                                 <p className="font-medium">
