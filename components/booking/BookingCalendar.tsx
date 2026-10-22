@@ -203,7 +203,11 @@ const BookingCalendar = ({
       <div className="sticky top-0 z-[5] border-b bg-white pb-2 shadow-sm">
         <div className="flex items-center gap-2">
           <div className="flex items-center px-2 pl-4">
-            <DatePickerModal onChange={handleSelectDate} label="Select Booking Date">
+            <DatePickerModal
+              value={dayjs(selectedDate).toDate()}
+              onChange={handleSelectDate}
+              label="Pilih tanggal bermain"
+            >
               <DatePickerModalTrigger>
                 <Button variant="light" size={'icon-lg'} className="p-2">
                   <IconCalendarFilled className="text-primary size-6" />

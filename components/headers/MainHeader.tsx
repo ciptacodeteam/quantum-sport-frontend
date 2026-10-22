@@ -1,19 +1,22 @@
 'use client';
 
-import LogoImage from '@/assets/img/logo.svg';
+import LogoImage from '@/assets/img/logoblack.webp';
 import { cn } from '@/lib/utils';
 import { profileQueryOptions } from '@/queries/profile';
-import { notificationsQueryOptions } from '@/queries/notification';
-import { IconBellFilled } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronLeft } from 'lucide-react';
+import { UserRound } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
-import CartSheet from '../CartSheet';
-import { Button } from '../ui/button';
-import { Skeleton } from '../ui/skeleton';
 import { usePathname } from 'next/navigation';
 import useAuthModalStore from '@/stores/useAuthModalStore';
-import { useMemo } from 'react';
+import CartSheet from '../CartSheet';
+import { Button } from '../ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from '../ui/dropdown-menu';
 
 type Props = {
   onBack?: () => void;
@@ -25,159 +28,133 @@ type Props = {
   withCartBadge?: boolean;
 };
 
-const MainHeader = ({
-  onBack,
-  backHref,
-  withLogo = true,
-  title,
-  withBorder = false,
-  withNotificationBadge,
-  withCartBadge
-}: Props) => {
-  const { data: user, isPending: isUserPending } = useQuery(profileQueryOptions);
+const navItems = [
+  { title: 'Beranda', path: '/' },
+  { title: 'Padel', path: '/booking' },
+  { title: 'Tennis', path: '/booking/tennis' },
+  { title: 'Value Pack', path: '/membership' },
+  { title: 'Riwayat', path: '/invoice', requiresAuth: true }
+];
+
+const MainHeader = (_props: Props) => {
+  const { data: user } = useQuery(profileQueryOptions);
   const pathname = usePathname();
   const openAuthModal = useAuthModalStore((state) => state.open);
-
-  const isBeranda = pathname === '/';
+  const openRegister = useAuthModalStore((state) => state.openRegister);
   const isAuthenticated = !!user?.id;
 
-  // Fetch notifications only if authenticated and notification badge is shown
-  const { data: notifications } = useQuery({
-    ...notificationsQueryOptions(),
-    enabled: isAuthenticated && !!withNotificationBadge
-  });
-
-  // Check if there are unread notifications
-  const hasUnreadNotifications = useMemo(() => {
-    if (!notifications) return false;
-    return notifications.some((notif) => !notif.isRead);
-  }, [notifications]);
-
-  const navItems = [
-    { title: 'Beranda', path: '/' },
-    { title: 'My Club', path: '/my-club' },
-    { title: 'Riwayat', path: '/invoice', requiresAuth: true },
-    { title: 'Profil', path: '/profile', requiresAuth: true }
-  ];
+  const isActive = (path: string) => {
+    if (path === '/') return pathname === '/';
+    if (path === '/booking') return pathname === '/booking';
+    return pathname === path || pathname.startsWith(`${path}/`);
+  };
+  const accountButton = (
+    <Button
+      variant="ghost"
+      size="icon"
+      aria-label={isAuthenticated ? 'Buka menu akun' : 'Masuk atau daftar akun'}
+      className="rounded-none text-black hover:bg-black/5"
+    >
+      <UserRound className="size-5" strokeWidth={1.5} />
+    </Button>
+  );
 
   return (
     <>
-      <header
-        className={cn('fixed top-0 right-0 left-0 z-40', withBorder && 'border-b', 'bg-white')}
-      >
-        <div
-          className={cn('mx-auto w-11/12 py-2', pathname === '/' ? 'lg:max-w-7xl' : 'lg:max-w-lg')}
-        >
-          <main
-            className={cn(
-              'flex min-h-16 items-center gap-4 lg:min-h-[72px]',
-              isBeranda ? 'justify-between' : 'justify-start'
-            )}
+      <header className="fixed inset-x-0 top-0 z-40 border-b border-black/10 bg-[#f8f8f6] text-[#171717]">
+        <div className="mx-auto grid w-full max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 px-5 sm:px-8 xl:grid-cols-[auto_minmax(0,1fr)_auto] xl:gap-x-10 2xl:gap-x-14">
+          <div className="col-start-1 row-start-1 flex min-h-[76px] min-w-0 items-center gap-3">
+            <Link
+              href="/"
+              aria-label="Black Padel — Beranda"
+              className="shrink-0 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-black"
+            >
+              <Image
+                src={LogoImage}
+                alt="Black Padel"
+                priority
+                sizes="(min-width: 640px) 104px, 92px"
+                className="h-auto w-[92px] sm:w-[104px]"
+              />
+            </Link>
+          </div>
+          <nav
+            aria-label="Navigasi pelanggan"
+            className="col-span-2 col-start-1 row-start-2 flex min-w-0 items-center gap-6 overflow-x-auto xl:col-span-1 xl:col-start-2 xl:row-start-1 xl:gap-5 2xl:gap-7"
           >
-            {/* Kiri: tombol back / title */}
-            {(onBack || backHref || title) && (
-              <div className="flex items-center gap-6">
-                {onBack && (
-                  <Button variant="light" size="icon-sm" onClick={onBack}>
-                    <ChevronLeft className="size-6" />
-                  </Button>
-                )}
-                {backHref && (
-                  <Link href={backHref}>
-                    <Button variant="light" size="icon-sm">
-                      <ChevronLeft className="size-6" />
-                    </Button>
-                  </Link>
-                )}
-                {title && (
-                  <h1 className="text-primary text-lg font-semibold lg:text-xl">{title}</h1>
-                )}
+            {navItems.map((item) => {
+              const active = isActive(item.path);
+              const className = cn(
+                'flex min-h-11 shrink-0 items-center py-3 text-xs font-medium whitespace-nowrap transition-colors hover:text-black focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-black xl:min-h-[76px] xl:text-[13px]',
+                active ? 'text-black' : 'text-black/60'
+              );
+              if (item.requiresAuth && !isAuthenticated) {
+                return (
+                  <button
+                    key={item.path}
+                    type="button"
+                    className={className}
+                    onClick={openAuthModal}
+                  >
+                    {item.title}
+                  </button>
+                );
+              }
+              return (
+                <Link
+                  key={item.path}
+                  href={item.path}
+                  aria-current={active ? 'page' : undefined}
+                  className={className}
+                >
+                  {item.title}
+                </Link>
+              );
+            })}
+          </nav>
+          <div className="col-start-2 row-start-1 flex shrink-0 items-center gap-1 sm:gap-2 xl:col-start-3">
+            {isAuthenticated ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>{accountButton}</DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  sideOffset={12}
+                  className="min-w-44 border-black/10 bg-[#f8f8f6] p-2 text-[#171717]"
+                >
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile">Profil saya</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/invoice">Riwayat pemesanan</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/notifications">Notifikasi</Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div className="flex items-center gap-2 sm:gap-3">
+                <Button
+                  variant="ghost"
+                  className="h-9 rounded-full px-3 text-xs font-medium text-black hover:bg-black/5 sm:px-4"
+                  onClick={openAuthModal}
+                >
+                  Login
+                </Button>
+                <Button
+                  className="h-9 rounded-full bg-[#111111] px-4 text-xs font-medium text-white hover:bg-black/80 sm:px-5"
+                  onClick={openRegister}
+                >
+                  Daftar
+                </Button>
               </div>
             )}
-
-            {/* Tengah: Logo */}
-            {withLogo && (
-              <Link href="/" prefetch>
-                <div className="relative flex h-16 w-28 items-center justify-center">
-                  <LogoImage className="absolute inset-0 h-full w-full object-contain" />
-                </div>
-              </Link>
-            )}
-
-            {/* Kanan: Navigasi + Notifikasi */}
-            <div className="ml-auto flex items-center justify-end gap-6">
-              {/* Menu navigasi (desktop only) */}
-              <div className="hidden items-center gap-8">
-                {navItems.map((item, index) => {
-                  const requiresAuth = item.requiresAuth ?? false;
-
-                  if (requiresAuth && !isAuthenticated) {
-                    return (
-                      <button
-                        key={item.path || `nav-item-${index}`}
-                        onClick={openAuthModal}
-                        className={cn(
-                          'hover:text-primary text-gray-600 transition-colors',
-                          pathname === item.path && 'text-primary font-medium'
-                        )}
-                      >
-                        {item.title}
-                      </button>
-                    );
-                  }
-
-                  return (
-                    <Link
-                      key={item.path || `nav-item-${index}`}
-                      href={item.path || '/'}
-                      className={cn(
-                        'hover:text-primary text-gray-600 transition-colors',
-                        pathname === item.path && 'text-primary font-medium'
-                      )}
-                    >
-                      {item.title}
-                    </Link>
-                  );
-                })}
-              </div>
-
-              {/* Icon notifikasi & cart */}
-              {isUserPending ? (
-                <>
-                  <Skeleton className="size-8 rounded-lg" />
-                  <Skeleton className="size-8 rounded-lg" />
-                </>
-              ) : (
-                <>
-                  {withCartBadge && <CartSheet />}
-                  {withNotificationBadge && (
-                    <>
-                      {isAuthenticated ? (
-                        <Link href="/notifications">
-                          <Button variant="ghost" size="icon-sm">
-                            <div className="relative flex items-center justify-center">
-                              <IconBellFilled className="text-primary size-7" />
-                              {hasUnreadNotifications && (
-                                <div className="bg-badge absolute top-1 right-1 size-2 rounded-full"></div>
-                              )}
-                            </div>
-                          </Button>
-                        </Link>
-                      ) : (
-                        <Button variant="ghost" size="icon-sm" onClick={openAuthModal}>
-                          <div className="relative flex items-center justify-center">
-                            <IconBellFilled className="text-primary size-7" />
-                          </div>
-                        </Button>
-                      )}
-                    </>
-                  )}
-                </>
-              )}
-            </div>
-          </main>
+            <span aria-hidden="true" className="mx-2 h-5 w-px bg-black/20 sm:mx-3" />
+            <CartSheet minimal />
+          </div>
         </div>
       </header>
+      <div aria-hidden="true" className="h-11 xl:hidden" />
     </>
   );
 };

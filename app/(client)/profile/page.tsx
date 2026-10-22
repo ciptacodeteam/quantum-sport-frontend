@@ -32,10 +32,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export default function ProfilePage() {
   const router = useRouter();
+  const hasLoggedOut = useRef(false);
   const queryClient = useQueryClient();
   const { data: user, isPending, isError } = useQuery(profileQueryOptions);
   const { data: myMemberships, isPending: isMembershipsLoading } =
@@ -67,10 +68,13 @@ export default function ProfilePage() {
 
   const { mutate: logoutMutation, isPending: isLoggingOut } = useMutation(
     logoutMutationOptions({
-      onSuccess: () => {
+      onSuccess: async () => {
+        hasLoggedOut.current = true;
+        await queryClient.cancelQueries();
         queryClient.clear();
         logout();
-        router.push('/');
+        queryClient.setQueryData(profileQueryOptions.queryKey, { data: null });
+        router.replace('/');
       }
     })
   );
@@ -103,7 +107,7 @@ export default function ProfilePage() {
 
   // Redirect to home if not authenticated
   useEffect(() => {
-    if (!isPending && (isError || !user?.id)) {
+    if (!hasLoggedOut.current && !isPending && (isError || !user?.id)) {
       router.push('/?requireLogin=true');
     }
   }, [isPending, isError, user, router]);
@@ -173,7 +177,7 @@ export default function ProfilePage() {
     );
   }
 
-  if (!user) {
+  if (isError || !user) {
     return null;
   }
 

@@ -1,7 +1,6 @@
 'use client';
 
 import MainHeader from '@/components/headers/MainHeader';
-import BottomNavigationWrapper from '@/components/ui/BottomNavigationWrapper';
 import { Button } from '@/components/ui/button';
 import { DatePickerModal, DatePickerModalTrigger } from '@/components/ui/date-picker-modal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -134,7 +133,12 @@ export default function BookingPage() {
     [selectedFullDate, courtSport]
   );
 
-  const { data: slotsData, isLoading: isSlotsLoading } = useQuery({
+  const {
+    data: slotsData,
+    isLoading: isSlotsLoading,
+    isError: isSlotsError,
+    refetch: refetchSlots
+  } = useQuery({
     ...courtsSlotsQueryOptions(slotQueryParams),
     refetchInterval: 60_000,
     refetchOnWindowFocus: true
@@ -658,191 +662,352 @@ export default function BookingPage() {
     <>
       <MainHeader backHref="/" title={bookingTitle} withLogo={false} withCartBadge withBorder />
 
-      <main className="mt-24 flex h-[calc(100dvh-180px)] w-full flex-col md:mt-24 lg:h-[calc(100dvh-230px)]">
-        <div className="sticky top-24 z-30 border-b bg-white pb-2 md:top-14">
-          <div className="flex items-center gap-2">
-            <div className="flex items-center px-2 pl-4">
-              <DatePickerModal onChange={handleSelectDate} label="Select Booking Date">
-                <DatePickerModalTrigger>
-                  <Button variant="light" size={'icon-lg'} className="p-2">
-                    <IconCalendarFilled className="text-primary size-6" />
-                  </Button>
-                </DatePickerModalTrigger>
-              </DatePickerModal>
+      <main className="booking-page mx-auto mt-[76px] h-[calc(100dvh-120px)] w-full max-w-7xl overflow-hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))] text-[#171717] lg:mt-0 lg:h-auto lg:overflow-visible lg:px-8 lg:pt-28 lg:pb-16 xl:pt-32">
+        <div className="grid h-full min-h-0 min-w-0 items-start gap-8 lg:h-auto lg:grid-cols-[minmax(0,1fr)_300px] xl:gap-10">
+          <section
+            aria-label="Jadwal lapangan"
+            className="flex h-full min-h-0 min-w-0 flex-col lg:h-auto"
+          >
+            <div className="mb-4 flex shrink-0 flex-wrap items-end justify-between gap-3 px-5 pt-4 lg:px-0 lg:pt-0">
+              <div>
+                <p className="mb-1 text-[10px] tracking-[0.15em] text-black/45 uppercase">
+                  01 / Pilih jadwal
+                </p>
+                <h2 className="text-xl font-medium tracking-tight">{bookingTitle}</h2>
+              </div>
+              <p className="text-xs text-black/50" suppressHydrationWarning>
+                {dayjs(selectedDate).format('dddd, DD MMMM YYYY')}
+              </p>
             </div>
-
-            <Separator orientation="vertical" className="h-10" />
-
-            <div className="scrollbar-hide flex flex-nowrap gap-2 overflow-x-auto px-2">
-              {dateList.map((d) => (
-                <button
-                  id={`date-${d.fullDate}`}
-                  key={d.fullDate}
-                  className={cn(
-                    'flex h-14 min-w-14 flex-col items-center justify-center rounded px-2 py-1 font-semibold transition-all md:h-16 md:min-w-16 md:px-3 md:hover:scale-[1.03]',
-                    selectedDate === d.fullDate
-                      ? 'bg-primary text-white'
-                      : 'hover:bg-muted text-black'
-                  )}
-                  onClick={() => setSelectedDate(d.fullDate)}
-                >
-                  <span className="text-xs font-normal">{d.label}</span>
-                  <div className="mt-0.5 flex">
-                    <span className="me-0.5 text-sm font-semibold">
-                      {dayjs(d.fullDate).format('DD')}
-                    </span>
-                    <span className="text-sm font-semibold">{dayjs(d.fullDate).format('MMM')}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="scrollbar-hide flex-1 overflow-auto pb-10 lg:pb-0">
-          {isSlotsLoading && (
-            <div className="text-muted-foreground p-4 text-center text-sm">Memuat slot...</div>
-          )}
-          <div className="h-full overflow-x-auto">
-            <table className="min-w-full border-separate border-spacing-0 border border-gray-200 text-center">
-              <thead className="sticky top-0 z-20 bg-gray-50/90 shadow-sm backdrop-blur md:text-sm md:tracking-tight">
-                <tr>
-                  <th className="sticky left-0 z-30 w-20 border-r border-b bg-gray-50 px-2 py-2 text-left font-semibold"></th>
-                  {courts.map((court) => (
-                    <th
-                      key={court.id}
-                      className="border border-gray-200 bg-gray-50 px-4 py-2 text-xs font-semibold"
-                    >
+            <div className="min-w-0 shrink-0 border-y border-black/15 bg-[#f8f8f6] p-3 lg:border">
+              <div className="flex items-center gap-2">
+                <div className="flex shrink-0 items-center">
+                  <DatePickerModal
+                    value={dayjs(selectedDate).toDate()}
+                    onChange={handleSelectDate}
+                    label="Pilih tanggal bermain"
+                  >
+                    <DatePickerModalTrigger>
                       <Button
-                        variant={'ghost'}
-                        className="flex items-center gap-1 text-gray-700"
-                        onClick={() => setSelectedCourt(court)}
+                        variant="ghost"
+                        size="icon-lg"
+                        aria-label="Pilih tanggal pemesanan"
+                        className="rounded-none border border-black/15 bg-white p-2 text-black hover:bg-black/5"
                       >
-                        {court.name}
-                        <IconInfoCircle className="inline-block size-4" />
+                        <IconCalendarFilled className="size-5" />
                       </Button>
-                    </th>
+                    </DatePickerModalTrigger>
+                  </DatePickerModal>
+                </div>
+
+                <Separator orientation="vertical" className="h-10" />
+
+                <div className="flex min-w-0 flex-1 flex-nowrap gap-2 overflow-x-auto px-2 pb-1">
+                  {dateList.map((d) => (
+                    <button
+                      id={`date-${d.fullDate}`}
+                      key={d.fullDate}
+                      aria-pressed={selectedDate === d.fullDate}
+                      className={cn(
+                        'flex h-16 min-w-16 shrink-0 flex-col items-center justify-center border px-3 py-2 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black',
+                        selectedDate === d.fullDate
+                          ? 'border-[#111111] bg-[#111111] text-white'
+                          : 'border-transparent text-black/60 hover:border-black/15 hover:bg-white'
+                      )}
+                      onClick={() => setSelectedDate(d.fullDate)}
+                    >
+                      <span className="text-xs font-normal">{d.label}</span>
+                      <div className="mt-0.5 flex">
+                        <span className="me-0.5 text-sm font-semibold">
+                          {dayjs(d.fullDate).format('DD')}
+                        </span>
+                        <span className="text-sm font-semibold">
+                          {dayjs(d.fullDate).format('MMM')}
+                        </span>
+                      </div>
+                    </button>
                   ))}
-                </tr>
-              </thead>
+                </div>
+              </div>
+            </div>
 
-              <tbody>
-                {availableTimeSlots.map((time) => (
-                  <tr key={time}>
-                    <td className="sticky left-0 z-10 w-20 border border-gray-200 bg-white px-4 py-2 text-left text-sm font-medium">
-                      {time}
-                    </td>
-                    {courts.map((court) => {
-                      const slot = slotMap.get(`${court.id}-${time}`);
-                      const hasSlot = !!slot;
-                      const isAvailable = !!slot?.isAvailable;
-                      const selected = selectedCells.some(
-                        (cell) => cell.courtId === court.id && cell.time === time
-                      );
-                      const normalPrice = slot?.price ?? 0;
-                      const discountPrice = slot?.discountPrice ?? 0;
-                      const effectivePrice = discountPrice > 0 ? discountPrice : normalPrice;
-                      return (
-                        <td key={court.name} className="border border-gray-200 p-1">
-                          <button
-                            disabled={!hasSlot || !isAvailable}
-                            className={cn(
-                              `flex h-14 w-full flex-col items-start justify-between rounded px-2 py-1 text-base font-semibold transition-all`,
-                              !hasSlot
-                                ? 'text-muted-foreground cursor-not-allowed bg-gray-100'
-                                : !isAvailable
-                                  ? 'cursor-not-allowed bg-gray-200 text-gray-400'
-                                  : selected
-                                    ? 'border-primary bg-primary text-white shadow-lg'
-                                    : 'bg-white hover:bg-green-100'
-                            )}
-                            onClick={() => {
-                              if (!slot || !isAvailable) return;
-                              setSelectionsByDate((prev) => {
-                                const dateKey = selectedDate;
-                                const currentSelections = prev[dateKey] ?? [];
-                                const exists = currentSelections.some(
-                                  (cell) => cell.courtId === court.id && cell.time === time
-                                );
-
-                                let updatedSelections: SelectedCell[];
-                                if (exists) {
-                                  updatedSelections = currentSelections.filter(
-                                    (cell) => !(cell.courtId === court.id && cell.time === time)
-                                  );
-                                } else {
-                                  updatedSelections = [
-                                    ...currentSelections,
-                                    {
-                                      slotId: slot.id,
-                                      courtId: court.id,
-                                      courtName: court.name,
-                                      time,
-                                      price: effectivePrice,
-                                      normalPrice,
-                                      discountPrice,
-                                      dateKey,
-                                      startAt:
-                                        typeof slot.startAt === 'string'
-                                          ? slot.startAt
-                                          : slot.startAt.toISOString(),
-                                      endAt:
-                                        typeof slot.endAt === 'string'
-                                          ? slot.endAt
-                                          : slot.endAt.toISOString()
-                                    }
-                                  ];
-                                }
-
-                                const next = { ...prev };
-                                if (updatedSelections.length > 0) {
-                                  next[dateKey] = updatedSelections;
-                                } else {
-                                  delete next[dateKey];
-                                }
-
-                                return next;
-                              });
-                            }}
+            <div
+              className="flex shrink-0 flex-wrap gap-5 px-5 py-4 text-[11px] text-black/55 lg:px-0"
+              aria-label="Keterangan jadwal"
+            >
+              <span className="flex items-center gap-2">
+                <span className="size-2.5 border border-black/25 bg-white" />
+                Tersedia
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="size-2.5 bg-[#111111]" />
+                Dipilih
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="size-2.5 bg-[#e5e5e2]" />
+                Tidak tersedia
+              </span>
+            </div>
+            <div className="flex min-h-0 flex-1 flex-col lg:block">
+              {isSlotsError && (
+                <div
+                  role="alert"
+                  className="mb-4 border border-[#ad422b]/25 bg-[#ad422b]/5 p-4 text-sm"
+                >
+                  <p>Jadwal belum dapat dimuat.</p>
+                  <button
+                    type="button"
+                    onClick={() => refetchSlots()}
+                    className="mt-2 font-medium underline underline-offset-4"
+                  >
+                    Coba lagi
+                  </button>
+                </div>
+              )}
+              {isSlotsLoading && (
+                <div className="text-muted-foreground p-4 text-center text-sm">Memuat slot...</div>
+              )}
+              <div
+                className="min-h-0 flex-1 overflow-auto border-y border-black/15 lg:max-h-[640px] lg:flex-none lg:border"
+                aria-busy={isSlotsLoading}
+              >
+                <table className="w-full min-w-full border-separate border-spacing-0 text-center">
+                  <thead className="sticky top-0 z-20 bg-[#f8f8f6] text-xs">
+                    <tr>
+                      <th
+                        scope="col"
+                        className="sticky left-0 z-30 w-20 border-r border-b border-black/10 bg-[#f8f8f6] px-4 py-4 text-left text-[10px] font-medium tracking-wider text-black/45 uppercase"
+                      >
+                        Waktu
+                      </th>
+                      {courts.map((court) => (
+                        <th
+                          key={court.id}
+                          scope="col"
+                          className="min-w-[150px] border-r border-b border-black/10 bg-[#f8f8f6] px-3 py-3 text-xs font-medium"
+                        >
+                          <Button
+                            variant={'ghost'}
+                            className="mx-auto flex items-center gap-2 rounded-none text-black/70 hover:bg-black/5"
+                            onClick={() => setSelectedCourt(court)}
                           >
-                            {hasSlot ? (
-                              <>
-                                {discountPrice > 0 && discountPrice < normalPrice ? (
-                                  <span className="flex flex-col items-start text-xs">
-                                    <span className="text-[10px] text-gray-400 line-through">
-                                      Rp{normalPrice.toLocaleString('id-ID')}
-                                    </span>
-                                    <span
-                                      className={cn(
-                                        'text-sm font-semibold',
-                                        selected ? 'text-white' : 'text-primary'
-                                      )}
-                                    >
-                                      Rp{effectivePrice.toLocaleString('id-ID')}
-                                    </span>
-                                  </span>
-                                ) : (
-                                  <span className="text-sm">
-                                    {`Rp${effectivePrice.toLocaleString('id-ID')}`}
-                                  </span>
-                                )}
-                                {!isAvailable && <span className="text-xs">Booked</span>}
-                              </>
-                            ) : (
-                              <span className="text-xs">Booked</span>
-                            )}
-                          </button>
+                            {court.name}
+                            <IconInfoCircle className="inline-block size-4" />
+                          </Button>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {availableTimeSlots.map((time) => (
+                      <tr key={time}>
+                        <td className="sticky left-0 z-10 w-20 border-r border-b border-black/10 bg-[#f8f8f6] px-4 py-2 text-left text-xs font-medium tabular-nums">
+                          {time}
                         </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="pointer-events-none h-2"></div>
-          </div>
+                        {courts.map((court) => {
+                          const slot = slotMap.get(`${court.id}-${time}`);
+                          const hasSlot = !!slot;
+                          const isAvailable = !!slot?.isAvailable;
+                          const selected = selectedCells.some(
+                            (cell) => cell.courtId === court.id && cell.time === time
+                          );
+                          const normalPrice = slot?.price ?? 0;
+                          const discountPrice = slot?.discountPrice ?? 0;
+                          const effectivePrice = discountPrice > 0 ? discountPrice : normalPrice;
+                          return (
+                            <td key={court.id} className="border-r border-b border-black/10 p-1.5">
+                              <button
+                                disabled={!hasSlot || !isAvailable}
+                                aria-pressed={selected}
+                                aria-label={`${court.name}, ${time}, ${selected ? 'dipilih' : isAvailable ? 'tersedia' : 'tidak tersedia'}`}
+                                className={cn(
+                                  'flex h-16 w-full flex-col items-start justify-center gap-1 border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black',
+                                  !hasSlot
+                                    ? 'cursor-not-allowed border-transparent bg-[#f3f3f0] text-black/30'
+                                    : !isAvailable
+                                      ? 'cursor-not-allowed border-transparent bg-[#eaeae6] text-black/35'
+                                      : selected
+                                        ? 'border-[#111111] bg-[#111111] text-white'
+                                        : 'border-black/15 bg-white text-[#171717] hover:border-[#ad422b] hover:bg-[#ad422b]/5'
+                                )}
+                                onClick={() => {
+                                  if (!slot || !isAvailable) return;
+                                  setSelectionsByDate((prev) => {
+                                    const dateKey = selectedDate;
+                                    const currentSelections = prev[dateKey] ?? [];
+                                    const exists = currentSelections.some(
+                                      (cell) => cell.courtId === court.id && cell.time === time
+                                    );
+
+                                    let updatedSelections: SelectedCell[];
+                                    if (exists) {
+                                      updatedSelections = currentSelections.filter(
+                                        (cell) => !(cell.courtId === court.id && cell.time === time)
+                                      );
+                                    } else {
+                                      updatedSelections = [
+                                        ...currentSelections,
+                                        {
+                                          slotId: slot.id,
+                                          courtId: court.id,
+                                          courtName: court.name,
+                                          time,
+                                          price: effectivePrice,
+                                          normalPrice,
+                                          discountPrice,
+                                          dateKey,
+                                          startAt:
+                                            typeof slot.startAt === 'string'
+                                              ? slot.startAt
+                                              : slot.startAt.toISOString(),
+                                          endAt:
+                                            typeof slot.endAt === 'string'
+                                              ? slot.endAt
+                                              : slot.endAt.toISOString()
+                                        }
+                                      ];
+                                    }
+
+                                    const next = { ...prev };
+                                    if (updatedSelections.length > 0) {
+                                      next[dateKey] = updatedSelections;
+                                    } else {
+                                      delete next[dateKey];
+                                    }
+
+                                    return next;
+                                  });
+                                }}
+                              >
+                                {hasSlot ? (
+                                  <>
+                                    {discountPrice > 0 && discountPrice < normalPrice ? (
+                                      <span className="flex flex-col items-start text-xs">
+                                        <span className="text-[10px] text-gray-400 line-through">
+                                          Rp{normalPrice.toLocaleString('id-ID')}
+                                        </span>
+                                        <span
+                                          className={cn(
+                                            'text-sm font-semibold',
+                                            selected ? 'text-white' : 'text-[#ad422b]'
+                                          )}
+                                        >
+                                          Rp{effectivePrice.toLocaleString('id-ID')}
+                                        </span>
+                                      </span>
+                                    ) : (
+                                      <span className="text-sm">
+                                        {`Rp${effectivePrice.toLocaleString('id-ID')}`}
+                                      </span>
+                                    )}
+                                    {!isAvailable && (
+                                      <span className="text-[11px]">Tidak tersedia</span>
+                                    )}
+                                  </>
+                                ) : (
+                                  <span className="text-[11px]">Tidak tersedia</span>
+                                )}
+                              </button>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {!isSlotsLoading && availableTimeSlots.length === 0 && (
+                  <p className="p-8 text-center text-sm text-black/50">
+                    Tidak ada jam bermain untuk tanggal ini. Silakan pilih tanggal lain.
+                  </p>
+                )}
+              </div>
+            </div>
+          </section>
+          <aside
+            className="hidden border border-black/15 bg-[#f8f8f6] p-6 lg:sticky lg:top-28 lg:block"
+            aria-label="Ringkasan pemesanan"
+          >
+            <p className="mb-2 text-[10px] tracking-[0.15em] text-[#ad422b] uppercase">
+              02 / Pemesanan Anda
+            </p>
+            <h2 className="text-2xl font-medium tracking-tight">Ready to play?</h2>
+            <p className="mt-3 text-xs leading-relaxed text-black/50">
+              Pilih satu atau beberapa slot pada jadwal untuk mulai memesan lapangan.
+            </p>
+            <div className="my-6 border-y border-black/15 py-4">
+              <div className="mb-3 flex items-center justify-between text-xs">
+                <span className="text-black/50">Slot terpilih</span>
+                <span suppressHydrationWarning>{hasMounted ? bookingItems.length : 0} slot</span>
+              </div>
+              {hasMounted && bookingItems.length > 0 ? (
+                <ul className="max-h-64 space-y-3 overflow-y-auto">
+                  {bookingItems.map((item) => (
+                    <li
+                      key={`${item.courtId}-${item.date}-${item.timeSlot}`}
+                      className="border-t border-black/10 pt-3 text-xs"
+                    >
+                      <div className="flex justify-between gap-3">
+                        <span className="font-medium">{item.courtName}</span>
+                        <span>Rp{item.price.toLocaleString('id-ID')}</span>
+                      </div>
+                      <p className="mt-1 text-black/50">
+                        {dayjs(normalizeDateKey(item.date)).format('DD MMM YYYY')} · {item.timeSlot}
+                        –{item.endTime}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="py-4 text-xs text-black/40">Belum ada jadwal yang dipilih.</p>
+              )}
+            </div>
+            <div className="mb-6 flex items-end justify-between gap-3">
+              <span className="text-xs text-black/50">Subtotal</span>
+              <p className="text-2xl font-medium tracking-tight" suppressHydrationWarning>
+                Rp{(hasMounted ? courtTotal : 0).toLocaleString('id-ID')}
+              </p>
+            </div>
+            <Button
+              className="h-12 w-full rounded-full bg-[#111111] text-sm text-white hover:bg-black/80 disabled:bg-black/15 disabled:text-black/40 disabled:opacity-100"
+              onClick={handleBooking}
+              disabled={!hasMounted || bookingItems.length === 0}
+            >
+              Lanjutkan pemesanan <span aria-hidden="true">↗</span>
+            </Button>
+            <p className="mt-4 text-center text-[11px] text-black/40">
+              Periksa pilihan Anda sebelum melanjutkan.
+            </p>
+          </aside>
         </div>
       </main>
+
+      <div
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-black/15 bg-[#f8f8f6] pb-[env(safe-area-inset-bottom)] lg:hidden"
+        role="region"
+        aria-label="Ringkasan pemesanan"
+      >
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 sm:px-8">
+          <div className="min-w-0">
+            <p className="text-[11px] text-black/50" suppressHydrationWarning>
+              Subtotal · {hasMounted ? bookingItems.length : 0} slot
+            </p>
+            <p
+              className="mt-1 text-xl font-medium tracking-tight text-[#171717]"
+              suppressHydrationWarning
+            >
+              Rp{(hasMounted ? courtTotal : 0).toLocaleString('id-ID')}
+            </p>
+          </div>
+          <Button
+            className="h-12 shrink-0 rounded-full bg-[#111111] px-6 text-sm text-white hover:bg-black/80 disabled:bg-black/15 disabled:text-black/40 disabled:opacity-100"
+            onClick={handleBooking}
+            disabled={!hasMounted || bookingItems.length === 0}
+          >
+            Lanjutkan <span aria-hidden="true">↗</span>
+          </Button>
+        </div>
+      </div>
 
       {/* Court detail dialog */}
       <Dialog open={!!selectedCourt} onOpenChange={() => setSelectedCourt(null)}>
@@ -1021,32 +1186,6 @@ export default function BookingPage() {
           </div>
         </DialogContent>
       </Dialog>
-
-      <BottomNavigationWrapper className="pb-4">
-        <header className="flex-between my-2 items-end">
-          <div>
-            <span className="text-muted-foreground text-xs">Subtotal</span>
-            <h2 className="text-lg font-semibold" suppressHydrationWarning>
-              Rp{(hasMounted ? courtTotal : 0).toLocaleString('id-ID')}
-            </h2>
-          </div>
-          <div>
-            <span className="text-muted-foreground text-xs" suppressHydrationWarning>
-              {hasMounted ? bookingItems.length : 0} Slot Terpilih
-            </span>
-          </div>
-        </header>
-        <main className="flex gap-2">
-          <Button
-            className="w-full"
-            size={'xl'}
-            onClick={handleBooking}
-            disabled={!hasMounted || bookingItems.length === 0}
-          >
-            Pilih Jadwal
-          </Button>
-        </main>
-      </BottomNavigationWrapper>
     </>
   );
 }

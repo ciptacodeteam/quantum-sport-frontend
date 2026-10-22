@@ -26,7 +26,7 @@ import z from 'zod';
 const formSchema = z.object({
   name: z.string().min(1, { message: 'Name is required.' }),
   description: z.string().optional(),
-  image: z.file().min(1, { message: 'Image is required.' }),
+  image: z.file().min(1, { message: 'File gambar kosong.' }).optional(),
   sport: z.enum(['PADEL', 'TENNIS']).default('PADEL'),
   isActive: z.boolean().default(true)
 });
@@ -72,7 +72,7 @@ const CreateCourtForm = () => {
       <FieldSet>
         <FieldGroup>
           <Field>
-            <FieldLabel htmlFor="image">Image</FieldLabel>
+            <FieldLabel htmlFor="image">Image (opsional)</FieldLabel>
             {imagePreview && (
               <Image
                 src={String(imagePreview)}
@@ -87,6 +87,7 @@ const CreateCourtForm = () => {
               name="image"
               render={({ field }) => (
                 <Input
+                  id="image"
                   type="file"
                   accept="image/*"
                   onChange={(e) => {

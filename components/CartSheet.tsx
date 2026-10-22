@@ -5,11 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { useBookingStore } from '@/stores/useBookingStore';
 import { IconShoppingCartFilled, IconTrash } from '@tabler/icons-react';
+import { ShoppingCart } from 'lucide-react';
 import dayjs from 'dayjs';
 import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 
-export default function CartSheet() {
+export default function CartSheet({ minimal = false }: { minimal?: boolean }) {
   const router = useRouter();
 
   const bookingItems = useBookingStore((state) => state.bookingItems);
@@ -68,11 +69,20 @@ export default function CartSheet() {
   return (
     <Sheet open={isCartOpen} onOpenChange={setCartOpen}>
       <SheetTrigger asChild>
-        <Button variant={'ghost'} size={'icon-sm'}>
+        <Button
+          variant="ghost"
+          size={minimal ? 'icon' : 'icon-sm'}
+          aria-label="Buka keranjang booking"
+          className={minimal ? 'rounded-none text-black hover:bg-black/5' : undefined}
+        >
           <div className="flex-center relative">
-            <IconShoppingCartFilled className="text-primary size-7" />
+            {minimal ? (
+              <ShoppingCart className="size-5" strokeWidth={1.5} />
+            ) : (
+              <IconShoppingCartFilled className="text-primary size-7" />
+            )}
             {bookingItems.length > 0 && (
-              <Badge className="bg-badge absolute -top-2 -right-2 h-5 min-w-5 rounded-full px-1 font-mono tabular-nums">
+              <Badge className="absolute -top-2 -right-2 h-5 min-w-5 rounded-full border-transparent bg-[#ad422b] px-1 font-mono text-white tabular-nums">
                 {bookingItems.length}
               </Badge>
             )}

@@ -1,6 +1,6 @@
 'use client';
 
-import { getApiErrorMessage, mapApiErrorsToForm } from '@/lib/api-error';
+import { mapApiErrorsToForm } from '@/lib/api-error';
 
 import { Button } from '@/components/ui/button';
 import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from '@/components/ui/field';
@@ -15,6 +15,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
 import { type SubmitHandler, useForm } from 'react-hook-form';
 import z from 'zod';
+import AuthFormHeader from './AuthFormHeader';
 
 const formSchema = z
   .object({
@@ -87,15 +88,13 @@ const RegisterForm = ({ onRegisterSuccess, onLoginClick }: Props) => {
   };
 
   return (
-    <form className="p-0 md:p-8 md:pb-4" onSubmit={form.handleSubmit(onSubmit)}>
+    <form className="p-0" onSubmit={form.handleSubmit(onSubmit)}>
       <FieldSet>
         <FieldGroup>
-          <header className="flex flex-col items-center gap-2 text-center">
-            <h1 className="text-lg font-bold md:text-2xl">Create your account</h1>
-            <p className="text-muted-foreground text-sm text-balance md:text-base">
-              Please register to start using Quantum Sport.
-            </p>
-          </header>
+          <AuthFormHeader
+            title="Join the club."
+            description="Create your account. Find your court. Make your next move."
+          />
           <Field>
             <FieldLabel htmlFor="name">Name</FieldLabel>
             <Input id="name" {...form.register('name')} placeholder="e.g. John Doe" />
@@ -152,14 +151,15 @@ const RegisterForm = ({ onRegisterSuccess, onLoginClick }: Props) => {
             </Button>
           </Field>
           {!!onLoginClick && (
-            <p className="text-muted-foreground text-center text-sm">
+            <p className="border-t border-black/10 pt-5 text-center text-sm text-black/50">
               Already have an account?{' '}
-              <span
-                className="text-primary cursor-pointer font-medium underline"
+              <button
+                type="button"
+                className="cursor-pointer font-medium text-[#ad422b] underline underline-offset-4 hover:text-black"
                 onClick={onLoginClick}
               >
                 Login
-              </span>
+              </button>
             </p>
           )}
         </FieldGroup>
