@@ -26,7 +26,7 @@ import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { ArrowUpRight, ShoppingBag, X } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 dayjs.locale('id');
@@ -164,6 +164,7 @@ export default function CheckoutPage() {
   }, []);
 
   const [isTokenizingCard, setTokenizingCard] = useState(false);
+  const cardPayTab = useRef<Window | null>(null);
   const confirm = useConfirm();
   const queryClient = useQueryClient();
 
@@ -172,14 +173,25 @@ export default function CheckoutPage() {
       onSuccess: (data) => {
         void queryClient.invalidateQueries({ queryKey: ['memberships', 'my'] });
         void queryClient.invalidateQueries({ queryKey: ['courts', 'slots'] });
-        // For card payments, don't redirect to invoice yet
-        // Redirect will happen after 3DS authentication completes
-        if (
+        const paymentUrl = data?.data?.paymentUrl;
+        const needsCard3ds =
           selectedPaymentMethod?.channel === 'CARDS' &&
-          data?.data?.paymentUrl &&
-          data?.data?.paymentStatus !== 'PAID'
-        ) {
-          return;
+          paymentUrl &&
+          data?.data?.paymentStatus !== 'PAID';
+        if (needsCard3ds) {
+          const tab = cardPayTab.current;
+          cardPayTab.current = null;
+          if (tab && !tab.closed) {
+            tab.location.href = paymentUrl;
+            tab.opener = null;
+          } else {
+            setNavigatingToPayment(true);
+            window.location.href = paymentUrl;
+            return;
+          }
+        } else {
+          cardPayTab.current?.close();
+          cardPayTab.current = null;
         }
 
         setNavigatingToPayment(true);
@@ -565,6 +577,13 @@ export default function CheckoutPage() {
         'Reschedule berlaku H-3. Pastikan pesanan Anda sudah sesuai.'
       );
 
+    const willTokenizeCard =
+      !isCoveredByMembership && selectedPaymentMethod?.channel === 'CARDS' && !!newCardData;
+    if (willTokenizeCard) {
+      cardPayTab.current?.close();
+      cardPayTab.current = window.open('', '_blank');
+    }
+
     // Ask for user confirmation before sending to backend to create Payment Session
     try {
       const ok = await confirm({
@@ -585,9 +604,14 @@ export default function CheckoutPage() {
         dismissible: true
       });
 
-      if (!ok) return;
+      if (!ok) {
+        cardPayTab.current?.close();
+        cardPayTab.current = null;
+        return;
+      }
     } catch (e) {
-      // If confirm throws or is rejected, bail out
+      cardPayTab.current?.close();
+      cardPayTab.current = null;
       return;
     }
 
@@ -602,6 +626,8 @@ export default function CheckoutPage() {
         });
         payload.cardPayment = { tokenId, saveCard: newCardData.saveCard || false };
       } catch (err: any) {
+        cardPayTab.current?.close();
+        cardPayTab.current = null;
         toast.error(err.message || 'Card processing failed. Please try again.');
         setTokenizingCard(false);
         return;
@@ -611,16 +637,9 @@ export default function CheckoutPage() {
 
     // Send to backend to create Payment Session
     checkoutMutation.mutate(payload, {
-      onSuccess: (response) => {
-        const paymentUrl = response.data?.paymentUrl;
-        if (
-          selectedPaymentMethod?.channel === 'CARDS' &&
-          paymentUrl &&
-          response.data?.paymentStatus !== 'PAID'
-        ) {
-          setNavigatingToPayment(true);
-          window.location.href = paymentUrl;
-        }
+      onError: () => {
+        cardPayTab.current?.close();
+        cardPayTab.current = null;
       }
     });
   };

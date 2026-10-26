@@ -19,7 +19,7 @@ import { membershipTypeDescriptions, membershipTypeLabels } from '@/lib/membersh
 import { useMutation, useQuery } from '@tanstack/react-query';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 const currencyFormatter = new Intl.NumberFormat('id-ID', {
@@ -34,6 +34,7 @@ const PAYMENT_METHOD_STORAGE_KEY = 'membership-selected-payment';
 export default function MembershipCheckoutPage() {
   const router = useRouter();
   const [isNavigatingToPayment, setNavigatingToPayment] = useState(false);
+  const cardPayTab = useRef<Window | null>(null);
   const [membershipId, setMembershipId] = useState<string | null>(null);
   const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
@@ -115,10 +116,24 @@ export default function MembershipCheckoutPage() {
         sessionStorage.removeItem('membershipCheckoutId');
         persistPaymentMethodId(null);
         const paymentUrl = data?.data?.paymentUrl;
-        if (paymentUrl && data?.data?.paymentStatus !== 'PAID') {
-          setNavigatingToPayment(true);
-          window.location.href = paymentUrl;
-          return;
+        const needsCard3ds =
+          selectedPaymentMethod?.channel === 'CARDS' &&
+          paymentUrl &&
+          data?.data?.paymentStatus !== 'PAID';
+        if (needsCard3ds) {
+          const tab = cardPayTab.current;
+          cardPayTab.current = null;
+          if (tab && !tab.closed) {
+            tab.location.href = paymentUrl;
+            tab.opener = null;
+          } else {
+            setNavigatingToPayment(true);
+            window.location.href = paymentUrl;
+            return;
+          }
+        } else {
+          cardPayTab.current?.close();
+          cardPayTab.current = null;
         }
         const invoiceNumber = data?.data?.invoiceNumber;
         if (invoiceNumber) {
@@ -186,6 +201,8 @@ export default function MembershipCheckoutPage() {
         setPaymentModalOpen(true);
         return;
       }
+      cardPayTab.current?.close();
+      cardPayTab.current = window.open('', '_blank');
       setTokenizingCard(true);
       try {
         const tokenId = await getCardToken({
@@ -194,12 +211,22 @@ export default function MembershipCheckoutPage() {
           expiryYear: cardDraft.expiryYear,
           cvv: cardDraft.cvv
         });
-        checkoutMutation.mutate({
-          membershipId,
-          paymentMethodId: selectedPaymentMethod.id,
-          cardPayment: { tokenId }
-        });
+        checkoutMutation.mutate(
+          {
+            membershipId,
+            paymentMethodId: selectedPaymentMethod.id,
+            cardPayment: { tokenId }
+          },
+          {
+            onError: () => {
+              cardPayTab.current?.close();
+              cardPayTab.current = null;
+            }
+          }
+        );
       } catch (err: any) {
+        cardPayTab.current?.close();
+        cardPayTab.current = null;
         toast.error(err.message || 'Card processing failed. Please try again.');
       } finally {
         setTokenizingCard(false);

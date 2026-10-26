@@ -71,10 +71,7 @@ export default function CreditCardCheckout({
         if (ballboySlots && ballboySlots.length > 0) payload.ballboySlots = ballboySlots;
         if (inventories && inventories.length > 0) payload.inventories = inventories;
 
-        const response = await checkoutMutation.mutateAsync(payload);
-        if (response.paymentUrl && response.paymentStatus !== 'PAID') {
-          window.location.href = response.paymentUrl;
-        }
+        await checkoutMutation.mutateAsync(payload);
       } catch (err: any) {
         toast.error(err.message || 'Payment initialization failed. Please try again.');
         checkoutMutation.reset();
