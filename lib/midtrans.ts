@@ -38,16 +38,27 @@ export function getMidtransConfig() {
 export async function loadMidtransScript() {
   const config = await getMidtransConfig();
   if (!config?.clientKey) throw new Error('Payment config unavailable');
-  if (window.MidtransNew3ds) return config;
-  await new Promise<void>((resolve, reject) => {
-    const script = document.createElement('script');
+  const environment = config.sandbox ? 'sandbox' : 'production';
+  let script = document.getElementById('midtrans-script') as HTMLScriptElement | null;
+  if (!script) {
+    script = document.querySelector('script[src*="midtrans-new-3ds"]');
+  }
+  if (!script) {
+    script = document.createElement('script');
+    script.id = 'midtrans-script';
     script.src = 'https://api.midtrans.com/v2/assets/js/midtrans-new-3ds.min.js';
-    script.dataset.environment = config.sandbox ? 'sandbox' : 'production';
-    script.dataset.clientKey = config.clientKey;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Failed to load payment system'));
-    document.body.appendChild(script);
-  });
+    script.setAttribute('data-environment', environment);
+    script.setAttribute('data-client-key', config.clientKey);
+    await new Promise<void>((resolve, reject) => {
+      script!.onload = () => resolve();
+      script!.onerror = () => reject(new Error('Failed to load payment system'));
+      document.body.appendChild(script!);
+    });
+  }
+  script.id = 'midtrans-script';
+  script.setAttribute('data-environment', environment);
+  script.setAttribute('data-client-key', config.clientKey);
+  if (!window.MidtransNew3ds) throw new Error('Payment system is not ready');
   return config;
 }
 
