@@ -75,14 +75,24 @@ export default function PaymentActionCard({
         (info.qrString ? (
           <>
             <div className="mx-auto w-full max-w-[264px] border border-black/15 bg-white p-3 sm:p-4">
-              <QRCodeSVG
-                value={info.qrString}
-                size={232}
-                marginSize={4}
-                level="M"
-                title="Kode QRIS pembayaran"
-                className="h-auto w-full"
-              />
+              {info.qrIsImage ? (
+                // Midtrans returns a QR image URL, not an EMV payload.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={info.qrString}
+                  alt="Kode QRIS pembayaran"
+                  className="h-auto w-full"
+                />
+              ) : (
+                <QRCodeSVG
+                  value={info.qrString}
+                  size={232}
+                  marginSize={4}
+                  level="M"
+                  title="Kode QRIS pembayaran"
+                  className="h-auto w-full"
+                />
+              )}
             </div>
             <p className="mx-auto mt-4 max-w-xs text-center text-xs leading-relaxed text-black/50">
               Pindai QR menggunakan aplikasi bank atau dompet digital yang mendukung QRIS.
@@ -99,8 +109,14 @@ export default function PaymentActionCard({
       {info.isVA &&
         (info.vaNumber ? (
           <div className="border border-black/15 bg-white p-4 sm:p-5">
-            <p className="text-[10px] tracking-wider text-black/45 uppercase">
-              Nomor Virtual Account
+            {info.billerCode && (
+              <>
+                <p className="text-[10px] tracking-wider text-black/45 uppercase">Kode perusahaan</p>
+                <p className="mt-2 text-xl font-medium tabular-nums">{info.billerCode}</p>
+              </>
+            )}
+            <p className={`text-[10px] tracking-wider text-black/45 uppercase ${info.billerCode ? 'mt-4' : ''}`}>
+              {info.billerCode ? 'Kode bayar' : 'Nomor Virtual Account'}
             </p>
             <div className="mt-3 flex items-center justify-between gap-3">
               <p className="min-w-0 text-xl font-medium break-all tabular-nums select-all sm:text-2xl">

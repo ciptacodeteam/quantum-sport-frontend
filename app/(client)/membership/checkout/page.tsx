@@ -7,6 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn, resolveMediaUrl } from '@/lib/utils';
 import { membershipCheckoutMutationOptions } from '@/mutations/membership';
+import CreditCardForm, { type CreditCardFormData } from '@/components/forms/payment/CreditCardForm';
+import { getCardToken } from '@/lib/midtrans';
 import { membershipQueryOptions } from '@/queries/membership';
 import { paymentMethodsQueryOptions } from '@/queries/paymentMethod';
 import { profileQueryOptions } from '@/queries/profile';
@@ -18,6 +20,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 const currencyFormatter = new Intl.NumberFormat('id-ID', {
   style: 'currency',
@@ -34,6 +37,9 @@ export default function MembershipCheckoutPage() {
   const [membershipId, setMembershipId] = useState<string | null>(null);
   const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
+  const [cardDraft, setCardDraft] = useState<CreditCardFormData | null>(null);
+  const [showCardForm, setShowCardForm] = useState(false);
+  const [isTokenizingCard, setTokenizingCard] = useState(false);
 
   const { data: user, isPending: isUserPending } = useQuery(profileQueryOptions);
   const { data: membership, isPending: isMembershipLoading } = useQuery({
@@ -106,11 +112,14 @@ export default function MembershipCheckoutPage() {
   const checkoutMutation = useMutation(
     membershipCheckoutMutationOptions({
       onSuccess: (data) => {
-        // Clear session storage
         sessionStorage.removeItem('membershipCheckoutId');
         persistPaymentMethodId(null);
-
-        // Redirect to invoice page using the invoice number from response
+        const paymentUrl = data?.data?.paymentUrl;
+        if (paymentUrl && data?.data?.paymentStatus !== 'PAID') {
+          setNavigatingToPayment(true);
+          window.location.href = paymentUrl;
+          return;
+        }
         const invoiceNumber = data?.data?.invoiceNumber;
         if (invoiceNumber) {
           setNavigatingToPayment(true);
@@ -152,16 +161,49 @@ export default function MembershipCheckoutPage() {
 
   const handleSelectPaymentMethod = (method: PaymentMethod) => {
     setSelectedPaymentMethod(method);
+    if (method.channel === 'CARDS') {
+      setShowCardForm(true);
+      return;
+    }
+    setCardDraft(null);
+    setShowCardForm(false);
     setPaymentModalOpen(false);
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (!isAuthenticated) {
       openAuthModal();
       return;
     }
 
     if (!selectedPaymentMethod || !membershipId) {
+      return;
+    }
+
+    if (selectedPaymentMethod.channel === 'CARDS') {
+      if (!cardDraft) {
+        setShowCardForm(true);
+        setPaymentModalOpen(true);
+        return;
+      }
+      setTokenizingCard(true);
+      try {
+        const tokenId = await getCardToken({
+          cardNumber: cardDraft.cardNumber,
+          expiryMonth: cardDraft.expiryMonth,
+          expiryYear: cardDraft.expiryYear,
+          cvv: cardDraft.cvv
+        });
+        checkoutMutation.mutate({
+          membershipId,
+          paymentMethodId: selectedPaymentMethod.id,
+          cardPayment: { tokenId }
+        });
+      } catch (err: any) {
+        toast.error(err.message || 'Card processing failed. Please try again.');
+      } finally {
+        setTokenizingCard(false);
+      }
       return;
     }
 
@@ -176,13 +218,18 @@ export default function MembershipCheckoutPage() {
       size="lg"
       className="h-12 w-full min-w-0 rounded-full bg-[#111111] px-3 text-xs font-medium text-white hover:bg-black/80 disabled:bg-black/15 disabled:text-black/40 disabled:opacity-100"
       onClick={handleCheckout}
-      disabled={(!selectedPaymentMethod || checkoutMutation.isPending) && isAuthenticated}
+      disabled={
+        (!selectedPaymentMethod || checkoutMutation.isPending || isTokenizingCard) &&
+        isAuthenticated
+      }
     >
       {isUserPending
         ? 'Memuat...'
         : !isAuthenticated
           ? 'Login untuk Checkout'
-          : checkoutMutation.isPending
+          : isTokenizingCard
+            ? 'Memproses Kartu...'
+            : checkoutMutation.isPending
             ? 'Memproses...'
             : selectedPaymentMethod
               ? 'Bayar Sekarang'
@@ -209,7 +256,7 @@ export default function MembershipCheckoutPage() {
 
   return (
     <div className="min-h-dvh">
-      {checkoutMutation.isPending && <PaymentProcessingOverlay />}
+      {(checkoutMutation.isPending || isTokenizingCard) && <PaymentProcessingOverlay />}
       <MainHeader />
       <main className="checkout-page mx-auto w-full max-w-7xl px-5 pt-24 pb-[calc(8rem+env(safe-area-inset-bottom))] text-[#171717] sm:px-8 lg:pb-16 xl:pt-32">
         <header className="mb-6 flex items-center justify-between gap-4 border-b border-black/15 pb-5">
@@ -354,6 +401,17 @@ export default function MembershipCheckoutPage() {
             </DialogTitle>
           </DialogHeader>
 
+          {showCardForm ? (
+            <CreditCardForm
+              showSaveOption={false}
+              submitButtonText="Gunakan kartu"
+              onSubmit={(data) => {
+                setCardDraft(data);
+                setShowCardForm(false);
+                setPaymentModalOpen(false);
+              }}
+            />
+          ) : (
           <div className="space-y-3">
             {isLoadingPaymentMethods ? (
               <div className="text-muted-foreground py-6 text-center text-sm">
@@ -429,6 +487,7 @@ export default function MembershipCheckoutPage() {
               })
             )}
           </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

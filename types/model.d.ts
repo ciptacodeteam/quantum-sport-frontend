@@ -700,7 +700,8 @@ export type CreditCard = {
 };
 
 export type CardPaymentNewCard = {
-  saveCard?: boolean; // true for PAY_AND_SAVE, false/undefined for PAY
+  saveCard?: boolean;
+  tokenId?: string;
 };
 
 export type CardPaymentSavedCard = {
@@ -726,7 +727,7 @@ export type CheckoutResponse = {
   total?: number;
   subtotal?: number;
   status?: string;
-  paymentStatus: 'PENDING' | 'REQUIRES_ACTION' | 'SUCCEEDED' | 'FAILED';
+  paymentStatus: 'PENDING' | 'PAID' | 'REQUIRES_ACTION' | 'SUCCEEDED' | 'FAILED';
   paymentActions?: ThreeDSChallenge[];
   paymentUrl?: string;
 };
