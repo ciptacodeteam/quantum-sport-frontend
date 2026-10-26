@@ -1,6 +1,7 @@
 'use client';
 
 import BranchLabel from '@/components/branches/BranchLabel';
+import BranchLink from '@/components/branches/BranchLink';
 import LogoImage from '@/assets/img/logoblack.webp';
 import { cn } from '@/lib/utils';
 import { profileQueryOptions } from '@/queries/profile';
@@ -88,7 +89,7 @@ const MainHeader = ({ onBack, backHref }: Props) => {
                   className="h-auto w-[92px] sm:w-[104px]"
                 />
               </Link>
-              <BranchLabel />
+              {pathname !== '/' && <BranchLabel />}
             </div>
           </div>
           <nav
@@ -114,14 +115,14 @@ const MainHeader = ({ onBack, backHref }: Props) => {
                 );
               }
               return (
-                <Link
+                <BranchLink
                   key={item.path}
                   href={item.path}
                   aria-current={active ? 'page' : undefined}
                   className={className}
                 >
                   {item.title}
-                </Link>
+                </BranchLink>
               );
             })}
           </nav>

@@ -212,7 +212,17 @@ export const useBookingStore = create<BookingState>()(
 
       setSelectedDate: (date) => set({ selectedDate: date }),
 
-      setSelectedCustomerId: (customerId) => set({ selectedCustomerId: customerId }),
+      setSelectedCustomerId: (customerId) =>
+        set((state) =>
+          customerId && customerId === state.selectedCustomerId
+            ? { selectedCustomerId: customerId }
+            : {
+                selectedCustomerId: customerId,
+                selectedCustomerName: null,
+                selectedCustomerPhone: null,
+                membershipDiscount: 0
+              }
+        ),
 
       setSelectedCustomerDetails: (name, phone) =>
         set({ selectedCustomerName: name, selectedCustomerPhone: phone }),

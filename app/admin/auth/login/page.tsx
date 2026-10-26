@@ -48,7 +48,7 @@ export default async function LoginPage() {
                 </p>
                 <a
                   href="/admin/auth/login"
-                  className="inline-flex rounded-full bg-[#111111] px-6 py-3 text-sm font-medium text-white hover:bg-black/80"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex rounded-full px-6 py-3 text-sm font-medium"
                 >
                   Coba lagi
                 </a>

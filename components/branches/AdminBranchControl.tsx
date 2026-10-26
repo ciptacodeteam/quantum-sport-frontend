@@ -80,14 +80,18 @@ export default function AdminBranchControl() {
             </p>
             <div className="mt-5 flex gap-3">
               <button
+                data-slot="button"
+                data-variant="default"
                 type="button"
                 disabled={switching}
                 onClick={() => void changeBranch(pending)}
-                className="bg-black px-4 py-2 text-sm text-white"
+                className="bg-primary px-4 py-2 text-sm text-white"
               >
                 Pindah cabang
               </button>
               <button
+                data-slot="button"
+                data-variant="outline"
                 type="button"
                 disabled={switching}
                 onClick={() => setPending(undefined)}

@@ -21,7 +21,7 @@ import useAuthModalStore from '@/stores/useAuthModalStore';
 import useAuthRedirectStore from '@/stores/useAuthRedirectStore';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowUpRight, CalendarDays, Crown, LoaderCircle } from 'lucide-react';
-import Link from 'next/link';
+import BranchLink from '@/components/branches/BranchLink';
 import { useState, type ReactNode } from 'react';
 
 const labels: Record<TrackedPackage['status'], string> = {
@@ -131,12 +131,12 @@ function UsageRow({ usage }: { usage: TrackedPackage['usage'][number] }) {
     </>
   );
   return usage.invoiceNumber ? (
-    <Link
+    <BranchLink
       href={`/invoice/${encodeURIComponent(usage.invoiceNumber)}`}
       className="block border border-black/15 p-4 transition-colors hover:border-[#ad422b]/40 focus-visible:outline-2 focus-visible:outline-[#ad422b] sm:p-5"
     >
       {content}
-    </Link>
+    </BranchLink>
   ) : (
     <div className="border border-black/15 p-4 sm:p-5">{content}</div>
   );
@@ -172,13 +172,13 @@ export default function MyPackagesPage() {
       <main className="my-packages-page mx-auto w-full max-w-7xl flex-1 px-5 pt-24 pb-6 sm:px-8 lg:pb-12 xl:pt-32">
         <header className="mb-6 flex items-center justify-between gap-4 border-b border-black/15 pb-5">
           <h1 className="text-2xl font-medium tracking-tight sm:text-3xl">Paket Saya</h1>
-          <Link
+          <BranchLink
             href="/membership"
             className="flex items-center gap-1 text-xs text-[#ad422b] hover:underline"
           >
             Lihat paket
             <ArrowUpRight className="size-3.5" aria-hidden="true" />
-          </Link>
+          </BranchLink>
         </header>
         {!profilePending && (!user?.id || staff || expiredSession) ? (
           <PageState
@@ -192,7 +192,7 @@ export default function MyPackagesPage() {
             action={
               staff ? (
                 <Button asChild className={actionClass}>
-                  <Link href="/profile">Kembali ke profil</Link>
+                  <BranchLink href="/profile">Kembali ke profil</BranchLink>
                 </Button>
               ) : (
                 <Button className={actionClass} onClick={signIn}>
@@ -238,7 +238,7 @@ export default function MyPackagesPage() {
             title="Belum ada paket"
             action={
               <Button asChild className={actionClass}>
-                <Link href="/membership">Lihat Value Pack</Link>
+                <BranchLink href="/membership">Lihat Value Pack</BranchLink>
               </Button>
             }
           >
@@ -339,9 +339,9 @@ export default function MyPackagesPage() {
                     asChild
                     className="mt-6 h-11 w-full rounded-full bg-[#111111] text-xs text-white"
                   >
-                    <Link href={`/invoice/${encodeURIComponent(pack.purchaseInvoice.number)}`}>
+                    <BranchLink href={`/invoice/${encodeURIComponent(pack.purchaseInvoice.number)}`}>
                       Lanjutkan pembayaran
-                    </Link>
+                    </BranchLink>
                   </Button>
                 )}
                 {pack.status === 'ACTIVE' && (
@@ -349,9 +349,9 @@ export default function MyPackagesPage() {
                     asChild
                     className="mt-6 h-11 w-full rounded-full bg-[#111111] text-xs text-white"
                   >
-                    <Link href={pack.sport === 'TENNIS' ? '/booking/tennis' : '/booking'}>
+                    <BranchLink href={pack.sport === 'TENNIS' ? '/booking/tennis' : '/booking'}>
                       Gunakan paket
-                    </Link>
+                    </BranchLink>
                   </Button>
                 )}
               </section>

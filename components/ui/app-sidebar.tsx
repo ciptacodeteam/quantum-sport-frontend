@@ -1,6 +1,6 @@
 'use client';
 
-import { Command, LifeBuoy } from 'lucide-react';
+import { LifeBuoy } from 'lucide-react';
 import * as React from 'react';
 
 import { NavMain } from '@/components/ui/nav-main';
@@ -24,15 +24,14 @@ import {
   IconCategory,
   IconChartBar,
   IconDatabase,
-  IconLaurelWreath1,
   IconScan,
   IconSchool,
   IconShoppingCart,
   IconUser,
-  IconUsers,
-  IconUsersGroup
+  IconUsers
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -155,18 +154,6 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
     //   icon: IconSchool,
     //   items: []
     // },
-    {
-      title: 'Kelola Turnamen',
-      url: '/admin/kelola-turnamen',
-      icon: IconLaurelWreath1,
-      items: []
-    },
-    {
-      title: 'Kelola Club',
-      url: '/admin/kelola-club',
-      icon: IconUsersGroup,
-      items: []
-    },
     {
       title: 'Marketing',
       icon: IconAd2,
@@ -366,11 +353,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild isActive={isDashboardActive}>
               <Link href={dashboardLink} prefetch>
-                <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                  <Command className="size-4" />
-                </div>
+                <Image
+                  src="/favicon.ico"
+                  alt=""
+                  width={32}
+                  height={32}
+                  unoptimized
+                  className="size-8 shrink-0 rounded-lg object-contain"
+                />
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">Quantum Sport</span>
+                  <span className="truncate font-medium">Black Padel</span>
                   <span className="truncate text-xs">{subtitle}</span>
                 </div>
               </Link>

@@ -92,7 +92,7 @@ const RegisterForm = ({ onRegisterSuccess, onLoginClick }: Props) => {
       <FieldSet>
         <FieldGroup>
           <AuthFormHeader
-            title="Join the club."
+            title="Start your game."
             description="Create your account. Find your court. Make your next move."
           />
           <Field>

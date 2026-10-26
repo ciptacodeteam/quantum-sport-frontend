@@ -1,12 +1,23 @@
 'use client';
 
+import { useState } from 'react';
+import {
+  format,
+  isBefore,
+  isSameDay,
+  isSameMonth,
+  isSameYear,
+  startOfDay,
+  subDays
+} from 'date-fns';
+import type { DateRange } from 'react-day-picker';
+import { CalendarIcon } from 'lucide-react';
+
+import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { Button } from './button';
 import { Calendar } from './calendar';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
-import dayjs from 'dayjs';
-import type { DateRange } from 'react-day-picker';
-import { CalendarIcon } from 'lucide-react';
 
 interface DateRangeInputProps {
   value: DateRange | undefined | null;
@@ -18,62 +29,124 @@ interface DateRangeInputProps {
   placeholder?: string;
 }
 
-/**
- * Single-input date range picker with shadcn UI calendar.
- * Opens a range calendar and displays the selected range in one input.
- */
+function rangeLabel(range: DateRange | undefined | null, placeholder: string) {
+  if (!range?.from) return placeholder;
+  if (!range.to || isSameDay(range.from, range.to)) return format(range.from, 'dd MMM yyyy');
+  const fromFormat = isSameMonth(range.from, range.to)
+    ? 'dd'
+    : isSameYear(range.from, range.to)
+      ? 'dd MMM'
+      : 'dd MMM yyyy';
+  return `${format(range.from, fromFormat)} — ${format(range.to, 'dd MMM yyyy')}`;
+}
+
 const DateRangeInput = ({
   value,
   onValueChange,
   minDate,
   maxDate,
-  numberOfMonths = 2,
+  numberOfMonths = 1,
   className,
-  placeholder = 'dd/MM/YYYY — dd/MM/YYYY'
+  placeholder = 'Select date range'
 }: DateRangeInputProps) => {
-  const label = (() => {
-    const from = value?.from ? dayjs(value.from).format('DD/MM/YYYY') : null;
-    const to = value?.to ? dayjs(value.to).format('DD/MM/YYYY') : null;
-    if (from && to) return `${from} — ${to}`;
-    if (from) return from;
-    return placeholder;
-  })();
+  const isMobile = useIsMobile();
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<DateRange | undefined>();
+  const [month, setMonth] = useState<Date>(value?.from ?? new Date());
+  const [choosingEnd, setChoosingEnd] = useState(false);
+  const min = minDate ? startOfDay(minDate) : undefined;
+  const max = maxDate ? startOfDay(maxDate) : undefined;
+  const today = startOfDay(new Date());
+  const presets = [
+    { label: 'Today', from: today, to: today },
+    { label: 'Last 7 days', from: subDays(today, 6), to: today },
+    { label: 'Last 30 days', from: subDays(today, 29), to: today }
+  ];
+  const outOfBounds = (date: Date) =>
+    !!((min && startOfDay(date) < min) || (max && startOfDay(date) > max));
+  const label = rangeLabel(value, placeholder);
+
+  const changeOpen = (nextOpen: boolean) => {
+    if (nextOpen) {
+      setDraft(value ?? undefined);
+      setMonth(value?.from ?? max ?? min ?? today);
+      setChoosingEnd(false);
+    }
+    setOpen(nextOpen);
+  };
+
+  const applyRange = (range: DateRange) => {
+    onValueChange(range);
+    setOpen(false);
+  };
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={changeOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
           type="button"
+          aria-label={`Date range: ${label}`}
           className={cn(
-            'w-full pl-3 text-left font-normal sm:w-[300px]',
+            'w-full justify-start gap-2 text-left font-normal sm:w-auto',
             !value?.from && 'text-muted-foreground',
             className
           )}
         >
-          <div className="flex-between w-full">
-            {label}
-            <CalendarIcon className="inline-block size-4" />
-          </div>
+          <CalendarIcon className="text-muted-foreground size-4 shrink-0" />
+          <span className="truncate tabular-nums">{label}</span>
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent className="w-auto p-0" align="end">
+      <PopoverContent
+        className="w-auto max-w-[calc(100vw-2rem)] p-0"
+        align="end"
+        sideOffset={6}
+        aria-label="Choose date range"
+      >
+        <div className="flex gap-1 border-b p-2">
+          {presets.map((preset) => (
+            <Button
+              key={preset.label}
+              type="button"
+              size="sm"
+              variant="ghost"
+              disabled={outOfBounds(preset.from) || outOfBounds(preset.to)}
+              onClick={() => applyRange({ from: preset.from, to: preset.to })}
+              className="flex-1 px-2 text-xs"
+            >
+              {preset.label}
+            </Button>
+          ))}
+        </div>
         <Calendar
           mode="range"
           captionLayout="dropdown"
-          selected={value as any}
-          onSelect={(range) => onValueChange(range)}
-          numberOfMonths={numberOfMonths}
-          autoFocus
-          fromYear={minDate ? dayjs(minDate).year() : dayjs().subtract(1, 'year').year()}
-          toYear={maxDate ? dayjs(maxDate).year() : dayjs().add(5, 'year').year()}
-          disabled={(date) => {
-            if (minDate && date < minDate) return true;
-            if (maxDate && date > maxDate) return true;
-            return false;
+          month={month}
+          onMonthChange={setMonth}
+          selected={draft}
+          showOutsideDays={false}
+          onSelect={(_range, day) => {
+            if (outOfBounds(day)) return;
+            if (choosingEnd && draft?.from) {
+              applyRange(
+                isBefore(day, draft.from)
+                  ? { from: day, to: draft.from }
+                  : { from: draft.from, to: day }
+              );
+            } else {
+              setDraft({ from: day, to: undefined });
+              setChoosingEnd(true);
+            }
           }}
+          numberOfMonths={isMobile ? 1 : numberOfMonths}
+          startMonth={min ?? new Date(today.getFullYear() - 10, 0)}
+          endMonth={max ?? new Date(today.getFullYear() + 5, 11)}
+          disabled={outOfBounds}
         />
+        <p role="status" className="text-muted-foreground border-t px-3 py-2 text-xs">
+          {choosingEnd ? 'Select end date' : 'Select start date'}
+        </p>
       </PopoverContent>
     </Popover>
   );

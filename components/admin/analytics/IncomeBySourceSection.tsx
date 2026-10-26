@@ -2,7 +2,8 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { formatCurrency } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
+import { format } from 'date-fns';
 import { IconCash, IconDeviceDesktop, IconSchool, IconCreditCard } from '@tabler/icons-react';
 
 interface IncomeBySourceSectionProps {
@@ -13,18 +14,34 @@ interface IncomeBySourceSectionProps {
 export default function IncomeBySourceSection({ data, isLoading }: IncomeBySourceSectionProps) {
   if (isLoading) {
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {[...Array(4)].map((_, i) => (
-          <Card key={i}>
-            <CardHeader>
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-8 w-32" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-4 w-full" />
-            </CardContent>
-          </Card>
-        ))}
+      <div className="space-y-8" role="status" aria-label="Loading income analytics">
+        <Card className="gap-6 py-6 sm:py-8">
+          <CardHeader className="gap-2 px-6 sm:px-8">
+            <Skeleton className="h-5 w-44" />
+            <Skeleton className="h-4 w-52" />
+          </CardHeader>
+          <CardContent className="space-y-3 px-6 sm:px-8">
+            <Skeleton className="h-10 w-60 max-w-full" />
+            <Skeleton className="h-4 w-40" />
+          </CardContent>
+        </Card>
+        <div className="space-y-4">
+          <Skeleton className="h-6 w-32" />
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {Array.from({ length: 4 }, (_, i) => (
+              <Card key={i} className="gap-6 py-5">
+                <CardHeader className="px-5">
+                  <Skeleton className="h-10 w-full" />
+                </CardHeader>
+                <CardContent className="space-y-3 px-5">
+                  <Skeleton className="h-7 w-32" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-1.5 w-full" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -56,114 +73,135 @@ export default function IncomeBySourceSection({ data, isLoading }: IncomeBySourc
       title: 'Online Booking',
       icon: IconDeviceDesktop,
       color: 'text-blue-500',
-      bgColor: 'bg-blue-500/10'
+      bgColor: 'bg-blue-500/10',
+      barColor: 'bg-blue-500'
     },
     {
       key: 'Cashier',
       title: 'Cashier Booking',
       icon: IconCash,
       color: 'text-green-500',
-      bgColor: 'bg-green-500/10'
+      bgColor: 'bg-green-500/10',
+      barColor: 'bg-green-500'
     },
     {
       key: 'Class Bookings',
       title: 'Class Bookings',
       icon: IconSchool,
       color: 'text-purple-500',
-      bgColor: 'bg-purple-500/10'
+      bgColor: 'bg-purple-500/10',
+      barColor: 'bg-purple-500'
     },
     {
       key: 'Membership',
       title: 'Membership',
       icon: IconCreditCard,
       color: 'text-orange-500',
-      bgColor: 'bg-orange-500/10'
+      bgColor: 'bg-orange-500/10',
+      barColor: 'bg-orange-500'
     }
   ];
 
+  const metrics = [
+    { label: 'Gross amount', value: summary.totalGrossAmount || 0 },
+    { label: 'Processing fees', value: summary.totalProcessingFees || 0 },
+    { label: 'Net amount', value: summary.totalNetAmount || 0 }
+  ];
+
   return (
-    <div className="space-y-4">
-      {/* Summary Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Total Income Summary</CardTitle>
-          <CardDescription>
-            {data.dateRange?.startDate && data.dateRange?.endDate && (
-              <>
-                {new Date(data.dateRange.startDate).toLocaleDateString()} -{' '}
-                {new Date(data.dateRange.endDate).toLocaleDateString()}
-              </>
-            )}
-          </CardDescription>
+    <div className="space-y-8">
+      <Card className="gap-6 py-6 sm:py-8">
+        <CardHeader className="gap-2 px-6 sm:px-8">
+          <CardTitle className="text-base leading-snug">Total Income Summary</CardTitle>
+          {data.dateRange?.startDate && data.dateRange?.endDate && (
+            <CardDescription className="text-xs leading-relaxed sm:text-sm">
+              {format(new Date(data.dateRange.startDate), 'dd MMM yyyy')} —{' '}
+              {format(new Date(data.dateRange.endDate), 'dd MMM yyyy')}
+            </CardDescription>
+          )}
         </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Total Income</span>
-              <span className="text-2xl font-bold">{formatCurrency(summary.totalIncome || 0)}</span>
-            </div>
-            <div className="text-muted-foreground flex items-center justify-between text-sm">
-              <span>Total Transactions</span>
-              <span className="font-medium">{summary.totalTransactions || 0}</span>
-            </div>
-
-            <div className="my-2 border-t" />
-
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center justify-between">
-                <span>Total Gross Amount</span>
-                <span className="font-medium">{formatCurrency(summary.totalGrossAmount || 0)}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Total Processing Fees</span>
-                <span className="font-medium">
-                  {formatCurrency(summary.totalProcessingFees || 0)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Total Net Amount</span>
-                <span className="font-medium">{formatCurrency(summary.totalNetAmount || 0)}</span>
-              </div>
-            </div>
+        <CardContent className="grid gap-6 px-6 sm:px-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] xl:items-center xl:gap-8">
+          <div className="min-w-0 space-y-3">
+            <p className="text-muted-foreground text-sm font-medium">Total Income</p>
+            <p className="text-3xl leading-tight font-semibold tracking-tight break-words tabular-nums sm:text-4xl">
+              {formatCurrency(summary.totalIncome || 0)}
+            </p>
+            <p className="text-muted-foreground text-sm">
+              <span className="text-foreground font-medium tabular-nums">
+                {summary.totalTransactions || 0}
+              </span>{' '}
+              {summary.totalTransactions === 1 ? 'transaction' : 'transactions'} in this period
+            </p>
           </div>
+          <dl className="grid gap-5 border-t pt-6 sm:grid-cols-3 xl:border-t-0 xl:border-l xl:pt-0 xl:pl-8">
+            {metrics.map((metric) => (
+              <div key={metric.label} className="min-w-0 space-y-2">
+                <dt className="text-muted-foreground text-xs leading-relaxed font-medium sm:text-sm">
+                  {metric.label}
+                </dt>
+                <dd className="text-base leading-snug font-semibold break-words tabular-nums xl:text-lg">
+                  {formatCurrency(metric.value)}
+                </dd>
+              </div>
+            ))}
+          </dl>
         </CardContent>
       </Card>
 
-      {/* Income by Source Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {sourceConfigs.map((config) => {
-          const sourceData = bySource[config.key] || {
-            count: 0,
-            total: fallbackSourceTotals[config.key] || 0
-          };
-          const Icon = config.icon;
-          const percentage = summary.totalIncome
-            ? ((sourceData.total / summary.totalIncome) * 100).toFixed(1)
-            : '0.0';
+      <section aria-labelledby="income-sources-title" className="space-y-4">
+        <div className="space-y-1.5">
+          <h3 id="income-sources-title" className="text-base font-semibold">
+            Income sources
+          </h3>
+          <p className="text-muted-foreground text-sm">
+            Contribution from each booking channel and membership.
+          </p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {sourceConfigs.map((config) => {
+            const sourceData = bySource[config.key] || {
+              count: 0,
+              total: fallbackSourceTotals[config.key] || 0
+            };
+            const Icon = config.icon;
+            const percentage = summary.totalIncome
+              ? ((sourceData.total / summary.totalIncome) * 100).toFixed(1)
+              : '0.0';
 
-          return (
-            <Card key={config.key}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{config.title}</CardTitle>
-                <div className={cn('rounded-full p-2', config.bgColor)}>
-                  <Icon className={cn('h-4 w-4', config.color)} />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(sourceData.total)}</div>
-                <p className="text-muted-foreground text-xs">
-                  {sourceData.count ? `${sourceData.count} transactions • ` : ''}
-                  {percentage}% of total
-                </p>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+            return (
+              <Card key={config.key} className="gap-6 py-5">
+                <CardHeader className="flex flex-row items-center justify-between gap-3 px-5">
+                  <CardTitle className="text-sm leading-snug font-medium">{config.title}</CardTitle>
+                  <div className={cn('shrink-0 rounded-xl p-2.5', config.bgColor)}>
+                    <Icon className={cn('h-4 w-4', config.color)} />
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4 px-5">
+                  <div className="space-y-2">
+                    <p className="text-2xl leading-tight font-semibold tracking-tight break-words tabular-nums">
+                      {formatCurrency(sourceData.total)}
+                    </p>
+                    <p className="text-muted-foreground text-xs leading-relaxed">
+                      {sourceData.count || 0}{' '}
+                      {sourceData.count === 1 ? 'transaction' : 'transactions'}
+                      <span className="mx-2" aria-hidden="true">
+                        ·
+                      </span>
+                      {percentage}% of total
+                    </p>
+                  </div>
+                  <div className="bg-muted h-1.5 overflow-hidden rounded-full" aria-hidden="true">
+                    <div
+                      className={cn('h-full rounded-full', config.barColor)}
+                      style={{ width: `${Math.min(100, Math.max(0, Number(percentage)))}%` }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </section>
     </div>
   );
-}
-
-function cn(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(' ');
 }

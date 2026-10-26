@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import Link from 'next/link';
+import BranchLink from '@/components/branches/BranchLink';
 
 const menus = [
   { title: 'Padel', href: '/booking', image: '/assets/icons/mobile-menu/padel.png' },
@@ -14,7 +14,7 @@ export default function MenuSection() {
       <ul className="mx-auto grid max-w-md grid-cols-4 gap-2">
         {menus.map((menu) => (
           <li key={menu.href}>
-            <Link
+            <BranchLink
               href={menu.href}
               className="group flex min-h-28 flex-col items-center justify-center gap-2.5 rounded-2xl text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ad422b]"
             >
@@ -35,7 +35,7 @@ export default function MenuSection() {
               <span className="text-[11px] font-medium tracking-tight text-[#171717] sm:text-xs">
                 {menu.title}
               </span>
-            </Link>
+            </BranchLink>
           </li>
         ))}
       </ul>

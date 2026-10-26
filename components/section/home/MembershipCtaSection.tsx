@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
-import Link from 'next/link';
+import BranchLink from '@/components/branches/BranchLink';
 
 const MembershipCtaSection = () => {
   return (
@@ -30,9 +30,9 @@ const MembershipCtaSection = () => {
         </div>
         <footer className="w-full px-4">
           <Button asChild variant="secondary" className="mt-4 w-full">
-            <Link prefetch href="/membership">
+            <BranchLink prefetch href="/membership">
               Gabung Sekarang
-            </Link>
+            </BranchLink>
           </Button>
         </footer>
       </div>

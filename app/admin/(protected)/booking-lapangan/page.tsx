@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useMembershipDiscount } from '@/hooks/useMembershipDiscount';
 import { isTimeAllowedForMembershipType, type MembershipType } from '@/lib/membership-hours';
 import { formatSlotTime } from '@/lib/time-utils';
-import { cn, getPlaceholderImageUrl } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { adminCourtCostingQueryOptions } from '@/queries/admin/court';
 import type { CustomerSearchResult } from '@/queries/admin/customer';
 import { useBookingStore } from '@/stores/useBookingStore';
@@ -156,6 +156,7 @@ export default function BookingLapangan() {
     return {
       startAt: start.toISOString(),
       endAt: end.toISOString(),
+      includeUnavailable: 'true',
       courtSport
     };
   }, [localSelectedDate, courtSport]);
@@ -273,8 +274,7 @@ export default function BookingLapangan() {
         map.set(courtId, {
           id: courtId,
           name: court?.name || `Court ${map.size + 1}`,
-          image:
-            court?.image || getPlaceholderImageUrl({ width: 160, height: 90, text: 'No Image' }),
+          image: court?.image,
           pricePerHour:
             slot.discountPrice && slot.discountPrice > 0 ? slot.discountPrice : slot.price || 0,
           description: court?.description || undefined
@@ -693,6 +693,8 @@ export default function BookingLapangan() {
       return true;
     }
 
+    if (candidateSlots.every((slot) => slot.isAvailable === false)) return true;
+
     const now = dayjs();
 
     const evaluatedCandidates = candidateSlots.map((slot) => {
@@ -751,19 +753,21 @@ export default function BookingLapangan() {
   // };
 
   return (
-    <div className="w-full space-y-4 lg:space-y-6">
-      <div className="w-full space-y-4 lg:space-y-6">
+    <div className="flex w-full min-w-0 flex-col gap-6">
+      <div className="flex w-full min-w-0 flex-col gap-6">
         {/* Header with Calendar */}
-        <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <IconMapPin className="text-primary h-5 w-5" />
-            <h1 className="text-xl font-bold lg:text-2xl">{courtSportLabel} Court Booking</h1>
+            <h1 className="text-lg leading-snug font-semibold sm:text-xl">
+              {courtSportLabel} Court Booking
+            </h1>
           </div>
 
           {/* Calendar Selector */}
           <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="shrink-0 gap-2">
+              <Button variant="outline" className="h-11 shrink-0 gap-2">
                 <IconCalendar className="h-4 w-4" />
                 <span className="hidden sm:inline">
                   {formatDate(localSelectedDate, 'DD MMM YYYY')}
@@ -771,7 +775,7 @@ export default function BookingLapangan() {
                 <span className="sm:hidden">{formatDate(localSelectedDate, 'DD MMM')}</span>
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
+            <PopoverContent align="end" className="w-auto p-0">
               <Calendar
                 mode="single"
                 selected={localSelectedDate}
@@ -781,33 +785,27 @@ export default function BookingLapangan() {
                     setCalendarOpen(false);
                   }
                 }}
-                disabled={(date) => date < new Date()}
-                initialFocus
+                disabled={(date) => isBefore(date, new Date(), 'day')}
+                autoFocus
               />
             </PopoverContent>
           </Popover>
         </div>
 
         {/* Date Navigation */}
-        <Card>
-          <CardContent className="px-4">
+        <Card className="min-w-0 py-3">
+          <CardContent className="min-w-0 px-3">
             {/* Scrollable Date Selection */}
-            <div
-              className="flex gap-3 overflow-x-auto px-1"
-              style={{
-                scrollbarWidth: 'none',
-                msOverflowStyle: 'none'
-              }}
-            >
+            <div className="flex snap-x gap-2 overflow-x-auto px-1 py-1" aria-label="Booking dates">
               {weekDates.map((dateInfo, index) => (
                 <Button
                   key={index}
                   variant={isSameDay(localSelectedDate, dateInfo.date) ? 'default' : 'outline'}
                   className={cn(
-                    'min-h-20 min-w-16 shrink-0 flex-col p-2 text-center',
-                    dateInfo.isToday && 'border-primary border-2',
-                    !dateInfo.isCurrentMonth && 'opacity-50'
+                    'h-auto min-h-20 min-w-16 shrink-0 grow basis-16 snap-start flex-col gap-1.5 p-2 text-center',
+                    dateInfo.isToday && 'border-primary border-2'
                   )}
+                  aria-pressed={isSameDay(localSelectedDate, dateInfo.date)}
                   onClick={() => setLocalSelectedDate(dateInfo.date)}
                   disabled={isBefore(dateInfo.date, new Date(), 'day')}
                 >
@@ -820,18 +818,18 @@ export default function BookingLapangan() {
           </CardContent>
         </Card>
 
-        <div className="flex flex-col gap-6 xl:flex-row">
+        <div className="grid min-w-0 grid-cols-1 items-start gap-6 2xl:grid-cols-[minmax(0,1fr)_420px]">
           {/* Main Content - Court Selection & Time Selection */}
-          <div className="flex-1 space-y-6">
+          <div className="flex min-w-0 flex-col gap-6">
             {/* Court Selection (Green Section) */}
-            <Card>
-              <CardHeader className="pb-3 lg:pb-6">
-                <CardTitle className="text-lg lg:text-xl">Select Court</CardTitle>
+            <Card className="min-w-0 gap-5 py-5 sm:py-6">
+              <CardHeader className="gap-2 px-5 sm:px-6">
+                <CardTitle className="text-base leading-snug font-semibold">Select Court</CardTitle>
                 <p className="text-muted-foreground text-xs lg:text-sm">
                   Choose your preferred court
                 </p>
               </CardHeader>
-              <CardContent className="pt-0">
+              <CardContent className="min-w-0 px-5 sm:px-6">
                 {isSlotsLoading ? (
                   <div className="py-8 text-center">
                     <p className="text-muted-foreground text-sm">Loading courts...</p>
@@ -843,7 +841,7 @@ export default function BookingLapangan() {
                     </p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:gap-4">
+                  <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,240px),1fr))] gap-4">
                     {courts.map((court) => {
                       // Total slots is based on standard time slots (06:00-23:00)
                       const totalSlotsCount = allowedStandardTimeSlots.length;
@@ -856,26 +854,27 @@ export default function BookingLapangan() {
                       const isDisabled = availableSlotsCount === 0;
 
                       return (
-                        <div
+                        <button
+                          type="button"
+                          disabled={isDisabled}
+                          aria-pressed={selectedCourt === court.id}
                           key={court.id}
                           className={cn(
-                            'relative overflow-hidden rounded-lg border transition-all',
+                            'focus-visible:ring-ring relative flex h-full min-w-0 flex-col items-stretch justify-start overflow-hidden rounded-xl border-2 p-0 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none',
                             selectedCourt === court.id
-                              ? 'border-primary bg-primary/5 border-2 shadow-lg'
+                              ? 'border-primary bg-primary/5'
                               : 'border-gray-200',
                             isDisabled
                               ? 'cursor-not-allowed opacity-50'
-                              : 'hover:border-primary/50 cursor-pointer hover:shadow-lg'
+                              : 'hover:border-primary/50 cursor-pointer'
                           )}
                           onClick={() => !isDisabled && handleCourtSelect(court.id)}
                         >
                           {/* Court Image */}
-                          <div className="relative h-24 bg-linear-to-br from-green-100 to-green-200 sm:h-28 lg:h-32">
+                          <div className="bg-muted relative h-28 w-full shrink-0 overflow-hidden">
                             {court.image ? (
                               <Image
-                                src={
-                                  court.image || getPlaceholderImageUrl({ width: 160, height: 90 })
-                                }
+                                src={court.image}
                                 unoptimized
                                 alt={court.name}
                                 className="h-full w-full object-cover"
@@ -884,7 +883,7 @@ export default function BookingLapangan() {
                               />
                             ) : (
                               <div className="absolute inset-0 flex items-center justify-center">
-                                <IconMapPin className="h-8 w-8 text-green-600 sm:h-10 sm:w-10 lg:h-12 lg:w-12" />
+                                <IconMapPin className="text-muted-foreground/50 size-8" />
                               </div>
                             )}
 
@@ -897,17 +896,17 @@ export default function BookingLapangan() {
                           </div>
 
                           {/* Court Info */}
-                          <div className="p-3 lg:p-4">
-                            <div className="mb-2 flex items-start justify-between">
+                          <div className="w-full flex-1 p-4">
+                            <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
                               <div className="min-w-0 flex-1">
-                                <h3 className="mb-1 truncate text-xs font-semibold sm:text-sm">
+                                <h3 className="mb-1 text-sm leading-snug font-semibold break-words">
                                   {court.name}
                                 </h3>
                                 <p className="text-muted-foreground line-clamp-2 text-xs lg:line-clamp-none">
                                   {court.description}
                                 </p>
                               </div>
-                              <div className="ml-2 shrink-0 text-right">
+                              <div className="shrink-0">
                                 <Badge
                                   variant="outline"
                                   className="border-green-200 bg-green-50 text-xs text-green-700"
@@ -1033,16 +1032,16 @@ export default function BookingLapangan() {
                                       ) : (
                                         <div
                                           key={idx}
-                                          className="text-primary text-[10px] font-medium sm:text-xs"
+                                          className="text-muted-foreground text-xs leading-relaxed"
                                         >
-                                          {range.startTime}-{range.endTime} is Rp{' '}
+                                          {range.startTime}–{range.endTime} · Rp{' '}
                                           {range.price.toLocaleString('id-ID')}
                                         </div>
                                       )
                                     )}
                                   </div>
                                 ) : (
-                                  <span className="text-primary text-[10px] font-medium sm:text-xs">
+                                  <span className="text-muted-foreground text-xs leading-relaxed">
                                     Rp {court.pricePerHour.toLocaleString('id-ID')}/hr
                                   </span>
                                 );
@@ -1057,32 +1056,18 @@ export default function BookingLapangan() {
                               </div>
                             )}
                           </div>
-                        </div>
+                        </button>
                       );
                     })}
-                  </div>
-                )}
-
-                {/* Add to Booking Button */}
-                {selectedCourt && selectedTimeSlots.length > 0 && (
-                  <div className="mt-3 flex justify-center lg:mt-4 lg:justify-end">
-                    <Button
-                      onClick={handleAddBooking}
-                      className="w-full gap-2 sm:w-auto"
-                      size="default"
-                    >
-                      <IconCheck className="h-4 w-4" />
-                      Add to Booking ({selectedTimeSlots.length})
-                    </Button>
                   </div>
                 )}
               </CardContent>
             </Card>
 
             {/* Time Slot Selection (Red Section) */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg lg:text-xl">
+            <Card className="min-w-0 gap-5 py-5 sm:py-6">
+              <CardHeader className="gap-2 px-5 sm:px-6">
+                <CardTitle className="flex items-center gap-2 text-base leading-snug font-semibold">
                   <IconClock className="h-4 w-4 lg:h-5 lg:w-5" />
                   Select Time Slots
                 </CardTitle>
@@ -1092,13 +1077,13 @@ export default function BookingLapangan() {
                     : 'Select a court first to see available time slots'}
                 </p>
               </CardHeader>
-              <CardContent className="pt-0">
+              <CardContent className="min-w-0 px-5 sm:px-6">
                 {isSlotsLoading ? (
                   <div className="py-8 text-center">
                     <p className="text-muted-foreground text-sm">Loading time slots...</p>
                   </div>
                 ) : selectedCourt ? (
-                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:flex lg:flex-wrap">
+                  <div className="grid grid-cols-[repeat(auto-fit,minmax(100px,1fr))] gap-2">
                     {availableTimeSlots.length === 0 ? (
                       <div className="flex-center w-full py-8 text-center">
                         <p className="text-muted-foreground text-sm">
@@ -1121,16 +1106,20 @@ export default function BookingLapangan() {
                         // Always show the time slot, even if booked - just mark it visually
                         return (
                           <div key={timeSlot} className="relative">
-                            <Badge
+                            <Button
+                              type="button"
+                              disabled={isBooked}
+                              aria-pressed={isSelected}
+                              aria-label={`${timeSlot}${isBooked ? ' · Booked' : ''}`}
                               variant={isSelected ? 'default' : isBooked ? 'secondary' : 'outline'}
                               className={cn(
-                                'w-full justify-center px-2 py-1 text-xs font-medium transition-all lg:w-auto lg:px-4 lg:py-2 lg:text-sm',
+                                'h-11 w-full justify-center px-3 text-sm font-medium',
                                 isSelected && 'bg-primary text-primary-foreground shadow-lg',
                                 isBooked &&
                                   'cursor-not-allowed bg-gray-100 text-gray-500 opacity-50',
                                 !isBooked &&
                                   !isSelected &&
-                                  'hover:bg-primary/10 hover:border-primary cursor-pointer hover:scale-105'
+                                  'hover:bg-primary/10 hover:border-primary cursor-pointer'
                               )}
                               onClick={() => {
                                 if (isBooked) {
@@ -1146,7 +1135,7 @@ export default function BookingLapangan() {
                                   ({availableCourts.length})
                                 </span>
                               )}
-                            </Badge>
+                            </Button>
                             {isBooked && (
                               <div
                                 className="absolute -top-1 -right-1 h-3 w-3 rounded-full border-2 border-white bg-red-500"
@@ -1174,6 +1163,19 @@ export default function BookingLapangan() {
                   </div>
                 )}
 
+                {/* Add to Booking Button */}
+                {selectedCourt && selectedTimeSlots.length > 0 && (
+                  <div className="mt-4 flex justify-end">
+                    <Button
+                      onClick={handleAddBooking}
+                      className="h-11 w-full gap-2 sm:w-auto"
+                      size="default"
+                    >
+                      <IconCheck className="h-4 w-4" />
+                      Add to Booking ({selectedTimeSlots.length})
+                    </Button>
+                  </div>
+                )}
                 {/* Legend */}
                 <div className="mt-4 rounded-lg bg-gray-50 p-3">
                   <p className="mb-2 text-xs font-medium text-gray-700">Legend:</p>
@@ -1191,9 +1193,6 @@ export default function BookingLapangan() {
                         <div className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-red-500"></div>
                       </div>
                       <span>Booked</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs">(2) = Courts available</span>
                     </div>
                   </div>
                 </div>
@@ -1267,7 +1266,7 @@ export default function BookingLapangan() {
               }
             ]}
             showAddOns={false}
-            width="w-full xl:w-[618px] xl:shrink-0"
+            width="w-full min-w-0"
           />
         </div>
       </div>

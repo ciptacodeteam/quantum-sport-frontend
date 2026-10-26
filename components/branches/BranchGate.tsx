@@ -12,11 +12,10 @@ import type { Branch } from '@/types/branch';
 export default function BranchGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const exempt =
-    pathname.startsWith('/admin') ||
-    /^\/(invoice|payment|reset-password|verify)(\/|$)/.test(pathname) ||
-    pathname === '/checkout/3ds-challenge';
-  const { branch, selectorOpen, setBranch, closeSelector } = useBranchStore();
+  const requiresBranch =
+    /^\/(booking|membership|add-ons|checkout)(\/|$)/.test(pathname) &&
+    pathname !== '/checkout/3ds-challenge';
+  const { branch, selectorOpen, pendingHref, setBranch, closeSelector } = useBranchStore();
   const [ready, setReady] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [pendingBranch, setPendingBranch] = useState<Branch | null>(null);
@@ -29,7 +28,7 @@ export default function BranchGate({ children }: { children: ReactNode }) {
   } = useQuery({
     queryKey: ['branches'],
     queryFn: getBranches,
-    enabled: !exempt || selectorOpen,
+    enabled: requiresBranch || selectorOpen,
     staleTime: 60000
   });
   useEffect(() => {
@@ -38,11 +37,10 @@ export default function BranchGate({ children }: { children: ReactNode }) {
     setReady(true);
   }, []);
   useEffect(() => {
-    if (pathname === '/') setSwitching(false);
+    setSwitching(false);
   }, [pathname]);
   const validBranch = branches?.find((item) => item.id === branch?.id);
-  if (exempt && !selectorOpen) return children;
-  if (!ready) return <div className="min-h-dvh bg-white" />;
+  if (!ready && requiresBranch) return <div className="min-h-dvh bg-white" />;
 
   const choose = async (next: Branch, discardCart = false) => {
     const cart = useBookingStore.getState();
@@ -56,6 +54,7 @@ export default function BranchGate({ children }: { children: ReactNode }) {
       setPendingBranch(next);
       return;
     }
+    const destination = pendingHref || (selectorOpen ? '/' : pathname);
     setSwitching(true);
     if (next.id !== branch?.id) {
       await queryClient.cancelQueries();
@@ -69,15 +68,21 @@ export default function BranchGate({ children }: { children: ReactNode }) {
     sessionStorage.setItem('confirmed-branch', next.id);
     setConfirmed(true);
     setPendingBranch(null);
-    router.replace('/');
-    if (pathname === '/') setSwitching(false);
+    if (destination !== pathname) router.push(destination);
+    else setSwitching(false);
   };
-  const canDismiss = !!(confirmed && validBranch && !switching);
-  const dialogOpen = !confirmed || !validBranch || selectorOpen || (switching && pathname !== '/');
+  const canDismiss = !switching;
+  const dialogOpen =
+    !switching && (selectorOpen || (requiresBranch && (!confirmed || !validBranch)));
+  const dismiss = () => {
+    closeSelector();
+    setPendingBranch(null);
+    if (requiresBranch && (!confirmed || !validBranch)) router.replace('/');
+  };
   return (
     <>
       <Fragment key={branch?.id || 'no-branch'}>
-        {pathname === '/' || (!switching && confirmed && validBranch) || exempt ? (
+        {!requiresBranch || (!switching && confirmed && validBranch) ? (
           children
         ) : (
           <div className="min-h-dvh bg-[#f8f8f6]" />
@@ -87,8 +92,7 @@ export default function BranchGate({ children }: { children: ReactNode }) {
         open={dialogOpen}
         onOpenChange={(open) => {
           if (!open && canDismiss) {
-            closeSelector();
-            setPendingBranch(null);
+            dismiss();
           }
         }}
       >
@@ -111,7 +115,7 @@ export default function BranchGate({ children }: { children: ReactNode }) {
             <Dialog.Description className="mt-3 text-sm leading-relaxed text-black/55">
               {pendingBranch
                 ? 'Keranjang saat ini akan dikosongkan saat Anda pindah cabang. Booking yang sudah dibuat tetap tersimpan di riwayat.'
-                : 'Pilih lokasi bermain Anda untuk melanjutkan ke halaman Home.'}
+                : 'Pilih lokasi bermain Anda untuk melanjutkan booking atau memilih Value Pack.'}
             </Dialog.Description>
             {pendingBranch ? (
               <div className="mt-7">
@@ -183,13 +187,13 @@ export default function BranchGate({ children }: { children: ReactNode }) {
                 )}
               </div>
             )}
-            {selectorOpen && confirmed && validBranch && !pendingBranch && (
+            {!pendingBranch && (
               <button
                 type="button"
-                onClick={closeSelector}
+                onClick={dismiss}
                 className="mt-6 text-sm text-black/55 underline"
               >
-                Kembali ke {validBranch.name}
+                Batal
               </button>
             )}
           </Dialog.Content>

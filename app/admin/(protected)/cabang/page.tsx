@@ -96,6 +96,8 @@ export default function BranchManagementPage() {
               </div>
               <p className="mt-2 text-sm text-black/50">{branch.address}</p>
               <button
+                data-slot="button"
+                data-variant="link"
                 type="button"
                 onClick={() => setEditing(branch)}
                 className="mt-4 text-xs text-[#ad422b] underline"
@@ -148,13 +150,17 @@ export default function BranchManagementPage() {
           </label>
           <div className="flex gap-3">
             <button
+              data-slot="button"
+              data-variant="default"
               disabled={busy}
-              className="bg-black px-5 py-2 text-sm text-white disabled:opacity-50"
+              className="bg-primary px-5 py-2 text-sm text-white disabled:opacity-50"
             >
               Simpan
             </button>
             {editing && (
               <button
+                data-slot="button"
+                data-variant="outline"
                 type="button"
                 onClick={() => setEditing(null)}
                 className="border px-5 py-2 text-sm"

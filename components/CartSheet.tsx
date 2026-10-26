@@ -11,6 +11,7 @@ import {
   SheetTrigger
 } from '@/components/ui/sheet';
 import { useBookingStore } from '@/stores/useBookingStore';
+import { useBranchStore } from '@/stores/useBranchStore';
 import { IconShoppingCartFilled } from '@tabler/icons-react';
 import { ArrowUpRight, CalendarDays, ShoppingCart, Trash2, X } from 'lucide-react';
 import dayjs from 'dayjs';
@@ -203,7 +204,7 @@ export default function CartSheet({ minimal = false }: { minimal?: boolean }) {
                   variant="outline"
                   className="mt-8 h-11 gap-3 rounded-full border-black/20 bg-transparent px-6 text-xs shadow-none hover:bg-black/5 has-[>svg]:px-6"
                   onClick={() => {
-                    router.push('/booking');
+                    useBranchStore.getState().openSelector('/booking');
                     setCartOpen(false);
                   }}
                 >

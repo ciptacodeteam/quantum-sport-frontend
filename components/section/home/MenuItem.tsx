@@ -1,5 +1,5 @@
 import { type MenuItem } from '@/types';
-import Link from 'next/link';
+import BranchLink from '@/components/branches/BranchLink';
 
 type Props = {
   item: MenuItem;
@@ -7,7 +7,7 @@ type Props = {
 
 const MenuItem = ({ item }: Props) => {
   return (
-    <Link
+    <BranchLink
       href={item.url}
       prefetch
       className="group/menu flex w-full min-w-0 flex-col items-center gap-2 text-center lg:h-full lg:text-left"
@@ -30,7 +30,7 @@ const MenuItem = ({ item }: Props) => {
       <span className="block min-h-8 max-w-[68px] text-center text-[11px] leading-tight font-medium text-zinc-800 sm:max-w-[76px] sm:text-xs lg:hidden">
         {item.title}
       </span>
-    </Link>
+    </BranchLink>
   );
 };
 

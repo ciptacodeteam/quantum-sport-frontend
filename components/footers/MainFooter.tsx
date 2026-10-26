@@ -6,7 +6,7 @@ import { profileQueryOptions } from '@/queries/profile';
 import useAuthModalStore from '@/stores/useAuthModalStore';
 import { useQuery } from '@tanstack/react-query';
 import Image from 'next/image';
-import Link from 'next/link';
+import BranchLink from '@/components/branches/BranchLink';
 
 const menuItems = [
   { label: 'Beranda', href: '/' },
@@ -26,9 +26,9 @@ export default function MainFooter() {
     <footer className="hidden border-t border-black/10 bg-[#f8f8f6] text-sm leading-relaxed text-black/50 lg:block">
       <div className="mx-auto grid w-full max-w-7xl gap-10 px-5 py-12 sm:grid-cols-2 sm:px-8 lg:grid-cols-[1.4fr_0.8fr_1.2fr] lg:gap-16 lg:py-16">
         <div className="space-y-6 sm:col-span-2 lg:col-span-1">
-          <Link href="/" aria-label="Black Padel — Beranda" className="inline-block">
+          <BranchLink href="/" aria-label="Black Padel — Beranda" className="inline-block">
             <Image src={LogoImage} alt="Black Padel" sizes="144px" className="h-auto w-36" />
-          </Link>
+          </BranchLink>
           <p className="max-w-xs">Book courts and manage your padel activities in one place.</p>
           <address className="max-w-xs not-italic">{clubLocations[0].address}</address>
           <address className="max-w-xs not-italic">
@@ -55,9 +55,9 @@ export default function MainFooter() {
                     {item.label}
                   </button>
                 ) : (
-                  <Link href={item.href} className={linkClassName}>
+                  <BranchLink href={item.href} className={linkClassName}>
                     {item.label}
-                  </Link>
+                  </BranchLink>
                 )}
               </li>
             ))}
@@ -99,9 +99,9 @@ export default function MainFooter() {
             ©{new Date().getFullYear()} Black Padel. All Rights Reserved. Designed &amp; Developed
             by <span className="font-medium text-black/75">Cosinus</span>.
           </p>
-          <Link href="/terms-and-conditions" className={linkClassName}>
+          <BranchLink href="/terms-and-conditions" className={linkClassName}>
             Terms &amp; Conditions
-          </Link>
+          </BranchLink>
         </div>
       </div>
     </footer>

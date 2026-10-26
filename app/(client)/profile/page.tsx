@@ -6,18 +6,9 @@ import MainBottomNavigation from '@/components/footers/MainBottomNavigation';
 import MainHeader from '@/components/headers/MainHeader';
 import PasswordChangeModal from '@/components/profile/PasswordChangeModal';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle
-} from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatPhone } from '@/lib/utils';
 import { logoutMutationOptions } from '@/mutations/auth';
-import { leaveClubMutationOptions } from '@/mutations/club';
 import { myMembershipsQueryOptions } from '@/queries/membership';
 import { profileQueryOptions } from '@/queries/profile';
 import useAuthStore from '@/stores/useAuthStore';
@@ -49,13 +40,7 @@ export default function ProfilePage() {
     queryKey: ['memberships', 'my', user?.id ?? 'guest'],
     enabled: !isPending && !!user?.id && !isStaffAccount
   });
-  // const {
-  //   data: memberClubs,
-  //   isLoading: isLoadingMemberClubs,
-  //   error: memberClubsError
-  // } = useQuery(clubMembershipsQueryOptions());
   const logout = useAuthStore((state) => state.logout);
-  const [clubToLeave, setClubToLeave] = useState<{ id: string; name: string } | null>(null);
   // Password modal (two-step)
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   // Generic verification dialog state
@@ -78,16 +63,6 @@ export default function ProfilePage() {
     })
   );
 
-  const { mutate: leaveClub, isPending: isLeavingClub } = useMutation(
-    leaveClubMutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['clubs', 'my'] });
-        queryClient.invalidateQueries({ queryKey: ['clubs'] });
-        setClubToLeave(null);
-      }
-    })
-  );
-
   // Redirect to home if not authenticated
   useEffect(() => {
     if (!hasLoggedOut.current && !isPending && (isError || !user?.id)) {
@@ -99,16 +74,6 @@ export default function ProfilePage() {
     if (isLoggingOut) return;
     if (await confirmLogout()) {
       logoutMutation();
-    }
-  };
-
-  // const handleLeaveClubClick = (clubId: string, clubName: string) => {
-  //   setClubToLeave({ id: clubId, name: clubName });
-  // };
-
-  const confirmLeaveClub = () => {
-    if (clubToLeave) {
-      leaveClub(clubToLeave.id);
     }
   };
 
@@ -444,32 +409,6 @@ export default function ProfilePage() {
           </div>
         </div>
       </main>
-
-      {/* Leave Club Confirmation Dialog */}
-      <Dialog open={!!clubToLeave} onOpenChange={(open) => !open && setClubToLeave(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Leave Club</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to leave <strong>{clubToLeave?.name}</strong>? You will need to
-              request to join again if it&#39;s a private club.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setClubToLeave(null)} disabled={isLeavingClub}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmLeaveClub}
-              disabled={isLeavingClub}
-              loading={isLeavingClub}
-            >
-              Leave Club
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <MainBottomNavigation />
 

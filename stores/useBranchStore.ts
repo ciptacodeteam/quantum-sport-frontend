@@ -7,7 +7,8 @@ type BranchState = {
   branch: Branch | null;
   adminBranchId: string | null;
   selectorOpen: boolean;
-  openSelector: () => void;
+  pendingHref: string | null;
+  openSelector: (href?: string) => void;
   closeSelector: () => void;
   setBranch: (branch: Branch) => void;
   setAdminBranchId: (id: string | null) => void;
@@ -18,9 +19,10 @@ export const useBranchStore = create<BranchState>()(
       branch: null,
       adminBranchId: null,
       selectorOpen: false,
-      openSelector: () => set({ selectorOpen: true }),
-      closeSelector: () => set({ selectorOpen: false }),
-      setBranch: (branch) => set({ branch, selectorOpen: false }),
+      pendingHref: null,
+      openSelector: (href) => set({ selectorOpen: true, pendingHref: href ?? null }),
+      closeSelector: () => set({ selectorOpen: false, pendingHref: null }),
+      setBranch: (branch) => set({ branch, selectorOpen: false, pendingHref: null }),
       setAdminBranchId: (adminBranchId) => set({ adminBranchId })
     }),
     {

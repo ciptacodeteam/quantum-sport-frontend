@@ -273,3 +273,115 @@ body:has([data-slot='mobile-bottom-navigation']) .mobile-header-back {
   width: 26px;
   height: 26px;
 }
+
+/* Admin controls use the same terracotta palette as the public brand. */
+:is(.admin-theme, html[data-admin-theme='true']) {
+  --primary: #ad422b;
+  --primary-foreground: #ffffff;
+  --ring: #737373;
+  --accent: #f7ece8;
+  --accent-foreground: #803524;
+  --secondary: #f7ece8;
+  --secondary-foreground: #803524;
+  --sidebar-primary: #ad422b;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f7ece8;
+  --sidebar-accent-foreground: #803524;
+  --sidebar-ring: #737373;
+}
+
+:where(.admin-theme, html[data-admin-theme='true']) :is(button, a)[data-variant]:not([data-day]) {
+  --admin-button-color: #ad422b;
+  --admin-button-hover: #8e3524;
+  --admin-button-muted: #f7ece8;
+}
+
+:where(.admin-theme, html[data-admin-theme='true'])
+  :is(button, a)[data-variant]:not([data-day]):is(
+    [data-variant='default'],
+    [data-variant='destructive'],
+    [data-variant^='secondary']:not([data-variant='secondary'])
+  ) {
+  border-color: transparent;
+  background-color: var(--admin-button-color);
+  color: #ffffff;
+}
+
+:where(.admin-theme, html[data-admin-theme='true'])
+  :is(button, a)[data-variant]:not([data-day]):is(
+    [data-variant='default'],
+    [data-variant='destructive'],
+    [data-variant^='secondary']:not([data-variant='secondary'])
+  ):hover:not(:disabled) {
+  border-color: transparent;
+  background-color: var(--admin-button-hover);
+}
+
+:where(.admin-theme, html[data-admin-theme='true'])
+  :is(button, a)[data-variant]:not([data-day])[data-variant='outline'] {
+  border-color: var(--border);
+  color: var(--admin-button-color);
+}
+
+:where(.admin-theme, html[data-admin-theme='true'])
+  :is(button, a)[data-variant]:not([data-day]):is(
+    [data-variant='secondary'],
+    [data-variant^='light']
+  ) {
+  background-color: var(--admin-button-muted);
+  color: #803524;
+}
+
+:where(.admin-theme, html[data-admin-theme='true'])
+  :is(button, a)[data-variant]:not([data-day]):is([data-variant='ghost'], [data-variant='link']) {
+  color: var(--admin-button-color);
+}
+
+:where(.admin-theme, html[data-admin-theme='true'])
+  :is(button, a)[data-variant]:not([data-day]):is(
+    [data-variant='outline'],
+    [data-variant='secondary'],
+    [data-variant^='light'],
+    [data-variant='ghost']
+  ):hover:not(:disabled) {
+  background-color: var(--admin-button-muted);
+  color: #803524;
+}
+
+:where(.admin-theme, html[data-admin-theme='true'])
+  :is(button, a)[data-variant]:not([data-day]):focus-visible {
+  border-color: var(--ring);
+  --tw-ring-color: #73737366;
+}
+
+.dark
+  :where(.admin-theme, html[data-admin-theme='true'])
+  :is(button, a)[data-variant]:not([data-day]):is(
+    [data-variant='ghost'],
+    [data-variant='link'],
+    [data-variant='outline']
+  ),
+html.dark[data-admin-theme='true']
+  :is(button, a)[data-variant]:not([data-day]):is(
+    [data-variant='ghost'],
+    [data-variant='link'],
+    [data-variant='outline']
+  ) {
+  color: #e5b6a6;
+}
+
+/* Keep admin outlines neutral, including selected booking cards and hover states. */
+:where(.admin-theme, html[data-admin-theme='true'])
+  :is(
+    [class~='border-primary'],
+    [class~='border-primary/50'],
+    [class~='border-primary/30'],
+    [class~='border-primary/20']
+  ) {
+  border-color: var(--ring);
+}
+
+:where(.admin-theme, html[data-admin-theme='true'])
+  :is([class~='hover:border-primary'], [class~='hover:border-primary/50']):hover {
+  border-color: var(--ring);
+}

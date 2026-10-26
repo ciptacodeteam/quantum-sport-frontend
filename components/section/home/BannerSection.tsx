@@ -8,7 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import Autoplay from 'embla-carousel-autoplay';
 import { ArrowUpRight } from 'lucide-react';
 import Image from 'next/image';
-import Link from 'next/link';
+import BranchLink from '@/components/branches/BranchLink';
 import { useRef, useState } from 'react';
 import MenuSection from './MenuSection';
 import LocationsSection from './LocationsSection';
@@ -105,13 +105,13 @@ export default function BannerSection() {
           <h1 className="max-w-sm text-base leading-snug font-medium uppercase lg:text-lg">
             Are you ready to make your first swing on a padel court?
           </h1>
-          <Link
+          <BranchLink
             href="/booking"
             className="flex min-h-10 w-full items-center justify-center gap-2 rounded-full border border-white/30 px-5 py-3 text-[10px] font-medium tracking-[0.06em] uppercase transition-colors hover:bg-white hover:text-black focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
           >
             Book a Court
             <ArrowUpRight className="size-3" strokeWidth={1.5} aria-hidden="true" />
-          </Link>
+          </BranchLink>
         </div>
       </div>
     </section>

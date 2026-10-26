@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import BranchLink from '@/components/branches/BranchLink';
 
 const exploreItems = [
   { label: 'Find your next court', href: '/booking' },
@@ -29,7 +29,7 @@ export default function BrandIntroSection() {
         <ol className="border-t border-black/45">
           {exploreItems.map((item, index) => (
             <li key={item.label} className="border-b border-black/15">
-              <Link
+              <BranchLink
                 href={item.href}
                 className="flex min-h-10 items-center justify-between gap-6 py-2.5 text-[10px] font-medium tracking-[0.1em] uppercase transition-colors hover:text-[#ad422b] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#ad422b]"
               >
@@ -37,7 +37,7 @@ export default function BrandIntroSection() {
                   // {String(index + 1).padStart(2, '0')}
                 </span>
                 <span className="text-right">{item.label}</span>
-              </Link>
+              </BranchLink>
             </li>
           ))}
         </ol>

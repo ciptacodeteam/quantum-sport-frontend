@@ -10,7 +10,7 @@ export default function BranchLabel({ detailed = false }: { detailed?: boolean }
         <p className="text-[10px] tracking-wider text-black/45 uppercase">Lokasi bermain</p>
         <p className="mt-2 text-sm font-medium">{branch.name}</p>
         <p className="mt-1 text-xs leading-relaxed text-black/50">{branch.address}</p>
-        <button type="button" onClick={open} className="mt-3 text-xs text-[#ad422b] underline">
+        <button type="button" onClick={() => open()} className="mt-3 text-xs text-[#ad422b] underline">
           Ganti cabang
         </button>
       </section>
@@ -18,7 +18,7 @@ export default function BranchLabel({ detailed = false }: { detailed?: boolean }
   return (
     <button
       type="button"
-      onClick={open}
+      onClick={() => open()}
       aria-label={`Cabang: ${branch.name}. Ganti cabang`}
       className="max-w-44 border-black/15 text-left text-[10px] leading-4 focus-visible:outline-2 focus-visible:outline-[#ad422b] sm:max-w-52 sm:border-l sm:pl-3 sm:text-xs"
     >

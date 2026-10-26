@@ -170,7 +170,7 @@ const BookingMembershipPage = () => {
         </p>
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      <div className="grid gap-6 2xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <section className="min-w-0 space-y-4">
           <div className="bg-card/60 flex flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-3 shadow-sm">
             <div>
@@ -192,7 +192,7 @@ const BookingMembershipPage = () => {
             </Tabs>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,260px),1fr))] gap-4">
             {isMembershipsLoading ? (
               <div className="text-muted-foreground rounded-2xl border bg-white p-8 text-center text-sm shadow-sm">
                 Memuat paket membership...
@@ -276,7 +276,7 @@ const BookingMembershipPage = () => {
         </section>
 
         <aside className="min-w-0 space-y-4">
-          <Card className="bg-card/80 min-w-0 rounded-2xl border shadow-sm lg:sticky lg:top-4">
+          <Card className="bg-card/80 min-w-0 rounded-2xl border shadow-sm 2xl:sticky 2xl:top-4">
             <CardHeader className="space-y-1 pb-4">
               <div className="text-primary/70 flex items-center gap-2 text-sm font-medium">
                 <IconSparkles className="h-4 w-4" />
