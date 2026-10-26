@@ -28,6 +28,8 @@ export type PaymentInvoice = {
     qrString?: string;
     accountNumber?: string;
     accountName?: string;
+    billerCode?: string;
+    billKey?: string;
     expiresAt?: string;
     url?: string;
   } | null;
@@ -60,6 +62,7 @@ export function getInvoicePayment(invoice: PaymentInvoice) {
     redirect?.url || redirect?.value || invoice.paymentUrl || instructions?.url;
   const paymentUrl =
     redirectCandidate && /^https?:\/\//i.test(redirectCandidate) ? redirectCandidate : undefined;
+  const billerCode = props?.biller_code || instructions?.billerCode;
   return {
     channel,
     isQRIS: channel === 'QRIS' || channel === 'QR' || instructions?.type === 'QRIS',
@@ -69,7 +72,9 @@ export function getInvoicePayment(invoice: PaymentInvoice) {
       channel === 'VA' ||
       instructions?.type === 'VIRTUAL_ACCOUNT',
     qrString,
+    qrIsImage: Boolean(qrString && /^https?:\/\//i.test(qrString)),
     vaNumber,
+    billerCode,
     displayName: instructions?.accountName || va?.display_name,
     paymentUrl,
     expiresAt: invoice.dueDate || instructions?.expiresAt || props?.expires_at || va?.expiry
