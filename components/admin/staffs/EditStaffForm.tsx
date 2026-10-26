@@ -28,9 +28,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { COACH_TYPE_OPTIONS, ROLE, ROLE_OPTIONS } from '@/lib/constants';
 import { cn, formatPhone, getPlaceholderImageUrl } from '@/lib/utils';
 import { adminUpdateStaffMutationOptions } from '@/mutations/admin/staff';
+import { adminProfileQueryOptions } from '@/queries/admin/auth';
 import { adminStaffQueryOptions } from '@/queries/admin/staff';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Controller, type SubmitHandler, useForm } from 'react-hook-form';
@@ -47,9 +48,12 @@ const formSchema = z
     image: z.file().optional(),
     name: z.string().min(1, { message: 'Nama wajib diisi' }),
     email: z.string().email({ message: 'Email tidak valid' }),
-    role: z.enum([ROLE.ADMIN, ROLE.ADMIN_VIEWER, ROLE.BALLBOY, ROLE.COACH, ROLE.CASHIER], {
-      message: 'Role tidak valid'
-    }),
+    role: z.enum(
+      [ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.ADMIN_VIEWER, ROLE.BALLBOY, ROLE.COACH, ROLE.CASHIER],
+      {
+        message: 'Role tidak valid'
+      }
+    ),
     coachType: z.string().optional(),
     coachProfile: z.string().max(2000, { message: 'Portfolio maksimal 2000 karakter' }).optional(),
     phone: z
@@ -79,6 +83,7 @@ type Props = {
 };
 
 const EditStaffForm = ({ staffId }: Props) => {
+  const { data: currentUser } = useQuery(adminProfileQueryOptions);
   const { data, refetch } = useSuspenseQuery(adminStaffQueryOptions(staffId));
 
   const form = useForm({
@@ -245,7 +250,11 @@ const EditStaffForm = ({ staffId }: Props) => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      {ROLE_OPTIONS.filter((option) => option.value !== ROLE.USER).map((option) => (
+                      {ROLE_OPTIONS.filter(
+                        (option) =>
+                          option.value !== ROLE.USER &&
+                          (option.value !== ROLE.SUPER_ADMIN || currentUser?.role === 'SUPER_ADMIN')
+                      ).map((option) => (
                         <SelectItem key={option.value} value={option.value}>
                           {option.label}
                         </SelectItem>

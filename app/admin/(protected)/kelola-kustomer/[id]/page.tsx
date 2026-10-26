@@ -29,8 +29,8 @@ const EditCustomerPage = ({ params }: { params: Promise<IdParams> }) => {
   const { data: me } = useQuery(adminProfileQueryOptions);
   const { data: customer } = useQuery(adminCustomerQueryOptions(param.id));
   const role = me?.role?.toUpperCase?.();
-  const canEditCustomer = role === ROLE.ADMIN || role === ROLE.CASHIER;
-  const canManageCustomerAccess = role === ROLE.ADMIN;
+  const canEditCustomer = role === ROLE.ADMIN || role === ROLE.SUPER_ADMIN || role === ROLE.CASHIER;
+  const canManageCustomerAccess = role === ROLE.ADMIN || role === ROLE.SUPER_ADMIN;
 
   if (!canEditCustomer) {
     return (

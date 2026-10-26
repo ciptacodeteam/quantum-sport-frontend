@@ -2,10 +2,17 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger
+} from '@/components/ui/sheet';
 import { useBookingStore } from '@/stores/useBookingStore';
-import { IconShoppingCartFilled, IconTrash } from '@tabler/icons-react';
-import { ShoppingCart } from 'lucide-react';
+import { IconShoppingCartFilled } from '@tabler/icons-react';
+import { ArrowUpRight, CalendarDays, ShoppingCart, Trash2, X } from 'lucide-react';
 import dayjs from 'dayjs';
 import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
@@ -24,6 +31,14 @@ export default function CartSheet({ minimal = false }: { minimal?: boolean }) {
   const isCartOpen = useBookingStore((state) => state.isCartOpen);
   const setCartOpen = useBookingStore((state) => state.setCartOpen);
   const removeBookingItem = useBookingStore((state) => state.removeBookingItem);
+  const removeInventory = useBookingStore((state) => state.removeInventory);
+
+  const hasCartItems =
+    bookingItems.length > 0 || selectedInventories.length > 0 || selectedCoaches.length > 0;
+  const cartItemCount =
+    bookingItems.length +
+    selectedCoaches.length +
+    selectedInventories.reduce((total, item) => total + item.quantity, 0);
 
   // Group booking items by date
   const groupedBookings = useMemo(() => {
@@ -81,9 +96,9 @@ export default function CartSheet({ minimal = false }: { minimal?: boolean }) {
             ) : (
               <IconShoppingCartFilled className="text-primary size-7" />
             )}
-            {bookingItems.length > 0 && (
+            {cartItemCount > 0 && (
               <Badge className="absolute -top-2 -right-2 h-5 min-w-5 rounded-full border-transparent bg-[#ad422b] px-1 font-mono text-white tabular-nums">
-                {bookingItems.length}
+                {cartItemCount}
               </Badge>
             )}
           </div>
@@ -91,174 +106,213 @@ export default function CartSheet({ minimal = false }: { minimal?: boolean }) {
       </SheetTrigger>
       <SheetContent
         side="right"
-        className="flex h-full w-full flex-col overflow-hidden bg-white sm:w-[420px] [&>button]:hidden"
+        withClose={false}
+        className="h-dvh max-h-dvh w-full gap-0 overflow-hidden border-black/15 bg-[#f8f8f6] text-[#171717] sm:w-[480px] sm:max-w-[480px]"
       >
-        <div className="flex h-full flex-col">
-          <SheetHeader className="mb-4 flex flex-row items-center justify-between border border-b px-5 py-7">
-            <SheetTitle className="text-primary text-xl font-semibold">
-              Keranjang Booking
-            </SheetTitle>
+        <SheetHeader className="shrink-0 border-b border-black/15 px-5 py-5 sm:px-7 sm:py-6">
+          <div className="flex items-center justify-between gap-4">
+            <SheetTitle className="text-2xl font-medium tracking-tight">Keranjang</SheetTitle>
             <button
+              type="button"
               onClick={() => setCartOpen(false)}
-              className="text-muted-foreground hover:text-foreground transition"
+              aria-label="Tutup keranjang"
+              className="flex size-10 shrink-0 items-center justify-center border border-black/15 bg-transparent text-black/55 transition-colors hover:bg-black/5 hover:text-black focus-visible:outline-2 focus-visible:outline-[#ad422b]"
             >
-              ✕
+              <X className="size-5" strokeWidth={1.5} aria-hidden="true" />
             </button>
-          </SheetHeader>
-          <div className="mx-auto w-11/12 flex-1 overflow-y-auto">
-            <div className="space-y-4">
-              {/* COURT BOOKINGS - GROUPED BY DATE */}
-              {groupedBookings.length > 0 ? (
-                <section className="space-y-4">
-                  {/* <h3 className="font-semibold text-base">Booking Lapangan</h3> */}
-                  <div className="space-y-4">
-                    {groupedBookings.map(([date, items]) => (
-                      <div
-                        key={date}
-                        className="border-muted space-y-3 rounded-lg border bg-white px-3 py-3"
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="text-primary text-sm font-semibold">
-                            {dayjs(date).format('dddd, DD MMMM YYYY')}
-                          </p>
-                          <span className="text-muted-foreground text-xs font-medium">
-                            {items.length} Slot
-                          </span>
-                        </div>
+          </div>
+          <SheetDescription className="text-xs leading-relaxed text-black/50">
+            Periksa jadwal dan perlengkapan sebelum melanjutkan.
+          </SheetDescription>
+        </SheetHeader>
 
-                        <div className="space-y-3">
-                          {[...items]
-                            .sort((a, b) => a.timeSlot.localeCompare(b.timeSlot))
-                            .map((item, idx) => (
-                              <div
-                                key={`${item.courtId}-${item.timeSlot}-${idx}`}
-                                className="border-muted/70 flex items-start justify-between gap-3 rounded-lg border bg-white px-3 py-2"
-                              >
-                                <div>
-                                  <p className="text-sm font-medium">{item.courtName}</p>
-                                  <p className="text-muted-foreground text-xs">
-                                    {item.timeSlot} - {getEndTime(item.timeSlot)}
-                                  </p>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                  <span className="text-sm font-semibold whitespace-nowrap">
-                                    Rp{item.price.toLocaleString('id-ID')}
-                                  </span>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon-sm"
-                                    className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8"
-                                    onClick={() =>
-                                      removeBookingItem(item.courtId, item.timeSlot, date)
-                                    }
-                                  >
-                                    <IconTrash className="h-4 w-4" />
-                                  </Button>
-                                </div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-7 sm:py-6">
+          <div className="space-y-6">
+            {groupedBookings.length > 0 ? (
+              <section aria-labelledby="cart-courts-title">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <h3
+                    id="cart-courts-title"
+                    className="text-[10px] font-medium tracking-[0.14em] text-[#ad422b] uppercase"
+                  >
+                    Lapangan
+                  </h3>
+                  <span className="text-[11px] text-black/45">{bookingItems.length} slot</span>
+                </div>
+                <div className="space-y-3">
+                  {groupedBookings.map(([date, items]) => (
+                    <div key={date} className="border border-black/15 bg-white">
+                      <div className="flex items-center gap-2 border-b border-black/10 bg-[#f8f8f6] px-4 py-3">
+                        <CalendarDays
+                          className="size-3.5 shrink-0 text-[#ad422b]"
+                          strokeWidth={1.5}
+                          aria-hidden="true"
+                        />
+                        <h4 className="text-xs font-medium">
+                          {dayjs(date).format('dddd, DD MMM YYYY')}
+                        </h4>
+                      </div>
+                      <ul className="divide-y divide-black/10 px-4">
+                        {[...items]
+                          .sort((a, b) => a.timeSlot.localeCompare(b.timeSlot))
+                          .map((item, index) => (
+                            <li
+                              key={`${item.courtId}-${item.timeSlot}-${index}`}
+                              className="flex items-center justify-between gap-3 py-4"
+                            >
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium break-words">{item.courtName}</p>
+                                <p className="mt-1 text-xs text-black/50">
+                                  {item.timeSlot}–{item.endTime || getEndTime(item.timeSlot)}
+                                </p>
                               </div>
-                            ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  {/* <div className="border-muted flex items-center justify-between border-t border-dashed text-sm">
-                    <span className="text-muted-foreground font-medium">Subtotal Lapangan</span>
-                    <span className="font-semibold">Rp {courtTotal.toLocaleString('id-ID')}</span>
-                  </div> */}
-                </section>
-              ) : (
-                <section className="border-muted/60 bg-muted/30 text-muted-foreground flex h-64 flex-col items-center justify-center rounded-xl border border-dashed text-center">
-                  <IconShoppingCartFilled className="text-muted-foreground/70 mb-3 size-12" />
-                  <p className="text-sm font-medium">Belum ada booking lapangan</p>
-                </section>
-              )}
-
-              {/* COACH */}
-              {selectedCoaches.length > 0 && (
-                <section className="space-y-3">
-                  <h3 className="text-base font-semibold">Coach</h3>
-                  <div className="space-y-3">
-                    {selectedCoaches.map((coach, idx) => (
-                      <div
-                        key={idx}
-                        className="border-muted/70 flex items-start justify-between gap-3 rounded-lg border bg-white px-3 py-2"
-                      >
-                        <div>
-                          <p className="text-sm font-medium">{coach.coachName}</p>
-                          <p className="text-muted-foreground text-xs">{coach.timeSlot}</p>
-                        </div>
-                        <span className="text-sm font-semibold whitespace-nowrap">
-                          Rp {coach.price.toLocaleString('id-ID')}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="border-muted flex items-center justify-between border-t border-dashed pt-3 text-sm">
-                    <span className="text-muted-foreground font-medium">Subtotal Coach</span>
-                    <span className="font-semibold">Rp {coachTotal.toLocaleString('id-ID')}</span>
-                  </div>
-                </section>
-              )}
-
-              {/* INVENTORY */}
-              {selectedInventories.length > 0 && (
-                <section className="space-y-3">
-                  <h3 className="text-base font-semibold">Peralatan</h3>
-                  <div className="space-y-3">
-                    {selectedInventories.map((inv, idx) => (
-                      <div
-                        key={idx}
-                        className="border-muted/70 flex items-start justify-between gap-3 rounded-lg border bg-white px-3 py-2"
-                      >
-                        <div>
-                          <p className="text-sm font-medium">{inv.inventoryName}</p>
-                          <p className="text-muted-foreground text-xs">Quantity: {inv.quantity}</p>
-                        </div>
-                        <span className="text-sm font-semibold whitespace-nowrap">
-                          Rp {inv.price.toLocaleString('id-ID')}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="border-muted flex items-center justify-between border-t border-dashed pt-3 text-sm">
-                    <span className="text-muted-foreground font-medium">Subtotal Peralatan</span>
-                    <span className="font-semibold">
-                      Rp {inventoryTotal.toLocaleString('id-ID')}
-                    </span>
-                  </div>
-                </section>
-              )}
-
-              {/* TOTAL */}
-              <section className="border-muted/70 bg-muted/20 mb-4 space-y-2 rounded-lg border px-4 py-4">
-                <div className="text-muted-foreground flex justify-between text-sm">
-                  <span>Sub total</span>
-                  <span className="text-foreground text-base font-semibold">
-                    Rp{getTotalAmount().toLocaleString('id-ID')}
-                  </span>
+                              <div className="flex shrink-0 items-center gap-2">
+                                <span className="text-sm font-medium whitespace-nowrap text-[#ad422b] tabular-nums">
+                                  Rp{item.price.toLocaleString('id-ID')}
+                                </span>
+                                <button
+                                  type="button"
+                                  aria-label={`Hapus ${item.courtName}, ${item.timeSlot}, ${dayjs(date).format('DD MMM YYYY')}`}
+                                  onClick={() =>
+                                    removeBookingItem(item.courtId, item.timeSlot, date)
+                                  }
+                                  className="flex size-9 items-center justify-center text-black/35 transition-colors hover:bg-[#ad422b]/5 hover:text-[#ad422b] focus-visible:outline-2 focus-visible:outline-[#ad422b]"
+                                >
+                                  <Trash2 className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                                </button>
+                              </div>
+                            </li>
+                          ))}
+                      </ul>
+                    </div>
+                  ))}
                 </div>
               </section>
-            </div>
-          </div>
+            ) : !hasCartItems ? (
+              <section className="flex min-h-64 flex-col items-center justify-center border border-dashed border-black/20 px-5 py-8 text-center">
+                <ShoppingCart
+                  className="mb-4 size-10 text-black/25"
+                  strokeWidth={1}
+                  aria-hidden="true"
+                />
+                <h3 className="text-lg font-medium tracking-tight">Jadwal Anda masih kosong</h3>
+                <p className="mt-2 max-w-60 text-xs leading-relaxed text-black/50">
+                  Pilih lapangan dan waktu bermain untuk memulai pemesanan.
+                </p>
+                <Button
+                  variant="outline"
+                  className="mt-8 h-11 gap-3 rounded-full border-black/20 bg-transparent px-6 text-xs shadow-none hover:bg-black/5 has-[>svg]:px-6"
+                  onClick={() => {
+                    router.push('/booking');
+                    setCartOpen(false);
+                  }}
+                >
+                  Pilih jadwal <ArrowUpRight className="size-3.5" aria-hidden="true" />
+                </Button>
+              </section>
+            ) : null}
 
-          <div className="space-y-3 border-t border-gray-200 bg-white px-4 py-4">
-            <Button
-              className="w-full"
-              size="lg"
-              disabled={bookingItems.length === 0}
-              onClick={handleCheckout}
-            >
-              Lanjut ke Checkout
-            </Button>
-            {(bookingItems.length > 0 ||
-              selectedCoaches.length > 0 ||
-              selectedInventories.length > 0) && (
-              <Button variant="outline" className="w-full" onClick={clearAll}>
-                Hapus Semua
-              </Button>
+            {selectedCoaches.length > 0 && (
+              <section aria-labelledby="cart-coaches-title">
+                <h3
+                  id="cart-coaches-title"
+                  className="mb-3 text-[10px] font-medium tracking-[0.14em] text-[#ad422b] uppercase"
+                >
+                  Coach
+                </h3>
+                <ul className="divide-y divide-black/10 border border-black/15 bg-white px-4">
+                  {selectedCoaches.map((coach, index) => (
+                    <li key={index} className="flex items-start justify-between gap-3 py-4">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium break-words">{coach.coachName}</p>
+                        <p className="mt-1 text-xs text-black/50">{coach.timeSlot}</p>
+                      </div>
+                      <span className="shrink-0 text-sm font-medium text-[#ad422b] tabular-nums">
+                        Rp{coach.price.toLocaleString('id-ID')}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-3 flex justify-between gap-3 text-xs">
+                  <span className="text-black/45">Subtotal coach</span>
+                  <span className="font-medium">Rp{coachTotal.toLocaleString('id-ID')}</span>
+                </div>
+              </section>
+            )}
+
+            {selectedInventories.length > 0 && (
+              <section aria-labelledby="cart-equipment-title">
+                <h3
+                  id="cart-equipment-title"
+                  className="mb-3 text-[10px] font-medium tracking-[0.14em] text-[#ad422b] uppercase"
+                >
+                  Peralatan
+                </h3>
+                <ul className="divide-y divide-black/10 border border-black/15 bg-white px-4">
+                  {selectedInventories.map((item) => (
+                    <li
+                      key={`${item.inventoryId}-${item.timeSlot ?? 'default'}`}
+                      className="flex items-center justify-between gap-3 py-4"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium break-words">{item.inventoryName}</p>
+                        <p className="mt-1 text-xs text-black/50">Jumlah: {item.quantity}</p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <span className="text-sm font-medium whitespace-nowrap text-[#ad422b] tabular-nums">
+                          Rp{item.price.toLocaleString('id-ID')}
+                        </span>
+                        <button
+                          type="button"
+                          aria-label={`Hapus ${item.inventoryName}`}
+                          onClick={() =>
+                            removeInventory(item.inventoryId, item.timeSlot ?? 'default')
+                          }
+                          className="flex size-9 items-center justify-center text-black/35 transition-colors hover:bg-[#ad422b]/5 hover:text-[#ad422b] focus-visible:outline-2 focus-visible:outline-[#ad422b]"
+                        >
+                          <Trash2 className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-3 flex justify-between gap-3 text-xs">
+                  <span className="text-black/45">Subtotal peralatan</span>
+                  <span className="font-medium">Rp{inventoryTotal.toLocaleString('id-ID')}</span>
+                </div>
+              </section>
             )}
           </div>
         </div>
+
+        <footer className="shrink-0 border-t border-black/15 bg-[#f8f8f6] px-5 pt-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:px-7">
+          <div className="mb-5 flex items-end justify-between gap-4">
+            <span className="text-xs text-black/50">Subtotal</span>
+            <p className="text-2xl font-medium tracking-tight tabular-nums">
+              Rp{getTotalAmount().toLocaleString('id-ID')}
+            </p>
+          </div>
+          <div className="grid auto-cols-fr grid-flow-col gap-3">
+            {(bookingItems.length > 0 ||
+              selectedCoaches.length > 0 ||
+              selectedInventories.length > 0) && (
+              <Button
+                variant="outline"
+                className="h-12 w-full rounded-full border-black/20 bg-transparent px-3 text-xs shadow-none hover:bg-black/5"
+                onClick={clearAll}
+              >
+                Hapus semua
+              </Button>
+            )}
+            <Button
+              className="h-12 w-full rounded-full bg-[#111111] px-3 text-xs text-white hover:bg-black/80 disabled:bg-black/15 disabled:text-black/40 disabled:opacity-100"
+              disabled={bookingItems.length === 0 && selectedInventories.length === 0}
+              onClick={handleCheckout}
+            >
+              Checkout <ArrowUpRight className="size-4" strokeWidth={1.5} aria-hidden="true" />
+            </Button>
+          </div>
+        </footer>
       </SheetContent>
     </Sheet>
   );

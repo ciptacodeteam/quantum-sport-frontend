@@ -96,26 +96,42 @@ export function ConfirmDialogProvider({ children }: { children: React.ReactNode 
           onPointerDownOutside={(e) => {
             if (!dismissible || state.isPending) e.preventDefault();
           }}
-          className="sm:max-w-sm"
+          showCloseButton={dismissible && !state.isPending}
+          className="max-h-[calc(100dvh-2rem)] max-w-[calc(100%-2rem)] gap-6 overflow-y-auto rounded-none border-black/15 bg-[#f8f8f6] p-6 text-[#171717] sm:max-w-md sm:p-8"
         >
-          <DialogHeader className="items-center text-center">
-            {icon ?? (
-              <TriangleAlert
-                className={cn('mb-2 size-16 text-red-600', destructive ? '' : 'text-foreground/70')}
-              />
-            )}
-            <DialogTitle>{title}</DialogTitle>
-            <DialogDescription className={cn('mt-2 text-center text-balance', bodyClassName)}>
-              {description}
+          <DialogHeader className="items-center gap-0 text-center sm:text-center">
+            <div
+              className={cn(
+                'mb-5 flex size-12 items-center justify-center border [&_svg]:size-6',
+                destructive
+                  ? 'border-red-600/20 bg-red-600/5 text-red-600'
+                  : 'border-[#ad422b]/20 bg-[#ad422b]/5 text-[#ad422b]'
+              )}
+            >
+              {icon ?? <TriangleAlert strokeWidth={1.5} aria-hidden="true" />}
+            </div>
+            <DialogTitle className="text-xl leading-snug font-medium tracking-tight text-[#171717]">
+              {title}
+            </DialogTitle>
+            <DialogDescription
+              asChild
+              className={cn(
+                'mt-3 text-center text-sm leading-relaxed text-pretty text-black/55',
+                bodyClassName
+              )}
+            >
+              <div>{description}</div>
             </DialogDescription>
           </DialogHeader>
 
-          <DialogFooter className={cn('mt-4 gap-4 sm:justify-center', footerClassName)}>
+          <DialogFooter
+            className={cn('grid grid-cols-2 gap-3 border-t border-black/15 pt-5', footerClassName)}
+          >
             <Button
-              variant="ghost"
+              variant="outline"
               onClick={close}
               disabled={state.isPending}
-              className="min-w-24 flex-1"
+              className="h-12 w-full min-w-0 rounded-full border-black/20 bg-transparent px-3 text-xs font-medium text-[#171717] shadow-none hover:bg-black/5 sm:text-sm"
             >
               {cancelText}
             </Button>
@@ -123,7 +139,10 @@ export function ConfirmDialogProvider({ children }: { children: React.ReactNode 
               variant={destructive ? 'destructive' : 'default'}
               onClick={doConfirm}
               disabled={state.isPending}
-              className="min-w-28 flex-1"
+              className={cn(
+                'h-12 w-full min-w-0 rounded-full px-3 text-xs font-medium text-white shadow-none sm:text-sm',
+                destructive ? 'bg-red-600 hover:bg-red-700' : 'bg-[#111111] hover:bg-black/80'
+              )}
             >
               {state.isPending ? 'Memproses...' : confirmText}
             </Button>

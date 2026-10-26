@@ -12,7 +12,7 @@ import { inventoryAvailabilityQueryOptions } from '@/queries/inventory';
 import { useBookingStore, type BookingItem } from '@/stores/useBookingStore';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { Minus, Plus } from 'lucide-react';
+import { ArrowUpRight, Minus, Plus } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
@@ -93,6 +93,9 @@ export default function AddOnsPage() {
   // const removeCoachFromStore = useBookingStore((state) => state.removeCoach);
   const selectedBallboys = useBookingStore((state) => state.selectedBallboys);
   const selectedInventories = useBookingStore((state) => state.selectedInventories);
+  const inventoryTotal = useBookingStore((state) => state.inventoryTotal);
+  const ballboyTotal = useBookingStore((state) => state.ballboyTotal);
+  const addOnsSubtotal = inventoryTotal + ballboyTotal;
   const addBallboyToStore = useBookingStore((state) => state.addBallboy);
   const removeBallboyFromStore = useBookingStore((state) => state.removeBallboy);
   const addInventoryToStore = useBookingStore((state) => state.addInventory);
@@ -169,7 +172,7 @@ export default function AddOnsPage() {
     isError: isInventoryError
   } = useQuery(
     inventoryAvailabilityQueryOptions({
-      courtSport,
+      ...(bookingItems.length > 0 ? { courtSport } : {}),
       ...(bookingTimeRange.startAt ? { startAt: bookingTimeRange.startAt } : {}),
       ...(bookingTimeRange.endAt ? { endAt: bookingTimeRange.endAt } : {})
     })
@@ -283,17 +286,23 @@ export default function AddOnsPage() {
     return booking ? getBookingRangeMs(booking) : null;
   };
 
-  const getOverlappingSelectedInventoryQty = (inventoryId: string, booking: BookingItem) => {
+  const getOverlappingSelectedInventoryQty = (inventoryId: string, booking?: BookingItem) => {
+    if (!booking) {
+      return selectedInventories
+        .filter(
+          (item) => item.inventoryId === inventoryId && (item.timeSlot ?? 'default') !== 'default'
+        )
+        .reduce((total, item) => total + item.quantity, 0);
+    }
     const bookingRange = getBookingRangeMs(booking);
 
     return selectedInventories
       .filter(
         (inventory) =>
-          inventory.inventoryId === inventoryId &&
-          inventory.courtSlotId &&
-          inventory.courtSlotId !== booking.slotId
+          inventory.inventoryId === inventoryId && inventory.courtSlotId !== booking.slotId
       )
       .reduce((total, inventory) => {
+        if (!inventory.courtSlotId) return total + inventory.quantity;
         const inventoryRange = getInventorySelectionRangeMs(inventory);
 
         if (!inventoryRange || !rangesOverlap(bookingRange, inventoryRange)) {
@@ -310,11 +319,6 @@ export default function AddOnsPage() {
     booking?: BookingItem,
     availableQuantityOverride?: number
   ) => {
-    if (!hasBookingSelection) {
-      toast.error('Tambahkan booking lapangan terlebih dahulu sebelum memilih peralatan.');
-      return;
-    }
-
     const selectedInventory = inventoryList.find((item) => item.id === inventoryId);
     if (!selectedInventory) {
       toast.error('Data inventori tidak valid.');
@@ -322,9 +326,7 @@ export default function AddOnsPage() {
     }
 
     const availableQuantity = availableQuantityOverride ?? selectedInventory.availableQuantity ?? 0;
-    const overlappingSelectedQty = booking
-      ? getOverlappingSelectedInventoryQty(inventoryId, booking)
-      : 0;
+    const overlappingSelectedQty = getOverlappingSelectedInventoryQty(inventoryId, booking);
     const currentMaxQty = Math.max(0, availableQuantity - overlappingSelectedQty);
     const safeQty = Math.max(0, Math.min(nextQty, currentMaxQty));
 
@@ -398,14 +400,16 @@ export default function AddOnsPage() {
 
   const inventoryItemsByBooking = useMemo(
     () =>
-      bookingItems.map((booking, index) => ({
-        booking,
-        items: (inventoryAvailabilityByBooking[index]?.data ??
-          inventoryList) as typeof inventoryList,
-        isPending: inventoryAvailabilityByBooking[index]?.isPending ?? false,
-        isError: inventoryAvailabilityByBooking[index]?.isError ?? false
-      })),
-    [bookingItems, inventoryAvailabilityByBooking, inventoryList]
+      !hasBookingSelection
+        ? [{ booking: undefined, items: inventoryList, isPending: false, isError: false }]
+        : bookingItems.map((booking, index) => ({
+            booking,
+            items: (inventoryAvailabilityByBooking[index]?.data ??
+              inventoryList) as typeof inventoryList,
+            isPending: inventoryAvailabilityByBooking[index]?.isPending ?? false,
+            isError: inventoryAvailabilityByBooking[index]?.isError ?? false
+          })),
+    [bookingItems, hasBookingSelection, inventoryAvailabilityByBooking, inventoryList]
   );
 
   const handleBallboyToggle = (
@@ -471,7 +475,7 @@ export default function AddOnsPage() {
   };
 
   return (
-    <div className="bg-background min-h-screen pb-32">
+    <div className="min-h-dvh">
       <MainHeader
         onBack={() => router.back()}
         title="Produk Tambahan"
@@ -479,158 +483,173 @@ export default function AddOnsPage() {
         withBorder
       />
 
-      <main className="mx-auto w-11/12 pt-24 pb-8">
-        <div className="bg-background/95 sticky top-20 z-30 mb-4 flex gap-2 border-b py-3 backdrop-blur">
-          {courtSport === 'TENNIS' && (
-            <Button
-              variant={activeTab === 'ballboy' ? 'default' : 'outline'}
-              className="flex-1"
-              onClick={() => setActiveTab('ballboy')}
-            >
-              Ballboy
-              {selectedBallboys.length > 0 && (
-                <Badge variant="secondary" className="ml-2">
-                  {selectedBallboys.length}
-                </Badge>
-              )}
-            </Button>
-          )}
-          <Button
-            variant={activeTab === 'inventory' ? 'default' : 'outline'}
-            className="flex-1"
-            onClick={() => setActiveTab('inventory')}
-          >
-            Peralatan
-            {selectedInventories.length > 0 && (
-              <Badge variant="secondary" className="ml-2">
-                {selectedInventories.length}
-              </Badge>
-            )}
-          </Button>
-        </div>
-
-        {activeTab === 'ballboy' && courtSport === 'TENNIS' && (
-          <div className="flex flex-col gap-3 pb-24">
-            {!hasBookingSelection && (
-              <Card>
-                <div className="px-4 py-3">
-                  <p className="text-muted-foreground text-sm">
-                    Tambahkan booking lapangan tennis terlebih dahulu untuk memilih ballboy.
-                  </p>
-                </div>
-              </Card>
-            )}
-
-            {hasBookingSelection && isBallboyPending && (
-              <Card>
-                <div className="px-4 py-3">
-                  <p className="text-muted-foreground text-sm">Memuat daftar ballboy...</p>
-                </div>
-              </Card>
-            )}
-
-            {hasBookingSelection && isBallboyError && (
-              <Card>
-                <div className="px-4 py-3">
-                  <p className="text-destructive text-sm">Gagal memuat ketersediaan ballboy.</p>
-                </div>
-              </Card>
-            )}
-
-            {hasBookingSelection &&
-              !isBallboyPending &&
-              !isBallboyError &&
-              ballboySlotsByBooking.map(({ booking, slots: matchingSlots }) => {
-                const selectedForCourt = selectedBallboys.find(
-                  (ballboy) => ballboy.courtSlotId === booking.slotId
-                );
-
-                return (
-                  <Card
-                    key={booking.slotId}
-                    className={matchingSlots.length === 0 ? 'bg-muted/40' : undefined}
+      <main className="addons-page mx-auto w-full max-w-7xl px-5 pt-24 pb-[calc(6rem+env(safe-area-inset-bottom))] text-[#171717] sm:px-8 lg:pb-16 xl:pt-32">
+        <header className="mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-black/15 pb-5">
+          <div>
+            <h1 className="text-2xl font-medium tracking-tight sm:text-3xl">Add Ons</h1>
+            <p className="mt-2 max-w-md text-xs leading-relaxed text-black/50">
+              Beli peralatan tambahan langsung, atau lengkapi booking lapangan Anda.
+            </p>
+          </div>
+        </header>
+        <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-6">
+          <div className="min-w-0">
+            {hasBookingSelection && courtSport === 'TENNIS' && (
+              <div
+                role="group"
+                aria-label="Kategori add-ons"
+                className={`mb-5 grid max-w-sm gap-3 ${courtSport === 'TENNIS' ? 'grid-cols-2' : 'grid-cols-1'}`}
+              >
+                {(courtSport === 'TENNIS'
+                  ? (['inventory', 'ballboy'] as const)
+                  : (['inventory'] as const)
+                ).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    aria-pressed={activeTab === tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`flex min-h-12 items-center justify-center gap-2 border border-b-2 px-5 py-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ad422b] ${activeTab === tab ? 'border-black/10 border-b-[#ad422b] bg-[#f8f8f6] text-[#171717]' : 'border-black/10 border-b-black/15 text-black/45 hover:bg-[#f8f8f6]'}`}
                   >
-                    <div className="space-y-3 px-4 py-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="font-semibold">{booking.courtName}</p>
-                          <p className="text-muted-foreground text-sm">
-                            {dayjs(booking.date).format('DD MMM YYYY')} • {booking.timeSlot} -{' '}
-                            {booking.endTime}
-                          </p>
-                        </div>
-                        {selectedForCourt && <Badge>Dipilih</Badge>}
-                      </div>
-
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        {matchingSlots.length === 0 && (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="text-muted-foreground h-auto justify-between gap-3 bg-gray-100 px-3 py-2"
-                            disabled
-                          >
-                            <span className="flex min-w-0 items-center gap-3 text-left">
-                              <Avatar className="h-10 w-10 shrink-0 border bg-white/80">
-                                <AvatarFallback className="text-xs font-semibold">B</AvatarFallback>
-                              </Avatar>
-                              <span className="min-w-0">
-                                <span className="block truncate">Ballboy tidak tersedia</span>
-                                <span className="text-xs opacity-75">Jadwal ini penuh</span>
-                              </span>
-                            </span>
-                          </Button>
-                        )}
-
-                        {matchingSlots.map((item) => {
-                          const isSelected = selectedForCourt?.slotId === item.slotId;
-                          const isUsedElsewhere = selectedBallboys.some(
-                            (ballboy) =>
-                              ballboy.slotId === item.slotId &&
-                              ballboy.courtSlotId !== booking.slotId
-                          );
-                          const ballboyName = item.ballboy?.name ?? 'Ballboy';
-                          const ballboyImage = resolveMediaUrl(item.ballboy?.image);
-
-                          return (
-                            <Button
-                              key={item.slotId}
-                              type="button"
-                              variant={isSelected ? 'default' : 'outline'}
-                              className="h-auto justify-between gap-3 px-3 py-2"
-                              disabled={isUsedElsewhere}
-                              onClick={() => handleBallboyToggle(item, booking)}
-                            >
-                              <span className="flex min-w-0 items-center gap-3 text-left">
-                                <Avatar className="h-10 w-10 shrink-0 border bg-white/80">
-                                  <AvatarImage src={ballboyImage ?? undefined} alt={ballboyName} />
-                                  <AvatarFallback className="text-xs font-semibold">
-                                    {getInitials(ballboyName)}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="min-w-0">
-                                  <span className="block truncate">{ballboyName}</span>
-                                  <span className="text-xs opacity-75">
-                                    Rp{Number(item.price ?? 0).toLocaleString('id-ID')}
-                                  </span>
-                                </span>
-                              </span>
-                              {isUsedElsewhere && (
-                                <span className="text-[11px] opacity-70">Terpakai</span>
-                              )}
-                            </Button>
-                          );
-                        })}
-                      </div>
+                    {tab === 'inventory' ? 'Peralatan' : 'Ballboy'}
+                    {(tab === 'inventory' ? selectedInventories.length : selectedBallboys.length) >
+                      0 && (
+                      <span className="border border-black/10 px-1.5 py-0.5 text-[10px] text-black/50">
+                        {tab === 'inventory' ? selectedInventories.length : selectedBallboys.length}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+            {activeTab === 'ballboy' && courtSport === 'TENNIS' && (
+              <div className="flex flex-col gap-4">
+                {!hasBookingSelection && (
+                  <Card>
+                    <div className="px-4 py-3">
+                      <p className="text-muted-foreground text-sm">
+                        Tambahkan booking lapangan tennis terlebih dahulu untuk memilih ballboy.
+                      </p>
                     </div>
                   </Card>
-                );
-              })}
-          </div>
-        )}
+                )}
 
-        {/* === COACH LIST === */}
-        {/* {activeTab === 'coach' && (
+                {hasBookingSelection && isBallboyPending && (
+                  <Card>
+                    <div className="px-4 py-3">
+                      <p className="text-muted-foreground text-sm">Memuat daftar ballboy...</p>
+                    </div>
+                  </Card>
+                )}
+
+                {hasBookingSelection && isBallboyError && (
+                  <Card>
+                    <div className="px-4 py-3">
+                      <p className="text-destructive text-sm">Gagal memuat ketersediaan ballboy.</p>
+                    </div>
+                  </Card>
+                )}
+
+                {hasBookingSelection &&
+                  !isBallboyPending &&
+                  !isBallboyError &&
+                  ballboySlotsByBooking.map(({ booking, slots: matchingSlots }) => {
+                    const selectedForCourt = selectedBallboys.find(
+                      (ballboy) => ballboy.courtSlotId === booking.slotId
+                    );
+
+                    return (
+                      <Card
+                        key={booking.slotId}
+                        className={matchingSlots.length === 0 ? 'bg-muted/40' : undefined}
+                      >
+                        <div className="space-y-4 p-4 sm:p-5">
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className="font-semibold">{booking.courtName}</p>
+                              <p className="text-muted-foreground text-sm">
+                                {dayjs(booking.date).format('DD MMM YYYY')} • {booking.timeSlot} -{' '}
+                                {booking.endTime}
+                              </p>
+                            </div>
+                            {selectedForCourt && <Badge>Dipilih</Badge>}
+                          </div>
+
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            {matchingSlots.length === 0 && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="h-auto min-h-20 justify-between gap-3 rounded-none bg-black/5 px-3 py-3 text-sm whitespace-normal text-black/35"
+                                disabled
+                              >
+                                <span className="flex min-w-0 items-center gap-3 text-left">
+                                  <Avatar className="h-10 w-10 shrink-0 border bg-white/80">
+                                    <AvatarFallback className="text-xs font-semibold">
+                                      B
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span className="min-w-0">
+                                    <span className="block truncate">Ballboy tidak tersedia</span>
+                                    <span className="text-xs opacity-75">Jadwal ini penuh</span>
+                                  </span>
+                                </span>
+                              </Button>
+                            )}
+
+                            {matchingSlots.map((item) => {
+                              const isSelected = selectedForCourt?.slotId === item.slotId;
+                              const isUsedElsewhere = selectedBallboys.some(
+                                (ballboy) =>
+                                  ballboy.slotId === item.slotId &&
+                                  ballboy.courtSlotId !== booking.slotId
+                              );
+                              const ballboyName = item.ballboy?.name ?? 'Ballboy';
+                              const ballboyImage = resolveMediaUrl(item.ballboy?.image);
+
+                              return (
+                                <Button
+                                  key={item.slotId}
+                                  type="button"
+                                  variant={isSelected ? 'default' : 'outline'}
+                                  aria-pressed={isSelected}
+                                  className="h-auto min-h-20 justify-between gap-3 rounded-none px-3 py-3 text-sm font-medium whitespace-normal shadow-none"
+                                  disabled={isUsedElsewhere}
+                                  onClick={() => handleBallboyToggle(item, booking)}
+                                >
+                                  <span className="flex min-w-0 items-center gap-3 text-left">
+                                    <Avatar className="h-10 w-10 shrink-0 border bg-white/80">
+                                      <AvatarImage
+                                        src={ballboyImage ?? undefined}
+                                        alt={ballboyName}
+                                      />
+                                      <AvatarFallback className="text-xs font-semibold">
+                                        {getInitials(ballboyName)}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <span className="min-w-0">
+                                      <span className="block truncate">{ballboyName}</span>
+                                      <span className="text-xs opacity-75">
+                                        Rp{Number(item.price ?? 0).toLocaleString('id-ID')}
+                                      </span>
+                                    </span>
+                                  </span>
+                                  {isUsedElsewhere && (
+                                    <span className="text-[11px] opacity-70">Terpakai</span>
+                                  )}
+                                </Button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+              </div>
+            )}
+
+            {/* === COACH LIST === */}
+            {/* {activeTab === 'coach' && (
           <div className="mb-4 flex flex-col gap-3">
             {!hasBookingSelection && (
               <Card>
@@ -685,11 +704,11 @@ export default function AddOnsPage() {
                     key={item.slotId}
                     onClick={() => handleCoachToggle(item)}
                     className={cn(
-                      'hover:border-primary cursor-pointer transition',
-                      isSelected && 'border-primary bg-primary/5'
+                      'hover:border-[#ad422b] cursor-pointer transition',
+                      isSelected && 'border-[#ad422b] bg-[#ad422b]/5'
                     )}
                   >
-                    <div className="space-y-3 px-4 py-3">
+                    <div className="space-y-4 p-4 sm:p-5">
                       <div className="flex items-center justify-between gap-4">
                         <div className="flex gap-4">
                           <div className="shrink-0 overflow-hidden rounded-full bg-gray-200">
@@ -711,19 +730,19 @@ export default function AddOnsPage() {
                         {isSelected ? (
                           <Badge
                             variant="secondary"
-                            className="bg-primary/10 text-primary flex items-center gap-1"
+                            className="bg-[#ad422b]/10 text-[#ad422b] flex items-center gap-1"
                           >
                             <Check className="h-3 w-3" />
                             Dipilih
                           </Badge>
                         ) : (
-                          <ChevronRight className="text-primary" />
+                          <ChevronRight className="text-[#ad422b]" />
                         )}
                       </div>
 
-                      <div className="bg-muted flex items-center justify-between rounded-sm px-4 py-2">
+                      <div className="bg-muted flex items-center justify-between rounded-none px-4 py-2">
                         <p className="text-foreground">
-                          <span className="text-primary font-semibold">
+                          <span className="text-[#ad422b] font-semibold">
                             Rp{coachPrice.toLocaleString('id-ID')}{' '}
                           </span>
                           <span className="text-muted-foreground text-sm">/sesi</span>
@@ -746,195 +765,250 @@ export default function AddOnsPage() {
           </div>
         )} */}
 
-        {/* === INVENTORY === */}
-        {activeTab === 'inventory' && (
-          <div className="flex flex-col gap-3 pb-24">
-            {isInventoryPending && (
-              <Card>
-                <div className="px-4 py-3">
-                  <p className="text-muted-foreground text-sm">Memuat ketersediaan...</p>
-                </div>
-              </Card>
-            )}
+            {/* === INVENTORY === */}
+            {activeTab === 'inventory' && (
+              <div className="flex flex-col gap-4">
+                {isInventoryPending && (
+                  <Card>
+                    <div className="px-4 py-3">
+                      <p className="text-muted-foreground text-sm">Memuat ketersediaan...</p>
+                    </div>
+                  </Card>
+                )}
 
-            {isInventoryError && (
-              <Card>
-                <div className="px-4 py-3">
-                  <p className="text-destructive text-sm">Gagal memuat ketersediaan inventori.</p>
-                </div>
-              </Card>
-            )}
-
-            {!isInventoryPending && !isInventoryError && inventoryList.length === 0 && (
-              <Card>
-                <div className="px-4 py-3">
-                  <p className="text-muted-foreground text-sm">
-                    {courtSport === 'TENNIS' && hasBookingSelection
-                      ? 'Peralatan di jam tersebut tidak tersedia.'
-                      : 'Inventori tidak tersedia.'}
-                  </p>
-                </div>
-              </Card>
-            )}
-
-            {!isInventoryPending &&
-              !isInventoryError &&
-              inventoryItemsByBooking.map(({ booking, items, isPending, isError }) => (
-                <Card
-                  key={booking.slotId}
-                  className={`overflow-hidden ${items.length === 0 ? 'bg-muted/40' : ''}`}
-                >
-                  <div className="space-y-3 px-3 py-3 sm:px-4">
-                    <div className="bg-muted/40 rounded-md px-3 py-2">
-                      <p className="truncate text-sm font-semibold sm:text-base">
-                        {booking.courtName}
-                      </p>
-                      <p className="text-muted-foreground mt-0.5 text-xs sm:text-sm">
-                        {dayjs(booking.date).format('DD MMM YYYY')} • {booking.timeSlot} -{' '}
-                        {booking.endTime}
+                {isInventoryError && (
+                  <Card>
+                    <div className="px-4 py-3">
+                      <p className="text-destructive text-sm">
+                        Gagal memuat ketersediaan inventori.
                       </p>
                     </div>
+                  </Card>
+                )}
 
-                    <div className="grid gap-3">
-                      {isPending && (
-                        <p className="text-muted-foreground text-sm">Memuat stok sesi ini...</p>
-                      )}
-                      {isError && (
-                        <p className="text-destructive text-sm">Gagal memuat stok sesi ini.</p>
-                      )}
-                      {items.map((inventory) => {
-                        const selectedQty =
-                          selectedInventories.find(
-                            (item) =>
-                              item.inventoryId === inventory.id &&
-                              (item.timeSlot ?? 'default') === booking.slotId
-                          )?.quantity ?? 0;
-                        const availableQuantity = inventory.availableQuantity ?? 0;
-                        const overlappingSelectedQty = getOverlappingSelectedInventoryQty(
-                          inventory.id,
-                          booking
-                        );
-                        const maxSelectableQty = Math.max(
-                          0,
-                          availableQuantity - overlappingSelectedQty
-                        );
-                        const remainingQty = Math.max(0, maxSelectableQty - selectedQty);
-                        const unitPrice = inventory.price ?? 0;
-                        const inventoryImage = resolveMediaUrl(inventory.image);
-                        const isUnavailable = availableQuantity <= 0;
-                        const isLocallyUnavailable = maxSelectableQty <= 0 && selectedQty <= 0;
-                        const isDisabled = isUnavailable || isLocallyUnavailable;
+                {!isInventoryPending && !isInventoryError && inventoryList.length === 0 && (
+                  <Card>
+                    <div className="px-4 py-3">
+                      <p className="text-muted-foreground text-sm">
+                        {courtSport === 'TENNIS' && hasBookingSelection
+                          ? 'Peralatan di jam tersebut tidak tersedia.'
+                          : 'Inventori tidak tersedia.'}
+                      </p>
+                    </div>
+                  </Card>
+                )}
 
-                        return (
-                          <div
-                            key={`${booking.slotId}-${inventory.id}`}
-                            className={`rounded-lg border p-3 transition-colors ${
-                              isDisabled
-                                ? 'text-muted-foreground border-gray-200 bg-gray-100'
-                                : selectedQty > 0
-                                  ? 'border-primary/40 bg-primary/5'
-                                  : 'bg-white'
-                            }`}
-                          >
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                              <div className="flex min-w-0 gap-3">
-                                <div className="bg-muted relative h-16 w-16 shrink-0 overflow-hidden rounded-md border sm:h-14 sm:w-14">
-                                  {inventoryImage ? (
-                                    <Image
-                                      src={inventoryImage}
-                                      alt={inventory.name}
-                                      fill
-                                      sizes="64px"
-                                      className={`object-cover ${isDisabled ? 'grayscale' : ''}`}
-                                      unoptimized
-                                    />
-                                  ) : (
-                                    <div className="text-muted-foreground flex h-full w-full items-center justify-center text-sm font-semibold">
-                                      {getInitials(inventory.name)}
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-start justify-between gap-2">
-                                    <p className="min-w-0 flex-1 text-sm leading-snug font-semibold sm:text-base">
-                                      {inventory.name}
-                                    </p>
-                                    {isDisabled && (
-                                      <Badge variant="secondary" className="shrink-0 text-[10px]">
-                                        Booked
-                                      </Badge>
-                                    )}
-                                  </div>
-                                  <p className="text-muted-foreground mt-1 text-xs">
-                                    {isUnavailable
-                                      ? 'Tidak tersedia di sesi ini'
-                                      : isLocallyUnavailable
-                                        ? 'Sudah dipakai di lapangan lain'
-                                        : `${remainingQty} buah tersedia`}
-                                  </p>
-                                  <div className="mt-2 flex flex-wrap items-baseline gap-x-1">
-                                    <span className="text-primary text-sm font-semibold">
-                                      Rp{unitPrice.toLocaleString('id-ID')}
-                                    </span>
-                                    <span className="text-muted-foreground text-xs">/sesi</span>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="flex h-11 w-full shrink-0 items-center justify-between rounded-md border bg-white px-2 sm:w-auto sm:border-0 sm:bg-transparent sm:px-0">
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  className="h-8 w-8 shrink-0"
-                                  onClick={() =>
-                                    handleInventoryQtyChange(
-                                      inventory.id,
-                                      selectedQty - 1,
-                                      booking,
-                                      availableQuantity
-                                    )
-                                  }
-                                  disabled={selectedQty <= 0 || isDisabled}
-                                >
-                                  <Minus size={16} />
-                                </Button>
-                                <span className="min-w-10 text-center text-sm font-semibold">
-                                  {selectedQty}
-                                </span>
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  className="h-8 w-8 shrink-0"
-                                  onClick={() =>
-                                    handleInventoryQtyChange(
-                                      inventory.id,
-                                      selectedQty + 1,
-                                      booking,
-                                      availableQuantity
-                                    )
-                                  }
-                                  disabled={selectedQty >= maxSelectableQty || isDisabled}
-                                >
-                                  <Plus size={16} />
-                                </Button>
-                              </div>
-                            </div>
-
-                            {selectedQty > 0 && (
-                              <p className="text-primary mt-2 text-sm font-medium">
-                                Total: Rp{(selectedQty * unitPrice).toLocaleString('id-ID')}
-                              </p>
-                            )}
+                {!isInventoryPending &&
+                  !isInventoryError &&
+                  inventoryItemsByBooking.map(({ booking, items, isPending, isError }) => (
+                    <div key={booking?.slotId ?? 'standalone'}>
+                      <div className="space-y-4">
+                        {booking && (
+                          <div className="bg-muted/40 rounded-none px-3 py-2">
+                            <p className="truncate text-sm font-semibold sm:text-base">
+                              {booking.courtName}
+                            </p>
+                            <p className="text-muted-foreground mt-0.5 text-xs sm:text-sm">
+                              {dayjs(booking.date).format('DD MMM YYYY')} • {booking.timeSlot} -{' '}
+                              {booking.endTime}
+                            </p>
                           </div>
-                        );
-                      })}
+                        )}
+                        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                          {isPending && (
+                            <p className="text-muted-foreground text-sm">Memuat stok sesi ini...</p>
+                          )}
+                          {isError && (
+                            <p className="text-destructive text-sm">Gagal memuat stok sesi ini.</p>
+                          )}
+                          {items.map((inventory) => {
+                            const selectedQty =
+                              selectedInventories.find(
+                                (item) =>
+                                  item.inventoryId === inventory.id &&
+                                  (item.timeSlot ?? 'default') === (booking?.slotId ?? 'default')
+                              )?.quantity ?? 0;
+                            const availableQuantity = inventory.availableQuantity ?? 0;
+                            const overlappingSelectedQty = getOverlappingSelectedInventoryQty(
+                              inventory.id,
+                              booking
+                            );
+                            const maxSelectableQty = Math.max(
+                              0,
+                              availableQuantity - overlappingSelectedQty
+                            );
+                            const unitPrice = inventory.price ?? 0;
+                            const inventoryImage = resolveMediaUrl(inventory.image);
+                            const isUnavailable = availableQuantity <= 0;
+                            const isLocallyUnavailable = maxSelectableQty <= 0 && selectedQty <= 0;
+                            const isDisabled = isUnavailable || isLocallyUnavailable;
+
+                            return (
+                              <div
+                                key={`${booking?.slotId ?? 'standalone'}-${inventory.id}`}
+                                className={`flex min-w-0 flex-col border border-black/15 p-2.5 transition-colors sm:p-4 ${
+                                  isDisabled
+                                    ? 'text-muted-foreground border-gray-200 bg-gray-100'
+                                    : selectedQty > 0
+                                      ? 'border-[#ad422b]/40 bg-[#ad422b]/5'
+                                      : 'bg-white'
+                                }`}
+                              >
+                                <div className="flex h-full flex-col gap-3">
+                                  <div className="flex min-w-0 flex-1 flex-col gap-3">
+                                    <div className="relative aspect-square w-full overflow-hidden bg-[#f3f3f1]">
+                                      {inventoryImage ? (
+                                        <Image
+                                          src={inventoryImage}
+                                          alt={inventory.name}
+                                          fill
+                                          sizes="(max-width: 1024px) 50vw, 25vw"
+                                          className={`object-contain p-2 ${isDisabled ? 'grayscale' : ''}`}
+                                          unoptimized
+                                        />
+                                      ) : (
+                                        <div className="text-muted-foreground flex h-full w-full items-center justify-center text-2xl font-medium text-black/30 sm:text-3xl">
+                                          {getInitials(inventory.name)}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <p className="text-sm leading-snug font-medium break-words sm:text-base">
+                                        {inventory.name}
+                                      </p>
+                                      <div className="mt-2 flex flex-wrap items-baseline gap-x-1">
+                                        <span className="text-sm font-semibold text-[#ad422b]">
+                                          Rp{unitPrice.toLocaleString('id-ID')}
+                                        </span>
+                                        <span className="text-muted-foreground text-xs">
+                                          {booking ? '/sesi' : '/item'}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="mt-auto flex h-11 w-full shrink-0 items-center justify-between border border-black/15 bg-white">
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      className="size-9 shrink-0 rounded-none border-0 bg-transparent text-[#171717] shadow-none hover:bg-black/5"
+                                      aria-label={`Kurangi ${inventory.name} ${booking ? `untuk ${booking.courtName} pukul ${booking.timeSlot}` : ''}`}
+                                      onClick={() =>
+                                        handleInventoryQtyChange(
+                                          inventory.id,
+                                          selectedQty - 1,
+                                          booking,
+                                          availableQuantity
+                                        )
+                                      }
+                                      disabled={selectedQty <= 0 || isDisabled}
+                                    >
+                                      <Minus size={16} />
+                                    </Button>
+                                    <span className="min-w-6 text-center text-sm font-medium tabular-nums">
+                                      {selectedQty}
+                                    </span>
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      className="size-9 shrink-0 rounded-none border-0 bg-transparent text-[#171717] shadow-none hover:bg-black/5"
+                                      aria-label={`Tambah ${inventory.name} ${booking ? `untuk ${booking.courtName} pukul ${booking.timeSlot}` : ''}`}
+                                      onClick={() =>
+                                        handleInventoryQtyChange(
+                                          inventory.id,
+                                          selectedQty + 1,
+                                          booking,
+                                          availableQuantity
+                                        )
+                                      }
+                                      disabled={selectedQty >= maxSelectableQty || isDisabled}
+                                    >
+                                      <Plus size={16} />
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </Card>
-              ))}
+                  ))}
+              </div>
+            )}
           </div>
-        )}
+          <aside
+            aria-label="Ringkasan add-ons"
+            className="hidden min-w-0 border border-black/15 bg-[#f8f8f6] p-6 lg:sticky lg:top-28 lg:block"
+          >
+            <h2 className="text-xl font-medium tracking-tight">Pilihan Anda</h2>
+            <p className="mt-2 text-xs text-black/50">
+              {hasBookingSelection
+                ? `${bookingItems.length} slot lapangan dipilih`
+                : 'Pembelian tanpa booking lapangan'}
+            </p>
+            <div className="my-5 border-y border-black/15 py-4">
+              {selectedInventories.length === 0 && selectedBallboys.length === 0 ? (
+                <p className="text-xs leading-relaxed text-black/45">
+                  Belum ada add-ons yang dipilih.
+                </p>
+              ) : (
+                <ul className="max-h-72 space-y-3 overflow-y-auto">
+                  {selectedInventories.map((item, index) => (
+                    <li key={`inventory-${index}`} className="flex justify-between gap-3 text-xs">
+                      <span className="min-w-0 break-words">
+                        {item.inventoryName} <span className="text-black/45">×{item.quantity}</span>
+                      </span>
+                      <span className="shrink-0">Rp{item.price.toLocaleString('id-ID')}</span>
+                    </li>
+                  ))}
+                  {selectedBallboys.map((item, index) => (
+                    <li key={`ballboy-${index}`} className="flex justify-between gap-3 text-xs">
+                      <span className="min-w-0 break-words">{item.ballboyName}</span>
+                      <span className="shrink-0">Rp{item.price.toLocaleString('id-ID')}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className="mb-5 flex items-end justify-between gap-3">
+              <span className="text-xs text-black/50">Subtotal add-ons</span>
+              <p className="text-xl font-medium tracking-tight">
+                Rp{addOnsSubtotal.toLocaleString('id-ID')}
+              </p>
+            </div>
+            <Button
+              className="h-12 w-full rounded-full bg-[#111111] text-xs text-white hover:bg-black/80"
+              disabled={bookingItems.length === 0 && selectedInventories.length === 0}
+              onClick={() => router.push('/checkout')}
+            >
+              Lanjut ke checkout{' '}
+              <ArrowUpRight className="size-4" strokeWidth={1.5} aria-hidden="true" />
+            </Button>
+          </aside>
+        </div>
       </main>
+      <div
+        role="region"
+        aria-label="Ringkasan add-ons"
+        className="fixed inset-x-0 bottom-0 z-40 h-[calc(5rem+env(safe-area-inset-bottom))] border-t border-black/15 bg-[#f8f8f6] px-5 pb-[env(safe-area-inset-bottom)] lg:hidden"
+      >
+        <div className="mx-auto flex h-full max-w-7xl items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[10px] text-black/50">Subtotal add-ons</p>
+            <p className="mt-1 text-xl font-medium tracking-tight">
+              Rp{addOnsSubtotal.toLocaleString('id-ID')}
+            </p>
+          </div>
+          <Button
+            className="h-12 shrink-0 rounded-full bg-[#111111] px-5 text-xs text-white hover:bg-black/80"
+            disabled={bookingItems.length === 0 && selectedInventories.length === 0}
+            onClick={() => router.push('/checkout')}
+          >
+            Lanjutkan <ArrowUpRight className="size-4" aria-hidden="true" />
+          </Button>
+        </div>
+      </div>
 
       {/* Seleksi coach & inventori langsung melalui kartu */}
     </div>

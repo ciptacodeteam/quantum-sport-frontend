@@ -6,9 +6,11 @@ import { DatePickerModal, DatePickerModalTrigger } from '@/components/ui/date-pi
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
+import { getCourtSlotLabel } from '@/lib/court-slot-status';
 import { formatSlotTime } from '@/lib/time-utils';
 import { isTimeAllowedForMembershipType, type MembershipType } from '@/lib/membership-hours';
-import { cn, getPlaceholderImageUrl } from '@/lib/utils';
+import { cn } from '@/lib/utils';
+import CourtDetailsDialog from '@/components/booking/CourtDetailsDialog';
 import { coachAvailabilityQueryOptions } from '@/queries/coach';
 import { courtsSlotsQueryOptions } from '@/queries/court';
 import { myMembershipQueryOptions } from '@/queries/membership';
@@ -24,6 +26,7 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { ArrowUpRight } from 'lucide-react';
 
 const timeSlots = [
   // '00:00',
@@ -128,7 +131,8 @@ export default function BookingPage() {
     () => ({
       startAt: dayjs(selectedFullDate).startOf('day').format('YYYY-MM-DD HH:mm:ss'),
       endAt: dayjs(selectedFullDate).endOf('day').format('YYYY-MM-DD HH:mm:ss'),
-      courtSport
+      courtSport,
+      includeUnavailable: 'true'
     }),
     [selectedFullDate, courtSport]
   );
@@ -222,9 +226,7 @@ export default function BookingPage() {
         map.set(courtId, {
           id: courtId,
           name: slot.court?.name || `Court ${map.size + 1}`,
-          image:
-            (slot.court as Court | undefined)?.image ||
-            getPlaceholderImageUrl({ width: 160, height: 90, text: 'No Image' })
+          image: (slot.court as Court | undefined)?.image ?? null
         });
       }
     });
@@ -234,7 +236,7 @@ export default function BookingPage() {
         {
           id: 'default-court',
           name: 'Court',
-          image: getPlaceholderImageUrl({ width: 160, height: 90, text: 'No Image' })
+          image: null
         }
       ];
     }
@@ -662,23 +664,12 @@ export default function BookingPage() {
     <>
       <MainHeader backHref="/" title={bookingTitle} withLogo={false} withCartBadge withBorder />
 
-      <main className="booking-page mx-auto mt-[76px] h-[calc(100dvh-120px)] w-full max-w-7xl overflow-hidden pb-[calc(5.5rem+env(safe-area-inset-bottom))] text-[#171717] lg:mt-0 lg:h-auto lg:overflow-visible lg:px-8 lg:pt-28 lg:pb-16 xl:pt-32">
-        <div className="grid h-full min-h-0 min-w-0 items-start gap-8 lg:h-auto lg:grid-cols-[minmax(0,1fr)_300px] xl:gap-10">
+      <main className="booking-page mx-auto mt-[76px] h-[calc(100dvh-76px)] w-full max-w-7xl overflow-hidden pb-[calc(5rem+env(safe-area-inset-bottom))] text-[#171717] lg:mt-0 lg:h-auto lg:overflow-visible lg:px-8 lg:pt-28 lg:pb-16 xl:pt-32">
+        <div className="grid h-full min-h-0 min-w-0 items-start gap-4 lg:h-auto lg:grid-cols-[minmax(0,1fr)_300px]">
           <section
             aria-label="Jadwal lapangan"
             className="flex h-full min-h-0 min-w-0 flex-col lg:h-auto"
           >
-            <div className="mb-4 flex shrink-0 flex-wrap items-end justify-between gap-3 px-5 pt-4 lg:px-0 lg:pt-0">
-              <div>
-                <p className="mb-1 text-[10px] tracking-[0.15em] text-black/45 uppercase">
-                  01 / Pilih jadwal
-                </p>
-                <h2 className="text-xl font-medium tracking-tight">{bookingTitle}</h2>
-              </div>
-              <p className="text-xs text-black/50" suppressHydrationWarning>
-                {dayjs(selectedDate).format('dddd, DD MMMM YYYY')}
-              </p>
-            </div>
             <div className="min-w-0 shrink-0 border-y border-black/15 bg-[#f8f8f6] p-3 lg:border">
               <div className="flex items-center gap-2">
                 <div className="flex shrink-0 items-center">
@@ -700,7 +691,10 @@ export default function BookingPage() {
                   </DatePickerModal>
                 </div>
 
-                <Separator orientation="vertical" className="h-10" />
+                <Separator
+                  orientation="vertical"
+                  className="mx-2 bg-black/25 data-[orientation=vertical]:h-10"
+                />
 
                 <div className="flex min-w-0 flex-1 flex-nowrap gap-2 overflow-x-auto px-2 pb-1">
                   {dateList.map((d) => (
@@ -745,7 +739,7 @@ export default function BookingPage() {
               </span>
               <span className="flex items-center gap-2">
                 <span className="size-2.5 bg-[#e5e5e2]" />
-                Tidak tersedia
+                On Hold / Booked / Unavailable
               </span>
             </div>
             <div className="flex min-h-0 flex-1 flex-col lg:block">
@@ -820,7 +814,7 @@ export default function BookingPage() {
                               <button
                                 disabled={!hasSlot || !isAvailable}
                                 aria-pressed={selected}
-                                aria-label={`${court.name}, ${time}, ${selected ? 'dipilih' : isAvailable ? 'tersedia' : 'tidak tersedia'}`}
+                                aria-label={`${court.name}, ${time}, ${selected ? 'dipilih' : getCourtSlotLabel(slot)}`}
                                 className={cn(
                                   'flex h-16 w-full flex-col items-start justify-center gap-1 border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black',
                                   !hasSlot
@@ -880,7 +874,7 @@ export default function BookingPage() {
                                   });
                                 }}
                               >
-                                {hasSlot ? (
+                                {hasSlot && isAvailable ? (
                                   <>
                                     {discountPrice > 0 && discountPrice < normalPrice ? (
                                       <span className="flex flex-col items-start text-xs">
@@ -901,12 +895,9 @@ export default function BookingPage() {
                                         {`Rp${effectivePrice.toLocaleString('id-ID')}`}
                                       </span>
                                     )}
-                                    {!isAvailable && (
-                                      <span className="text-[11px]">Tidak tersedia</span>
-                                    )}
                                   </>
                                 ) : (
-                                  <span className="text-[11px]">Tidak tersedia</span>
+                                  <span className="text-[11px]">{getCourtSlotLabel(slot)}</span>
                                 )}
                               </button>
                             </td>
@@ -973,7 +964,8 @@ export default function BookingPage() {
               onClick={handleBooking}
               disabled={!hasMounted || bookingItems.length === 0}
             >
-              Lanjutkan pemesanan <span aria-hidden="true">↗</span>
+              Lanjutkan pemesanan{' '}
+              <ArrowUpRight className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
             </Button>
             <p className="mt-4 text-center text-[11px] text-black/40">
               Periksa pilihan Anda sebelum melanjutkan.
@@ -983,11 +975,11 @@ export default function BookingPage() {
       </main>
 
       <div
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-black/15 bg-[#f8f8f6] pb-[env(safe-area-inset-bottom)] lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 h-[calc(5rem+env(safe-area-inset-bottom))] border-t border-black/15 bg-[#f8f8f6] pb-[env(safe-area-inset-bottom)] lg:hidden"
         role="region"
         aria-label="Ringkasan pemesanan"
       >
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 sm:px-8">
+        <div className="mx-auto flex h-full max-w-7xl items-center justify-between gap-4 px-5 sm:px-8">
           <div className="min-w-0">
             <p className="text-[11px] text-black/50" suppressHydrationWarning>
               Subtotal · {hasMounted ? bookingItems.length : 0} slot
@@ -1004,36 +996,12 @@ export default function BookingPage() {
             onClick={handleBooking}
             disabled={!hasMounted || bookingItems.length === 0}
           >
-            Lanjutkan <span aria-hidden="true">↗</span>
+            Lanjutkan <ArrowUpRight className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
           </Button>
         </div>
       </div>
 
-      {/* Court detail dialog */}
-      <Dialog open={!!selectedCourt} onOpenChange={() => setSelectedCourt(null)}>
-        <DialogContent className="w-11/12">
-          {selectedCourt && (
-            <>
-              <DialogHeader>
-                <DialogTitle>{selectedCourt.name}</DialogTitle>
-              </DialogHeader>
-              <div className="mt-1">
-                <Image
-                  src={
-                    selectedCourt.image ||
-                    getPlaceholderImageUrl({ width: 600, height: 400, text: 'No Image' })
-                  }
-                  alt={selectedCourt.name}
-                  width={600}
-                  height={400}
-                  className="w-full rounded-sm object-cover"
-                  unoptimized
-                />
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+      <CourtDetailsDialog court={selectedCourt} onClose={() => setSelectedCourt(null)} />
 
       {/* Add-ons (Coach) modal */}
       <Dialog open={addonsOpen} onOpenChange={(o) => setAddonsOpen(o)}>

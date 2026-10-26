@@ -1,5 +1,7 @@
 'use client';
 
+import { useLogoutConfirmation } from '@/hooks/useLogoutConfirmation';
+
 import { Bell, ChevronsUpDown, LogOut, User } from 'lucide-react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -30,6 +32,7 @@ import { Skeleton } from './skeleton';
 
 export function NavUser() {
   const { isMobile } = useSidebar();
+  const confirmLogout = useLogoutConfirmation();
 
   const { data: user, isPending } = useQuery(adminProfileQueryOptions);
 
@@ -56,7 +59,10 @@ export function NavUser() {
   );
 
   const onLogout = async () => {
-    logoutMutate();
+    if (isLogoutPending) return;
+    if (await confirmLogout()) {
+      logoutMutate();
+    }
   };
 
   if (isPending || !user) {

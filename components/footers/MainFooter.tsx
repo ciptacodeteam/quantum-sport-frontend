@@ -1,6 +1,7 @@
 'use client';
 
 import LogoImage from '@/assets/img/logoblack.webp';
+import { clubLocations } from '@/lib/club-locations';
 import { profileQueryOptions } from '@/queries/profile';
 import useAuthModalStore from '@/stores/useAuthModalStore';
 import { useQuery } from '@tanstack/react-query';
@@ -29,10 +30,7 @@ export default function MainFooter() {
             <Image src={LogoImage} alt="Black Padel" sizes="144px" className="h-auto w-36" />
           </Link>
           <p className="max-w-xs">Book courts and manage your padel activities in one place.</p>
-          <address className="max-w-xs not-italic">
-            Jl. Cemara No. 51, Pulo Brayan Bengkel Baru, Medan Timur, Kota Medan, Sumatera Utara
-            20237, Indonesia.
-          </address>
+          <address className="max-w-xs not-italic">{clubLocations[0].address}</address>
           <address className="max-w-xs not-italic">
             <a
               href="https://maps.google.com/maps?vet=10CAAQoqAOahcKEwjwxdOnoM2XAxUAAAAAHQAAAAAQBQ..i&udm&fvr=1&pvq=Cg0vZy8xMXkwcDkxeTFoIhEKC2JsYWNrIHBhZGVsEAIYAw&lqi=CgtibGFjayBwYWRlbEiv6MPUgr2AgAhaExAAEAEYASILYmxhY2sgcGFkZWySAQtwYWRlbF9jb3VydA&cs=1&um=1&ie=UTF-8&fb=1&gl=id&sa=X&ftid=0x3031310010a25ae9:0x14bf370c5ed5f418"
@@ -40,8 +38,7 @@ export default function MainFooter() {
               rel="noopener noreferrer"
               className={linkClassName}
             >
-              Jl. S. Parman No.269-283, Petisah Hulu, Kec. Medan Baru, Kota Medan, Sumatera Utara
-              20152
+              {clubLocations[1].address}
             </a>
           </address>
         </div>

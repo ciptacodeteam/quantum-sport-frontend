@@ -33,7 +33,7 @@ const CUSTOMER_SOURCE_BADGE_VARIANT = {
 const CustomerTable = () => {
   const { data: me } = useQuery(adminProfileQueryOptions);
   const role = me?.role?.toUpperCase?.();
-  const canEditCustomer = role === ROLE.ADMIN || role === ROLE.CASHIER;
+  const canEditCustomer = role === ROLE.ADMIN || role === ROLE.SUPER_ADMIN || role === ROLE.CASHIER;
 
   // const { confirmAndMutate } = useConfirmMutation(
   //   {

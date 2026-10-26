@@ -13,7 +13,7 @@ import { ROLE } from '@/lib/constants';
 
 const ManageMembershipPage = () => {
   const { hasAccess, isLoading } = useRoleAccess({
-    allowedRoles: [ROLE.ADMIN]
+    allowedRoles: [ROLE.SUPER_ADMIN]
   });
 
   if (isLoading || !hasAccess) {

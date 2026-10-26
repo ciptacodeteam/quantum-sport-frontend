@@ -1,192 +1,195 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { resolveMediaUrl } from '@/lib/utils';
-import { CheckCircle, Copy, CreditCard } from 'lucide-react';
+import { getInvoicePayment, type PaymentInvoice } from '@/lib/invoice-payment';
+import { ArrowUpRight, Check, Copy, RefreshCw } from 'lucide-react';
 import Image from 'next/image';
+import { QRCodeSVG } from 'qrcode.react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import PaymentCountdown from './PaymentCountdown';
 
+const money = (value: number) => `Rp${value.toLocaleString('id-ID')}`;
+
 export default function PaymentActionCard({
   invoice,
   canPay,
-  onChooseMethod,
-  onExpired
+  onExpired,
+  onRefresh,
+  isRefreshing = false
 }: {
-  invoice: any;
+  invoice: PaymentInvoice;
   canPay: boolean;
-  onChooseMethod: () => void;
   onExpired?: () => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 }) {
-  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   if (!canPay) return null;
-
-  const paymentMeta = invoice?.paymentMeta;
-  const payment = invoice?.payment as any;
-  const paymentMethod = payment?.method;
-  const channelCode = paymentMethod?.channel || paymentMeta?.channel_code;
-
-  const isQRIS = channelCode === 'QRIS';
-  const qrString = paymentMeta?.actions?.find(
-    (action: any) => action.descriptor === 'QR_STRING'
-  )?.value;
-
-  const isVA = channelCode?.includes('VIRTUAL_ACCOUNT') || channelCode?.includes('_VA');
-  const vaAction = paymentMeta?.actions?.find(
-    (action: any) => action.descriptor === 'VIRTUAL_ACCOUNT_NUMBER'
-  );
-  const vaNumber = vaAction?.value || paymentMeta?.channel_properties?.account_number;
-  const vaDisplayName = vaAction?.display_name || paymentMethod?.name;
-  const vaExpiry = vaAction?.expiry || paymentMeta?.channel_properties?.expires_at;
-
-  const paymentExpiry = vaExpiry ? vaExpiry : invoice ? invoice.dueDate : null;
-
-  const isEWallet = ['OVO', 'DANA', 'LINKAJA', 'SHOPEEPAY'].includes(channelCode);
-  const paymentUrl =
-    paymentMeta?.actions?.find(
-      (action: any) => action.descriptor === 'DEEPLINK_CHECKOUT' || action.type === 'REDIRECT'
-    )?.url || invoice?.paymentUrl;
-
-  const copyToClipboard = (text: string, field: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedField(field);
-    toast.success('Berhasil disalin!');
-    setTimeout(() => setCopiedField(null), 2000);
+  const info = getInvoicePayment(invoice);
+  const method = invoice.payment?.method;
+  const logo = resolveMediaUrl(method?.logo);
+  const copyNumber = async () => {
+    if (!info.vaNumber) return;
+    try {
+      await navigator.clipboard.writeText(info.vaNumber);
+      setCopied(true);
+      toast.success('Nomor Virtual Account disalin');
+    } catch {
+      toast.error('Nomor belum dapat disalin. Silakan salin secara manual.');
+    }
   };
-
   return (
-    <Card className="bg-primary/5 border-primary/20">
-      <CardContent className="pt-6">
-        <div className="text-center">
-          {paymentMethod && (
-            <div className="mb-3 flex flex-col items-center justify-center gap-2">
-              {paymentMethod.logo && (
-                <Image
-                  src={resolveMediaUrl(paymentMethod.logo) || ''}
-                  unoptimized
-                  alt={paymentMethod.name}
-                  width={48}
-                  height={24}
-                  className="h-6 w-auto object-contain"
-                />
-              )}
-              <span className="text-sm font-medium">{paymentMethod.name}</span>
-            </div>
+    <section
+      aria-label="Instruksi pembayaran"
+      className="border border-black/15 bg-[#f8f8f6] p-5 sm:p-8"
+    >
+      <div className="flex items-center justify-between gap-3 border-b border-black/15 pb-5">
+        <div className="flex min-w-0 items-center gap-3">
+          {logo && (
+            <Image
+              src={logo}
+              alt={method?.name ?? 'Metode pembayaran'}
+              width={56}
+              height={28}
+              unoptimized
+              className="h-7 w-14 object-contain"
+            />
           )}
-
-          <h3 className="text-sm text-gray-700">Total Pembayaran</h3>
-
-          <h4 className="mb-6 text-2xl font-bold">
-            {currencyFormatter.format(invoice.total).replace(/\s/g, '')}
-          </h4>
-
-          {isQRIS && qrString && (
-            <div className="space-y-4">
-              <div className="flex justify-center">
-                <div className="rounded-lg bg-white p-4 shadow-md">
-                  <div className="bg-white p-2">
-                    <Image
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrString)}`}
-                      alt="QR Code"
-                      width={200}
-                      unoptimized
-                      height={200}
-                      className="h-48 w-48"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {paymentExpiry && (
-                <div className="mb-5 flex justify-center">
-                  <PaymentCountdown
-                    dueDate={paymentExpiry}
-                    status={invoice.status}
-                    invoiceId={invoice.id}
-                    onExpired={onExpired}
-                  />
-                </div>
-              )}
-              <p className="text-xs text-gray-600">
-                Scan QR code di atas menggunakan aplikasi pembayaran QRIS Anda
-              </p>
-            </div>
-          )}
-
-          {isVA && vaNumber && (
-            <div className="space-y-4">
-              <div className="rounded-lg border bg-white p-4">
-                <p className="mb-2 text-sm text-gray-600">Nomor Virtual Account</p>
-                <div className="flex items-center justify-center gap-2">
-                  <code className="text-2xl font-bold tracking-wider">{vaNumber}</code>
-                  <Button variant="ghost" size="sm" onClick={() => copyToClipboard(vaNumber, 'va')}>
-                    {copiedField === 'va' ? (
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-                <div className="mt-2 text-xs text-gray-500">
-                  Bank: <span className="font-semibold">{vaDisplayName}</span>
-                </div>
-              </div>
-              {paymentExpiry && (
-                <div className="mb-5 flex justify-center">
-                  <PaymentCountdown
-                    dueDate={paymentExpiry}
-                    status={invoice.status}
-                    invoiceId={invoice.id}
-                    onExpired={onExpired}
-                  />
-                </div>
-              )}
-              <div className="space-y-2 text-left text-sm text-gray-700">
-                <p className="font-semibold">Cara Pembayaran:</p>
-                <ol className="ml-2 list-inside list-decimal space-y-1">
-                  <li>Buka aplikasi mobile banking atau ATM</li>
-                  <li>Pilih menu Transfer / Bayar</li>
-                  <li>Pilih Virtual Account {vaDisplayName}</li>
-                  <li>Masukkan nomor VA di atas</li>
-                  <li>
-                    Masukkan nominal {currencyFormatter.format(invoice.total).replace(/\s/g, '')}
-                  </li>
-                  <li>Konfirmasi dan selesaikan pembayaran</li>
-                </ol>
-              </div>
-            </div>
-          )}
-
-          {(isEWallet || paymentUrl) && !isQRIS && !isVA && (
-            <div className="space-y-4">
-              <Button
-                size="lg"
-                className="w-full md:w-auto"
-                onClick={() => window.open(paymentUrl, '_blank')}
-              >
-                <CreditCard className="mr-2 h-5 w-5" /> Bayar dengan {paymentMethod?.name}
-              </Button>
-              <p className="text-sm text-gray-600">
-                Anda akan diarahkan ke halaman pembayaran {paymentMethod?.name}
-              </p>
-            </div>
-          )}
-
-          {!isQRIS && !isVA && !paymentUrl && (
-            <Button size="lg" className="w-full md:w-auto" onClick={onChooseMethod}>
-              <CreditCard className="mr-2 h-5 w-5" /> Pilih Metode Pembayaran
-            </Button>
-          )}
+          <h2 className="text-sm font-medium">
+            {method?.name || (info.isQRIS ? 'QRIS' : info.isVA ? 'Virtual Account' : 'Pembayaran')}
+          </h2>
         </div>
-      </CardContent>
-    </Card>
+        <span className="shrink-0 border border-[#ad422b]/25 px-2 py-1 text-[10px] text-[#ad422b]">
+          Menunggu pembayaran
+        </span>
+      </div>
+      <div className="my-6 text-center">
+        <p className="text-xs text-black/50">Total pembayaran</p>
+        <p className="mt-2 text-3xl font-medium tracking-tight tabular-nums sm:text-4xl">
+          {money(invoice.total)}
+        </p>
+      </div>
+      {info.isQRIS &&
+        (info.qrString ? (
+          <>
+            <div className="mx-auto w-full max-w-[264px] border border-black/15 bg-white p-3 sm:p-4">
+              <QRCodeSVG
+                value={info.qrString}
+                size={232}
+                marginSize={4}
+                level="M"
+                title="Kode QRIS pembayaran"
+                className="h-auto w-full"
+              />
+            </div>
+            <p className="mx-auto mt-4 max-w-xs text-center text-xs leading-relaxed text-black/50">
+              Pindai QR menggunakan aplikasi bank atau dompet digital yang mendukung QRIS.
+            </p>
+          </>
+        ) : (
+          <p
+            role="status"
+            className="border border-dashed border-black/20 p-5 text-center text-sm text-black/50"
+          >
+            Kode QR belum tersedia. Silakan cek status pembayaran kembali.
+          </p>
+        ))}
+      {info.isVA &&
+        (info.vaNumber ? (
+          <div className="border border-black/15 bg-white p-4 sm:p-5">
+            <p className="text-[10px] tracking-wider text-black/45 uppercase">
+              Nomor Virtual Account
+            </p>
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <p className="min-w-0 text-xl font-medium break-all tabular-nums select-all sm:text-2xl">
+                {info.vaNumber}
+              </p>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-10 shrink-0 rounded-none text-[#ad422b] hover:bg-black/5"
+                aria-label="Salin nomor Virtual Account"
+                onClick={() => void copyNumber()}
+              >
+                {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+              </Button>
+            </div>
+            {info.displayName && (
+              <p className="mt-2 text-xs text-black/50">Atas nama {info.displayName}</p>
+            )}
+          </div>
+        ) : (
+          <p
+            role="status"
+            className="border border-dashed border-black/20 p-5 text-center text-sm text-black/50"
+          >
+            Nomor Virtual Account belum tersedia. Silakan cek status pembayaran kembali.
+          </p>
+        ))}
+      {info.expiresAt && (
+        <div className="mt-5 flex justify-center">
+          <PaymentCountdown
+            dueDate={info.expiresAt}
+            status={invoice.status}
+            invoiceId={invoice.id}
+            onExpired={onExpired}
+          />
+        </div>
+      )}
+      {info.isVA && info.vaNumber && (
+        <div className="mt-6 border-t border-black/15 pt-5">
+          <h3 className="text-sm font-medium">Cara pembayaran</h3>
+          <ol className="mt-3 list-decimal space-y-2 pl-4 text-xs leading-relaxed text-black/55 marker:text-[#ad422b]">
+            <li>Buka aplikasi bank atau ATM, lalu pilih pembayaran Virtual Account.</li>
+            <li>Masukkan nomor Virtual Account di atas.</li>
+            <li>
+              Periksa penerima dan nominal {money(invoice.total)}, lalu selesaikan pembayaran.
+            </li>
+            <li>Kembali ke halaman ini untuk melihat status pembayaran.</li>
+          </ol>
+        </div>
+      )}
+      {!info.isQRIS &&
+        !info.isVA &&
+        (info.paymentUrl ? (
+          <Button
+            asChild
+            className="mt-5 h-12 w-full gap-3 rounded-full bg-[#111111] px-6 text-xs text-white hover:bg-black/80 has-[>svg]:px-6"
+          >
+            <a href={info.paymentUrl} target="_blank" rel="noopener noreferrer">
+              Lanjutkan pembayaran <ArrowUpRight className="size-4" strokeWidth={1.5} />
+            </a>
+          </Button>
+        ) : (
+          <p
+            role="status"
+            className="mt-5 border border-dashed border-black/20 p-5 text-center text-sm text-black/50"
+          >
+            Instruksi pembayaran belum tersedia. Silakan cek status pembayaran kembali.
+          </p>
+        ))}
+      {onRefresh && (
+        <div className="mt-6 border-t border-black/15 pt-5 text-center">
+          <Button
+            variant="outline"
+            className="h-11 w-full gap-2 rounded-full border-black/20 bg-transparent px-5 text-xs shadow-none hover:bg-black/5 has-[>svg]:px-5"
+            disabled={isRefreshing}
+            onClick={onRefresh}
+          >
+            <RefreshCw
+              className={`size-3.5 ${isRefreshing ? 'animate-spin' : ''}`}
+              strokeWidth={1.5}
+              aria-hidden="true"
+            />
+            {isRefreshing ? 'Memeriksa pembayaran...' : 'Cek status pembayaran'}
+          </Button>
+          <p className="mt-3 text-[11px] leading-relaxed text-black/45">
+            Status diperbarui otomatis setelah pembayaran dikonfirmasi.
+          </p>
+        </div>
+      )}
+    </section>
   );
 }
-
-const currencyFormatter = new Intl.NumberFormat('id-ID', {
-  style: 'currency',
-  currency: 'IDR',
-  minimumFractionDigits: 0
-});

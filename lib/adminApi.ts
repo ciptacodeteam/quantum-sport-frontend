@@ -1,3 +1,4 @@
+import { useBranchStore } from '@/stores/useBranchStore';
 import { env } from '@/env';
 import { normalizeApiErrorResponse } from '@/lib/api-error';
 import { clearAdminSessionCookie, setAdminSessionCookie } from '@/lib/admin-session';
@@ -28,6 +29,10 @@ adminApi.interceptors.request.use(
   (config: RetryableConfig) => {
     config.headers = config.headers ?? {};
 
+    const user = useAuthStore.getState().user as { role?: string; branchId?: string } | null;
+    const branchId =
+      user?.role === 'SUPER_ADMIN' ? useBranchStore.getState().adminBranchId : user?.branchId;
+    if (branchId) config.headers['X-Branch-ID'] = branchId;
     // Get token directly from Zustand store
     const token = useAuthStore.getState().token;
 

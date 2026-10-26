@@ -1,4 +1,5 @@
 enum Role {
+  SUPER_ADMIN = 'SUPER_ADMIN',
   ADMIN = 'ADMIN',
   ADMIN_VIEWER = 'ADMIN_VIEWER',
   COACH = 'COACH',
@@ -7,6 +8,8 @@ enum Role {
 }
 
 export type AdminProfile = {
+  branchId: string;
+  branch: import('./branch').Branch;
   id: string;
   name: string;
   email: string;
@@ -235,6 +238,8 @@ export type Club = {
 };
 
 export type Staff = {
+  branchId: string;
+  branch?: import('./branch').Branch;
   id: string;
   name: string;
   email: string;
@@ -389,6 +394,7 @@ export type ClassBookingDetail = {
 };
 
 export type Invoice = {
+  branch?: import('./branch').Branch;
   id: string;
   bookingId: string;
   classBookingId: string | null;
@@ -448,6 +454,7 @@ export type Slot = {
   discountPrice?: number | null;
   normalPrice?: number | null;
   isAvailable: boolean;
+  availabilityStatus?: 'AVAILABLE' | 'ON_HOLD' | 'BOOKED' | 'UNAVAILABLE';
   createdAt: Date;
   updatedAt: Date;
 

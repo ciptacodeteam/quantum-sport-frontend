@@ -1,4 +1,5 @@
 import { refreshTokenApi } from '@/api/auth';
+import { useBranchStore } from '@/stores/useBranchStore';
 import { env } from '@/env';
 import { normalizeApiErrorResponse } from '@/lib/api-error';
 import useAuthStore from '@/stores/useAuthStore';
@@ -46,6 +47,8 @@ api.interceptors.request.use(
   async (config: RetryableConfig) => {
     config.headers = config.headers ?? {};
 
+    const branch = useBranchStore.getState().branch;
+    if (branch) config.headers['X-Branch-ID'] = branch.id;
     const token = useAuthStore.getState().token;
 
     if (token) {

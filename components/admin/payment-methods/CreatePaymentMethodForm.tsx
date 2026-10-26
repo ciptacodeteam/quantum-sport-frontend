@@ -177,7 +177,11 @@ const CreatePaymentMethodForm = () => {
           </div>
           <Field>
             <FieldLabel htmlFor="channel">Channel</FieldLabel>
-            <Input id="channel" {...form.register('channel')} placeholder="e.g. VA, QRIS, etc." />
+            <Input
+              id="channel"
+              {...form.register('channel')}
+              placeholder="BCA_VIRTUAL_ACCOUNT, QRIS, CARDS"
+            />
             <FieldError>{form.formState.errors.channel?.message}</FieldError>
           </Field>
           <Field>

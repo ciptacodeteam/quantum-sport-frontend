@@ -1,22 +1,17 @@
 'use client';
 
+import BranchLabel from '@/components/branches/BranchLabel';
 import LogoImage from '@/assets/img/logoblack.webp';
 import { cn } from '@/lib/utils';
 import { profileQueryOptions } from '@/queries/profile';
 import { useQuery } from '@tanstack/react-query';
-import { UserRound } from 'lucide-react';
+import { ArrowLeft, UserRound } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import useAuthModalStore from '@/stores/useAuthModalStore';
 import CartSheet from '../CartSheet';
 import { Button } from '../ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from '../ui/dropdown-menu';
 
 type Props = {
   onBack?: () => void;
@@ -33,54 +28,72 @@ const navItems = [
   { title: 'Padel', path: '/booking' },
   { title: 'Tennis', path: '/booking/tennis' },
   { title: 'Value Pack', path: '/membership' },
+  { title: 'Paket Saya', path: '/my-packages', requiresAuth: true },
   { title: 'Riwayat', path: '/invoice', requiresAuth: true }
 ];
 
-const MainHeader = (_props: Props) => {
+const MainHeader = ({ onBack, backHref }: Props) => {
   const { data: user } = useQuery(profileQueryOptions);
   const pathname = usePathname();
+  const router = useRouter();
   const openAuthModal = useAuthModalStore((state) => state.open);
   const openRegister = useAuthModalStore((state) => state.openRegister);
   const isAuthenticated = !!user?.id;
+  const showMobileBack = [
+    '/booking',
+    '/booking/tennis',
+    '/add-ons',
+    '/terms-and-conditions'
+  ].includes(pathname);
+
+  const handleBack = () => {
+    if (onBack) onBack();
+    else if (backHref) router.push(backHref);
+    else if (window.history.length > 1) router.back();
+    else router.push('/');
+  };
 
   const isActive = (path: string) => {
     if (path === '/') return pathname === '/';
     if (path === '/booking') return pathname === '/booking';
     return pathname === path || pathname.startsWith(`${path}/`);
   };
-  const accountButton = (
-    <Button
-      variant="ghost"
-      size="icon"
-      aria-label={isAuthenticated ? 'Buka menu akun' : 'Masuk atau daftar akun'}
-      className="rounded-none text-black hover:bg-black/5"
-    >
-      <UserRound className="size-5" strokeWidth={1.5} />
-    </Button>
-  );
 
   return (
     <>
       <header className="fixed inset-x-0 top-0 z-40 border-b border-black/10 bg-[#f8f8f6] text-[#171717]">
         <div className="mx-auto grid w-full max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 px-5 sm:px-8 xl:grid-cols-[auto_minmax(0,1fr)_auto] xl:gap-x-10 2xl:gap-x-14">
-          <div className="col-start-1 row-start-1 flex min-h-[76px] min-w-0 items-center gap-3">
-            <Link
-              href="/"
-              aria-label="Black Padel — Beranda"
-              className="shrink-0 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-black"
-            >
-              <Image
-                src={LogoImage}
-                alt="Black Padel"
-                priority
-                sizes="(min-width: 640px) 104px, 92px"
-                className="h-auto w-[92px] sm:w-[104px]"
-              />
-            </Link>
+          <div className="col-start-1 row-start-1 flex min-h-[76px] min-w-0 items-center gap-2 sm:gap-3">
+            {showMobileBack && (
+              <button
+                type="button"
+                onClick={handleBack}
+                aria-label="Kembali"
+                className="mobile-header-back mr-3 flex h-10 w-8 shrink-0 items-center justify-center text-[#171717] transition-colors hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-[#ad422b] lg:hidden"
+              >
+                <ArrowLeft className="size-5" strokeWidth={1.5} aria-hidden="true" />
+              </button>
+            )}
+            <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
+              <Link
+                href="/"
+                aria-label="Black Padel — Beranda"
+                className="min-w-0 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-black"
+              >
+                <Image
+                  src={LogoImage}
+                  alt="Black Padel"
+                  priority
+                  sizes="(min-width: 640px) 104px, 92px"
+                  className="h-auto w-[92px] sm:w-[104px]"
+                />
+              </Link>
+              <BranchLabel />
+            </div>
           </div>
           <nav
             aria-label="Navigasi pelanggan"
-            className="col-span-2 col-start-1 row-start-2 flex min-w-0 items-center gap-6 overflow-x-auto xl:col-span-1 xl:col-start-2 xl:row-start-1 xl:gap-5 2xl:gap-7"
+            className="col-span-2 col-start-1 row-start-2 hidden min-w-0 items-center gap-6 overflow-x-auto lg:flex xl:col-span-1 xl:col-start-2 xl:row-start-1 xl:gap-5 2xl:gap-7"
           >
             {navItems.map((item) => {
               const active = isActive(item.path);
@@ -114,24 +127,16 @@ const MainHeader = (_props: Props) => {
           </nav>
           <div className="col-start-2 row-start-1 flex shrink-0 items-center gap-1 sm:gap-2 xl:col-start-3">
             {isAuthenticated ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>{accountButton}</DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  sideOffset={12}
-                  className="min-w-44 border-black/10 bg-[#f8f8f6] p-2 text-[#171717]"
-                >
-                  <DropdownMenuItem asChild>
-                    <Link href="/profile">Profil saya</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/invoice">Riwayat pemesanan</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/notifications">Notifikasi</Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-none text-black hover:bg-black/5"
+                asChild
+              >
+                <Link href="/profile" aria-label="Buka profil saya">
+                  <UserRound className="size-5" strokeWidth={1.5} aria-hidden="true" />
+                </Link>
+              </Button>
             ) : (
               <div className="flex items-center gap-2 sm:gap-3">
                 <Button
@@ -154,7 +159,7 @@ const MainHeader = (_props: Props) => {
           </div>
         </div>
       </header>
-      <div aria-hidden="true" className="h-11 xl:hidden" />
+      <div aria-hidden="true" className="hidden h-11 lg:block xl:hidden" />
     </>
   );
 };

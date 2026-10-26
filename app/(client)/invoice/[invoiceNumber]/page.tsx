@@ -1,15 +1,12 @@
 'use client';
-
 import MainHeader from '@/components/headers/MainHeader';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { invoiceQueryOptions } from '@/queries/invoice';
 import { useQuery } from '@tanstack/react-query';
-import dayjs from 'dayjs';
-import 'dayjs/locale/id';
-import { ArrowLeft, FileText } from 'lucide-react';
-import { useParams, useRouter } from 'next/navigation';
-// Local typed view-models for the invoice detail API response
+import { useParams } from 'next/navigation';
+import Link from 'next/link';
+import PaymentLoading from '@/components/invoice/PaymentLoading';
+import PaymentOutcomeCard from '@/components/invoice/PaymentOutcomeCard';
 type ApiUser = {
   id: string;
   name: string;
@@ -95,6 +92,7 @@ type ApiBooking = {
   processingFee: number;
   courtNormalPrice?: number;
   courtDiscountPrice?: number;
+  membershipSessionsUsed?: number;
   createdAt: string;
   details?: ApiBookingDetail[];
   inventories?: Array<{
@@ -142,6 +140,7 @@ type ApiMembershipUser = {
 };
 
 type InvoiceDetail = {
+  branch?: { id: string; name: string; address: string };
   id: string;
   number: string;
   status: 'PENDING' | 'PAID' | 'FAILED' | 'EXPIRED' | 'CANCELLED' | string;
@@ -171,262 +170,198 @@ type InvoiceDetailApiResponse = {
 
 import AddOnsCard from '@/components/invoice/AddOnsCard';
 import BookingDetailsCard from '@/components/invoice/BookingDetailsCard';
-import CustomerInfoCard from '@/components/invoice/CustomerInfoCard';
-import InvoiceInfoCard from '@/components/invoice/InvoiceInfoCard';
 import MembershipDetailsCard from '@/components/invoice/MembershipDetailsCard';
 import PaymentActionCard from '@/components/invoice/PaymentActionCard';
 import PaymentSummaryCard from '@/components/invoice/PaymentSummaryCard';
 import SuccessMessageCard from '@/components/invoice/SuccessMessageCard';
 
-dayjs.locale('id');
-
 export default function InvoiceDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const invoiceNumber = params.invoiceNumber as string;
-
   const {
     data: response,
     isPending,
-    isError,
-    isLoading,
+    isFetching,
     refetch
   } = useQuery({
     ...invoiceQueryOptions(invoiceNumber),
-    // Poll every 3 seconds when status is PENDING or HOLD
-    refetchInterval: (query) => {
-      const typedData = query.state.data as InvoiceDetailApiResponse | undefined;
-      const status = typedData?.data?.status;
-      // Stop polling if payment is completed (PAID, FAILED, EXPIRED, CANCELLED)
-      if (['PAID', 'FAILED', 'EXPIRED', 'CANCELLED'].includes(status || '')) {
-        return false;
-      }
-      // Poll every 3 seconds for pending payments
-      return 3000;
-    },
-    refetchIntervalInBackground: true // Continue polling even when tab is not focused
-  });
-
-  const handleExpired = () => {
-    // Refetch invoice data when countdown expires
-    refetch();
-  };
-
-  const typedResponse = response as InvoiceDetailApiResponse | undefined;
-  const invoice = typedResponse?.data;
-  const booking = invoice?.booking ?? undefined;
-  const membershipUser = invoice?.membershipUser ?? undefined;
-
-  // Show loading state while fetching initial data
-  if (isLoading || (isPending && !response)) {
-    return (
-      <div className="min-h-screen">
-        <MainHeader title="Detail Transaksi" withLogo={false} backHref="/invoice" withBorder />
-        <div className="container mx-auto mt-28 pb-10">
-          <div className="mx-auto w-11/12 max-w-7xl">
-            <div className="animate-pulse space-y-4">
-              {/* Payment Action Card Skeleton */}
-              <Card className="bg-primary/5 border-primary/20">
-                <CardContent className="pt-6">
-                  <div className="space-y-4">
-                    <div className="mx-auto h-6 w-32 rounded bg-gray-200"></div>
-                    <div className="mx-auto h-10 w-48 rounded bg-gray-200"></div>
-                    <div className="mx-auto h-32 w-32 rounded-lg bg-gray-200"></div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Invoice Info Card Skeleton */}
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="space-y-3">
-                    <div className="h-5 w-32 rounded bg-gray-200"></div>
-                    <div className="h-4 w-48 rounded bg-gray-200"></div>
-                    <div className="h-4 w-40 rounded bg-gray-200"></div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Customer Info Card Skeleton */}
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="space-y-3">
-                    <div className="h-5 w-40 rounded bg-gray-200"></div>
-                    <div className="h-4 w-56 rounded bg-gray-200"></div>
-                    <div className="h-4 w-44 rounded bg-gray-200"></div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Booking Details Card Skeleton */}
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="space-y-3">
-                    <div className="h-5 w-36 rounded bg-gray-200"></div>
-                    <div className="space-y-2">
-                      <div className="h-20 w-full rounded bg-gray-200"></div>
-                      <div className="h-20 w-full rounded bg-gray-200"></div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Payment Summary Card Skeleton */}
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <div className="h-4 w-24 rounded bg-gray-200"></div>
-                      <div className="h-4 w-32 rounded bg-gray-200"></div>
-                    </div>
-                    <div className="flex justify-between">
-                      <div className="h-4 w-28 rounded bg-gray-200"></div>
-                      <div className="h-4 w-28 rounded bg-gray-200"></div>
-                    </div>
-                    <div className="border-t pt-3">
-                      <div className="flex justify-between">
-                        <div className="h-6 w-20 rounded bg-gray-200"></div>
-                        <div className="h-6 w-36 rounded bg-gray-200"></div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (isError || !invoice) {
-    return (
-      <div className="min-h-screen">
-        <MainHeader />
-        <div className="container mx-auto mt-28 px-4 pb-24 lg:mt-28">
-          <div className="mx-auto max-w-4xl text-center">
-            <Card>
-              <CardContent className="pt-6">
-                <FileText className="mx-auto mb-4 h-16 w-16 text-gray-400" />
-                <h2 className="mb-2 text-2xl font-bold">Invoice Tidak Ditemukan</h2>
-                <p className="mb-6 text-gray-600">
-                  Invoice dengan nomor {invoiceNumber} tidak ditemukan.
-                </p>
-                <Button onClick={() => router.push('/')}>
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Kembali ke Beranda
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const bookingDetails = booking?.details || [];
-  const bookingInventories = booking?.inventories || [];
-  const bookingCoaches = booking?.coaches || [];
-  const bookingBallboys = booking?.ballboys || [];
-  const bookingCourtDiscountTotal = booking
-    ? (booking.courtDiscountPrice ??
-      bookingDetails.reduce((sum, detail) => {
-        const normalPrice = detail.price || detail.slot?.price || 0;
-        const discountPrice = detail.discountPrice ?? detail.slot?.discountPrice ?? 0;
-        const effectivePrice = discountPrice > 0 ? discountPrice : normalPrice;
-        return sum + effectivePrice;
-      }, 0))
-    : 0;
-  const bookingAddOnsTotal = booking
-    ? bookingCoaches.reduce((sum, item: any) => sum + (item.price || 0), 0) +
-      bookingBallboys.reduce((sum, item: any) => sum + (item.price || 0), 0) +
-      bookingInventories.reduce(
-        (sum, item: any) => sum + (item.price || 0) * (item.quantity || 0),
-        0
+    refetchInterval: (query) =>
+      ['PAID', 'FAILED', 'EXPIRED', 'CANCELLED'].includes(
+        (query.state.data as InvoiceDetailApiResponse | undefined)?.data?.status || ''
       )
-    : 0;
-  const subtotalForDisplay = booking
-    ? bookingCourtDiscountTotal + bookingAddOnsTotal
-    : invoice.subtotal;
-  const canPay =
-    ['PENDING', 'HOLD'].includes(invoice.status) &&
-    (!invoice.dueDate || dayjs().isBefore(dayjs(invoice.dueDate)));
-
-  return (
-    <div className="min-h-screen">
-      <MainHeader title="Detail Transaksi" withLogo={false} backHref="/invoice" withBorder />
-
-      <div className="container mx-auto mt-28 pb-10">
-        <div className="mx-auto w-11/12 max-w-7xl">
-          {/* Payment Action */}
-          <PaymentActionCard
-            invoice={invoice as any}
-            canPay={canPay}
-            onChooseMethod={() => router.push(`/payment/${invoice.id}`)}
-            onExpired={handleExpired}
-          />
-
-          {/* Success Message */}
-          {invoice.status === 'PAID' && <SuccessMessageCard />}
-
-          {/* {membershipUser && (
-            <div className="mb-4">
-              <Badge className="border-amber-200 bg-amber-100 text-amber-800" variant="outline">
-                Invoice Membership
-              </Badge>
+        ? false
+        : 3000,
+    refetchIntervalInBackground: true
+  });
+  const invoice = (response as InvoiceDetailApiResponse | undefined)?.data;
+  if (isPending && !invoice) return <PaymentLoading />;
+  if (!invoice)
+    return (
+      <>
+        <MainHeader />
+        <main className="invoice-page mx-auto max-w-2xl px-5 pt-28 pb-12">
+          <PaymentOutcomeCard status="UNKNOWN">
+            <div className="flex flex-col gap-3">
+              <Button
+                className="h-12 rounded-full"
+                onClick={() => void refetch()}
+                disabled={isFetching}
+              >
+                Coba lagi
+              </Button>
+              <Button asChild variant="outline" className="h-12 rounded-full">
+                <Link href="/invoice">Riwayat pemesanan</Link>
+              </Button>
             </div>
-          )} */}
-
-          {/* Invoice Information */}
-          <InvoiceInfoCard
-            invoiceNumber={invoice.number}
-            issuedAt={invoice.issuedAt}
-            dueDate={invoice.dueDate}
-            paidAt={invoice.paidAt}
-            invoiceStatus={invoice.status}
-          />
-
-          {/* Customer Information */}
-          <CustomerInfoCard
-            user={invoice.user as { name?: string | null; phone?: string | null }}
-          />
-
-          {/* Membership Details (if membership purchase) */}
-          {membershipUser && (
-            <MembershipDetailsCard membershipUser={membershipUser as unknown as any} />
+          </PaymentOutcomeCard>
+        </main>
+      </>
+    );
+  const booking = invoice.booking;
+  const details = booking?.details || [];
+  const inventories = booking?.inventories || [];
+  const coaches = booking?.coaches || [];
+  const ballboys = booking?.ballboys || [];
+  const courtSubtotal =
+    booking?.courtDiscountPrice ??
+    details.reduce((sum, detail) => {
+      const discount = detail.discountPrice ?? detail.slot?.discountPrice ?? 0;
+      return sum + (discount > 0 ? discount : detail.price || detail.slot?.price || 0);
+    }, 0);
+  const subtotal = booking
+    ? courtSubtotal +
+      coaches.reduce((sum, item) => sum + (item.price || 0), 0) +
+      ballboys.reduce((sum, item) => sum + (item.price || 0), 0) +
+      inventories.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 0), 0)
+    : invoice.subtotal;
+  const pending = ['PENDING', 'HOLD', 'AWAITING_CONFIRMATION'].includes(invoice.status);
+  const canPay = pending && (!invoice.dueDate || Date.now() < new Date(invoice.dueDate).getTime());
+  return (
+    <>
+      <MainHeader />
+      <main className="invoice-page mx-auto w-full max-w-7xl px-5 pt-24 pb-12 text-[#171717] sm:px-8 lg:pb-16 xl:pt-32">
+        <header className="mb-5">
+          {pending && (
+            <h1 className="mb-2 text-2xl font-medium tracking-tight sm:text-3xl">Pembayaran</h1>
           )}
-
-          {/* Booking Details (if booking invoice) */}
-          {booking && bookingDetails.length > 0 && <BookingDetailsCard details={bookingDetails} />}
-
-          {/* Add-ons Section (only for bookings) */}
-          {booking && (
-            <AddOnsCard
-              coaches={bookingCoaches as any}
-              ballboys={bookingBallboys as any}
-              inventories={bookingInventories as any}
-              details={bookingDetails as any}
+          <p className="text-xs break-all text-black/45">Invoice {invoice.number}</p>
+        </header>
+        {invoice.branch && (
+          <section
+            aria-label="Lokasi transaksi"
+            className="mb-6 border border-black/15 bg-[#f8f8f6] p-5"
+          >
+            <p className="text-[10px] tracking-wider text-black/45 uppercase">Cabang</p>
+            <p className="mt-2 text-sm font-medium">{invoice.branch.name}</p>
+            <p className="mt-1 text-xs leading-relaxed text-black/50">{invoice.branch.address}</p>
+          </section>
+        )}
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="min-w-0 space-y-5">
+            {canPay && (
+              <PaymentActionCard
+                invoice={invoice}
+                canPay={canPay}
+                onExpired={() => void refetch()}
+                onRefresh={() => void refetch()}
+                isRefreshing={isFetching}
+              />
+            )}
+            {invoice.status === 'PAID' &&
+              (invoice.total === 0 && (booking?.membershipSessionsUsed ?? 0) > 0 ? (
+                <PaymentOutcomeCard
+                  status="PAID"
+                  title="Pemesanan berhasil"
+                  description="Jadwal Anda telah dikonfirmasi menggunakan Value Pack. Tidak ada pembayaran tambahan."
+                />
+              ) : (
+                <SuccessMessageCard />
+              ))}
+            {['FAILED', 'EXPIRED', 'CANCELLED'].includes(invoice.status) && (
+              <PaymentOutcomeCard status={invoice.status}>
+                <Button asChild className="h-12 rounded-full px-7">
+                  <Link
+                    href={
+                      invoice.membershipUser
+                        ? '/membership'
+                        : details.length
+                          ? '/booking'
+                          : '/add-ons'
+                    }
+                  >
+                    Buat pesanan baru
+                  </Link>
+                </Button>
+              </PaymentOutcomeCard>
+            )}
+            {pending && !canPay && (
+              <PaymentOutcomeCard
+                status="PENDING"
+                description="Batas waktu pembayaran telah berakhir. Periksa status terbaru transaksi Anda."
+              >
+                <Button
+                  variant="outline"
+                  className="h-12 rounded-full"
+                  disabled={isFetching}
+                  onClick={() => void refetch()}
+                >
+                  {isFetching ? 'Memeriksa…' : 'Periksa status'}
+                </Button>
+              </PaymentOutcomeCard>
+            )}
+            {(invoice.membershipUser ||
+              details.length > 0 ||
+              inventories.length > 0 ||
+              coaches.length > 0 ||
+              ballboys.length > 0) && (
+              <details className="border border-black/15 bg-white">
+                <summary className="cursor-pointer px-5 py-4 text-sm font-medium marker:text-[#ad422b] focus-visible:outline-2 focus-visible:outline-[#ad422b] sm:px-6">
+                  Detail pesanan
+                </summary>
+                <div className="space-y-4 border-t border-black/10 p-4 sm:p-5">
+                  {invoice.membershipUser && (
+                    <MembershipDetailsCard membershipUser={invoice.membershipUser} />
+                  )}
+                  {!!details.length && (
+                    <BookingDetailsCard
+                      details={details}
+                      coveredByMembership={(booking?.membershipSessionsUsed ?? 0) > 0}
+                    />
+                  )}
+                  {booking && (
+                    <AddOnsCard
+                      coaches={coaches}
+                      ballboys={ballboys}
+                      inventories={inventories}
+                      details={details}
+                    />
+                  )}
+                </div>
+              </details>
+            )}
+          </div>
+          <aside className="space-y-4 lg:sticky lg:top-28">
+            <PaymentSummaryCard
+              subtotal={subtotal}
+              processingFee={invoice.processingFee}
+              promoDiscountAmount={invoice.promoDiscountAmount}
+              total={invoice.total}
+              method={
+                invoice.payment?.method
+                  ? {
+                      name: invoice.payment.method.name,
+                      logo: invoice.payment.method.logo || undefined,
+                      channel: invoice.payment.method.channel || undefined
+                    }
+                  : undefined
+              }
             />
-          )}
-
-          {/* Payment Summary */}
-          <PaymentSummaryCard
-            subtotal={subtotalForDisplay}
-            processingFee={invoice.processingFee}
-            promoDiscountAmount={invoice.promoDiscountAmount}
-            total={invoice.total}
-            method={
-              invoice.payment?.method
-                ? {
-                    name: invoice.payment.method.name,
-                    logo: invoice.payment.method.logo || undefined,
-                    channel: invoice.payment.method.channel || undefined
-                  }
-                : undefined
-            }
-          />
+            <Button asChild variant="outline" className="h-12 w-full rounded-full border-black/20">
+              <Link href="/invoice">Lihat riwayat pemesanan</Link>
+            </Button>
+          </aside>
         </div>
-      </div>
-    </div>
+      </main>
+    </>
   );
 }

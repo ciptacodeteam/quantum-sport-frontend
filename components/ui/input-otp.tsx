@@ -31,10 +31,12 @@ function InputOTPGroup({ className, ...props }: React.ComponentProps<'div'>) {
 
 function InputOTPSlot({
   index,
+  variant = 'default',
   className,
   ...props
 }: React.ComponentProps<'div'> & {
   index: number;
+  variant?: 'default' | 'separated';
 }) {
   const inputOTPContext = React.useContext(OTPInputContext);
   const { char, hasFakeCaret, isActive } = inputOTPContext?.slots[index] ?? {};
@@ -45,6 +47,8 @@ function InputOTPSlot({
       data-active={isActive}
       className={cn(
         'data-[active=true]:border-ring data-[active=true]:ring-ring/50 data-[active=true]:aria-invalid:ring-destructive/20 dark:data-[active=true]:aria-invalid:ring-destructive/40 aria-invalid:border-destructive data-[active=true]:aria-invalid:border-destructive dark:bg-input/30 border-input relative flex h-9 w-9 items-center justify-center border-y border-r text-sm shadow-xs transition-all outline-none first:rounded-l-md first:border-l last:rounded-r-md data-[active=true]:z-10 data-[active=true]:ring-[3px]',
+        variant === 'separated' &&
+          'h-14 w-14 max-w-14 min-w-0 flex-1 rounded-none border border-black/15 bg-white text-2xl font-medium shadow-none first:rounded-none last:rounded-none data-[active=true]:border-[#ad422b] data-[active=true]:ring-2 data-[active=true]:ring-[#ad422b]/15',
         className
       )}
       {...props}

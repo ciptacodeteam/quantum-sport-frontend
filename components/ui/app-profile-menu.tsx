@@ -1,5 +1,7 @@
 'use client';
 
+import { useLogoutConfirmation } from '@/hooks/useLogoutConfirmation';
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,6 +21,7 @@ import AppUserProfile from './app-user-profile';
 
 const AppProfileMenu = () => {
   const router = useRouter();
+  const confirmLogout = useLogoutConfirmation();
 
   const logout = useAuthStore((state) => state.logout);
   const queryClient = useQueryClient();
@@ -41,7 +44,10 @@ const AppProfileMenu = () => {
   );
 
   const onLogout = async () => {
-    mutateLogout();
+    if (isLogoutPending) return;
+    if (await confirmLogout()) {
+      mutateLogout();
+    }
   };
   return (
     <DropdownMenu>

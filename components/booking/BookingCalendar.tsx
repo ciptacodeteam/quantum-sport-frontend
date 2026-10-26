@@ -7,9 +7,8 @@ import { cn } from '@/lib/utils';
 import type { Court, Slot } from '@/types/model';
 import { IconCalendarFilled, IconInfoCircle } from '@tabler/icons-react';
 import dayjs from 'dayjs';
-import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import CourtDetailsDialog from './CourtDetailsDialog';
 
 type SelectedSlot = {
   courtId: string;
@@ -216,7 +215,10 @@ const BookingCalendar = ({
             </DatePickerModal>
           </div>
 
-          <Separator orientation="vertical" className="h-10" />
+          <Separator
+            orientation="vertical"
+            className="mx-2 bg-black/25 data-[orientation=vertical]:h-10"
+          />
 
           <div className="flex flex-nowrap gap-2">
             {dateList.map((d) => (
@@ -342,32 +344,7 @@ const BookingCalendar = ({
         </div>
       </div>
 
-      {/* Court Info Dialog */}
-      <Dialog open={!!selectedCourt} onOpenChange={() => setSelectedCourt(null)}>
-        <DialogContent className="max-w-sm">
-          {selectedCourt && (
-            <>
-              <DialogHeader>
-                <DialogTitle>{selectedCourt.name}</DialogTitle>
-              </DialogHeader>
-              <div className="mt-1">
-                {selectedCourt.image && (
-                  <Image
-                    src={selectedCourt.image}
-                    alt={selectedCourt.name}
-                    width={600}
-                    height={400}
-                    className="w-full rounded-sm object-cover"
-                  />
-                )}
-                {selectedCourt.description && (
-                  <p className="text-muted-foreground mt-2 text-sm">{selectedCourt.description}</p>
-                )}
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+      <CourtDetailsDialog court={selectedCourt} onClose={() => setSelectedCourt(null)} />
     </div>
   );
 };

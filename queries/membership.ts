@@ -2,7 +2,8 @@ import {
   getMembershipsApi,
   getMembershipApi,
   getMyMembershipsApi,
-  getMyMembershipApi
+  getMyMembershipApi,
+  getMyMembershipTrackingApi
 } from '@/api/membership';
 import type { Membership } from '@/types/model';
 import type { SearchParamsData } from '@/types';
@@ -70,3 +71,10 @@ export const myMembershipQueryOptions = queryOptions({
   select: (res) => res.data as UserMembershipResponse,
   enabled: true // Will be controlled by authentication status
 });
+
+export const myMembershipTrackingQueryOptions = (userId: string) =>
+  queryOptions({
+    queryKey: ['memberships', 'my', 'tracking', userId],
+    queryFn: getMyMembershipTrackingApi,
+    select: (res) => res.data
+  });

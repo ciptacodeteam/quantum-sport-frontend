@@ -231,7 +231,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const isCoach = me?.role?.toUpperCase?.() === ROLE.COACH;
   const isCashier = me?.role?.toUpperCase?.() === ROLE.CASHIER;
   const isAdminViewer = me?.role?.toUpperCase?.() === ROLE.ADMIN_VIEWER;
-  const isAdmin = me?.role?.toUpperCase?.() === ROLE.ADMIN;
+  const isAdmin = [ROLE.ADMIN, ROLE.SUPER_ADMIN].includes(
+    me?.role?.toUpperCase?.() as typeof ROLE.ADMIN | typeof ROLE.SUPER_ADMIN
+  );
 
   const navMainItems = React.useMemo<AppSidebarItem[]>(() => {
     // If still loading user data, return empty array to avoid menu flash
@@ -328,6 +330,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       );
     }
 
+    if (me.role !== ROLE.SUPER_ADMIN)
+      return data.navMain.map((item) => ({
+        ...item,
+        items: item.items?.filter(
+          (child) =>
+            !['/admin/kelola-membership', '/admin/kelola-metode-pembayaran'].includes(
+              child.url || ''
+            )
+        )
+      }));
     return data.navMain;
   }, [isCoach, isCashier, isAdminViewer, isLoading, me]);
 

@@ -1,101 +1,53 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Badge } from '@/components/ui/badge';
-import { Clock } from 'lucide-react';
-import dayjs from 'dayjs';
-import duration from 'dayjs/plugin/duration';
+import { useEffect, useRef, useState } from 'react';
+import { Clock3 } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { expireInvoiceApi } from '@/api/booking';
 
-dayjs.extend(duration);
-
-type PaymentCountdownProps = {
-  dueDate: string | Date;
-  status: string;
-  invoiceId: string;
-  onExpired?: () => void;
-};
-
-export default function PaymentCountdown({
-  dueDate,
-  status,
-  invoiceId,
-  onExpired
-}: PaymentCountdownProps) {
-  const [timeLeft, setTimeLeft] = useState<{
-    hours: number;
-    minutes: number;
-    seconds: number;
-    isExpired: boolean;
-  }>({ hours: 0, minutes: 0, seconds: 0, isExpired: false });
-
-  const { mutate: expireInvoice } = useMutation({
+type Props = { dueDate: string | Date; status: string; invoiceId: string; onExpired?: () => void };
+export default function PaymentCountdown({ dueDate, status, invoiceId, onExpired }: Props) {
+  const deadline = new Date(dueDate).getTime();
+  const [remaining, setRemaining] = useState(() => Math.max(0, deadline - Date.now()));
+  const expiredRequest = useRef<string | null>(null);
+  const pending = ['PENDING', 'HOLD', 'AWAITING_CONFIRMATION'].includes(status);
+  const onExpiredRef = useRef(onExpired);
+  onExpiredRef.current = onExpired;
+  const { mutate: expire } = useMutation({
     mutationFn: () => expireInvoiceApi(invoiceId),
-    onSuccess: () => {
-      onExpired?.();
-    },
-    onError: (error: any) => {
-      console.error('Failed to expire invoice:', error);
-      // Still call onExpired to refresh the UI even if API fails
-      onExpired?.();
-    }
+    onSettled: () => onExpiredRef.current?.()
   });
-
   useEffect(() => {
-    const calculateTimeLeft = () => {
-      const now = dayjs();
-      const due = dayjs(dueDate);
-      const diff = due.diff(now);
-
-      if (diff <= 0) {
-        setTimeLeft((prev) => {
-          // Only trigger expiration once when transitioning to expired
-          if (!prev.isExpired) {
-            expireInvoice();
-          }
-          return { hours: 0, minutes: 0, seconds: 0, isExpired: true };
-        });
-        return;
+    if (!pending || !Number.isFinite(deadline)) return;
+    const update = () => {
+      const diff = Math.max(0, deadline - Date.now());
+      setRemaining(diff);
+      const key = `${invoiceId}:${deadline}`;
+      if (diff === 0 && expiredRequest.current !== key) {
+        expiredRequest.current = key;
+        expire();
       }
-
-      const duration = dayjs.duration(diff);
-      setTimeLeft({
-        hours: Math.floor(duration.asHours()),
-        minutes: duration.minutes(),
-        seconds: duration.seconds(),
-        isExpired: false
-      });
     };
-
-    calculateTimeLeft();
-    const interval = setInterval(calculateTimeLeft, 1000);
-
-    return () => clearInterval(interval);
-  }, [dueDate, expireInvoice]);
-
-  // Don't show if not pending
-  if (!['PENDING', 'HOLD'].includes(status)) {
-    return null;
-  }
-
-  // Show expired message if time is up
-  if (timeLeft.isExpired) {
-    return (
-      <Badge className="flex w-fit items-center gap-1.5 bg-gray-600 px-3 py-1.5 text-white">
-        <Clock className="h-3.5 w-3.5" />
-        <span className="text-xs font-medium">Payment Expired</span>
-      </Badge>
-    );
-  }
-
+    update();
+    const timer = setInterval(update, 1000);
+    return () => clearInterval(timer);
+  }, [deadline, invoiceId, pending, expire]);
+  if (!pending || !Number.isFinite(deadline)) return null;
+  const seconds = Math.ceil(remaining / 1000);
+  const hours = Math.floor(seconds / 3600);
+  const display = `${hours > 0 ? `${String(hours).padStart(2, '0')}:` : ''}${String(Math.floor((seconds % 3600) / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
   return (
-    <Badge className="flex w-fit items-center gap-1.5 bg-red-600 px-3 py-1.5 text-white">
-      <Clock className="h-3.5 w-3.5" />
-      <span className="text-xs font-medium">
-        {timeLeft.hours > 0 && `${timeLeft.hours} jam : `}
-        {timeLeft.minutes} menit : {timeLeft.seconds} detik
+    <div className="inline-flex items-center gap-2 border border-[#ad422b]/20 bg-[#ad422b]/5 px-3 py-2 text-xs text-[#ad422b]">
+      <Clock3 className="size-3.5 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+      <span>
+        {seconds === 0 ? (
+          'Batas waktu pembayaran berakhir'
+        ) : (
+          <>
+            Selesaikan dalam <span className="font-medium tabular-nums">{display}</span>
+          </>
+        )}
       </span>
-    </Badge>
+    </div>
   );
 }

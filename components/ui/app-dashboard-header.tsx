@@ -1,3 +1,4 @@
+import AdminBranchControl from '@/components/branches/AdminBranchControl';
 import { Separator } from '@/components/ui/separator';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import AppBreadcrumb from './app-breadcrumb';
@@ -18,6 +19,7 @@ const AppDashboardHeader = () => {
         </div>
       </div>
       <div className="flex items-center gap-2 px-4">
+        <AdminBranchControl />
         <AppNotificationDropdown />
         <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
         <AppProfileMenu />

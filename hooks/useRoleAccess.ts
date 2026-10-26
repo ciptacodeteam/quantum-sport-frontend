@@ -20,7 +20,9 @@ export function useRoleAccess(config: RoleAccessConfig) {
   const { data: me, isLoading } = useQuery(adminProfileQueryOptions);
 
   const userRole = me?.role?.toUpperCase?.();
-  const hasAccess = userRole ? config.allowedRoles.includes(userRole) : false;
+  const hasAccess = userRole
+    ? userRole === ROLE.SUPER_ADMIN || config.allowedRoles.includes(userRole)
+    : false;
 
   useEffect(() => {
     if (isLoading || !me) return;
@@ -58,7 +60,7 @@ export function useRoleAccess(config: RoleAccessConfig) {
  */
 export function useIsSuperAdmin() {
   const { data: me } = useQuery(adminProfileQueryOptions);
-  return me?.role?.toUpperCase?.() === ROLE.ADMIN;
+  return me?.role?.toUpperCase?.() === ROLE.SUPER_ADMIN;
 }
 
 /**
@@ -67,5 +69,5 @@ export function useIsSuperAdmin() {
 export function useHasRole(roles: string[]) {
   const { data: me } = useQuery(adminProfileQueryOptions);
   const userRole = me?.role?.toUpperCase?.();
-  return userRole ? roles.includes(userRole) : false;
+  return userRole ? userRole === ROLE.SUPER_ADMIN || roles.includes(userRole) : false;
 }

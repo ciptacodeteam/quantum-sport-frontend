@@ -33,14 +33,14 @@ export default function DashboardPage() {
       router.replace('/admin/booking-lapangan');
     } else if (userRole === ROLE.BALLBOY) {
       router.replace('/admin/kelola-karyawan');
-    } else if (userRole !== ROLE.ADMIN) {
+    } else if (userRole !== ROLE.ADMIN && userRole !== ROLE.SUPER_ADMIN) {
       // Any other role that's not ADMIN should be redirected
       router.replace('/admin/booking-lapangan');
     }
   }, [me, router]);
 
   // Only ADMIN role can view dashboard - show loading for others during redirect
-  if (!me || me.role?.toUpperCase?.() !== ROLE.ADMIN) {
+  if (!me || ![ROLE.ADMIN, ROLE.SUPER_ADMIN].some((role) => role === me.role?.toUpperCase?.())) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-muted-foreground">Redirecting...</div>

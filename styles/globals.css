@@ -140,6 +140,19 @@
   -webkit-overflow-scrolling: touch;
 }
 
+body:has([data-slot='mobile-bottom-navigation']) .mobile-header-back {
+  display: none;
+}
+
+.addons-page [data-slot='card'] {
+  gap: 0;
+  padding: 0;
+  border-radius: 0;
+  border-color: rgb(0 0 0 / 15%);
+  background: #f8f8f6;
+  box-shadow: none;
+}
+
 .booking-date-dialog {
   --color-primary: #111111;
   --color-primary-foreground: #ffffff;
@@ -209,14 +222,31 @@
   border-right: 1px solid #e5e5e2;
 }
 
-.auth-dialog button[type='submit'] {
+.auth-dialog [data-slot='dialog-footer'] {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  align-items: stretch;
+  gap: 0.75rem;
+}
+
+.auth-dialog [data-slot='dialog-footer'] > button {
+  width: 100%;
+  min-width: 0;
+}
+
+.auth-dialog button[type='submit'],
+.auth-dialog [data-slot='dialog-footer'] > button {
   height: 3rem;
   border-radius: 9999px;
-  background: #111111;
-  color: #ffffff;
   font-size: 0.875rem;
   font-weight: 500;
   box-shadow: none;
+}
+
+.auth-dialog button[type='submit'] {
+  background: #111111;
+  color: #ffffff;
 }
 
 .auth-dialog button[type='submit']:hover {

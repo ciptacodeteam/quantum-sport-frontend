@@ -143,7 +143,10 @@ const AuthModal = () => {
           }
         }}
       >
-        <DialogContent className="auth-dialog max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-none border-black/15 bg-[#f8f8f6] p-6 pt-10 text-[#171717] shadow-2xl sm:max-w-[480px] sm:p-10">
+        <DialogContent
+          aria-describedby="whatsapp-otp-description"
+          className="auth-dialog max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-none border-black/15 bg-[#f8f8f6] px-6 pt-10 pb-6 text-[#171717] shadow-2xl sm:max-w-[400px] sm:px-8 sm:pt-10 sm:pb-7"
+        >
           <main>
             <VerifyPhoneOtpForm
               type={verifyType}

@@ -1,9 +1,6 @@
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import dayjs from 'dayjs';
+import dayjs from '@/lib/dayjs';
 import { CopyButton } from '../ui/clipboard-copy';
 import { getStatusColor, getStatusLabel } from './status';
-
 type Props = {
   invoiceNumber?: string;
   issuedAt: string | Date;
@@ -11,7 +8,6 @@ type Props = {
   paidAt?: string | Date | null;
   invoiceStatus?: string;
 };
-
 export default function InvoiceInfoCard({
   invoiceNumber,
   issuedAt,
@@ -19,49 +15,48 @@ export default function InvoiceInfoCard({
   paidAt,
   invoiceStatus
 }: Props) {
+  const date = (value: string | Date) =>
+    dayjs(value).tz('Asia/Jakarta').format('D MMM YYYY, HH:mm [WIB]');
   return (
-    <Card className="my-6">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">Informasi Invoice</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <p className="text-sm text-gray-600">Sales ID</p>
-            <div className="flex items-center">
-              <p className="font-semibold">{invoiceNumber}</p>
-              <CopyButton variant={'ghost'} content={invoiceNumber || ''} className="ml-2" />
-            </div>
-          </div>
-
-          <div>
-            <p className="text-sm text-gray-600">Tanggal Pembuatan</p>
-            <p className="font-semibold">{dayjs(issuedAt).format('DD MMMM YYYY, HH:mm')}</p>
-          </div>
-          {dueDate && (
-            <div>
-              <p className="text-sm text-gray-600">Jatuh Tempo</p>
-              <p className="font-semibold">{dayjs(dueDate).format('DD MMMM YYYY, HH:mm')}</p>
-            </div>
-          )}
-          {paidAt && (
-            <div>
-              <p className="text-sm text-gray-600">Tanggal Pembayaran</p>
-              <p className="font-semibold text-green-600">
-                {dayjs(paidAt).format('DD MMMM YYYY, HH:mm')}
-              </p>
-            </div>
-          )}
-          {invoiceStatus && (
-            <div>
-              <p className="text-sm text-gray-600">Status</p>
-              <Badge className={getStatusColor(invoiceStatus)} variant="outline">
-                {getStatusLabel(invoiceStatus)}
-              </Badge>
-            </div>
-          )}
+    <section className="border border-black/15 bg-white p-5 sm:p-6">
+      <h2 className="mb-5 text-lg font-medium">Informasi transaksi</h2>
+      <dl className="grid gap-5 text-sm sm:grid-cols-2">
+        <div className="min-w-0">
+          <dt className="mb-1 text-black/45">Nomor invoice</dt>
+          <dd className="flex items-center gap-2">
+            <span className="font-medium break-all">{invoiceNumber}</span>
+            <CopyButton variant="ghost" content={invoiceNumber || ''} className="size-9 shrink-0" />
+          </dd>
         </div>
-      </CardContent>
-    </Card>
+        <div>
+          <dt className="mb-1 text-black/45">Dibuat pada</dt>
+          <dd>{date(issuedAt)}</dd>
+        </div>
+        {dueDate && (
+          <div>
+            <dt className="mb-1 text-black/45">Batas pembayaran</dt>
+            <dd>{date(dueDate)}</dd>
+          </div>
+        )}
+        {paidAt && (
+          <div>
+            <dt className="mb-1 text-black/45">Dibayar pada</dt>
+            <dd>{date(paidAt)}</dd>
+          </div>
+        )}
+        {invoiceStatus && (
+          <div>
+            <dt className="mb-2 text-black/45">Status</dt>
+            <dd>
+              <span
+                className={`inline-flex border px-2.5 py-1 text-xs ${getStatusColor(invoiceStatus)}`}
+              >
+                {getStatusLabel(invoiceStatus)}
+              </span>
+            </dd>
+          </div>
+        )}
+      </dl>
+    </section>
   );
 }

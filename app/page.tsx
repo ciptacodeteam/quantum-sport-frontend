@@ -6,7 +6,7 @@ export default function HomePage() {
   return (
     <>
       <MainHeader withNotificationBadge withBorder />
-      <main className="mt-[100px]">
+      <main className="mt-25">
         <BannerSection />
         {/* <ActiveCourtSection /> */}
       </main>

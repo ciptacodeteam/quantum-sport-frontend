@@ -1,5 +1,6 @@
 'use client';
 
+import BranchGate from '@/components/branches/BranchGate';
 import { Suspense, type PropsWithChildren } from 'react';
 import ReactQueryProvider from './ReactQueryProvider';
 
@@ -24,8 +25,10 @@ const AppProvider = ({ children }: Readonly<PropsWithChildren>) => {
               children
             ) : (
               <div className="flex min-h-dvh flex-col">
-                <div className="min-w-0 flex-1">{children}</div>
-                <MainFooter />
+                <BranchGate>
+                  <div className="min-w-0 flex-1">{children}</div>
+                  <MainFooter />
+                </BranchGate>
               </div>
             )}
             {!isAdminRoute && (

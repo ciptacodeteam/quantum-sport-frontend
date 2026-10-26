@@ -64,6 +64,12 @@ type CheckoutData = {
     channel?: string;
     logo?: string | null;
   };
+  inventories?: {
+    inventoryId: string;
+    inventoryName: string;
+    quantity: number;
+    price: number;
+  }[];
   courtSlots?: CourtSlot[];
   breakdown?: {
     courtTotal?: number;
@@ -201,45 +207,64 @@ export default function PaymentPage() {
 
       <main className="mx-auto flex w-11/12 max-w-4xl flex-col gap-6 pt-24 pb-28">
         {/* Court Bookings */}
-        <section className="border-muted space-y-4 rounded-2xl border bg-white p-5 shadow-sm">
-          {courtGroups.map((group, index) => (
-            <div
-              key={`${group.courtName}-${group.date}`}
-              className={cn(
-                'space-y-3',
-                index < courtGroups.length - 1 && 'border-muted/80 border-b border-dashed pb-4'
-              )}
-            >
-              <header className="space-y-1">
-                <h2 className="text-primary text-base font-semibold">{group.courtName}</h2>
-                <p className="text-muted-foreground text-sm">
-                  {dayjs(group.date).format('dddd, DD MMM YYYY')}
-                </p>
-              </header>
+        {courtGroups.length > 0 && (
+          <section className="border-muted space-y-4 rounded-2xl border bg-white p-5 shadow-sm">
+            {courtGroups.map((group, index) => (
+              <div
+                key={`${group.courtName}-${group.date}`}
+                className={cn(
+                  'space-y-3',
+                  index < courtGroups.length - 1 && 'border-muted/80 border-b border-dashed pb-4'
+                )}
+              >
+                <header className="space-y-1">
+                  <h2 className="text-primary text-base font-semibold">{group.courtName}</h2>
+                  <p className="text-muted-foreground text-sm">
+                    {dayjs(group.date).format('dddd, DD MMM YYYY')}
+                  </p>
+                </header>
 
-              <div className="space-y-2">
-                {[...group.slots]
-                  .sort((a, b) => a.timeSlot.localeCompare(b.timeSlot))
-                  .map((slot, slotIndex) => {
-                    const range = getSlotDisplayRange(slot.timeSlot);
-                    return (
-                      <div
-                        key={`${slot.courtId}-${slot.timeSlot}-${slotIndex}`}
-                        className="border-muted/60 bg-muted/15 flex items-center justify-between rounded-xl border px-4 py-3"
-                      >
-                        <span className="text-sm font-medium">
-                          {range.start} - {range.end}
-                        </span>
-                        <span className="text-foreground text-sm font-semibold">
-                          {formatCurrency(slot.price)}
-                        </span>
-                      </div>
-                    );
-                  })}
+                <div className="space-y-2">
+                  {[...group.slots]
+                    .sort((a, b) => a.timeSlot.localeCompare(b.timeSlot))
+                    .map((slot, slotIndex) => {
+                      const range = getSlotDisplayRange(slot.timeSlot);
+                      return (
+                        <div
+                          key={`${slot.courtId}-${slot.timeSlot}-${slotIndex}`}
+                          className="border-muted/60 bg-muted/15 flex items-center justify-between rounded-xl border px-4 py-3"
+                        >
+                          <span className="text-sm font-medium">
+                            {range.start} - {range.end}
+                          </span>
+                          <span className="text-foreground text-sm font-semibold">
+                            {formatCurrency(slot.price)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                </div>
               </div>
-            </div>
-          ))}
-        </section>
+            ))}
+          </section>
+        )}
+
+        {!!checkoutData.inventories?.length && (
+          <section className="space-y-4 border border-[#d8d8d5] bg-[#f8f8f6] p-5">
+            <h2 className="text-base font-semibold">Add Ons</h2>
+            {checkoutData.inventories.map((item, index) => (
+              <div
+                key={`${item.inventoryId}-${index}`}
+                className="flex items-center justify-between gap-4"
+              >
+                <p>
+                  {item.inventoryName} × {item.quantity}
+                </p>
+                <span className="shrink-0 font-medium">{formatCurrency(item.price)}</span>
+              </div>
+            ))}
+          </section>
+        )}
 
         {/* Payment Method */}
         <section className="border-muted rounded-2xl border bg-white p-5 shadow-sm">

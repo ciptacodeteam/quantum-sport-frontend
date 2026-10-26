@@ -1,6 +1,6 @@
 'use client';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from '@/components/ui/field';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Field, FieldError, FieldGroup, FieldSet } from '@/components/ui/field';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { verifyVerificationOtpMutationOptions } from '@/mutations/verification';
 import { profileQueryOptions } from '@/queries/profile';
@@ -89,22 +89,33 @@ export function VerifyContactOtpDialog({
         onOpenChange(o);
       }}
     >
-      <DialogContent>
-        <form className="py-6 md:p-8" onSubmit={form.handleSubmit(handleSubmit)}>
+      <DialogContent
+        aria-describedby="contact-otp-description"
+        className="auth-dialog max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-none border-black/15 bg-[#f8f8f6] px-6 pt-10 pb-6 text-[#171717] sm:max-w-[400px] sm:px-8 sm:pb-7"
+      >
+        <form className="otp-verification py-1" onSubmit={form.handleSubmit(handleSubmit)}>
           <FieldSet>
             <FieldGroup>
               <Field>
-                <div className="flex-center flex-col gap-4">
-                  <header className="flex-center flex-col gap-4">
-                    {type === 'phone' ? (
-                      <Phone className="text-primary size-10" />
-                    ) : (
-                      <Mail className="text-primary size-10" />
-                    )}
-                    <FieldLabel htmlFor="otp" className="max-w-xs text-center leading-relaxed">
-                      Masukkan OTP yang dikirim ke{' '}
-                      {type === 'phone' ? 'nomor WhatsApp Anda' : 'alamat email Anda'}
-                    </FieldLabel>
+                <div className="flex w-full flex-col items-center gap-0">
+                  <header className="mb-7 flex w-full flex-col items-center text-center">
+                    <div className="mb-4 flex size-10 items-center justify-center text-[#ad422b]">
+                      {type === 'phone' ? (
+                        <Phone className="size-7" strokeWidth={1.5} aria-hidden="true" />
+                      ) : (
+                        <Mail className="size-7" strokeWidth={1.5} aria-hidden="true" />
+                      )}
+                    </div>
+                    <DialogTitle className="text-[22px] leading-snug font-medium tracking-tight text-[#171717]">
+                      {type === 'phone' ? 'Verifikasi WhatsApp' : 'Verifikasi email'}
+                    </DialogTitle>
+                    <p
+                      id="contact-otp-description"
+                      className="mt-3 max-w-[260px] text-xs leading-relaxed text-black/50"
+                    >
+                      Masukkan {maxLength} digit kode OTP yang dikirim ke{' '}
+                      {type === 'phone' ? 'nomor WhatsApp Anda.' : 'alamat email Anda.'}
+                    </p>
                   </header>
                   <Controller
                     name="otp"
@@ -113,7 +124,13 @@ export function VerifyContactOtpDialog({
                     disabled={isPending}
                     render={({ field }) => (
                       <InputOTP
+                        id="otp"
+                        aria-label="Kode OTP"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        containerClassName="w-full justify-center"
                         maxLength={maxLength}
+                        disabled={field.disabled}
                         value={field.value}
                         onChange={(value) => {
                           field.onChange(value);
@@ -122,12 +139,13 @@ export function VerifyContactOtpDialog({
                           }
                         }}
                       >
-                        <InputOTPGroup>
+                        <InputOTPGroup className="w-full max-w-[280px] justify-center gap-2">
                           {Array.from({ length: maxLength }).map((_, index) => (
                             <InputOTPSlot
                               key={index}
                               index={index}
-                              className="size-14 md:text-xl"
+                              variant="separated"
+                              className={maxLength === 6 ? 'h-12 max-w-10 text-xl' : undefined}
                             />
                           ))}
                         </InputOTPGroup>
@@ -135,7 +153,8 @@ export function VerifyContactOtpDialog({
                     )}
                   />
                   <FieldError>{form.formState.errors.otp?.message}</FieldError>
-                  <div className="mt-2">
+                  <div className="mt-6 flex w-full flex-wrap items-center justify-center gap-x-2 gap-y-0 [&_button]:min-h-10 [&_button]:border-0 [&_button]:px-0 [&_button]:py-0">
+                    <p className="text-xs text-black/45">Belum menerima kode?</p>
                     <ResendOtpButton
                       onSendOtp={handleResendOtp}
                       seconds={process.env.NODE_ENV === 'development' ? 5 : 60}
