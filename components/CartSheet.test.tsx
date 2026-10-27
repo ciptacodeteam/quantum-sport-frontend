@@ -10,45 +10,47 @@ afterEach(() => {
   useBookingStore.getState().setCartOpen(false);
   vi.clearAllMocks();
 });
-it('allows checkout from a cart containing only equipment', () => {
-  useBookingStore.getState().clearAll();
-  useBookingStore.getState().addInventory({
-    inventoryId: 'balls',
-    inventoryName: 'Tennis Balls',
-    quantity: 2,
-    price: 50000,
-    timeSlot: 'default'
-  });
+function addLegacyEquipment() {
+  useBookingStore
+    .getState()
+    .addInventory({
+      inventoryId: 'balls',
+      inventoryName: 'Tennis Balls',
+      quantity: 2,
+      price: 50000,
+      timeSlot: 'default'
+    });
+}
+it('does not offer equipment-only checkout from a legacy cart', () => {
+  addLegacyEquipment();
   render(<CartSheet />);
   fireEvent.click(screen.getByRole('button', { name: 'Buka keranjang booking' }));
-  expect(screen.getByText('Tennis Balls')).toBeInTheDocument();
-  expect(screen.queryByText('Jadwal Anda masih kosong')).not.toBeInTheDocument();
+  expect(screen.queryByText('Tennis Balls')).toBeNull();
+  expect(screen.getByRole('button', { name: /Checkout/ })).toBeDisabled();
+});
+it('checks out courts without including legacy equipment in the subtotal', () => {
+  addLegacyEquipment();
+  useBookingStore
+    .getState()
+    .setBookingItems([
+      {
+        courtId: 'court',
+        courtName: 'Padel 1',
+        slotId: 'slot',
+        date: '2030-10-23',
+        timeSlot: '08:00',
+        endTime: '09:00',
+        price: 200000
+      }
+    ]);
+  render(<CartSheet />);
+  fireEvent.click(screen.getByRole('button', { name: 'Buka keranjang booking' }));
+  expect(screen.getByText('Padel 1')).toBeInTheDocument();
+  expect(screen.queryByText('Tennis Balls')).toBeNull();
+  expect(screen.queryByText('Rp250.000')).toBeNull();
   const checkout = screen.getByRole('button', { name: /Checkout/ });
   expect(checkout).toBeEnabled();
   fireEvent.click(checkout);
   expect(mocks.push).toHaveBeenCalledWith('/checkout');
-});
-
-it('removes only the selected equipment session and recalculates the subtotal', () => {
-  useBookingStore.getState().clearAll();
-  for (const timeSlot of ['default', 'court-slot']) {
-    useBookingStore.getState().addInventory({
-      inventoryId: 'balls',
-      inventoryName: 'Tennis Balls',
-      quantity: 1,
-      price: 25000,
-      timeSlot
-    });
-  }
-  render(<CartSheet />);
-  fireEvent.click(screen.getByRole('button', { name: 'Buka keranjang booking' }));
-  fireEvent.click(screen.getAllByRole('button', { name: 'Hapus Tennis Balls' })[0]);
-  expect(useBookingStore.getState().selectedInventories).toEqual([
-    expect.objectContaining({ inventoryId: 'balls', timeSlot: 'court-slot' })
-  ]);
-  expect(useBookingStore.getState().inventoryTotal).toBe(25000);
-  fireEvent.click(screen.getByRole('button', { name: 'Hapus Tennis Balls' }));
-  expect(screen.queryByText('Tennis Balls')).not.toBeInTheDocument();
-  expect(useBookingStore.getState().inventoryTotal).toBe(0);
-  expect(screen.getByRole('button', { name: /Checkout/ })).toBeDisabled();
+  expect(useBookingStore.getState().selectedInventories).toHaveLength(1);
 });

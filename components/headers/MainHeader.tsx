@@ -40,12 +40,9 @@ const MainHeader = ({ onBack, backHref }: Props) => {
   const openAuthModal = useAuthModalStore((state) => state.open);
   const openRegister = useAuthModalStore((state) => state.openRegister);
   const isAuthenticated = !!user?.id;
-  const showMobileBack = [
-    '/booking',
-    '/booking/tennis',
-    '/add-ons',
-    '/terms-and-conditions'
-  ].includes(pathname);
+  const showMobileBack = ['/booking', '/booking/tennis', '/terms-and-conditions'].includes(
+    pathname
+  );
 
   const handleBack = () => {
     if (onBack) onBack();

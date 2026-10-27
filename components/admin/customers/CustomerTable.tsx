@@ -1,151 +1,128 @@
 'use client';
 
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
-import PreviewImage from '@/components/ui/preview-image';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { STATUS_BADGE_VARIANT, STATUS_MAP } from '@/lib/constants';
+import { ROLE } from '@/lib/constants';
 import { formatPhone, getNameInitial } from '@/lib/utils';
+import { formatBookingDate } from '@/lib/booking-display';
 import { adminCustomersQueryOptions } from '@/queries/admin/customer';
 import { adminProfileQueryOptions } from '@/queries/admin/auth';
 import type { Customer } from '@/types/model';
-import { ROLE } from '@/lib/constants';
-import { IconCircleCheckFilled, IconCircleXFilled, IconEye, IconPencil } from '@tabler/icons-react';
+import { IconCircleCheckFilled, IconEye, IconPencil } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
-import dayjs from 'dayjs';
 import Link from 'next/link';
 import { useMemo } from 'react';
 
-const CUSTOMER_SOURCE_LABEL = {
-  ONLINE: 'Online',
-  WALK_IN: 'Walk-in',
-  ADMIN_CREATED: 'Admin Created'
-} as const;
-
-const CUSTOMER_SOURCE_BADGE_VARIANT = {
-  ONLINE: 'lightInfo',
-  WALK_IN: 'lightWarning',
-  ADMIN_CREATED: 'secondary'
-} as const;
-
-const CustomerTable = () => {
+const sources = { ONLINE: 'Online', WALK_IN: 'Walk-in', ADMIN_CREATED: 'Admin' } as const;
+const helper = createColumnHelper<Customer>();
+export default function CustomerTable() {
   const { data: me } = useQuery(adminProfileQueryOptions);
-  const role = me?.role?.toUpperCase?.();
-  const canEditCustomer = role === ROLE.ADMIN || role === ROLE.SUPER_ADMIN || role === ROLE.CASHIER;
-
-  // const { confirmAndMutate } = useConfirmMutation(
-  //   {
-  //     mutationFn: deleteCustomerApi
-  //   },
-  //   {
-  //     title: 'Hapus Data',
-  //     description: 'Apakah Anda yakin ingin menghapus data ini?',
-  //     confirmText: 'Hapus',
-  //     cancelText: 'Batal',
-  //     destructive: true,
-  //     toastMessages: {
-  //       loading: 'Menghapus data...',
-  //       success: () => 'Data berhasil dihapus.',
-  //       error: 'Gagal menghapus data.'
-  //     },
-  //     invalidate: adminCustomersQueryOptions.queryKey
-  //   }
-  // );
-
-  const colHelper = createColumnHelper<Customer>();
-
+  const query = useQuery(adminCustomersQueryOptions);
+  const canEdit = [ROLE.ADMIN, ROLE.SUPER_ADMIN, ROLE.CASHIER].some(
+    (role) => role === me?.role?.toUpperCase()
+  );
   const columns = useMemo(
     () => [
-      colHelper.accessor('image', {
-        header: 'Preview',
-        cell: (info) => (
-          <PreviewImage
-            src={info.getValue()}
-            className="aspect-square w-auto object-cover"
-            placeholder={getNameInitial(info.row.original.name)}
-          />
+      helper.accessor((item) => [item.name, item.email].filter(Boolean).join(' '), {
+        id: 'customer',
+        header: 'Kustomer',
+        cell: ({ row }) => (
+          <div className="flex min-w-44 items-center gap-4">
+            <Avatar className="size-9 shrink-0 rounded-lg">
+              <AvatarImage src={row.original.image || undefined} alt="" />
+              <AvatarFallback className="bg-muted text-muted-foreground rounded-lg text-xs font-medium">
+                {getNameInitial(row.original.name)}
+              </AvatarFallback>
+            </Avatar>
+            <span className="max-w-60 truncate text-sm font-medium" title={row.original.name}>
+              {row.original.name}
+            </span>
+          </div>
         )
       }),
-      colHelper.accessor('name', {
-        header: 'Nama Lapangan',
-        cell: (info) => info.getValue()
-      }),
-      colHelper.accessor('phone', {
+      helper.accessor('phone', {
         header: 'Telepon',
-        cell: (info) => (
-          <div className="flex items-center gap-2">
-            {formatPhone(info.getValue()) || '-'}
-            {info.getValue() && (
+        cell: ({ row, getValue }) => (
+          <div className="flex items-center gap-2 text-sm tabular-nums">
+            {getValue() ? formatPhone(getValue()) : '—'}
+            {getValue() && row.original.phoneVerified && (
               <Tooltip>
-                <TooltipTrigger>
-                  {info.row.original.phoneVerified ? (
-                    <IconCircleCheckFilled className="text-green-500" />
-                  ) : (
-                    <IconCircleXFilled className="text-red-500" />
-                  )}
+                <TooltipTrigger asChild>
+                  <span tabIndex={0} aria-label="WhatsApp terverifikasi">
+                    <IconCircleCheckFilled className="size-4 text-emerald-600" />
+                  </span>
                 </TooltipTrigger>
-                <TooltipContent>
-                  {info.row.original.phoneVerified ? 'Terverifikasi' : 'Belum Terverifikasi'}
-                </TooltipContent>
+                <TooltipContent>WhatsApp terverifikasi</TooltipContent>
               </Tooltip>
             )}
           </div>
         )
       }),
-      colHelper.accessor('banned', {
+      helper.accessor('banned', {
         header: 'Status',
-        cell: (info) => (
-          <Tooltip>
-            <TooltipTrigger>
-              <Badge variant={STATUS_BADGE_VARIANT[Number(!info.getValue())]}>
-                {STATUS_MAP[Number(!info.getValue())]}
-              </Badge>
-            </TooltipTrigger>
-            <TooltipContent>
-              {info.getValue() ? 'Pengguna diblokir' : 'Pengguna aktif'}
-            </TooltipContent>
-          </Tooltip>
+        cell: ({ getValue }) => (
+          <Badge variant={getValue() ? 'lightDestructive' : 'lightSuccess'}>
+            {getValue() ? 'Diblokir' : 'Aktif'}
+          </Badge>
         )
       }),
-      colHelper.accessor('source', {
+      helper.accessor('source', {
         header: 'Sumber',
-        cell: (info) => {
-          const source = info.getValue() || 'ONLINE';
-
-          return (
-            <Badge variant={CUSTOMER_SOURCE_BADGE_VARIANT[source]}>
-              {CUSTOMER_SOURCE_LABEL[source]}
-            </Badge>
-          );
-        }
+        cell: ({ getValue }) => (
+          <span className="text-muted-foreground text-sm">{sources[getValue() || 'ONLINE']}</span>
+        )
       }),
-      colHelper.accessor('createdAt', {
-        header: 'Dibuat Pada',
-        cell: (info) => dayjs(info.getValue()).format('DD/MM/YYYY HH:mm')
+      helper.accessor('createdAt', {
+        header: 'Bergabung',
+        cell: ({ getValue }) => (
+          <span className="text-muted-foreground text-sm tabular-nums">
+            {formatBookingDate(getValue(), 'DD MMM YYYY')}
+          </span>
+        )
       }),
-      colHelper.display({
+      helper.display({
         id: 'actions',
         header: 'Aksi',
         cell: ({ row }) => (
-          <div className="flex items-center gap-2">
-            <Link href={`/admin/kelola-kustomer/${row.original.id}`} prefetch>
-              <Button size="icon" variant="lightInfo">
-                {canEditCustomer ? <IconPencil /> : <IconEye />}
-              </Button>
+          <Button asChild size="icon-sm" variant="ghost">
+            <Link
+              href={`/admin/kelola-kustomer/${row.original.id}`}
+              aria-label={`${canEdit ? 'Edit' : 'Lihat'} ${row.original.name}`}
+              title={canEdit ? 'Edit kustomer' : 'Lihat detail'}
+            >
+              {canEdit ? <IconPencil /> : <IconEye />}
             </Link>
-          </div>
+          </Button>
         )
       })
     ],
-    [canEditCustomer, colHelper]
+    [canEdit]
   );
-
-  const { data, isPending } = useQuery(adminCustomersQueryOptions);
-
+  if (query.isError)
+    return (
+      <div role="alert" className="space-y-3 rounded-xl border p-8 text-center">
+        <p className="text-muted-foreground text-sm">Data kustomer belum dapat dimuat.</p>
+        <Button variant="outline" size="sm" onClick={() => void query.refetch()}>
+          Coba lagi
+        </Button>
+      </div>
+    );
   return (
-    <DataTable loading={isPending} data={data || []} columns={columns} enableRowSelection={false} />
+    <div className="[&_thead]:bg-muted/50 min-w-0">
+      <DataTable
+        loading={query.isPending}
+        data={query.data || []}
+        columns={columns}
+        enableRowSelection={false}
+        getRowId={(item) => item.id}
+        searchPlaceholder="Cari nama, telepon, atau email..."
+        columnVisibilityLabel="Kolom"
+        columnVisibilityStorageKey="quantum:customers:columns"
+      />
+    </div>
   );
-};
-export default CustomerTable;
+}

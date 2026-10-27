@@ -4,7 +4,6 @@ const exploreItems = [
   { label: 'Find your next court', href: '/booking' },
   { label: 'Make time for tennis', href: '/booking/tennis' },
   { label: 'More play, more value', href: '/membership' },
-  { label: 'Complete your game', href: '/add-ons' },
   { label: 'Meet us in Medan', href: '#locations-title' }
 ];
 
@@ -34,7 +33,8 @@ export default function BrandIntroSection() {
                 className="flex min-h-10 items-center justify-between gap-6 py-2.5 text-[10px] font-medium tracking-[0.1em] uppercase transition-colors hover:text-[#ad422b] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#ad422b]"
               >
                 <span aria-hidden="true" className="shrink-0 text-black/45">
-                  // {String(index + 1).padStart(2, '0')}
+                  {'// '}
+                  {String(index + 1).padStart(2, '0')}
                 </span>
                 <span className="text-right">{item.label}</span>
               </BranchLink>

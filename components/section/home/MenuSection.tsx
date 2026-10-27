@@ -4,14 +4,13 @@ import BranchLink from '@/components/branches/BranchLink';
 const menus = [
   { title: 'Padel', href: '/booking', image: '/assets/icons/mobile-menu/padel.png' },
   { title: 'Tennis', href: '/booking/tennis', image: '/assets/icons/mobile-menu/tennis.png' },
-  { title: 'Value Pack', href: '/membership', image: '/assets/icons/mobile-menu/value-pack.png' },
-  { title: 'Add Ons', href: '/add-ons', image: '/assets/icons/mobile-menu/add-ons-v2.png' }
+  { title: 'Value Pack', href: '/membership', image: '/assets/icons/mobile-menu/value-pack.png' }
 ];
 
 export default function MenuSection() {
   return (
     <nav aria-label="Menu olahraga" className="py-6 lg:hidden">
-      <ul className="mx-auto grid max-w-md grid-cols-4 gap-2">
+      <ul className="mx-auto grid max-w-md grid-cols-3 gap-2">
         {menus.map((menu) => (
           <li key={menu.href}>
             <BranchLink
@@ -29,7 +28,7 @@ export default function MenuSection() {
                   width={80}
                   height={80}
                   sizes="(min-width: 640px) 80px, (min-width: 375px) 68px, 64px"
-                  className={`absolute -right-1 size-16 max-w-none object-contain min-[375px]:size-[68px] sm:-right-2 sm:size-20 ${menu.href === '/add-ons' ? '-bottom-1.5' : 'bottom-0'}`}
+                  className="absolute -right-1 bottom-0 size-16 max-w-none object-contain min-[375px]:size-[68px] sm:-right-2 sm:size-20"
                 />
               </span>
               <span className="text-[11px] font-medium tracking-tight text-[#171717] sm:text-xs">

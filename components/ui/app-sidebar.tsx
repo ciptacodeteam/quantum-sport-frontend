@@ -3,6 +3,7 @@
 import { LifeBuoy } from 'lucide-react';
 import * as React from 'react';
 
+import { useAdminCourtSports } from '@/hooks/useAdminCourtSports';
 import { NavMain } from '@/components/ui/nav-main';
 import { NavSecondary } from '@/components/ui/nav-secondary';
 import { NavUser } from '@/components/ui/nav-user';
@@ -25,7 +26,6 @@ import {
   IconChartBar,
   IconDatabase,
   IconScan,
-  IconSchool,
   IconShoppingCart,
   IconUser,
   IconUsers
@@ -33,7 +33,6 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 
 const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
   navMain: [
@@ -105,14 +104,6 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
           url: '/admin/kelola-pemesanan/inventori'
         },
         {
-          title: 'Coach',
-          url: '/admin/kelola-pemesanan/coach'
-        },
-        {
-          title: 'Ballboy',
-          url: '/admin/kelola-pemesanan/ballboy'
-        },
-        {
           title: 'Value Pack',
           url: '/admin/kelola-pemesanan/membership'
         }
@@ -158,10 +149,6 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
       title: 'Marketing',
       icon: IconAd2,
       items: [
-        {
-          title: 'Push Notification',
-          url: '/admin/kelola-notifikasi'
-        },
         {
           title: 'Kelola Banner',
           url: '/admin/kelola-banner'
@@ -212,10 +199,8 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const pathname = usePathname();
-  const isDashboardActive = pathname === '/admin/dashboard' || pathname === '/admin/dashboard/';
+  const { branchId: activeBranchId } = useAdminCourtSports();
   const { data: me, isLoading } = useQuery(adminProfileQueryOptions);
-  const isCoach = me?.role?.toUpperCase?.() === ROLE.COACH;
   const isCashier = me?.role?.toUpperCase?.() === ROLE.CASHIER;
   const isAdminViewer = me?.role?.toUpperCase?.() === ROLE.ADMIN_VIEWER;
   const isAdmin = [ROLE.ADMIN, ROLE.SUPER_ADMIN].includes(
@@ -226,17 +211,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     // If still loading user data, return empty array to avoid menu flash
     if (isLoading || !me) {
       return [];
-    }
-
-    if (isCoach) {
-      return [
-        {
-          title: 'Jadwal Saya',
-          url: '/admin/kelola-karyawan',
-          icon: IconSchool,
-          items: []
-        }
-      ];
     }
 
     if (isCashier) {
@@ -282,14 +256,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             {
               title: 'Inventori',
               url: '/admin/kelola-pemesanan/inventori'
-            },
-            {
-              title: 'Coach',
-              url: '/admin/kelola-pemesanan/coach'
-            },
-            {
-              title: 'Ballboy',
-              url: '/admin/kelola-pemesanan/ballboy'
             }
           ]
         },
@@ -328,16 +294,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         )
       }));
     return data.navMain;
-  }, [isCoach, isCashier, isAdminViewer, isLoading, me]);
+  }, [isCashier, isAdminViewer, isLoading, me]);
 
   // Get appropriate dashboard link based on role
   const dashboardLink = React.useMemo(() => {
     if (isLoading || !me) return '/admin/dashboard';
-    if (isCoach) return '/admin/kelola-karyawan';
     if (isCashier) return '/admin/booking-lapangan';
     if (isAdminViewer) return '/admin/booking-lapangan';
     return '/admin/dashboard';
-  }, [isCoach, isCashier, isAdminViewer, isLoading, me]);
+  }, [isCashier, isAdminViewer, isLoading, me]);
 
   // Get appropriate subtitle based on role
   const subtitle = React.useMemo(() => {
@@ -351,7 +316,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild isActive={isDashboardActive}>
+            <SidebarMenuButton
+              size="lg"
+              asChild
+              className="hover:text-sidebar-foreground active:text-sidebar-foreground hover:bg-transparent active:bg-transparent"
+            >
               <Link href={dashboardLink} prefetch>
                 <Image
                   src="/favicon.ico"
@@ -371,7 +340,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={navMainItems} />
+        <NavMain
+          items={navMainItems.map((item) => ({
+            ...item,
+            items: item.items?.filter(
+              (child) =>
+                !activeBranchId ||
+                activeBranchId === 'cemara' ||
+                !child.url?.includes('courtSport=TENNIS')
+            )
+          }))}
+        />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>

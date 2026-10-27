@@ -9,13 +9,13 @@ import {
 
 export default function Page() {
   return (
-    <main>
-      <Section>
-        <SectionHeader>
-          <SectionTitle title="Kelola Pemesanan Add-on" />
-          <SectionDescription description="Daftar bola, raket, ballboy, dan coach yang dipesan oleh pelanggan." />
+    <main className="w-full min-w-0">
+      <Section className="min-w-0 bg-transparent pt-0">
+        <SectionHeader className="px-0">
+          <SectionTitle title="Pemesanan Inventori" />
+          <SectionDescription description="Pantau inventori dan layanan tambahan yang dipesan pelanggan." />
         </SectionHeader>
-        <SectionContent>
+        <SectionContent className="min-w-0 px-0">
           <BookedInventoryTable />
         </SectionContent>
       </Section>

@@ -1,9 +1,16 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { createColumnHelper } from '@tanstack/react-table';
+import { IconEye, IconX } from '@tabler/icons-react';
+import { toast } from 'sonner';
 import { cancelBookedInventoryApi } from '@/api/admin/bookedInventory';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { CopyButton } from '@/components/ui/clipboard-copy';
 import { DataTable } from '@/components/ui/data-table';
+import { DialogTrigger, ManagedDialog } from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
@@ -11,232 +18,241 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
+import { BOOKING_STATUS_BADGE_VARIANT } from '@/lib/constants';
 import {
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  ManagedDialog
-} from '@/components/ui/dialog';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useConfirmMutation } from '@/hooks/useConfirmDialog';
-import { BOOKING_STATUS_BADGE_VARIANT, BOOKING_STATUS_MAP, getCoachTypeLabel } from '@/lib/constants';
-import { formatSlotTime } from '@/lib/time-utils';
-import { formatPhone } from '@/lib/utils';
+  hasAmount,
+  hasText,
+  inventoryCategoryLabels,
+  inventoryStatusLabels,
+  itemCategory,
+  itemCustomer,
+  itemInvoice,
+  itemSchedules,
+  scheduleDate,
+  scheduleTime
+} from '@/lib/booked-inventory-display';
 import {
   adminBookedInventoriesQueryOptions,
-  adminBookedInventoryQueryOptions,
-  type AdminBookedInventoryDetail,
   type AdminBookedInventoryListItem
 } from '@/queries/admin/bookedInventory';
-import { IconEye, IconX } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
-import { createColumnHelper } from '@tanstack/react-table';
-import dayjs from 'dayjs';
-import { useMemo, useState } from 'react';
+import {
+  BookedInventoryDetailsDialog,
+  CancelBookedInventoryDialog,
+  inventoryCurrency
+} from './BookedInventoryDialogs';
 
-const currency = (n: number) => `Rp ${new Intl.NumberFormat('id-ID').format(n)}`;
-
-const CATEGORY_LABELS: Record<string, string> = {
-  all: 'Semua',
-  bola: 'Bola',
-  raket: 'Raket',
-  coach: 'Coach',
-  inventory: 'Inventori Lain'
-};
-
-const isBallboyItem = (item: AdminBookedInventoryListItem) =>
-  item.itemType === 'ballboy' || item.category === 'ballboy';
-
-const BookedInventoryTable = () => {
-  const [source, setSource] = useState<string>('');
-  const [category, setCategory] = useState<string>('all');
-
-  const { confirmAndMutate: cancelBookedInventory } = useConfirmMutation(
-    {
-      mutationFn: (id: string) => cancelBookedInventoryApi(id, 'Cancelled by admin')
-    },
-    {
-      title: 'Batalkan Inventori',
-      description: 'Apakah Anda yakin ingin membatalkan inventori ini dari pemesanan?',
-      confirmText: 'Batalkan',
-      cancelText: 'Tutup',
-      destructive: true,
-      toastMessages: {
-        loading: 'Membatalkan inventori...',
-        success: () => 'Inventori berhasil dibatalkan.',
-        error: 'Gagal membatalkan inventori.'
-      },
-      invalidate: ['admin', 'booked-inventories']
-    }
+const helper = createColumnHelper<AdminBookedInventoryListItem>();
+export default function BookedInventoryTable() {
+  const [category, setCategory] = useState('all');
+  const [cancelItem, setCancelItem] = useState<AdminBookedInventoryListItem | null>(null);
+  const queryClient = useQueryClient();
+  const query = useQuery(adminBookedInventoriesQueryOptions());
+  const allItems = useMemo(
+    () =>
+      (query.data || []).filter(
+        (item) => item.itemType !== 'ballboy' && item.category !== 'ballboy'
+      ),
+    [query.data]
   );
-
-  const colHelper = createColumnHelper<AdminBookedInventoryListItem>();
-
+  const categories = useMemo(
+    () => [...new Set(allItems.map(itemCategory))].filter((key) => inventoryCategoryLabels[key]),
+    [allItems]
+  );
+  useEffect(() => {
+    if (category !== 'all' && !categories.includes(category)) setCategory('all');
+  }, [categories, category]);
+  const items = useMemo(
+    () =>
+      category === 'all' ? allItems : allItems.filter((item) => itemCategory(item) === category),
+    [allItems, category]
+  );
+  const cancel = useMutation({
+    mutationFn: (id: string) => cancelBookedInventoryApi(id, 'Dibatalkan oleh admin'),
+    onSuccess: () => {
+      setCancelItem(null);
+      toast.success('Inventori berhasil dibatalkan.');
+      for (const key of ['booked-inventories', 'bookings', 'inventory', 'inventories', 'analytics'])
+        void queryClient.invalidateQueries({ queryKey: ['admin', key] });
+    },
+    onError: (error: Error) => toast.error(error.message || 'Gagal membatalkan inventori.')
+  });
   const columns = useMemo(
     () => [
-      colHelper.accessor((row) => row.category || row.itemType || 'inventory', {
-        id: 'category',
-        header: 'Kategori',
-        cell: (info) => (
-          <Badge variant="outline">{CATEGORY_LABELS[info.getValue()] || 'Inventori'}</Badge>
-        )
-      }),
-      colHelper.accessor((row) => row.inventory.name, {
-        id: 'inventoryName',
+      helper.accessor((item) => item.inventory?.name, {
+        id: 'item',
         header: 'Item',
-        cell: (info) => <span className="font-medium">{info.getValue()}</span>
+        cell: ({ row, getValue }) =>
+          hasText(getValue()) ? (
+            <p
+              className="max-w-64 truncate font-medium"
+              title={`${getValue()}${inventoryCategoryLabels[itemCategory(row.original)] ? ` · ${inventoryCategoryLabels[itemCategory(row.original)]}` : ''}`}
+            >
+              {getValue()}
+            </p>
+          ) : null
       }),
-      colHelper.accessor('quantity', {
-        header: 'Qty',
-        cell: (info) => <span>{info.getValue()}</span>
-      }),
-      colHelper.accessor('unitPrice', {
-        header: 'Harga Satuan',
-        cell: (info) => <span className="tabular-nums">{currency(info.getValue())}</span>
-      }),
-      colHelper.accessor('totalPrice', {
-        header: 'Total',
-        cell: (info) => (
-          <span className="font-medium tabular-nums">{currency(info.getValue())}</span>
-        )
-      }),
-      colHelper.accessor((row) => row.booking.status, {
-        id: 'bookingStatus',
-        header: 'Status Pemesanan',
-        cell: (info) => {
-          const status = info.getValue() as keyof typeof BOOKING_STATUS_MAP;
-          return (
-            <Badge variant={BOOKING_STATUS_BADGE_VARIANT[status]}>
-              {BOOKING_STATUS_MAP[status]}
-            </Badge>
-          );
-        }
-      }),
-      colHelper.accessor((row) => row.booking?.customer ?? (row as any).customer, {
-        id: 'customer',
-        header: 'Pelanggan',
-        cell: (info) => {
-          const original = info.row.original as any;
-          const customer =
-            info.getValue() ||
-            original?.booking?.customer ||
-            original?.customer ||
-            original?.user ||
-            null;
-          if (!customer) return '-';
-          return (
-            <div className="flex flex-col">
-              <span className="font-medium">{customer.name}</span>
-              {customer.phone && (
-                <span className="text-muted-foreground text-xs">{formatPhone(customer.phone)}</span>
-              )}
-            </div>
-          );
-        }
-      }),
-      colHelper.accessor((row) => (row as any).invoice ?? row.booking?.invoice ?? null, {
-        header: 'Invoice',
-        cell: (info) => {
-          const invoice = info.getValue();
-          if (!invoice) return <span className="text-muted-foreground">-</span>;
-          return (
-            <div className="flex flex-col">
-              <span className="font-medium">{invoice.number}</span>
-              <span className="text-muted-foreground text-xs">{invoice.status}</span>
-            </div>
-          );
-        }
-      }),
-      colHelper.accessor((row) => (row as any).courtSlots ?? row.booking?.courtSlots ?? [], {
-        header: 'Lapangan & Waktu',
-        cell: (info) => {
-          let slots = info.getValue() || [];
-          // Fallback: derive slots from booking.details if API doesn't return top-level courtSlots
-          if ((!slots || slots.length === 0) && (info.row.original as any).booking?.details) {
-            const details = (info.row.original as any).booking.details as Array<any>;
-            slots = details.map((d) => ({
-              court: d.court ?? null,
-              startAt: d.slot?.startAt ?? d.startAt,
-              endAt: d.slot?.endAt ?? d.endAt,
-              date: d.date
-                ? String(d.date)
-                : formatSlotTime(d.slot?.startAt ?? d.startAt, 'YYYY-MM-DD'),
-              time:
-                (d.time as string) ||
-                `${formatSlotTime(d.slot?.startAt ?? d.startAt)} - ${formatSlotTime(d.slot?.endAt ?? d.endAt)}`
-            }));
-          }
-          if (slots.length === 0) return '-';
-          const first = slots[0];
-          const isExpired = dayjs(first.endAt).isBefore(dayjs());
-          return (
-            <Tooltip>
-              <TooltipTrigger>
-                <div className="flex flex-col">
-                  <span className="font-medium">{first.court?.name || '-'}</span>
-                  <span
-                    className={`text-xs ${isExpired ? 'text-destructive' : 'text-muted-foreground'}`}
-                  >
-                    {first.date || formatSlotTime(first.startAt, 'DD MMM YYYY')} · {first.time}
-                  </span>
-                  {slots.length > 1 && (
-                    <span className="text-muted-foreground text-xs">+{slots.length - 1} slot</span>
-                  )}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <div className="space-y-1">
-                  {slots.slice(0, 4).map((s, idx) => (
-                    <div key={idx} className="text-xs">
-                      {s.date || formatSlotTime(s.startAt, 'DD MMM')} - {s.court?.name || '-'} ({s.time})
+      ...(allItems.some(
+        (item) =>
+          hasText(itemCustomer(item)?.name) ||
+          hasText(itemCustomer(item)?.phone) ||
+          hasText(itemCustomer(item)?.email) ||
+          hasText(itemInvoice(item)?.number)
+      )
+        ? [
+            helper.accessor(
+              (item) =>
+                [itemCustomer(item)?.name, itemCustomer(item)?.phone, itemInvoice(item)?.number]
+                  .filter(hasText)
+                  .join(' '),
+              {
+                id: 'customer',
+                header: 'Pelanggan',
+                cell: ({ row }) => {
+                  const customer = itemCustomer(row.original);
+                  const invoice = itemInvoice(row.original);
+                  return (
+                    <div className="flex min-w-36 items-center gap-1.5">
+                      <span
+                        className="max-w-48 truncate font-medium"
+                        title={customer?.name || customer?.email || customer?.phone || undefined}
+                      >
+                        {customer?.name || customer?.email || customer?.phone || '—'}
+                      </span>
+                      {hasText(invoice?.number) && (
+                        <CopyButton
+                          content={invoice.number}
+                          variant="ghost"
+                          size="sm"
+                          aria-label={`Salin invoice ${invoice.number}`}
+                          title={invoice.number}
+                        />
+                      )}
                     </div>
-                  ))}
-                  {slots.length > 4 && (
-                    <div className="text-muted-foreground text-xs">dan lainnya...</div>
-                  )}
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          );
-        }
-      }),
-      colHelper.accessor('createdAt', {
-        header: 'Dibuat',
-        cell: (info) => dayjs(info.getValue()).format('DD/MM/YYYY HH:mm')
-      }),
-      colHelper.display({
+                  );
+                }
+              }
+            )
+          ]
+        : []),
+      ...(allItems.some((item) => itemSchedules(item).length)
+        ? [
+            helper.accessor(
+              (item) =>
+                itemSchedules(item)
+                  .map((slot) => `${slot.court || ''} ${slot.start}`)
+                  .join(' '),
+              {
+                id: 'schedule',
+                header: 'Jadwal (WIB)',
+                cell: ({ row }) => (
+                  <div className="space-y-1">
+                    {itemSchedules(row.original)
+                      .slice(0, 1)
+                      .map((slot, index) => (
+                        <div key={index} className="space-y-1">
+                          <p className="font-medium">{slot.court || scheduleDate(slot)}</p>
+                          <p className="text-muted-foreground text-sm tabular-nums">
+                            {slot.court ? `${scheduleDate(slot)} · ` : ''}
+                            {scheduleTime(slot)}
+                          </p>
+                        </div>
+                      ))}
+                    {itemSchedules(row.original).length > 1 && (
+                      <span className="text-muted-foreground text-sm">
+                        +{itemSchedules(row.original).length - 1} jadwal
+                      </span>
+                    )}
+                  </div>
+                )
+              }
+            )
+          ]
+        : []),
+      ...(allItems.some((item) => hasAmount(item.quantity))
+        ? [
+            helper.accessor('quantity', {
+              header: 'Jumlah',
+              cell: ({ row }) => (
+                <span
+                  className="tabular-nums"
+                  title={
+                    hasAmount(row.original.unitPrice)
+                      ? `Harga satuan ${inventoryCurrency(row.original.unitPrice)}`
+                      : undefined
+                  }
+                >
+                  {hasAmount(row.original.quantity) ? row.original.quantity : '—'}
+                </span>
+              )
+            })
+          ]
+        : []),
+      ...(allItems.some((item) => hasAmount(item.totalPrice))
+        ? [
+            helper.accessor('totalPrice', {
+              header: 'Total',
+              cell: ({ getValue }) =>
+                hasAmount(getValue()) ? (
+                  <span className="font-semibold tabular-nums">
+                    {inventoryCurrency(getValue())}
+                  </span>
+                ) : null
+            })
+          ]
+        : []),
+      ...(allItems.some((item) => hasText(item.booking?.status))
+        ? [
+            helper.accessor((item) => item.booking?.status, {
+              id: 'status',
+              header: 'Status',
+              cell: ({ getValue }) =>
+                hasText(getValue()) ? (
+                  <Badge
+                    variant={
+                      BOOKING_STATUS_BADGE_VARIANT[
+                        getValue() as keyof typeof BOOKING_STATUS_BADGE_VARIANT
+                      ]
+                    }
+                  >
+                    {inventoryStatusLabels[getValue()] || getValue()}
+                  </Badge>
+                ) : null
+            })
+          ]
+        : []),
+      helper.display({
         id: 'actions',
         header: 'Aksi',
         cell: ({ row }) => {
           const item = row.original;
           const canCancel =
-            (!item.itemType || item.itemType === 'inventory') && item.booking.status !== 'CANCELLED';
+            (!item.itemType || item.itemType === 'inventory') &&
+            ['HOLD', 'CONFIRMED'].includes(item.booking?.status);
           return (
-            <div className="flex items-center gap-2">
-              <ManagedDialog id={`view-booked-inventory-${item.id}`}>
+            <div className="flex items-center gap-1">
+              <ManagedDialog
+                id={`view-booked-inventory-${item.itemType || 'inventory'}-${item.id}`}
+              >
                 <DialogTrigger asChild>
-                  <Button size="icon" variant="lightInfo">
+                  <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    aria-label={`Lihat detail ${item.inventory?.name || 'item'}`}
+                    title="Lihat detail"
+                  >
                     <IconEye />
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl">
-                  <DialogHeader className="mb-4">
-                    <DialogTitle>Detail Add-on</DialogTitle>
-                  </DialogHeader>
-                  {item.itemType && item.itemType !== 'inventory' ? (
-                    <ServiceDetail item={item} />
-                  ) : (
-                    <InventoryDetail id={item.id} />
-                  )}
-                </DialogContent>
+                <BookedInventoryDetailsDialog item={item} />
               </ManagedDialog>
               {canCancel && (
                 <Button
-                  size="icon"
-                  variant="destructive"
-                  onClick={() => cancelBookedInventory(item.id)}
-                  title="Batalkan Inventori"
+                  size="icon-sm"
+                  variant="ghost"
+                  className="text-destructive hover:bg-destructive/5 hover:text-destructive"
+                  aria-label={`Batalkan ${item.inventory?.name || 'item'}`}
+                  title="Batalkan item"
+                  onClick={() => setCancelItem(item)}
                 >
                   <IconX />
                 </Button>
@@ -246,280 +262,58 @@ const BookedInventoryTable = () => {
         }
       })
     ],
-    [colHelper, cancelBookedInventory]
+    [allItems]
   );
 
-  const { data, isPending } = useQuery(
-    adminBookedInventoriesQueryOptions({
-      ...(source && source !== 'all' ? { source } : {}),
-      ...(category && category !== 'all' ? { category } : {})
-    })
-  );
-
-  const inventoryData = useMemo(() => (data || []).filter((item) => !isBallboyItem(item)), [data]);
-
+  if (query.isError)
+    return (
+      <div role="alert" className="space-y-3 rounded-xl border p-8 text-center">
+        <p className="text-muted-foreground text-sm">Data inventori belum dapat dimuat.</p>
+        <Button variant="outline" size="sm" onClick={() => void query.refetch()}>
+          Coba lagi
+        </Button>
+      </div>
+    );
   return (
-    <div className="space-y-4">
+    <div className="[&_thead]:bg-muted/50 min-w-0 space-y-4 [&_td]:px-3 [&_td]:py-2.5 [&_th]:px-3">
       <DataTable
-        loading={isPending}
-        data={inventoryData}
-        rightActions={
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2">
-              <label htmlFor="category-filter" className="text-sm font-medium">
-                Kategori:
-              </label>
-              <Select value={category || 'all'} onValueChange={setCategory}>
-                <SelectTrigger id="category-filter" className="w-[170px]">
-                  <SelectValue placeholder="Semua" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua</SelectItem>
-                  <SelectItem value="bola">Bola</SelectItem>
-                  <SelectItem value="raket">Raket</SelectItem>
-                  <SelectItem value="coach">Coach</SelectItem>
-                  <SelectItem value="inventory">Inventori Lain</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center gap-2">
-              <label htmlFor="source-filter" className="text-sm font-medium">
-                Sumber:
-              </label>
-              <Select value={source || 'all'} onValueChange={setSource}>
-                <SelectTrigger id="source-filter" className="w-[160px]">
-                  <SelectValue placeholder="Semua" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Semua</SelectItem>
-                  <SelectItem value="cashier">Cashier</SelectItem>
-                  <SelectItem value="online">Online</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        }
+        loading={query.isPending}
+        data={items}
         columns={columns}
+        getRowId={(item) => `${item.itemType || 'inventory'}-${item.id}`}
         enableRowSelection={false}
+        searchPlaceholder="Cari item, pelanggan, atau invoice..."
+        columnVisibilityLabel="Kolom"
+        columnVisibilityStorageKey="quantum:booked-inventories:columns"
+        rightActions={
+          categories.length > 1 ? (
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger
+                className="h-9 w-44 rounded-lg shadow-none"
+                aria-label="Kategori inventori"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua kategori</SelectItem>
+                {categories.map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {inventoryCategoryLabels[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : undefined
+        }
+      />
+      <CancelBookedInventoryDialog
+        item={cancelItem}
+        pending={cancel.isPending}
+        onClose={() => setCancelItem(null)}
+        onConfirm={() => {
+          if (cancelItem) cancel.mutate(cancelItem.id);
+        }}
       />
     </div>
   );
-};
-
-const ServiceDetail = ({ item }: { item: AdminBookedInventoryListItem }) => {
-  const customer = item.booking?.customer ?? null;
-  const invoice = item.booking?.invoice ?? null;
-  const bookingCourtSlots = item.booking?.courtSlots ?? [];
-  const categoryLabel = CATEGORY_LABELS[item.category || item.itemType || 'inventory'] || 'Add-on';
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <p className="text-muted-foreground text-sm">Kategori</p>
-          <Badge variant="outline">{categoryLabel}</Badge>
-        </div>
-        <div>
-          <p className="text-muted-foreground text-sm">Item</p>
-          <p className="font-medium">{item.inventory.name}</p>
-          {item.inventory.description && (
-            <p className="text-muted-foreground mt-1 text-xs">{item.inventory.description}</p>
-          )}
-        </div>
-        <div>
-          <p className="text-muted-foreground text-sm">Pelanggan</p>
-          <p className="font-medium">{customer?.name || '-'}</p>
-          {customer?.phone && (
-            <p className="text-muted-foreground text-xs">{formatPhone(customer.phone)}</p>
-          )}
-        </div>
-        <div>
-          <p className="text-muted-foreground text-sm">Total</p>
-          <p className="font-medium">{currency(item.totalPrice)}</p>
-        </div>
-        <div>
-          <p className="text-muted-foreground text-sm">Status Pemesanan</p>
-          <Badge
-            variant={
-              BOOKING_STATUS_BADGE_VARIANT[item.booking.status as keyof typeof BOOKING_STATUS_MAP]
-            }
-          >
-            {BOOKING_STATUS_MAP[item.booking.status as keyof typeof BOOKING_STATUS_MAP]}
-          </Badge>
-        </div>
-        <div>
-          <p className="text-muted-foreground text-sm">Invoice</p>
-          {invoice ? (
-            <div className="flex flex-col">
-              <span className="font-medium">{invoice.number}</span>
-              <span className="text-muted-foreground text-xs">{invoice.status}</span>
-            </div>
-          ) : (
-            <span className="text-muted-foreground">-</span>
-          )}
-        </div>
-      </div>
-
-      {item.slot && (
-        <div>
-          <p className="mb-2 text-sm font-medium">Slot Add-on</p>
-          <div className="bg-muted/50 rounded-lg border p-3">
-            <p className="font-medium">{item.serviceStaff?.name || item.inventory.name}</p>
-            <p className="text-muted-foreground text-sm">
-              {formatSlotTime(item.slot.startAt, 'DD MMM YYYY')} ·{' '}
-              {formatSlotTime(item.slot.startAt)} - {formatSlotTime(item.slot.endAt)}
-            </p>
-            {item.serviceStaff?.phone && (
-              <p className="text-muted-foreground text-xs">{formatPhone(item.serviceStaff.phone)}</p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {bookingCourtSlots?.length > 0 && (
-        <div>
-          <p className="mb-2 text-sm font-medium">Slot Lapangan</p>
-          <div className="space-y-2">
-            {bookingCourtSlots.map((cs, idx) => (
-              <div key={idx} className="bg-muted/50 rounded-lg border p-3">
-                <p className="font-medium">{cs.court?.name || '-'}</p>
-                <p className="text-muted-foreground text-sm">
-                  {cs.date || formatSlotTime(cs.startAt, 'DD MMM YYYY')} · {cs.time}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-const InventoryDetail = ({ id }: { id: string }) => {
-  const { data, isPending } = useQuery(adminBookedInventoryQueryOptions(id));
-
-  if (isPending || !data) {
-    return <div className="text-muted-foreground text-sm">Memuat detail...</div>;
-  }
-
-  const detail = data as AdminBookedInventoryDetail;
-  const customer =
-    (detail as any).booking?.customer ??
-    (detail as any).booking?.user ??
-    (detail as any).customer ??
-    null;
-  const invoice = (detail as any).booking?.invoice ?? (detail as any).invoice ?? null;
-  const bookingCourtSlots =
-    ((detail as any).booking?.courtSlots as any[]) ?? ((detail as any).courtSlots as any[]) ?? [];
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <p className="text-muted-foreground text-sm">Inventori</p>
-          <p className="font-medium">{detail.inventory.name}</p>
-          {detail.inventory.description && (
-            <p className="text-muted-foreground mt-1 text-xs">{detail.inventory.description}</p>
-          )}
-        </div>
-        <div>
-          <p className="text-muted-foreground text-sm">Pelanggan</p>
-          <p className="font-medium">{customer?.name || '-'}</p>
-          {customer?.phone && (
-            <p className="text-muted-foreground text-xs">{formatPhone(customer.phone)}</p>
-          )}
-        </div>
-        <div>
-          <p className="text-muted-foreground text-sm">Jumlah</p>
-          <p className="font-medium">
-            {detail.quantity} × {currency(detail.unitPrice)} = {currency(detail.totalPrice)}
-          </p>
-        </div>
-        <div>
-          <p className="text-muted-foreground text-sm">Status Pemesanan</p>
-          <Badge
-            variant={
-              BOOKING_STATUS_BADGE_VARIANT[
-                (detail as any).booking?.status as keyof typeof BOOKING_STATUS_MAP
-              ]
-            }
-          >
-            {BOOKING_STATUS_MAP[(detail as any).booking?.status as keyof typeof BOOKING_STATUS_MAP]}
-          </Badge>
-        </div>
-        <div>
-          <p className="text-muted-foreground text-sm">Invoice</p>
-          {invoice ? (
-            <div className="flex flex-col">
-              <span className="font-medium">{invoice.number}</span>
-              <span className="text-muted-foreground text-xs">{invoice.status}</span>
-              {invoice.payment?.method && (
-                <span className="text-muted-foreground text-xs">
-                  Metode: {(invoice.payment.method as any)?.name ?? invoice.payment.method}
-                </span>
-              )}
-            </div>
-          ) : (
-            <span className="text-muted-foreground">-</span>
-          )}
-        </div>
-        <div>
-          <p className="text-muted-foreground text-sm">Dibuat</p>
-          <p className="text-sm">
-            {dayjs((detail as any).booking?.createdAt ?? detail.createdAt).format(
-              'DD/MM/YYYY HH:mm'
-            )}
-          </p>
-        </div>
-      </div>
-
-      {bookingCourtSlots?.length > 0 && (
-        <div>
-          <p className="mb-2 text-sm font-medium">Slot Lapangan</p>
-          <div className="space-y-2">
-            {bookingCourtSlots.map((cs: any, idx: number) => (
-              <div key={idx} className="bg-muted/50 rounded-lg border p-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="font-medium">{(cs.court as any)?.name || '-'}</p>
-                    {cs.slot ? (
-                      <p className="text-muted-foreground text-sm">
-                        {cs.slot.date || formatSlotTime(cs.slot.startAt, 'DD MMM YYYY')} ·{' '}
-                        {cs.slot.startTime || formatSlotTime(cs.slot.startAt)} -{' '}
-                        {cs.slot.endTime || formatSlotTime(cs.slot.endAt)}
-                      </p>
-                    ) : (
-                      <p className="text-muted-foreground text-sm">
-                        {cs.date || formatSlotTime(cs.startAt, 'DD MMM YYYY')} · {cs.time}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {detail.coaches?.length > 0 && (
-        <div>
-          <p className="mb-2 text-sm font-medium">Coach</p>
-          <div className="space-y-2">
-            {detail.coaches.map((c, idx) => (
-              <div key={idx} className="bg-muted/50 rounded-lg border p-3">
-                <p className="font-medium">{c.staff.name}</p>
-                <p className="text-muted-foreground text-sm">
-                  {(c as any).coachType?.name ?? getCoachTypeLabel(c.coachType)} ·{' '}
-                  {formatSlotTime(c.slot.startAt)} - {formatSlotTime(c.slot.endAt)}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-    </div>
-  );
-};
-
-export default BookedInventoryTable;
+}

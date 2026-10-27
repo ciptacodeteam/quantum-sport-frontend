@@ -48,7 +48,6 @@ export default defineConfig([
       'react-hooks/exhaustive-deps': 'off',
       'react-hooks/rules-of-hooks': 'off',
       'react-hooks/incompatible-library': 'off'
-      '@typescript-eslint/no-misused-promises': 'off'
     }
   },
   {

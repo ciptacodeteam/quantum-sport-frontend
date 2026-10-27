@@ -6,6 +6,18 @@ import { useBranchStore } from '@/stores/useBranchStore';
 import { useBookingStore } from '@/stores/useBookingStore';
 import Link from 'next/link';
 import { useState } from 'react';
+import { MapPin, Settings2, ChevronDown } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuItem
+} from '@/components/ui/dropdown-menu';
 
 export default function AdminBranchControl() {
   const { data: user } = useQuery(adminProfileQueryOptions);
@@ -45,28 +57,78 @@ export default function AdminBranchControl() {
     window.location.assign('/admin/dashboard');
   };
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <label htmlFor="admin-branch" className="sr-only">
-        Cabang dashboard
-      </label>
-      <select
-        id="admin-branch"
-        value={selected || ''}
-        disabled={switching}
-        onChange={(event) => void changeBranch(event.target.value)}
-        className="h-9 max-w-48 border border-black/15 bg-white px-2 text-xs"
-      >
-        <option value="">Semua cabang</option>
-        {branches?.map((branch) => (
-          <option key={branch.id} value={branch.id}>
-            {branch.name}
-            {branch.isActive ? '' : ' (nonaktif)'}
-          </option>
-        ))}
-      </select>
-      <Link href="/admin/cabang" className="text-xs text-[#ad422b] underline">
-        Kelola cabang
-      </Link>
+    <div className="min-w-0">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="outline"
+            disabled={switching}
+            aria-label="Cabang dashboard"
+            className="h-10 max-w-[calc(100vw-160px)] gap-2 rounded-lg px-3 shadow-none sm:max-w-[240px]"
+          >
+            <MapPin className="text-muted-foreground size-4" />
+            <span className="truncate">
+              {switching
+                ? 'Memindahkan cabang...'
+                : selected
+                  ? branches?.find((branch) => branch.id === selected)?.name ||
+                    user.branch?.name ||
+                    'Pilih cabang'
+                  : 'Semua cabang'}
+            </span>
+            <ChevronDown className="text-muted-foreground ml-1 size-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="end"
+          sideOffset={8}
+          collisionPadding={12}
+          className="w-72 max-w-[calc(100vw-24px)] rounded-xl p-2 shadow-lg"
+        >
+          <DropdownMenuLabel className="text-muted-foreground px-3 py-2 text-xs font-medium">
+            Pilih cabang
+          </DropdownMenuLabel>
+          <DropdownMenuRadioGroup
+            value={selected || ''}
+            onValueChange={(value) => {
+              if (value !== (selected || '')) void changeBranch(value);
+            }}
+          >
+            <DropdownMenuRadioItem
+              value=""
+              className="data-[state=checked]:bg-muted rounded-lg py-3 pr-3"
+            >
+              <div className="space-y-1">
+                <p className="font-medium">Semua cabang</p>
+                <p className="text-muted-foreground text-xs">Ringkasan seluruh lokasi</p>
+              </div>
+            </DropdownMenuRadioItem>
+            <div className="max-h-64 overflow-y-auto">
+              {branches?.map((branch) => (
+                <DropdownMenuRadioItem
+                  key={branch.id}
+                  value={branch.id}
+                  className="data-[state=checked]:bg-muted rounded-lg py-3 pr-3"
+                >
+                  <span className="flex min-w-0 flex-col gap-1">
+                    <span className="font-medium break-words">{branch.name}</span>
+                    {!branch.isActive && (
+                      <span className="text-muted-foreground text-xs">Nonaktif</span>
+                    )}
+                  </span>
+                </DropdownMenuRadioItem>
+              ))}
+            </div>
+          </DropdownMenuRadioGroup>
+          <DropdownMenuSeparator className="my-2" />
+          <DropdownMenuItem asChild className="gap-2 rounded-lg px-3 py-2.5">
+            <Link href="/admin/cabang">
+              <Settings2 className="size-4 text-white" />
+              Kelola cabang
+            </Link>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
       {pending !== undefined && (
         <div
           role="alertdialog"

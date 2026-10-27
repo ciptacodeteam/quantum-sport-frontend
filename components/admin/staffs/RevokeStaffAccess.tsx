@@ -2,13 +2,7 @@
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle
-} from '@/components/ui/section';
+import StaffSettingsCard from './StaffSettingsCard';
 import { useConfirmMutation } from '@/hooks/useConfirmDialog';
 import { adminRevokeStaffSessionMutationOptions } from '@/mutations/admin/staff';
 import { adminStaffQueryOptions } from '@/queries/admin/staff';
@@ -42,24 +36,18 @@ const RevokeStaffAccess = ({ staffId }: Props) => {
   };
 
   return (
-    <Section>
-      <SectionHeader>
-        <SectionTitle title="Revoke Sessions" />
-        <SectionDescription description="Menghapus semua sesi aktif untuk karyawan ini." />
-      </SectionHeader>
-      <SectionContent>
-        <Alert variant="warning" className="mb-4">
-          <IconInfoCircle />
-          <AlertDescription>
-            Dengan mengklik tombol di bawah, anda akan mencabut sesi aktif untuk karyawan ini.
-            Karyawan yang bersangkutan akan diminta untuk login kembali pada semua perangkat.
-          </AlertDescription>
-        </Alert>
-        <Button variant="destructive" className="mt-6 md:mt-0" onClick={onRevoke}>
-          Revoke Sessions
-        </Button>
-      </SectionContent>
-    </Section>
+    <StaffSettingsCard title="Sesi login" description="Keluarkan karyawan dari semua perangkat.">
+      <Alert variant="warning" className="mb-4">
+        <IconInfoCircle />
+        <AlertDescription>
+          Dengan mengklik tombol di bawah, anda akan mencabut sesi aktif untuk karyawan ini.
+          Karyawan yang bersangkutan akan diminta untuk login kembali pada semua perangkat.
+        </AlertDescription>
+      </Alert>
+      <Button variant="outline" size="sm" className="rounded-lg shadow-none" onClick={onRevoke}>
+        Keluar dari semua perangkat
+      </Button>
+    </StaffSettingsCard>
   );
 };
 export default RevokeStaffAccess;

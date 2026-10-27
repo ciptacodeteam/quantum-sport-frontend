@@ -210,3 +210,28 @@ it('keeps the requested destination when confirming a switch with items in the c
   await waitFor(() => expect(mocks.push).toHaveBeenCalledWith('/membership'));
   expect(useBookingStore.getState().selectedInventories).toHaveLength(0);
 });
+it('offers only Cemara when entering the Tennis booking flow', async () => {
+  mocks.path = '/booking/tennis';
+  useBranchStore.setState({ branch: branches[1] });
+  sessionStorage.setItem('confirmed-branch', 's-parman');
+  show();
+  expect(await screen.findByText('Tennis hanya tersedia di cabang Cemara.')).toBeInTheDocument();
+  expect(screen.queryByText('Booking content')).toBeNull();
+  expect(screen.queryByRole('button', { name: /Black Padel S. Parman/ })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: /^Black Padel Cemara/ }));
+  expect(await screen.findByText('Booking content')).toBeInTheDocument();
+  expect(useBranchStore.getState().branch?.id).toBe('cemara');
+});
+it('filters a pending Tennis destination while leaving the current Padel selection intact', async () => {
+  mocks.path = '/booking';
+  useBranchStore.setState({
+    branch: branches[1],
+    selectorOpen: true,
+    pendingHref: '/booking/tennis'
+  });
+  sessionStorage.setItem('confirmed-branch', 's-parman');
+  show();
+  expect(await screen.findByText('Tennis hanya tersedia di cabang Cemara.')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /Black Padel S. Parman/ })).toBeNull();
+  expect(useBranchStore.getState().branch?.id).toBe('s-parman');
+});

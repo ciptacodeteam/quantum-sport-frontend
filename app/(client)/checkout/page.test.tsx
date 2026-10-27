@@ -61,7 +61,7 @@ afterEach(() => {
   mocks.mutate.mockClear();
   useBookingStore.getState().clearAll();
 });
-it('renders equipment-only checkout without requiring a court schedule', () => {
+it('ignores a legacy equipment-only cart and hides add-on ordering', () => {
   useBookingStore.getState().clearAll();
   useBookingStore.getState().addInventory({
     inventoryId: 'balls',
@@ -71,20 +71,13 @@ it('renders equipment-only checkout without requiring a court schedule', () => {
     timeSlot: 'default'
   });
   render(<CheckoutPage />);
-  expect(screen.getByText('Tennis Balls')).toBeInTheDocument();
-  expect(screen.queryByText('Belum ada pesanan')).not.toBeInTheDocument();
-  expect(screen.getAllByText('Rp50.000').length).toBeGreaterThan(0);
-  expect(screen.getByText('Pilih Metode Pembayaran')).toBeInTheDocument();
+  expect(screen.getByText('Belum ada pesanan')).toBeInTheDocument();
+  expect(screen.queryByText('Tennis Balls')).toBeNull();
+  expect(screen.queryByText('Tambah Add-Ons')).toBeNull();
 });
 
 it('shows payment loading after checkout even when the cart is cleared before navigation', () => {
-  useBookingStore.getState().addInventory({
-    inventoryId: 'balls',
-    inventoryName: 'Tennis Balls',
-    quantity: 1,
-    price: 25000,
-    timeSlot: 'default'
-  });
+  addMembershipCourt();
   render(<CheckoutPage />);
   act(() => mocks.checkoutSuccess?.({ data: { invoiceNumber: 'INV-TEST' } }));
   expect(screen.getByText('Menyiapkan pesanan')).toBeInTheDocument();
@@ -92,15 +85,9 @@ it('shows payment loading after checkout even when the cart is cleared before na
 });
 it('shows a processing indicator while the checkout request is pending', () => {
   mocks.pending = true;
-  useBookingStore.getState().addInventory({
-    inventoryId: 'balls',
-    inventoryName: 'Tennis Balls',
-    quantity: 1,
-    price: 25000,
-    timeSlot: 'default'
-  });
+  addMembershipCourt();
   render(<CheckoutPage />);
-  expect(screen.getByText('Memproses pembayaran')).toBeInTheDocument();
+  expect(screen.getByText('Mengonfirmasi pesanan')).toBeInTheDocument();
 });
 
 function addMembershipCourt() {
@@ -134,7 +121,7 @@ it('confirms membership-covered bookings without a selected payment method', asy
   });
   expect(mocks.mutate.mock.calls[0][0]).not.toHaveProperty('paymentMethodId');
 });
-it('keeps payment selection for paid add-ons even when courts are covered', () => {
+it('ignores legacy add-ons when confirming a membership-covered court', async () => {
   addMembershipCourt();
   useBookingStore.getState().addInventory({
     inventoryId: 'towel',
@@ -144,8 +131,15 @@ it('keeps payment selection for paid add-ons even when courts are covered', () =
     timeSlot: 'default'
   });
   render(<CheckoutPage />);
-  expect(screen.getByText('Pilih Metode Pembayaran')).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Konfirmasi booking' })).toBeNull();
+  expect(screen.queryByText('Towel')).toBeNull();
+  expect(screen.queryByText('Pilih Metode Pembayaran')).toBeNull();
+  expect(screen.queryByText('Subtotal add-ons')).toBeNull();
+  fireEvent.click(screen.getAllByRole('button', { name: 'Konfirmasi booking' })[0]);
+  await waitFor(() => expect(mocks.mutate).toHaveBeenCalled());
+  const payload = mocks.mutate.mock.calls[0][0];
+  expect(payload.courtSlots).toEqual(['court-slot']);
+  for (const key of ['inventories', 'coachSlots', 'ballboySlots'])
+    expect(payload).not.toHaveProperty(key);
 });
 it('does not require a stored card for a zero-rupiah membership booking', async () => {
   addMembershipCourt();

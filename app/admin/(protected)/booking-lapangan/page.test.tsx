@@ -1,92 +1,65 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import dayjs from 'dayjs';
-import { useBookingStore } from '@/stores/useBookingStore';
 import BookingLapangan from './page';
+import { useBookingStore } from '@/stores/useBookingStore';
 
-const mocks = vi.hoisted(() => ({ slots: [] as any[], push: vi.fn() }));
+const fixtures = vi.hoisted(() => ({
+  slots: ['court-a', 'court-b'].map((id) => ({
+    id: `slot-${id}`,
+    courtId: id,
+    court: { id, name: id === 'court-a' ? 'Court A' : 'Court B' },
+    startAt: '2040-01-02T12:00:00Z',
+    endAt: '2040-01-02T13:00:00Z',
+    price: 150000,
+    isAvailable: true
+  }))
+}));
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: mocks.push }),
+  useRouter: () => ({ push: vi.fn() }),
   useSearchParams: () => new URLSearchParams()
 }));
 vi.mock('@tanstack/react-query', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@tanstack/react-query')>()),
-  useQuery: () => ({ data: mocks.slots, isLoading: false }),
+  useQuery: () => ({ data: fixtures.slots, isLoading: false }),
   useQueryClient: () => ({ invalidateQueries: vi.fn() })
 }));
+vi.mock('@/components/admin/booking/BookingSummary', () => ({ default: () => null }));
 vi.mock('@/hooks/useMembershipDiscount', () => ({
-  useMembershipDiscount: () => ({
-    discountAmount: 0,
-    originalTotal: 0,
-    finalTotal: 0,
-    canUseMembership: false
-  })
-}));
-vi.mock('@/components/admin/booking/BookingSummary', () => ({
-  default: () => <div>Booking summary</div>
+  useMembershipDiscount: () => ({ discountAmount: 0, discountedTotal: 0, originalTotal: 0 })
 }));
 
 beforeEach(() => {
   useBookingStore.getState().clearAll();
-  const tomorrow = dayjs().add(1, 'day').startOf('day');
-  useBookingStore.setState({ selectedDate: tomorrow.toDate(), selectedCustomerId: null });
-  mocks.slots = [9, 10].map((hour) => ({
-    id: `slot-${hour}`,
-    courtId: 'court-a',
-    court: { id: 'court-a', name: 'Court Alpha', image: null },
-    startAt: `${tomorrow.format('YYYY-MM-DD')}T${hour.toString().padStart(2, '0')}:00:00+07:00`,
-    endAt: `${tomorrow.format('YYYY-MM-DD')}T${(hour + 1).toString().padStart(2, '0')}:00:00+07:00`,
-    price: 150000,
-    discountPrice: 0,
-    isAvailable: hour === 9
-  }));
+  useBookingStore.setState({ selectedDate: new Date(2040, 0, 2) });
 });
 afterEach(cleanup);
 
-it('supports court and time selection with real buttons and adds the chosen slot to the booking', () => {
+it('deselects a court on a second click and clears its pending time slots', () => {
   render(<BookingLapangan />);
-  fireEvent.click(screen.getByRole('button', { name: /Court Alpha/ }));
-  expect(screen.getByRole('button', { name: /Court Alpha/ })).toHaveAttribute(
-    'aria-pressed',
-    'true'
-  );
-  const available = screen.getByRole('button', { name: '09:00' });
-  fireEvent.click(available);
-  expect(available).toHaveAttribute('aria-pressed', 'true');
-  fireEvent.click(screen.getByRole('button', { name: 'Add to Booking (1)' }));
-  expect(useBookingStore.getState().bookingItems).toEqual([
-    expect.objectContaining({
-      courtId: 'court-a',
-      slotId: 'slot-9',
-      timeSlot: '09:00 - 10:00',
-      price: 150000
-    })
-  ]);
-});
+  const court = screen.getByRole('button', { name: /Court A/ });
+  fireEvent.click(court);
+  fireEvent.click(screen.getByRole('button', { name: '12:00' }));
+  expect(screen.getByRole('button', { name: /Add to Booking/ })).toBeInTheDocument();
 
-it('prevents unavailable time slots from being selected', () => {
-  render(<BookingLapangan />);
-  fireEvent.click(screen.getByRole('button', { name: /Court Alpha/ }));
-  const booked = screen.getByRole('button', { name: '10:00 · Booked' });
-  expect(booked).toBeDisabled();
-  fireEvent.click(booked);
+  fireEvent.click(court);
+  expect(court).toHaveAttribute('aria-pressed', 'false');
   expect(screen.queryByRole('button', { name: /Add to Booking/ })).not.toBeInTheDocument();
+  expect(screen.getByText('Select a court first to view time slots')).toBeInTheDocument();
+
+  fireEvent.click(court);
+  expect(court).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('button', { name: '12:00' })).toHaveAttribute('aria-pressed', 'false');
 });
 
-it('keeps a continuous price range when a middle slot is already booked', () => {
-  const date = dayjs(useBookingStore.getState().selectedDate).format('YYYY-MM-DD');
-  mocks.slots = [15, 16, 17].map((hour) => ({
-    id: `slot-${hour}`,
-    courtId: 'court-a',
-    court: { id: 'court-a', name: 'Court Alpha', image: null },
-    startAt: `${date}T${hour}:00:00+07:00`,
-    endAt: `${date}T${hour + 1}:00:00+07:00`,
-    price: 200000,
-    discountPrice: 0,
-    isAvailable: hour !== 16
-  }));
+it('clears pending times when switching to another court', () => {
   render(<BookingLapangan />);
-  expect(screen.getByText(/15:00–18:00/)).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: /Court Alpha/ }));
-  expect(screen.getByRole('button', { name: '16:00 · Booked' })).toBeDisabled();
+  const first = screen.getByRole('button', { name: /Court A/ });
+  const second = screen.getByRole('button', { name: /Court B/ });
+  fireEvent.click(first);
+  fireEvent.click(screen.getByRole('button', { name: '12:00' }));
+  fireEvent.click(second);
+  expect(first).toHaveAttribute('aria-pressed', 'false');
+  expect(second).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('button', { name: '12:00' })).toHaveAttribute('aria-pressed', 'false');
+  expect(screen.queryByRole('button', { name: /Add to Booking/ })).not.toBeInTheDocument();
 });

@@ -7,13 +7,14 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getBranches } from '@/api/branch';
 import { useBranchStore } from '@/stores/useBranchStore';
 import { useBookingStore } from '@/stores/useBookingStore';
+import { branchSupportsTennis } from '@/lib/court-branch-policy';
 import type { Branch } from '@/types/branch';
 
 export default function BranchGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const requiresBranch =
-    /^\/(booking|membership|add-ons|checkout)(\/|$)/.test(pathname) &&
+    /^\/(booking|membership|checkout)(\/|$)/.test(pathname) &&
     pathname !== '/checkout/3ds-challenge';
   const { branch, selectorOpen, pendingHref, setBranch, closeSelector } = useBranchStore();
   const [ready, setReady] = useState(false);
@@ -39,10 +40,18 @@ export default function BranchGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     setSwitching(false);
   }, [pathname]);
-  const validBranch = branches?.find((item) => item.id === branch?.id);
+  const tennisPage = /^\/booking\/tennis(?:\/|$)/.test(pathname);
+  const tennisSelection = /^\/booking\/tennis(?:[/?#]|$)/.test(pendingHref || pathname);
+  const availableBranches = tennisSelection
+    ? branches?.filter((item) => branchSupportsTennis(item.id))
+    : branches;
+  const validBranch = branches?.find(
+    (item) => item.id === branch?.id && (!tennisPage || branchSupportsTennis(item.id))
+  );
   if (!ready && requiresBranch) return <div className="min-h-dvh bg-white" />;
 
   const choose = async (next: Branch, discardCart = false) => {
+    if (tennisSelection && !branchSupportsTennis(next.id)) return;
     const cart = useBookingStore.getState();
     const hasCart = !!(
       cart.bookingItems.length ||
@@ -159,31 +168,38 @@ export default function BranchGate({ children }: { children: ReactNode }) {
                   <p role="status" className="py-5 text-sm text-black/50">
                     Memuat cabang…
                   </p>
-                ) : !branches.length ? (
+                ) : !availableBranches?.length ? (
                   <p className="text-sm text-black/50">Belum ada cabang yang tersedia.</p>
                 ) : (
-                  branches.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      disabled={switching}
-                      onClick={() => void choose(item)}
-                      className="block w-full border border-black/15 p-5 text-left transition-colors hover:border-[#ad422b] hover:bg-[#f8f8f6] focus-visible:outline-2 focus-visible:outline-[#ad422b] disabled:opacity-50"
-                    >
-                      <span className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="text-base font-medium">{item.name}</span>
-                        {item.id === branch?.id && (
-                          <span className="text-xs text-[#ad422b]">Pilihan terakhir</span>
-                        )}
-                      </span>
-                      <span className="mt-2 block text-sm leading-relaxed text-black/50">
-                        {item.address}
-                      </span>
-                      <span className="mt-4 block text-xs font-medium text-[#ad422b]">
-                        {item.id === branch?.id ? 'Lanjut di cabang ini' : 'Pilih cabang'}
-                      </span>
-                    </button>
-                  ))
+                  <>
+                    {tennisSelection && (
+                      <p className="border border-black/15 bg-[#f8f8f6] p-3 text-sm">
+                        Tennis hanya tersedia di cabang Cemara.
+                      </p>
+                    )}
+                    {availableBranches.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        disabled={switching}
+                        onClick={() => void choose(item)}
+                        className="block w-full border border-black/15 p-5 text-left transition-colors hover:border-[#ad422b] hover:bg-[#f8f8f6] focus-visible:outline-2 focus-visible:outline-[#ad422b] disabled:opacity-50"
+                      >
+                        <span className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="text-base font-medium">{item.name}</span>
+                          {item.id === branch?.id && (
+                            <span className="text-xs text-[#ad422b]">Pilihan terakhir</span>
+                          )}
+                        </span>
+                        <span className="mt-2 block text-sm leading-relaxed text-black/50">
+                          {item.address}
+                        </span>
+                        <span className="mt-4 block text-xs font-medium text-[#ad422b]">
+                          {item.id === branch?.id ? 'Lanjut di cabang ini' : 'Pilih cabang'}
+                        </span>
+                      </button>
+                    ))}
+                  </>
                 )}
               </div>
             )}

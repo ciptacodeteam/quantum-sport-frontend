@@ -286,7 +286,7 @@ export default function InvoiceDetailPage() {
                         ? '/membership'
                         : details.length
                           ? '/booking'
-                          : '/add-ons'
+                          : '/booking'
                     }
                   >
                     Buat pesanan baru

@@ -1,4 +1,7 @@
-import CoachCostingTable from '@/components/admin/staffs/StaffCostingTable';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { IconArrowLeft } from '@tabler/icons-react';
+import StaffSettingsCard from '@/components/admin/staffs/StaffSettingsCard';
 import EditStaffForm from '@/components/admin/staffs/EditStaffForm';
 import ResetStaffPassword from '@/components/admin/staffs/ResetStaffPassword';
 import RevokeStaffAccess from '@/components/admin/staffs/RevokeStaffAccess';
@@ -9,7 +12,6 @@ import {
   SectionHeader,
   SectionTitle
 } from '@/components/ui/section';
-import { Separator } from '@/components/ui/separator';
 import { createQueryClient } from '@/lib/query-client';
 import { adminStaffQueryOptions } from '@/queries/admin/staff';
 import { type IdParams } from '@/types';
@@ -24,25 +26,31 @@ const EditStaffPage = async ({ params }) => {
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <main>
+      <main className="w-full min-w-0">
+        <Button asChild variant="ghost" size="sm" className="text-muted-foreground mb-4 -ml-2">
+          <Link href="/admin/kelola-karyawan">
+            <IconArrowLeft />
+            Daftar karyawan
+          </Link>
+        </Button>
         <Section>
           <SectionHeader>
-            <SectionTitle title="Kelola Karyawan" />
-            <SectionDescription description="Atur dan pantau karyawan Anda di sini." />
+            <SectionTitle title="Edit Karyawan" />
+            <SectionDescription description="Perbarui profil dan pengaturan akses karyawan." />
           </SectionHeader>
           <SectionContent className="mt-4">
-            <div className="mt-4 grid grid-cols-1 justify-center xl:grid-cols-2 xl:gap-x-6">
-              <div className="md:max-w-3xl">
+            <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+              <StaffSettingsCard
+                title="Informasi karyawan"
+                description="Kelola foto, kontak, peran, dan status akun."
+              >
                 <EditStaffForm staffId={param.id} />
-              </div>
-              <Separator className="mt-10 mb-6 block xl:hidden" />
-              <div>
+              </StaffSettingsCard>
+              <div className="min-w-0 space-y-5">
                 <ResetStaffPassword staffId={param.id} />
-                <Separator className="my-4" />
                 <RevokeStaffAccess staffId={param.id} />
               </div>
             </div>
-            <CoachCostingTable staffId={param.id} />
           </SectionContent>
         </Section>
       </main>

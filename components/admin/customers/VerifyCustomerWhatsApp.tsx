@@ -2,13 +2,7 @@
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle
-} from '@/components/ui/section';
+import CustomerSettingsCard from './CustomerSettingsCard';
 import { useConfirmMutation } from '@/hooks/useConfirmDialog';
 import { adminVerifyCustomerPhoneMutationOptions } from '@/mutations/admin/customer';
 import { adminCustomerQueryOptions, adminCustomersQueryOptions } from '@/queries/admin/customer';
@@ -38,35 +32,37 @@ const VerifyCustomerWhatsApp = ({ customerId }: Props) => {
         success: 'Nomor WhatsApp berhasil diverifikasi.',
         error: 'Gagal memverifikasi nomor WhatsApp.'
       },
-      invalidate: [adminCustomerQueryOptions(customerId).queryKey, adminCustomersQueryOptions.queryKey]
+      invalidate: [
+        adminCustomerQueryOptions(customerId).queryKey,
+        adminCustomersQueryOptions.queryKey
+      ]
     }
   );
 
   return (
-    <Section>
-      <SectionHeader>
-        <SectionTitle title="Verifikasi WhatsApp Kustomer" />
-        <SectionDescription description="Tandai nomor WhatsApp kustomer sebagai terverifikasi." />
-      </SectionHeader>
-      <SectionContent>
-        <Alert variant={customer?.phoneVerified ? 'success' : 'info'} className="mb-4">
-          <IconInfoCircle />
-          <AlertDescription>
-            {customer?.phoneVerified
-              ? 'Nomor WhatsApp kustomer ini sudah terverifikasi.'
-              : 'Jika OTP tidak masuk, admin dapat memverifikasi nomor ini secara manual setelah memastikan nomor benar.'}
-          </AlertDescription>
-        </Alert>
+    <CustomerSettingsCard
+      title="WhatsApp"
+      description="Verifikasi nomor kustomer setelah memastikan nomor tersebut benar."
+    >
+      <Alert variant={customer?.phoneVerified ? 'success' : 'info'} className="text-sm">
+        <IconInfoCircle />
+        <AlertDescription>
+          {customer?.phoneVerified
+            ? 'Nomor WhatsApp kustomer ini sudah terverifikasi.'
+            : 'Jika OTP tidak masuk, admin dapat memverifikasi nomor ini secara manual setelah memastikan nomor benar.'}
+        </AlertDescription>
+      </Alert>
 
-        <Button
-          variant="secondary"
-          disabled={!customer?.phone || customer?.phoneVerified}
-          onClick={() => confirmAndMutate(customerId)}
-        >
-          Tandai WhatsApp Terverifikasi
-        </Button>
-      </SectionContent>
-    </Section>
+      <Button
+        variant="outline"
+        size="sm"
+        className="rounded-lg shadow-none"
+        disabled={!customer?.phone || customer?.phoneVerified}
+        onClick={() => confirmAndMutate(customerId)}
+      >
+        {customer?.phoneVerified ? 'Sudah terverifikasi' : 'Verifikasi nomor'}
+      </Button>
+    </CustomerSettingsCard>
   );
 };
 

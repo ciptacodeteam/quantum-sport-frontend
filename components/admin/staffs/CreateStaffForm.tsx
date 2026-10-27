@@ -24,9 +24,8 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { COACH_TYPE_OPTIONS, ROLE, ROLE_OPTIONS } from '@/lib/constants';
-import { cn, formatPhone, getPlaceholderImageUrl } from '@/lib/utils';
+import { ROLE, ROLE_OPTIONS } from '@/lib/constants';
+import { formatPhone, getNameInitial } from '@/lib/utils';
 import { adminCreateStaffMutationOptions } from '@/mutations/admin/staff';
 import { adminProfileQueryOptions } from '@/queries/admin/auth';
 import { adminStaffsQueryOptions } from '@/queries/admin/staff';
@@ -39,17 +38,16 @@ import z from 'zod';
 
 const formSchema = z
   .object({
-    image: z.file().optional(),
+    image: z
+      .file()
+      .max(2 * 1024 * 1024, 'Ukuran foto maksimal 2 MB')
+      .mime(['image/jpeg', 'image/png'], 'Gunakan foto JPG atau PNG')
+      .optional(),
     name: z.string().min(1, { message: 'Nama wajib diisi' }),
     email: z.string().email({ message: 'Email tidak valid' }),
-    role: z.enum(
-      [ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.ADMIN_VIEWER, ROLE.BALLBOY, ROLE.COACH, ROLE.CASHIER],
-      {
-        message: 'Role tidak valid'
-      }
-    ),
-    coachType: z.string().optional(),
-    coachProfile: z.string().max(2000, { message: 'Portfolio maksimal 2000 karakter' }).optional(),
+    role: z.enum([ROLE.SUPER_ADMIN, ROLE.ADMIN, ROLE.ADMIN_VIEWER, ROLE.CASHIER], {
+      message: 'Role tidak valid'
+    }),
     phone: z
       .string()
       .min(10, { message: 'Nomor telepon minimal 10 digit' })
@@ -61,19 +59,7 @@ const formSchema = z
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Password dan konfirmasi password tidak sesuai',
     path: ['confirmPassword']
-  })
-  .refine(
-    (data) => {
-      if (data.role === ROLE.COACH) {
-        return !!data.coachType;
-      }
-      return true;
-    },
-    {
-      message: 'Coach type wajib diisi untuk role Coach',
-      path: ['coachType']
-    }
-  );
+  });
 
 type FormSchema = z.infer<typeof formSchema>;
 
@@ -85,8 +71,6 @@ const CreateStaffForm = () => {
       name: '',
       email: '',
       role: ROLE.ADMIN,
-      coachType: undefined,
-      coachProfile: '',
       phone: '',
       password: '',
       confirmPassword: '',
@@ -94,8 +78,6 @@ const CreateStaffForm = () => {
       joinedAt: new Date()
     }
   });
-
-  const selectedRole = form.watch('role');
 
   const [imagePreview, setImagePreview] = useState<string | ArrayBuffer | null>(null);
 
@@ -127,25 +109,19 @@ const CreateStaffForm = () => {
   return (
     <form onSubmit={form.handleSubmit(onSubmit)}>
       <FieldSet>
-        <FieldGroup>
-          <div className="mb-2 flex items-center justify-center gap-6">
-            <Avatar className="border-muted h-32 w-32 border">
+        <FieldGroup className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <div className="bg-muted/20 flex flex-wrap items-center gap-4 rounded-lg border p-4 sm:col-span-2">
+            <Avatar className="size-16 shrink-0 rounded-xl border">
               <AvatarImage
-                src={
-                  typeof imagePreview === 'string'
-                    ? imagePreview
-                    : getPlaceholderImageUrl({
-                        width: 128,
-                        height: 128,
-                        text: 'A'
-                      })
-                }
-                alt={"user's profile image"}
+                src={typeof imagePreview === 'string' ? imagePreview : undefined}
+                alt="Foto karyawan"
               />
-              <AvatarFallback>A</AvatarFallback>
+              <AvatarFallback className="bg-muted text-muted-foreground rounded-xl text-lg">
+                {getNameInitial(form.watch('name') || 'K')}
+              </AvatarFallback>
             </Avatar>
 
-            <Field>
+            <Field className="min-w-0 flex-1 basis-56">
               <FieldLabel htmlFor="image">Foto</FieldLabel>
               <Controller
                 control={form.control}
@@ -154,8 +130,8 @@ const CreateStaffForm = () => {
                   <Input
                     id="image"
                     type="file"
-                    className={cn('max-w-sm')}
-                    accept="image/*"
+                    className="bg-background w-full"
+                    accept="image/jpeg,image/png"
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       field.onChange(file);
@@ -181,7 +157,12 @@ const CreateStaffForm = () => {
 
           <Field>
             <FieldLabel htmlFor="name">Nama Lengkap</FieldLabel>
-            <Input id="name" type="text" {...form.register('name')} placeholder="e.g. John Doe" />
+            <Input
+              id="name"
+              type="text"
+              {...form.register('name')}
+              placeholder="Nama lengkap karyawan"
+            />
             <FieldError>{form.formState.errors.name?.message}</FieldError>
           </Field>
           <Field>
@@ -190,7 +171,7 @@ const CreateStaffForm = () => {
               id="email"
               type="text"
               {...form.register('email')}
-              placeholder="e.g. john.doe@example.com"
+              placeholder="nama@email.com"
             />
             <FieldError>{form.formState.errors.email?.message}</FieldError>
           </Field>
@@ -202,7 +183,7 @@ const CreateStaffForm = () => {
                 id="phone"
                 type="tel"
                 {...form.register('phone')}
-                placeholder="e.g. 81234567890"
+                placeholder="81234567890"
                 onBlur={(e) => {
                   const val = e.target.value ?? '';
                   if (val.startsWith('0')) {
@@ -222,23 +203,14 @@ const CreateStaffForm = () => {
             <FieldError>{form.formState.errors.phone?.message}</FieldError>
           </Field>
           <Field>
-            <FieldLabel htmlFor="role">Role</FieldLabel>
+            <FieldLabel htmlFor="role">Peran akses</FieldLabel>
             <Controller
               control={form.control}
               name="role"
               render={({ field }) => (
-                <Select
-                  onValueChange={(value) => {
-                    field.onChange(value);
-                    if (value !== ROLE.COACH) {
-                      form.setValue('coachType', undefined);
-                      form.setValue('coachProfile', '');
-                    }
-                  }}
-                  value={field.value}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Select a role" />
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <SelectTrigger id="role" className="w-full">
+                    <SelectValue placeholder="Pilih peran karyawan" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
@@ -258,48 +230,6 @@ const CreateStaffForm = () => {
             />
             <FieldError>{form.formState.errors.role?.message}</FieldError>
           </Field>
-          {selectedRole === ROLE.COACH && (
-            <>
-              <Field>
-                <FieldLabel htmlFor="coachType">Coach Type</FieldLabel>
-                <Controller
-                  control={form.control}
-                  name="coachType"
-                  render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Select coach type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          {COACH_TYPE_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                <FieldError>{form.formState.errors.coachType?.message}</FieldError>
-              </Field>
-
-              <Field>
-                <FieldLabel htmlFor="coachProfile">Portfolio Coach</FieldLabel>
-                <Textarea
-                  id="coachProfile"
-                  {...form.register('coachProfile')}
-                  className="min-h-28"
-                  placeholder={'Satu prestasi per baris\nContoh: Certified padel coach'}
-                />
-                <FieldDescription>
-                  Setiap baris akan tampil sebagai list prestasi di halaman Coach.
-                </FieldDescription>
-                <FieldError>{form.formState.errors.coachProfile?.message}</FieldError>
-              </Field>
-            </>
-          )}
           <Field>
             <FieldLabel htmlFor="joinedAt">Tanggal Bergabung</FieldLabel>
             <Controller
@@ -311,13 +241,13 @@ const CreateStaffForm = () => {
             />
             <FieldError>{form.formState.errors.joinedAt?.message}</FieldError>
           </Field>
-          <div className="grid grid-cols-1 gap-x-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 border-t pt-5 sm:col-span-2 sm:grid-cols-2">
             <Field>
               <FieldLabel htmlFor="password">Password</FieldLabel>
               <PasswordInput
                 id="password"
                 {...form.register('password')}
-                placeholder="Masukkan password Anda"
+                placeholder="Minimal 6 karakter"
               />
               <FieldError>{form.formState.errors.password?.message}</FieldError>
             </Field>
@@ -326,14 +256,14 @@ const CreateStaffForm = () => {
               <PasswordInput
                 id="confirmPassword"
                 {...form.register('confirmPassword')}
-                placeholder="Konfirmasi password Anda"
+                placeholder="Ulangi kata sandi"
               />
               <FieldError>{form.formState.errors.confirmPassword?.message}</FieldError>
             </Field>
           </div>
-          <Field className="mt-2">
-            <Button type="submit" className="w-fit!" loading={isPending}>
-              Save
+          <Field className="border-t pt-4 sm:col-span-2">
+            <Button type="submit" className="w-fit! rounded-lg" loading={isPending}>
+              Simpan karyawan
             </Button>
           </Field>
         </FieldGroup>

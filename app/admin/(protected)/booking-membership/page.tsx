@@ -6,7 +6,6 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import {
   Dialog,
@@ -28,14 +27,7 @@ import {
   CommandItem,
   CommandList
 } from '@/components/ui/command';
-import {
-  IconCalendar,
-  IconCheck,
-  IconCrown,
-  IconSparkles,
-  IconUser,
-  IconUserPlus
-} from '@tabler/icons-react';
+import { IconCalendar, IconCheck, IconUser, IconUserPlus } from '@tabler/icons-react';
 import { cn } from '@/lib/utils';
 import { membershipTypeDescriptions, membershipTypeLabels } from '@/lib/membership-hours';
 import { toast } from 'sonner';
@@ -153,46 +145,37 @@ const BookingMembershipPage = () => {
   );
 
   return (
-    <main className="space-y-6">
-      <header className="space-y-1">
-        <p className="text-primary/70 text-sm font-semibold">Value Pack</p>
-        <div className="flex flex-wrap items-baseline justify-between gap-3">
-          <h1 className="text-2xl leading-tight font-semibold">Booking Value Pack</h1>
-          <Badge
-            variant="outline"
-            className="rounded-full px-3 py-1 text-xs font-semibold tracking-wide"
-          >
-            Admin Tools
-          </Badge>
-        </div>
+    <main className="w-full min-w-0 space-y-6 pb-6">
+      <header className="space-y-2">
+        <h1 className="text-lg font-semibold">Booking Value Pack</h1>
         <p className="text-muted-foreground text-sm">
-          Pilih kategori paket, tetapkan pelanggan, lalu proses pembayaran membership secara instan.
+          Pilih paket, pelanggan, dan tanggal mulai membership.
         </p>
       </header>
 
-      <div className="grid gap-6 2xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_360px] 2xl:grid-cols-[minmax(0,1fr)_400px]">
         <section className="min-w-0 space-y-4">
-          <div className="bg-card/60 flex flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-3 shadow-sm">
-            <div>
-              <p className="text-muted-foreground text-sm font-medium">Katalog paket aktif</p>
-              <p className="text-lg font-semibold">
-                {isMembershipsLoading
-                  ? 'Memuat data...'
-                  : `${memberships.length} opsi ${sportLabels[selectedSport]}`}
-              </p>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-semibold">Pilihan paket</h2>
+              {!isMembershipsLoading && (
+                <span className="text-muted-foreground bg-muted rounded-md px-2 py-0.5 text-xs">
+                  {memberships.length}
+                </span>
+              )}
             </div>
             <Tabs
               value={selectedSport}
               onValueChange={(value) => setSelectedSport(value as MembershipSport)}
             >
-              <TabsList className="grid h-10 w-full grid-cols-2 sm:w-[220px]">
+              <TabsList className="grid h-10 w-full grid-cols-2 sm:w-48">
                 <TabsTrigger value="PADEL">Padel</TabsTrigger>
                 <TabsTrigger value="TENNIS">Tennis</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
 
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,260px),1fr))] gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {isMembershipsLoading ? (
               <div className="text-muted-foreground rounded-2xl border bg-white p-8 text-center text-sm shadow-sm">
                 Memuat paket membership...
@@ -210,63 +193,67 @@ const BookingMembershipPage = () => {
                   <button
                     key={membership.id}
                     type="button"
+                    aria-pressed={isSelected}
                     className={cn(
-                      'group bg-card/80 h-full min-w-0 rounded-2xl border text-left transition-all hover:-translate-y-0.5 hover:shadow-lg focus-visible:ring-2 focus-visible:outline-none',
+                      'group bg-card focus-visible:ring-ring flex h-full min-w-0 flex-col overflow-hidden rounded-xl border text-left transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
                       isSelected
-                        ? 'border-primary ring-primary/20 shadow-lg ring-1'
-                        : 'border-border'
+                        ? 'border-primary ring-primary ring-1'
+                        : 'border-border hover:border-primary/50'
                     )}
                     onClick={() => setSelectedMembershipId(isSelected ? null : membership.id)}
                   >
-                    <div className="flex h-full flex-col gap-4 p-4">
+                    <div className="flex h-full w-full flex-col gap-4 p-5">
                       <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 space-y-1">
-                          <p className="text-primary text-[11px] font-semibold tracking-wide uppercase">
+                        <div className="min-w-0 space-y-2">
+                          <p className="text-muted-foreground text-xs">
                             {sportLabels[membership.sport ?? 'PADEL']} · {membership.sessions} sesi
+                            · {membership.duration} hari
                           </p>
-                          <Badge variant="secondary" className="w-fit">
-                            {membershipTypeLabels[membership.type]} ·{' '}
-                            {membershipTypeDescriptions[membership.type]}
-                          </Badge>
-                          <div className="flex items-center gap-2 text-lg leading-tight font-semibold">
-                            <IconCrown className="h-4 w-4 text-yellow-500" />
-                            <span className="truncate">{membership.name}</span>
-                          </div>
-                          <p className="text-muted-foreground line-clamp-2 text-sm">
-                            {membership.description || 'Value Pack unggulan Quantum Sport'}
-                          </p>
+                          <h3 className="min-h-12 text-base leading-6 font-semibold break-words">
+                            {membership.name}
+                          </h3>
                         </div>
-                        {isSelected && (
-                          <Badge variant="default" className="shrink-0">
-                            Dipilih
-                          </Badge>
-                        )}
+                        <span
+                          className={cn(
+                            'mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border',
+                            isSelected ? 'border-primary bg-primary text-white' : 'border-input'
+                          )}
+                        >
+                          {isSelected && <IconCheck className="size-3.5" />}
+                        </span>
                       </div>
-
-                      <div>
-                        <p className="text-primary text-2xl font-bold">
+                      <div className="space-y-1">
+                        <p className="text-2xl font-semibold tracking-tight tabular-nums">
                           {formatCurrency(membership.price)}
                         </p>
                         <p className="text-muted-foreground text-xs">
-                          Durasi {membership.duration} hari
+                          {membershipTypeLabels[membership.type]} ·{' '}
+                          {membershipTypeDescriptions[membership.type]}
                         </p>
                       </div>
-
-                      {benefits.length > 0 && (
-                        <div className="bg-muted/60 space-y-1 rounded-xl p-3 text-xs">
-                          {(isSelected ? benefits : benefits.slice(0, 3)).map((benefit) => (
-                            <div key={benefit} className="flex items-center gap-2">
-                              <IconCheck className="text-primary h-3.5 w-3.5 shrink-0" />
-                              <span className="text-muted-foreground">{benefit}</span>
-                            </div>
-                          ))}
-                          {!isSelected && benefits.length > 3 && (
-                            <p className="text-muted-foreground mt-1">
-                              +{benefits.length - 3} benefit lainnya
-                            </p>
-                          )}
-                        </div>
-                      )}
+                      <div className="min-h-16 space-y-2 border-t pt-3 text-xs">
+                        {benefits.slice(0, 2).map((benefit, index) => (
+                          <div key={`${membership.id}-${index}`} className="flex items-start gap-2">
+                            <IconCheck className="text-primary mt-0.5 size-3.5 shrink-0" />
+                            <span className="text-muted-foreground line-clamp-1">{benefit}</span>
+                          </div>
+                        ))}
+                        {benefits.length > 2 && (
+                          <p className="text-muted-foreground pl-5.5">
+                            +{benefits.length - 2} benefit lainnya
+                          </p>
+                        )}
+                      </div>
+                      <div
+                        className={cn(
+                          'mt-auto rounded-lg px-3 py-2 text-center text-sm font-medium',
+                          isSelected
+                            ? 'bg-primary/10 text-primary'
+                            : 'bg-muted text-foreground group-hover:bg-primary/5'
+                        )}
+                      >
+                        {isSelected ? 'Paket dipilih' : 'Pilih paket'}
+                      </div>
                     </div>
                   </button>
                 );
@@ -275,21 +262,13 @@ const BookingMembershipPage = () => {
           </div>
         </section>
 
-        <aside className="min-w-0 space-y-4">
-          <Card className="bg-card/80 min-w-0 rounded-2xl border shadow-sm 2xl:sticky 2xl:top-4">
-            <CardHeader className="space-y-1 pb-4">
-              <div className="text-primary/70 flex items-center gap-2 text-sm font-medium">
-                <IconSparkles className="h-4 w-4" />
-                Detail Pemesanan
-              </div>
-              <CardTitle className="text-xl font-semibold">
-                {selectedMembership ? selectedMembership.name : 'Belum ada paket dipilih'}
-              </CardTitle>
-              <p className="text-muted-foreground text-sm">
-                Pilih pelanggan dan tentukan tanggal mulai membership.
-              </p>
+        <aside className="min-w-0 xl:sticky xl:top-4">
+          <Card className="min-w-0 gap-5 rounded-xl py-5 shadow-none">
+            <CardHeader className="space-y-2 px-5">
+              <CardTitle className="text-base">Ringkasan pemesanan</CardTitle>
+              <p className="text-muted-foreground text-xs">Lengkapi data untuk membuat booking.</p>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-5 px-5">
               <div className="space-y-3">
                 <p className="text-muted-foreground text-sm font-medium">Pelanggan</p>
                 <div className="flex flex-wrap gap-2 sm:flex-nowrap">
@@ -299,13 +278,12 @@ const BookingMembershipPage = () => {
                         variant="outline"
                         role="combobox"
                         aria-expanded={isCustomerOpen}
-                        className="w-full justify-between sm:w-auto sm:flex-1"
+                        className="h-10 w-full min-w-0 justify-start gap-2 rounded-lg shadow-none sm:w-auto sm:flex-1"
                       >
-                        {selectedCustomer
-                          ? `${selectedCustomer.name}${
-                              selectedCustomer.phone ? ` (${selectedCustomer.phone})` : ''
-                            }`
-                          : 'Cari pelanggan...'}
+                        <IconUser className="text-muted-foreground size-4 shrink-0" />
+                        <span className="truncate">
+                          {selectedCustomer ? selectedCustomer.name : 'Cari pelanggan...'}
+                        </span>
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-(--radix-popover-trigger-width) p-0">
@@ -361,7 +339,11 @@ const BookingMembershipPage = () => {
 
                   <Dialog open={isWalkInOpen} onOpenChange={setIsWalkInOpen}>
                     <DialogTrigger asChild>
-                      <Button variant="outline" size="sm" className="w-full gap-2 sm:w-auto">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-10 w-full gap-2 rounded-lg shadow-none sm:w-auto"
+                      >
                         <IconUserPlus className="h-4 w-4" />
                         Walk-in
                       </Button>
@@ -400,6 +382,7 @@ const BookingMembershipPage = () => {
                                 return;
                               }
                               setCustomerId('');
+                              setSelectedCustomer(null);
                               setIsWalkInOpen(false);
                             }}
                           >
@@ -466,7 +449,7 @@ const BookingMembershipPage = () => {
                     <Button
                       variant="outline"
                       className={cn(
-                        'w-full justify-start gap-2 text-left font-normal',
+                        'h-10 w-full justify-start gap-2 rounded-lg text-left font-normal shadow-none',
                         !startDate && 'text-muted-foreground'
                       )}
                     >
@@ -474,7 +457,7 @@ const BookingMembershipPage = () => {
                       {startDate ? dayjs(startDate).format('dddd, DD MMM YYYY') : 'Pilih tanggal'}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
+                  <PopoverContent className="w-auto rounded-xl p-0" align="start">
                     <Calendar
                       mode="single"
                       selected={startDate}
@@ -488,39 +471,43 @@ const BookingMembershipPage = () => {
 
               <Separator />
 
-              <div className="space-y-3">
-                <div className="flex items-center justify-between text-sm">
-                  <span>Value Pack</span>
-                  <span className="font-medium">
-                    {selectedMembership ? selectedMembership.name : '-'}
+              <div className="space-y-4">
+                <div className="flex items-start justify-between gap-4 text-sm">
+                  <span className="text-muted-foreground shrink-0">Paket</span>
+                  <span className="text-right font-medium break-words">
+                    {selectedMembership ? selectedMembership.name : 'Belum dipilih'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span>Harga</span>
-                  <span className="font-semibold">
+                  <span className="text-muted-foreground">Total</span>
+                  <span className="text-xl font-semibold tabular-nums">
                     {selectedMembership ? formatCurrency(selectedMembership.price) : '-'}
                   </span>
                 </div>
                 {selectedMembership && (
-                  <div className="bg-muted/50 rounded-md border p-3 text-xs">
-                    <div className="flex items-center gap-2 font-medium">
-                      <IconSparkles className="text-primary h-3.5 w-3.5" />
-                      Benefit singkat
-                    </div>
-                    <ul className="mt-2 space-y-1">
-                      {(selectedMembership.benefits ?? []).slice(0, 3).map((benefit) => (
-                        <li key={benefit.id} className="flex items-center gap-2">
-                          <IconCheck className="text-primary h-3 w-3" />
-                          <span>{benefit.benefit}</span>
+                  <details className="bg-muted/50 rounded-lg px-3 py-2.5 text-xs">
+                    <summary className="cursor-pointer font-medium">
+                      Detail paket dan benefit
+                    </summary>
+                    {selectedMembership.description && (
+                      <p className="text-muted-foreground mt-3 leading-relaxed">
+                        {selectedMembership.description}
+                      </p>
+                    )}
+                    <ul className="mt-3 space-y-2">
+                      {(selectedMembership.benefits ?? []).map((benefit) => (
+                        <li key={benefit.id} className="flex items-start gap-2">
+                          <IconCheck className="text-primary mt-0.5 size-3 shrink-0" />
+                          <span className="text-muted-foreground">{benefit.benefit}</span>
                         </li>
                       ))}
                     </ul>
-                  </div>
+                  </details>
                 )}
               </div>
 
               <Button
-                className="w-full"
+                className="h-10 w-full rounded-lg"
                 onClick={handleSubmit}
                 disabled={!canSubmit || isSubmitting}
               >

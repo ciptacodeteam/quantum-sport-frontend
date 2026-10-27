@@ -81,8 +81,6 @@ export const ROLE_OPTIONS: Array<{ label: string; value: Role }> = [
   { label: 'Admin', value: ROLE.ADMIN },
   { label: 'Admin Viewer', value: ROLE.ADMIN_VIEWER },
   { label: 'User', value: ROLE.USER },
-  { label: 'Ballboy', value: ROLE.BALLBOY },
-  { label: 'Coach', value: ROLE.COACH },
   { label: 'Cashier', value: ROLE.CASHIER }
 ];
 

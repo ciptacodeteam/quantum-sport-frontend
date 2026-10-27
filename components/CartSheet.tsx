@@ -22,24 +22,14 @@ export default function CartSheet({ minimal = false }: { minimal?: boolean }) {
   const router = useRouter();
 
   const bookingItems = useBookingStore((state) => state.bookingItems);
-  const selectedCoaches = useBookingStore((state) => state.selectedCoaches);
-  const selectedInventories = useBookingStore((state) => state.selectedInventories);
-  // const courtTotal = useBookingStore((state) => state.courtTotal);
-  const coachTotal = useBookingStore((state) => state.coachTotal);
-  const inventoryTotal = useBookingStore((state) => state.inventoryTotal);
-  const getTotalAmount = useBookingStore((state) => state.getTotalAmount);
   const clearAll = useBookingStore((state) => state.clearAll);
   const isCartOpen = useBookingStore((state) => state.isCartOpen);
   const setCartOpen = useBookingStore((state) => state.setCartOpen);
   const removeBookingItem = useBookingStore((state) => state.removeBookingItem);
-  const removeInventory = useBookingStore((state) => state.removeInventory);
 
-  const hasCartItems =
-    bookingItems.length > 0 || selectedInventories.length > 0 || selectedCoaches.length > 0;
-  const cartItemCount =
-    bookingItems.length +
-    selectedCoaches.length +
-    selectedInventories.reduce((total, item) => total + item.quantity, 0);
+  const hasCartItems = bookingItems.length > 0;
+  const cartItemCount = bookingItems.length;
+  const totalAmount = bookingItems.reduce((sum, item) => sum + item.price, 0);
 
   // Group booking items by date
   const groupedBookings = useMemo(() => {
@@ -76,7 +66,6 @@ export default function CartSheet({ minimal = false }: { minimal?: boolean }) {
     return `${String(endHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
   };
 
-  // handle to route to add-ons page
   const handleCheckout = () => {
     router.push('/checkout');
     setCartOpen(false);
@@ -123,7 +112,7 @@ export default function CartSheet({ minimal = false }: { minimal?: boolean }) {
             </button>
           </div>
           <SheetDescription className="text-xs leading-relaxed text-black/50">
-            Periksa jadwal dan perlengkapan sebelum melanjutkan.
+            Periksa jadwal lapangan sebelum melanjutkan.
           </SheetDescription>
         </SheetHeader>
 
@@ -212,77 +201,6 @@ export default function CartSheet({ minimal = false }: { minimal?: boolean }) {
                 </Button>
               </section>
             ) : null}
-
-            {selectedCoaches.length > 0 && (
-              <section aria-labelledby="cart-coaches-title">
-                <h3
-                  id="cart-coaches-title"
-                  className="mb-3 text-[10px] font-medium tracking-[0.14em] text-[#ad422b] uppercase"
-                >
-                  Coach
-                </h3>
-                <ul className="divide-y divide-black/10 border border-black/15 bg-white px-4">
-                  {selectedCoaches.map((coach, index) => (
-                    <li key={index} className="flex items-start justify-between gap-3 py-4">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium break-words">{coach.coachName}</p>
-                        <p className="mt-1 text-xs text-black/50">{coach.timeSlot}</p>
-                      </div>
-                      <span className="shrink-0 text-sm font-medium text-[#ad422b] tabular-nums">
-                        Rp{coach.price.toLocaleString('id-ID')}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-3 flex justify-between gap-3 text-xs">
-                  <span className="text-black/45">Subtotal coach</span>
-                  <span className="font-medium">Rp{coachTotal.toLocaleString('id-ID')}</span>
-                </div>
-              </section>
-            )}
-
-            {selectedInventories.length > 0 && (
-              <section aria-labelledby="cart-equipment-title">
-                <h3
-                  id="cart-equipment-title"
-                  className="mb-3 text-[10px] font-medium tracking-[0.14em] text-[#ad422b] uppercase"
-                >
-                  Peralatan
-                </h3>
-                <ul className="divide-y divide-black/10 border border-black/15 bg-white px-4">
-                  {selectedInventories.map((item) => (
-                    <li
-                      key={`${item.inventoryId}-${item.timeSlot ?? 'default'}`}
-                      className="flex items-center justify-between gap-3 py-4"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium break-words">{item.inventoryName}</p>
-                        <p className="mt-1 text-xs text-black/50">Jumlah: {item.quantity}</p>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        <span className="text-sm font-medium whitespace-nowrap text-[#ad422b] tabular-nums">
-                          Rp{item.price.toLocaleString('id-ID')}
-                        </span>
-                        <button
-                          type="button"
-                          aria-label={`Hapus ${item.inventoryName}`}
-                          onClick={() =>
-                            removeInventory(item.inventoryId, item.timeSlot ?? 'default')
-                          }
-                          className="flex size-9 items-center justify-center text-black/35 transition-colors hover:bg-[#ad422b]/5 hover:text-[#ad422b] focus-visible:outline-2 focus-visible:outline-[#ad422b]"
-                        >
-                          <Trash2 className="size-4" strokeWidth={1.5} aria-hidden="true" />
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-3 flex justify-between gap-3 text-xs">
-                  <span className="text-black/45">Subtotal peralatan</span>
-                  <span className="font-medium">Rp{inventoryTotal.toLocaleString('id-ID')}</span>
-                </div>
-              </section>
-            )}
           </div>
         </div>
 
@@ -290,13 +208,11 @@ export default function CartSheet({ minimal = false }: { minimal?: boolean }) {
           <div className="mb-5 flex items-end justify-between gap-4">
             <span className="text-xs text-black/50">Subtotal</span>
             <p className="text-2xl font-medium tracking-tight tabular-nums">
-              Rp{getTotalAmount().toLocaleString('id-ID')}
+              Rp{totalAmount.toLocaleString('id-ID')}
             </p>
           </div>
           <div className="grid auto-cols-fr grid-flow-col gap-3">
-            {(bookingItems.length > 0 ||
-              selectedCoaches.length > 0 ||
-              selectedInventories.length > 0) && (
+            {bookingItems.length > 0 && (
               <Button
                 variant="outline"
                 className="h-12 w-full rounded-full border-black/20 bg-transparent px-3 text-xs shadow-none hover:bg-black/5"
@@ -307,7 +223,7 @@ export default function CartSheet({ minimal = false }: { minimal?: boolean }) {
             )}
             <Button
               className="h-12 w-full rounded-full bg-[#111111] px-3 text-xs text-white hover:bg-black/80 disabled:bg-black/15 disabled:text-black/40 disabled:opacity-100"
-              disabled={bookingItems.length === 0 && selectedInventories.length === 0}
+              disabled={bookingItems.length === 0}
               onClick={handleCheckout}
             >
               Checkout <ArrowUpRight className="size-4" strokeWidth={1.5} aria-hidden="true" />

@@ -12,14 +12,9 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { InputGroup, InputGroupClipboardButton } from '@/components/ui/input-group';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle
-} from '@/components/ui/section';
+import { Section, SectionContent } from '@/components/ui/section';
 import { useConfirmMutation } from '@/hooks/useConfirmDialog';
+import StaffSettingsCard from './StaffSettingsCard';
 import { maskText } from '@/lib/utils';
 import { adminResetStaffPasswordMutationOptions } from '@/mutations/admin/staff';
 import { adminStaffQueryOptions } from '@/queries/admin/staff';
@@ -93,23 +88,25 @@ const ResetStaffPassword = ({ staffId }: Props) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <Section>
-        <SectionHeader>
-          <SectionTitle title="Reset Password Karyawan" />
-          <SectionDescription description="Kirim tautan reset password ke email karyawan ini." />
-        </SectionHeader>
-        <SectionContent>
-          <Alert variant="info" className="mb-4">
-            <IconInfoCircle />
-            <AlertDescription>
-              Dengan mengklik tombol di bawah, anda akan generate password baru untuk karyawan ini.
-            </AlertDescription>
-          </Alert>
-          <Button variant="secondaryInfo" className="mt-6 md:mt-0" onClick={onResetPassword}>
-            Reset Password
-          </Button>
-        </SectionContent>
-      </Section>
+      <StaffSettingsCard
+        title="Reset kata sandi"
+        description="Buat kata sandi baru untuk karyawan ini."
+      >
+        <Alert variant="info" className="mb-4">
+          <IconInfoCircle />
+          <AlertDescription>
+            Kata sandi lama akan diganti. Salin kata sandi baru dan berikan kepada karyawan.
+          </AlertDescription>
+        </Alert>
+        <Button
+          variant="outline"
+          size="sm"
+          className="rounded-lg shadow-none"
+          onClick={onResetPassword}
+        >
+          Reset kata sandi
+        </Button>
+      </StaffSettingsCard>
     </>
   );
 };

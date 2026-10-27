@@ -18,7 +18,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useMembershipDiscount } from '@/hooks/useMembershipDiscount';
 import { formatSlotTime } from '@/lib/time-utils';
-import { resolveMediaUrl } from '@/lib/utils';
+import { cn, resolveMediaUrl } from '@/lib/utils';
 import { adminCheckoutMutationOptions } from '@/mutations/admin/checkout';
 import { type CustomerSearchResult } from '@/queries/admin/customer';
 import { adminInventoryAvailabilityQueryOptions } from '@/queries/admin/inventory';
@@ -29,7 +29,7 @@ import {
   IconMapPin,
   IconMinus,
   IconPlus,
-  IconShoppingCart
+  IconPackage
 } from '@tabler/icons-react';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -659,50 +659,74 @@ export default function BookingAddOns() {
                 const failed = sessions.some((session) => session.isError);
                 const image = resolveMediaUrl(item.image);
                 return (
-                  <Card key={item.id} className="min-w-0 gap-4 py-5">
-                    <CardHeader className="flex flex-row items-start gap-3 px-5">
-                      <div className="bg-muted relative size-12 shrink-0 overflow-hidden rounded-lg">
-                        {image ? (
-                          <Image
-                            src={image}
-                            alt=""
-                            fill
-                            sizes="48px"
-                            className="object-cover"
-                            unoptimized
-                          />
-                        ) : (
-                          <IconShoppingCart className="text-muted-foreground absolute inset-3 size-6" />
-                        )}
-                      </div>
-                      <div className="min-w-0 space-y-1.5">
-                        <CardTitle className="text-sm leading-snug">{item.name}</CardTitle>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="flex flex-1 flex-col gap-4 px-5">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-2xl leading-tight font-semibold tracking-tight tabular-nums">
-                          Rp {item.price.toLocaleString('id-ID')}
-                          <span className="text-muted-foreground ml-1 text-sm font-normal">
-                            {bookingItems.length > 0 ? '/ sesi' : '/ item'}
-                          </span>
-                        </p>
-                        <Badge variant="outline" className="text-xs">
-                          {pending
-                            ? 'Loading stock...'
-                            : failed
-                              ? 'Stock unavailable'
-                              : max > 0
-                                ? `${max} tersedia`
-                                : 'Out of stock'}
-                        </Badge>
+                  <Card
+                    key={item.id}
+                    className={cn(
+                      'min-w-0 gap-0 overflow-hidden py-0 shadow-none transition-colors',
+                      quantity > 0 && 'border-primary/50 bg-primary/[0.02]'
+                    )}
+                  >
+                    <CardContent className="flex h-full flex-col gap-4 p-4 sm:p-5">
+                      <div className="flex items-start gap-4">
+                        <div className="bg-muted relative size-16 shrink-0 overflow-hidden rounded-xl">
+                          {image ? (
+                            <Image
+                              src={image}
+                              alt=""
+                              fill
+                              sizes="64px"
+                              className="object-cover"
+                              unoptimized
+                            />
+                          ) : (
+                            <IconPackage
+                              className="text-muted-foreground absolute inset-4 size-8"
+                              stroke={1.5}
+                            />
+                          )}
+                        </div>
+                        <div className="min-w-0 space-y-2 py-0.5">
+                          <h3 className="text-sm leading-snug font-semibold break-words">
+                            {item.name}
+                          </h3>
+                          <p className="flex flex-wrap items-baseline gap-x-1 text-xl leading-tight font-semibold tracking-tight tabular-nums">
+                            <span>Rp {item.price.toLocaleString('id-ID')}</span>
+                            <span className="text-muted-foreground text-xs font-normal tracking-normal">
+                              {bookingItems.length > 0 ? '/ sesi' : '/ item'}
+                            </span>
+                          </p>
+                        </div>
                       </div>
                       <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t pt-4">
-                        <div className="flex items-center gap-2">
+                        <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                          <span
+                            aria-hidden="true"
+                            className={cn(
+                              'size-1.5 shrink-0 rounded-full',
+                              pending || failed || max <= 0
+                                ? 'bg-muted-foreground/50'
+                                : max <= 3
+                                  ? 'bg-amber-500'
+                                  : 'bg-emerald-500'
+                            )}
+                          />
+                          {pending
+                            ? 'Memuat stok...'
+                            : failed
+                              ? 'Stok belum tersedia'
+                              : max > 0
+                                ? `${max} tersedia`
+                                : 'Stok habis'}
+                        </p>
+                        <div
+                          className="bg-background flex items-center overflow-hidden rounded-lg border"
+                          role="group"
+                          aria-label={`Jumlah ${item.name}`}
+                        >
                           <Button
                             type="button"
-                            variant="outline"
-                            className="size-11 p-0"
+                            variant="ghost"
+                            className="size-9 rounded-none p-0"
                             aria-label={`Kurangi ${item.name}`}
                             disabled={quantity <= 0 || pending || failed}
                             onClick={() => updateEquipment(item, quantity - 1)}
@@ -719,12 +743,12 @@ export default function BookingAddOns() {
                             onChange={(event) =>
                               updateEquipment(item, Number(event.target.value) || 0)
                             }
-                            className="h-11 w-16 [appearance:textfield] text-center tabular-nums [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                            className="h-9 w-12 [appearance:textfield] rounded-none border-x border-y-0 bg-transparent px-1 text-center font-medium tabular-nums shadow-none focus-visible:relative focus-visible:z-10 focus-visible:ring-inset [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                           />
                           <Button
                             type="button"
-                            variant="outline"
-                            className="size-11 p-0"
+                            variant="ghost"
+                            className="size-9 rounded-none p-0"
                             aria-label={`Tambah ${item.name}`}
                             disabled={quantity >= max || pending || failed}
                             onClick={() => updateEquipment(item, quantity + 1)}

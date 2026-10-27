@@ -1,3 +1,7 @@
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { IconArrowLeft } from '@tabler/icons-react';
+import StaffSettingsCard from '@/components/admin/staffs/StaffSettingsCard';
 import CreateStaffForm from '@/components/admin/staffs/CreateStaffForm';
 import {
   Section,
@@ -9,16 +13,25 @@ import {
 
 const CreateStaffPage = () => {
   return (
-    <main>
+    <main className="w-full min-w-0">
+      <Button asChild variant="ghost" size="sm" className="text-muted-foreground mb-4 -ml-2">
+        <Link href="/admin/kelola-karyawan">
+          <IconArrowLeft />
+          Daftar karyawan
+        </Link>
+      </Button>
       <Section>
         <SectionHeader>
           <SectionTitle title="Tambah Karyawan" />
           <SectionDescription description="Tambahkan karyawan baru ke dalam sistem Anda di sini." />
         </SectionHeader>
         <SectionContent className="mt-4">
-          <div className="md:max-w-2xl">
+          <StaffSettingsCard
+            title="Profil dan akses akun"
+            description="Lengkapi informasi karyawan dan pilih peran aksesnya."
+          >
             <CreateStaffForm />
-          </div>
+          </StaffSettingsCard>
         </SectionContent>
       </Section>
     </main>

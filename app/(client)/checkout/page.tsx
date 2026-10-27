@@ -23,7 +23,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs, { nowJakarta } from '@/lib/dayjs';
 import 'dayjs/locale/id';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
-import { ArrowUpRight, ShoppingBag, X } from 'lucide-react';
+import { ArrowUpRight, ShoppingBag } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -85,20 +85,7 @@ export default function CheckoutPage() {
   // const pathname = usePathname();
   // const searchParams = useSearchParams();
   const bookingItems = useBookingStore((state) => state.bookingItems);
-  const coachTotal = useBookingStore((state) => state.coachTotal);
-  const ballboyTotal = useBookingStore((state) => state.ballboyTotal);
-  const inventoryTotal = useBookingStore((state) => state.inventoryTotal);
-  const selectedCoaches = useBookingStore((state) => state.selectedCoaches);
-  const selectedBallboys = useBookingStore((state) => state.selectedBallboys);
-  const selectedInventories = useBookingStore((state) => state.selectedInventories);
-  // const removeCoach = useBookingStore((state) => state.removeCoach);
-  const removeBallboy = useBookingStore((state) => state.removeBallboy);
-  const removeInventory = useBookingStore((state) => state.removeInventory);
-
-  const addOnsTotal = coachTotal + ballboyTotal + inventoryTotal;
-  const hasCheckoutItems =
-    bookingItems.length > 0 ||
-    selectedInventories.some((item) => item.inventoryId && item.quantity > 0);
+  const hasCheckoutItems = bookingItems.length > 0;
 
   // Authentication check
   const { data: user, isPending: isUserPending } = useQuery(profileQueryOptions);
@@ -125,7 +112,7 @@ export default function CheckoutPage() {
   // Apply membership discount to court total
   const courtSubtotal = membershipDiscount.originalTotal;
   const discountedCourtTotal = membershipDiscount.discountedTotal;
-  const grandTotal = discountedCourtTotal + addOnsTotal;
+  const grandTotal = discountedCourtTotal;
   const isCoveredByMembership =
     useMembership &&
     bookingItems.length > 0 &&
@@ -222,16 +209,10 @@ export default function CheckoutPage() {
               date: item.date,
               price: item.price
             })),
-            inventories: selectedInventories.map((item) => ({
-              inventoryId: item.inventoryId,
-              inventoryName: item.inventoryName,
-              quantity: item.quantity,
-              price: item.price
-            })),
             promoCode: appliedPromoCode || undefined,
             breakdown: data.breakdown || {
               courtTotal: courtSubtotal,
-              addOnsTotal,
+              addOnsTotal: 0,
               processingFee: paymentFeeBreakdown.totalFee,
               promoDiscount: promoDiscountAmount,
               total: totalAfterPromo
@@ -328,11 +309,11 @@ export default function CheckoutPage() {
     () =>
       getCheckoutSelections({
         bookingItems,
-        selectedCoaches,
-        selectedBallboys,
-        selectedInventories
+        selectedCoaches: [],
+        selectedBallboys: [],
+        selectedInventories: []
       }),
-    [bookingItems, selectedBallboys, selectedCoaches, selectedInventories]
+    [bookingItems]
   );
 
   const groupedCourts = useMemo(() => {
@@ -443,10 +424,7 @@ export default function CheckoutPage() {
     applyPromoMutation.mutate(
       {
         promoCode: trimmedCode,
-        courtSlots: selections.courtSlots,
-        coachSlots: selections.coachSlots,
-        ballboySlots: selections.ballboySlots,
-        inventories: selections.inventories
+        courtSlots: selections.courtSlots
       },
       {
         onSuccess: (response) => {
@@ -522,7 +500,7 @@ export default function CheckoutPage() {
       return;
     }
 
-    const { courtSlots, coachSlots, ballboySlots, inventories } = buildCheckoutSelections();
+    const { courtSlots } = buildCheckoutSelections();
 
     const payload: any = {
       ...(!isCoveredByMembership && selectedPaymentMethod
@@ -537,18 +515,6 @@ export default function CheckoutPage() {
 
     if (courtSlots.length > 0) {
       payload.courtSlots = courtSlots;
-    }
-
-    if (coachSlots.length > 0) {
-      payload.coachSlots = coachSlots;
-    }
-
-    if (ballboySlots.length > 0) {
-      payload.ballboySlots = ballboySlots;
-    }
-
-    if (inventories.length > 0) {
-      payload.inventories = inventories;
     }
 
     // Add card payment data if CARDS channel
@@ -609,7 +575,7 @@ export default function CheckoutPage() {
         cardPayTab.current = null;
         return;
       }
-    } catch (e) {
+    } catch {
       cardPayTab.current?.close();
       cardPayTab.current = null;
       return;
@@ -792,136 +758,7 @@ export default function CheckoutPage() {
               </section>
             )}
             {/* Coach section - commented out as not in use */}
-            {/* {selectedCoaches.length > 0 && (
-          <section className="space-y-3 border border-black/15 bg-[#f8f8f6] p-5 sm:p-6">
-            <header className="space-y-1">
-              <h3 className="text-base font-semibold">Coach</h3>
-              <p className="text-muted-foreground text-sm">{selectedCoaches.length} sesi dipilih</p>
-            </header>
-            <div className="space-y-2">
-              {selectedCoaches.map((coach, index) => (
-                <div
-                  key={`${coach.coachId}-${coach.slotId ?? coach.timeSlot}-${index}`}
-                  className="border-black/10 flex items-center justify-between rounded-none border px-4 py-3"
-                >
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium">{coach.coachName}</span>
-                    <span className="text-muted-foreground text-xs">
-                      {dayjs(coach.date).format('DD MMM YYYY')} • {coach.timeSlot}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-semibold">{formatCurrency(coach.price)}</span>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      className="text-muted-foreground hover:text-destructive h-8 w-8"
-                      aria-label="Hapus coach"
-                      onClick={() => removeCoach(coach.coachId, coach.timeSlot, coach.slotId)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )} */}
-
-            {selectedBallboys.length > 0 && (
-              <section className="space-y-3 border border-black/15 bg-[#f8f8f6] p-5 sm:p-6">
-                <header className="space-y-1">
-                  <h3 className="text-base font-semibold">Ballboy</h3>
-                  <p className="text-muted-foreground text-sm">
-                    {selectedBallboys.length} sesi dipilih
-                  </p>
-                </header>
-                <div className="space-y-2">
-                  {selectedBallboys.map((ballboy, index) => (
-                    <div
-                      key={`${ballboy.ballboyId}-${ballboy.slotId ?? ballboy.timeSlot}-${index}`}
-                      className="flex items-center justify-between gap-3 rounded-none border border-black/10 px-4 py-3"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <span className="text-sm leading-snug font-medium break-words">
-                          {ballboy.ballboyName}
-                        </span>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        <span className="text-sm font-medium whitespace-nowrap">
-                          {formatCurrency(ballboy.price)}
-                        </span>
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          className="text-muted-foreground hover:text-destructive h-8 w-8"
-                          aria-label="Hapus ballboy"
-                          onClick={() =>
-                            removeBallboy(ballboy.ballboyId, ballboy.timeSlot, ballboy.slotId)
-                          }
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {selectedInventories.length > 0 && (
-              <section className="space-y-3 border border-black/15 bg-[#f8f8f6] p-5 sm:p-6">
-                <header className="space-y-1">
-                  <h3 className="text-base font-semibold">Peralatan</h3>
-                  <p className="text-muted-foreground text-sm">
-                    {selectedInventories.length} jenis dipilih
-                  </p>
-                </header>
-                <div className="space-y-2">
-                  {selectedInventories.map((inventory, index) => (
-                    <div
-                      key={`${inventory.inventoryId}-${inventory.timeSlot ?? 'default'}-${index}`}
-                      className="flex items-center justify-between gap-3 rounded-none border border-black/10 px-4 py-3"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <span className="text-sm leading-snug font-medium break-words">
-                          {inventory.inventoryName}
-                        </span>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        <span className="text-sm font-medium whitespace-nowrap">
-                          {formatCurrency(inventory.price)}
-                        </span>
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          className="text-muted-foreground hover:text-destructive h-8 w-8"
-                          aria-label="Hapus peralatan"
-                          onClick={() =>
-                            removeInventory(inventory.inventoryId, inventory.timeSlot ?? 'default')
-                          }
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
             <section className="grid min-w-0 gap-4">
-              <Button
-                variant="outline"
-                className="h-12 w-full rounded-full border-black/20 bg-transparent text-xs font-medium text-[#171717] shadow-none hover:bg-black/5"
-                onClick={() => router.push('/add-ons')}
-              >
-                Tambah Add-Ons
-              </Button>
-
               {!isCoveredByMembership && (
                 <div className="min-w-0 border border-black/15 bg-[#f8f8f6] p-5 sm:p-6">
                   <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1123,14 +960,6 @@ export default function CheckoutPage() {
                     <span>Potongan Value Pack ({membershipDiscount.slotsToDeduct} jam)</span>
                     <span className="font-medium">
                       - {formatCurrency(membershipDiscount.discountAmount)}
-                    </span>
-                  </div>
-                )}
-                {addOnsTotal > 0 && (
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="text-muted-foreground">Subtotal add-ons</span>
-                    <span className="text-foreground font-medium">
-                      {formatCurrency(addOnsTotal)}
                     </span>
                   </div>
                 )}

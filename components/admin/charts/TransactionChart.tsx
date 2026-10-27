@@ -25,8 +25,8 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { dailyTransactionsQueryOptions } from '@/queries/admin/analytics';
 import type { TransactionPeriod } from '@/types/model';
 import { useQuery } from '@tanstack/react-query';
@@ -35,39 +35,34 @@ import { formatNumber } from '@/lib/utils';
 
 const chartConfig = {
   total: {
-    label: 'Transactions',
+    label: 'Transaksi',
     color: 'var(--primary)'
   }
 } satisfies ChartConfig;
 
 const PERIOD_OPTIONS = {
-  '7days': { label: 'Last 7 days', value: '7days' as TransactionPeriod },
-  '30days': { label: 'Last 30 days', value: '30days' as TransactionPeriod },
-  '3months': { label: 'Last 3 months', value: '3months' as TransactionPeriod }
+  '7days': { label: '7 hari terakhir', value: '7days' as TransactionPeriod },
+  '30days': { label: '30 hari terakhir', value: '30days' as TransactionPeriod },
+  '3months': { label: '3 bulan terakhir', value: '3months' as TransactionPeriod }
 };
 
 export default function TransactionChart() {
-  const isMobile = useIsMobile();
   const [period, setPeriod] = React.useState<TransactionPeriod>('30days');
 
-  const { data, isLoading, isError } = useQuery(dailyTransactionsQueryOptions(period));
-
-  React.useEffect(() => {
-    if (isMobile) {
-      setPeriod('7days');
-    }
-  }, [isMobile]);
+  const { data, isLoading, isError, refetch, isFetching } = useQuery(
+    dailyTransactionsQueryOptions(period)
+  );
 
   const handlePeriodChange = (value: string) => {
-    setPeriod(value as TransactionPeriod);
+    if (value in PERIOD_OPTIONS) setPeriod(value as TransactionPeriod);
   };
 
   if (isLoading) {
     return (
-      <Card className="@container/card">
+      <Card className="@container/card gap-5 shadow-none">
         <CardHeader>
-          <CardTitle>Daily Transactions</CardTitle>
-          <CardDescription>Transaction trends over time</CardDescription>
+          <CardTitle>Transaksi harian</CardTitle>
+          <CardDescription>Pantau jumlah transaksi lunas per hari</CardDescription>
         </CardHeader>
         <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
           <Skeleton className="aspect-auto h-[250px] w-full" />
@@ -78,14 +73,25 @@ export default function TransactionChart() {
 
   if (isError || !data) {
     return (
-      <Card className="@container/card">
+      <Card className="@container/card gap-5 shadow-none">
         <CardHeader>
-          <CardTitle>Daily Transactions</CardTitle>
-          <CardDescription>Transaction trends over time</CardDescription>
+          <CardTitle>Transaksi harian</CardTitle>
+          <CardDescription>Pantau jumlah transaksi lunas per hari</CardDescription>
         </CardHeader>
         <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
-          <div className="text-muted-foreground flex h-[250px] items-center justify-center">
-            Failed to load transaction data. Please try again.
+          <div
+            role="alert"
+            className="text-muted-foreground flex h-[250px] flex-col items-center justify-center gap-3 text-sm"
+          >
+            Data transaksi belum dapat dimuat.
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void refetch()}
+              disabled={isFetching}
+            >
+              Coba lagi
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -95,25 +101,22 @@ export default function TransactionChart() {
   const { chartData, summary } = data;
 
   return (
-    <Card className="@container/card">
-      <CardHeader>
-        <CardTitle className="mb-2">Daily Transactions</CardTitle>
-        <CardDescription>
-          <span className="hidden @[540px]/card:block">
-            {formatNumber(summary.totalTransactions)} transactions |{' '}
-            {formatNumber(summary.totalRevenue)} revenue
-          </span>
-          <span className="@[540px]/card:hidden">
-            {formatNumber(summary.totalTransactions)} transactions
-          </span>
-        </CardDescription>
-        <CardAction>
+    <Card className="@container/card gap-5 shadow-none">
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-2">
+          <CardTitle>Transaksi harian</CardTitle>
+          <CardDescription>
+            {formatNumber(summary.totalTransactions)} transaksi · Rp{' '}
+            {formatNumber(summary.totalRevenue)}
+          </CardDescription>
+        </div>
+        <CardAction className="w-full self-auto sm:w-auto">
           <ToggleGroup
             type="single"
             value={period}
             onValueChange={handlePeriodChange}
             variant="outline"
-            className="hidden *:data-[slot=toggle-group-item]:px-4! @[767px]/card:flex"
+            className="hidden *:data-[slot=toggle-group-item]:px-3! @[700px]/card:flex"
           >
             <ToggleGroupItem value={PERIOD_OPTIONS['3months'].value}>
               {PERIOD_OPTIONS['3months'].label}
@@ -127,9 +130,9 @@ export default function TransactionChart() {
           </ToggleGroup>
           <Select value={period} onValueChange={handlePeriodChange}>
             <SelectTrigger
-              className="flex w-40 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate @[767px]/card:hidden"
+              className="flex w-40 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate @[700px]/card:hidden"
               size="sm"
-              aria-label="Select a period"
+              aria-label="Pilih periode transaksi"
             >
               <SelectValue placeholder={PERIOD_OPTIONS['30days'].label} />
             </SelectTrigger>
@@ -144,16 +147,22 @@ export default function TransactionChart() {
         </CardAction>
       </CardHeader>
       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
+        {summary.totalTransactions === 0 && (
+          <p className="text-muted-foreground mb-3 px-2 text-sm">
+            Belum ada transaksi lunas pada periode ini.
+          </p>
+        )}
         <ChartContainer config={chartConfig} className="aspect-auto h-[250px] w-full">
-          <LineChart data={chartData}>
-            <defs>
-              <linearGradient id="fillTotal" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--color-total)" stopOpacity={1.0} />
-                <stop offset="95%" stopColor="var(--color-total)" stopOpacity={0.1} />
-              </linearGradient>
-            </defs>
+          <LineChart data={chartData} margin={{ top: 12, right: 12, bottom: 4, left: 0 }}>
             <CartesianGrid vertical={false} />
-            <YAxis tickLine={false} axisLine={false} tickMargin={8} width={40} tickCount={6} />
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              width={40}
+              allowDecimals={false}
+              domain={[0, (max: number) => Math.max(1, max)]}
+            />
             <XAxis
               dataKey="date"
               tickLine={false}
@@ -173,11 +182,9 @@ export default function TransactionChart() {
             />
             <Line
               dataKey="total"
-              type="bump"
-              fill="url(#fillTotal)"
+              type="linear"
               stroke="var(--color-total)"
               strokeWidth={2}
-              fillOpacity={1}
               dot={false}
             />
           </LineChart>

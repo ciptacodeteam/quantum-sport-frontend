@@ -275,7 +275,7 @@ export default function InvoiceHistoryPage() {
                     typeFilter === 'MEMBERSHIP'
                       ? 'Paket yang Anda beli akan muncul di sini.'
                       : typeFilter === 'BOOKING'
-                        ? 'Pemesanan lapangan dan Add Ons akan muncul di sini.'
+                        ? 'Riwayat pemesanan lapangan akan muncul di sini.'
                         : 'Pilih jadwal bermain atau perlengkapan untuk memulai pemesanan pertama Anda.'
                   }
                   actionLabel={typeFilter === 'MEMBERSHIP' ? 'Lihat Value Pack' : 'Mulai bermain'}

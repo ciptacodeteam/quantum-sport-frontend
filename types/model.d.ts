@@ -245,6 +245,7 @@ export type MembershipInvoice = {
   paymentUrl: string | null;
   paymentRequestId: string | null;
   expiresAt: Date | null;
+  dueDate?: Date | null;
   paidAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -252,6 +253,8 @@ export type MembershipInvoice = {
     id: string;
     amount: number;
     fee: number;
+    fees?: number;
+    externalRef?: string | null;
     referenceId: string;
     paymentMethodId: string;
     createdAt: Date;

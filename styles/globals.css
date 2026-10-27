@@ -385,3 +385,45 @@ html.dark[data-admin-theme='true']
   :is([class~='hover:border-primary'], [class~='hover:border-primary/50']):hover {
   border-color: var(--ring);
 }
+
+/* Readable admin table type at normal browser zoom. */
+.admin-panel table {
+  --admin-table-text-size: 1rem;
+  font-size: var(--admin-table-text-size);
+  line-height: 1.5;
+}
+
+.admin-panel table :is(th, td),
+.admin-panel table .text-sm {
+  font-size: var(--admin-table-text-size);
+  line-height: 1.5;
+}
+
+.admin-panel
+  table
+  :is(.text-xs, [class~='text-[10px]'], [class~='text-[11px]'], [class~='text-[12px]']) {
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.admin-panel table th {
+  font-size: var(--admin-table-text-size);
+  font-weight: 500;
+}
+
+.admin-panel table [data-slot='badge'] {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  min-height: 1.5rem;
+  height: auto;
+}
+
+.admin-panel table[data-slot='table'] th {
+  height: auto;
+  padding: 0.625rem 1rem;
+}
+
+.admin-panel table[data-slot='table'] td {
+  padding: 1rem;
+  vertical-align: middle;
+}

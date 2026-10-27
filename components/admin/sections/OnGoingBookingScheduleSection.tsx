@@ -1,18 +1,32 @@
 'use client';
 
-import { Badge, type BadgeVariant } from '@/components/ui/badge';
-import { DataTable } from '@/components/ui/data-table';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { CalendarDays, RefreshCw } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { formatNumber } from '@/lib/utils';
-import { formatSlotTime, formatSlotTimeRange, toLocalSlotDate } from '@/lib/time-utils';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell
+} from '@/components/ui/table';
+import dayjs from '@/lib/dayjs';
 import { ongoingBookingsQueryOptions } from '@/queries/admin/booking';
 import type { OngoingBookingItem } from '@/types/model';
-import { useQuery } from '@tanstack/react-query';
-import { createColumnHelper } from '@tanstack/react-table';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
 
-dayjs.extend(relativeTime);
+const toScheduleDate = (value: string) => {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+const formatScheduleTime = (value: string | Date, format = 'HH:mm') =>
+  dayjs(value).tz('Asia/Jakarta').format(format);
+const formatScheduleRange = (start: string | Date, end: string | Date) =>
+  `${formatScheduleTime(start)} - ${formatScheduleTime(end)}`;
 
 const getBookingTimeRange = (item: OngoingBookingItem) => {
   const slotStarts = [
@@ -20,7 +34,7 @@ const getBookingTimeRange = (item: OngoingBookingItem) => {
     ...item.coaches.map((coach) => coach.slotStart),
     ...item.ballboys.map((ballboy) => ballboy.slotStart)
   ]
-    .map((value) => toLocalSlotDate(value))
+    .map((value) => toScheduleDate(value))
     .filter((date): date is Date => !!date);
 
   const slotEnds = [
@@ -28,11 +42,11 @@ const getBookingTimeRange = (item: OngoingBookingItem) => {
     ...item.coaches.map((coach) => coach.slotEnd),
     ...item.ballboys.map((ballboy) => ballboy.slotEnd)
   ]
-    .map((value) => toLocalSlotDate(value))
+    .map((value) => toScheduleDate(value))
     .filter((date): date is Date => !!date);
 
-  const fallbackStart = toLocalSlotDate(item.schedule.startAt);
-  const fallbackEnd = toLocalSlotDate(item.schedule.endAt);
+  const fallbackStart = toScheduleDate(item.schedule.startAt);
+  const fallbackEnd = toScheduleDate(item.schedule.endAt);
 
   const start =
     slotStarts.length > 0
@@ -52,217 +66,122 @@ const getBookingTimeRange = (item: OngoingBookingItem) => {
 };
 
 const OnGoingBookingScheduleSection = () => {
-  const { data: bookings, isLoading, isError } = useQuery(ongoingBookingsQueryOptions());
-
-  const colHelper = createColumnHelper<OngoingBookingItem>();
-  const columns = [
-    colHelper.accessor('booking.id', {
-      header: 'Booking ID',
-      cell: (info) => info.getValue(),
-      meta: {
-        ps: '5',
-        width: 150
-      }
-    }),
-    colHelper.accessor('user.name', {
-      header: 'Customer',
-      cell: (info) => (
-        <div className="flex flex-col">
-          <span className="font-medium">{info.getValue()}</span>
-          <span className="text-muted-foreground text-xs">{info.row.original.user.phone}</span>
-        </div>
-      ),
-      meta: {
-        ps: '5',
-        width: 180
-      }
-    }),
-    colHelper.accessor('courts', {
-      header: 'Courts / Coaches',
-      cell: (info) => {
-        const courts = info.getValue();
-        const coaches = info.row.original.coaches;
-        const ballboys = info.row.original.ballboys;
-        const inventories = info.row.original.inventories;
-
-        // Group courts by courtName
-        const groupedCourts = courts.reduce(
-          (acc, court) => {
-            if (!acc[court.courtName]) {
-              acc[court.courtName] = [];
-            }
-            acc[court.courtName].push(court);
-            return acc;
-          },
-          {} as Record<string, typeof courts>
-        );
-
-        return (
-          <div className="flex flex-col gap-1.5">
-            {Object.entries(groupedCourts).map(([courtName, courtSlots]) => (
-              <div key={courtName} className="flex flex-col">
-                <span className="text-sm font-medium">{courtName}</span>
-                {courtSlots.map((court, idx) => (
-                  <span key={idx} className="text-muted-foreground text-xs">
-                    {formatSlotTimeRange(court.slotStart, court.slotEnd)}
-                  </span>
-                ))}
-              </div>
-            ))}
-            {coaches.length > 0 &&
-              coaches.map((coach, idx) => (
-                <div key={idx} className="flex flex-col">
-                  <span className="text-sm font-medium">Coach: {coach.coachName}</span>
-                  <span className="text-muted-foreground text-xs">
-                    {formatSlotTimeRange(coach.slotStart, coach.slotEnd)}
-                  </span>
-                </div>
-              ))}
-            {ballboys.length > 0 && (
-              <span className="text-muted-foreground text-xs">
-                +{ballboys.length} Ballboy{ballboys.length > 1 ? 's' : ''}
-              </span>
-            )}
-            {inventories.length > 0 && (
-              <span className="text-muted-foreground text-xs">
-                +{inventories.length} Item{inventories.length > 1 ? 's' : ''}
-              </span>
-            )}
-          </div>
-        );
-      },
-      meta: {
-        ps: '5',
-        width: 220
-      }
-    }),
-    colHelper.accessor('schedule', {
-      header: 'Schedule',
-      cell: (info) => {
-        const row = info.row.original;
-        const { start, end } = getBookingTimeRange(row);
-
-        return (
-          <div className="flex flex-col">
-            <span className="text-sm">
-              {formatSlotTime(start ?? row.schedule.startAt, 'DD MMM YYYY')}
-            </span>
-            <span className="text-muted-foreground text-xs">
-              {formatSlotTimeRange(start ?? row.schedule.startAt, end ?? row.schedule.endAt)}
-            </span>
-          </div>
-        );
-      },
-      meta: {
-        ps: '5',
-        width: 150
-      }
-    }),
-    colHelper.accessor('schedule.status', {
-      header: 'Status',
-      cell: (info) => {
-        const row = info.row.original;
-        const status = info.getValue();
-        const { start, end } = getBookingTimeRange(row);
-        let variant: BadgeVariant['variant'];
-        let timeDisplay = row.schedule.timeDisplay;
-
-        if (status === 'ongoing') variant = 'lightInfo';
-        else if (status === 'upcoming') variant = 'lightWarning';
-        else if (status === 'completed') variant = 'lightSuccess';
-
-        if (status === 'upcoming' && start) {
-          timeDisplay = `Starts ${dayjs(start).fromNow()}`;
-        } else if (status === 'ongoing' && end) {
-          timeDisplay = `Ends ${dayjs(end).fromNow()}`;
-        } else if (status === 'completed' && end) {
-          timeDisplay = `Ended ${dayjs(end).fromNow()}`;
-        }
-
-        return (
-          <div className="flex flex-col gap-1">
-            <Badge variant={variant} className="w-fit">
-              {status === 'ongoing' ? 'Ongoing' : status === 'upcoming' ? 'Upcoming' : 'Completed'}
-            </Badge>
-            <span className="text-muted-foreground text-xs">{timeDisplay}</span>
-          </div>
-        );
-      },
-      meta: {
-        ps: '5',
-        width: 150
-      }
-    }),
-    colHelper.accessor('booking.totalPrice', {
-      header: 'Total Price',
-      cell: (info) => `Rp ${formatNumber(info.getValue())}`,
-      meta: {
-        ps: '5',
-        width: 120
-      }
-    }),
-    colHelper.accessor('booking.status', {
-      header: 'Payment',
-      cell: (info) => {
-        const status = info.getValue();
-        let variant: BadgeVariant['variant'];
-        let label = status;
-
-        if (status === 'CONFIRMED' || status === 'COMPLETED') {
-          variant = 'lightSuccess';
-          label = 'Paid';
-        } else if (status === 'PENDING') {
-          variant = 'lightWarning';
-          label = 'Pending';
-        } else if (status === 'CANCELLED') {
-          variant = 'lightDestructive';
-          label = 'Cancelled';
-        }
-
-        return <Badge variant={variant}>{label}</Badge>;
-      },
-      meta: {
-        ps: '5',
-        width: 100
-      }
-    })
-  ];
-
-  if (isLoading) {
-    return (
-      <section className="mt-6 space-y-4">
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-64 w-full" />
-      </section>
-    );
-  }
-
-  if (isError) {
-    return (
-      <section className="mt-6">
-        <div className="flex h-64 items-center justify-center rounded-lg border border-dashed">
-          <p className="text-muted-foreground">
-            Failed to load ongoing bookings. Please try again.
-          </p>
-        </div>
-      </section>
-    );
-  }
-
-  if (!bookings || bookings.length === 0) {
-    return (
-      <section className="mt-6">
-        <div className="flex h-64 items-center justify-center rounded-lg border border-dashed">
-          <p className="text-muted-foreground">No ongoing or upcoming bookings at the moment.</p>
-        </div>
-      </section>
-    );
-  }
+  const [showAll, setShowAll] = useState(false);
+  const {
+    data: bookings,
+    isLoading,
+    isError,
+    refetch,
+    isFetching
+  } = useQuery(ongoingBookingsQueryOptions());
+  const visibleBookings = showAll ? bookings : bookings?.slice(0, 5);
 
   return (
-    <section className="mt-6">
-      <DataTable data={bookings} columns={columns} />
-    </section>
+    <Card className="min-w-0 gap-3 overflow-hidden shadow-none">
+      <CardHeader className="flex flex-row items-center justify-between gap-3">
+        <CardTitle>Jadwal booking</CardTitle>
+        <Button
+          size="icon"
+          variant="ghost"
+          aria-label="Perbarui jadwal booking"
+          title="Perbarui jadwal"
+          onClick={() => void refetch()}
+          disabled={isFetching}
+        >
+          <RefreshCw className={isFetching ? 'size-4 animate-spin' : 'size-4'} />
+        </Button>
+      </CardHeader>
+      <CardContent className="min-w-0">
+        {isLoading ? (
+          <Skeleton className="h-24 w-full" />
+        ) : isError ? (
+          <div role="alert" className="flex flex-col items-center gap-3 py-6 text-center">
+            <p className="text-muted-foreground text-sm">Jadwal belum dapat dimuat.</p>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => void refetch()}
+              disabled={isFetching}
+            >
+              Coba lagi
+            </Button>
+          </div>
+        ) : !bookings?.length ? (
+          <div className="text-muted-foreground flex items-center justify-center gap-2 py-8 text-sm">
+            <CalendarDays className="size-4" />
+            Belum ada jadwal booking
+          </div>
+        ) : (
+          <>
+            <Table aria-label="Ringkasan jadwal booking">
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>Pelanggan</TableHead>
+                  <TableHead>Lapangan / Pelatih</TableHead>
+                  <TableHead>Waktu (WIB)</TableHead>
+                  <TableHead className="text-right">Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {visibleBookings?.map((item) => {
+                  const { start, end } = getBookingTimeRange(item);
+                  const names = [
+                    ...new Set(item.courts.map((court) => court.courtName).filter(Boolean))
+                  ];
+                  const services = names.length
+                    ? names.join(', ')
+                    : [...new Set(item.coaches.map((coach) => coach.coachName))].join(', ') ||
+                      'Ballboy';
+                  const status = item.schedule.status;
+                  const date = formatScheduleTime(start ?? item.schedule.startAt, 'DD MMM');
+                  return (
+                    <TableRow key={item.booking.id}>
+                      <TableCell className="py-4 font-medium">{item.user.name}</TableCell>
+                      <TableCell className="max-w-60 whitespace-normal">{services}</TableCell>
+                      <TableCell>
+                        <span className="text-muted-foreground">{date}</span>
+                        <span className="ml-3 tabular-nums">
+                          {formatScheduleRange(
+                            start ?? item.schedule.startAt,
+                            end ?? item.schedule.endAt
+                          )}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Badge
+                          variant={
+                            status === 'ongoing'
+                              ? 'lightInfo'
+                              : status === 'upcoming'
+                                ? 'lightWarning'
+                                : 'lightSuccess'
+                          }
+                        >
+                          {status === 'ongoing'
+                            ? 'Berlangsung'
+                            : status === 'upcoming'
+                              ? 'Akan datang'
+                              : 'Selesai'}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+            {bookings.length > 5 && (
+              <div className="mt-3 text-center">
+                <Button size="sm" variant="ghost" onClick={() => setShowAll((value) => !value)}>
+                  {showAll
+                    ? 'Tampilkan lebih sedikit'
+                    : `Lihat ${bookings.length - 5} booking lainnya`}
+                </Button>
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 

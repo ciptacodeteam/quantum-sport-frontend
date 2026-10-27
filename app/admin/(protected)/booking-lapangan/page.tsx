@@ -441,9 +441,8 @@ export default function BookingLapangan() {
 
   // Handle court selection
   const handleCourtSelect = (courtId: string) => {
-    setSelectedCourt(courtId);
-    // Clear selected time slots when switching courts
-    // This prevents selecting slots that don't exist for the new court
+    setSelectedCourt((current) => (current === courtId ? null : courtId));
+    // Reset uncommitted slots when changing or clearing the court.
     setSelectedTimeSlots([]);
   };
 
@@ -851,7 +850,7 @@ export default function BookingLapangan() {
                         return !isTimeSlotBooked(timeSlot, court.id);
                       }).length;
 
-                      const isDisabled = availableSlotsCount === 0;
+                      const isDisabled = availableSlotsCount === 0 && selectedCourt !== court.id;
 
                       return (
                         <button

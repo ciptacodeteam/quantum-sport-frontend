@@ -4,6 +4,7 @@ import TransactionChart from '@/components/admin/charts/TransactionChart';
 import StatsCard from '@/components/admin/dashboard/StatsCard';
 import OnGoingBookingScheduleSection from '@/components/admin/sections/OnGoingBookingScheduleSection';
 import AppSectionHeader from '@/components/ui/app-section-header';
+import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ROLE } from '@/lib/constants';
@@ -16,7 +17,13 @@ import { useEffect } from 'react';
 export default function DashboardPage() {
   const router = useRouter();
   const { data: me } = useQuery(adminProfileQueryOptions);
-  const { data: stats, isLoading, isError } = useQuery(dashboardStatsQueryOptions());
+  const {
+    data: stats,
+    isLoading,
+    isError,
+    refetch,
+    isFetching
+  } = useQuery(dashboardStatsQueryOptions());
 
   // Role-based access control - only ADMIN (super admin) can view dashboard
   useEffect(() => {
@@ -49,16 +56,19 @@ export default function DashboardPage() {
   }
 
   return (
-    <main>
-      <header>
+    <main className="w-full min-w-0 space-y-6 pb-6">
+      <div>
         <AppSectionHeader
-          title="Selamat datang di Quantum Sport Dashboard"
+          title="Dashboard Black Padel"
           description="Pantau kinerja lapangan dan kelola operasional bisnis Anda dengan mudah."
         />
-      </header>
+      </div>
 
-      <section className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-1 gap-4 *:data-[slot=card]:bg-linear-to-t *:data-[slot=card]:shadow-xs md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {isLoading || isError ? (
+      <section
+        aria-label="Ringkasan bulan ini"
+        className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
+      >
+        {isLoading ? (
           <>
             {[...Array(4)].map((_, i) => (
               <Card key={i} className="@container/card">
@@ -74,17 +84,45 @@ export default function DashboardPage() {
               </Card>
             ))}
           </>
+        ) : isError ? (
+          <Card className="col-span-full items-center gap-3 p-6 text-center" role="alert">
+            <p className="text-muted-foreground text-sm">Ringkasan dashboard belum dapat dimuat.</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void refetch()}
+              disabled={isFetching}
+            >
+              Coba lagi
+            </Button>
+          </Card>
         ) : stats ? (
           <>
-            <StatsCard title="Total Revenue" stat={stats.totalRevenue} />
-            <StatsCard title="Total Sales" stat={stats.totalSales} />
-            <StatsCard title="New Customers" stat={stats.newCustomers} />
-            <StatsCard title="Active Accounts" stat={stats.activeAccounts} />
+            <StatsCard
+              title="Pendapatan"
+              stat={stats.totalRevenue}
+              subtitle="Total pembayaran yang diterima bulan ini"
+            />
+            <StatsCard
+              title="Transaksi"
+              stat={stats.totalSales}
+              subtitle="Transaksi lunas bulan ini"
+            />
+            <StatsCard
+              title="Pelanggan baru"
+              stat={stats.newCustomers}
+              subtitle="Pelanggan yang bergabung bulan ini"
+            />
+            <StatsCard
+              title="Akun aktif"
+              stat={stats.activeAccounts}
+              subtitle="Pelanggan yang bertransaksi bulan ini"
+            />
           </>
         ) : null}
       </section>
 
-      <section className="mt-6">
+      <section aria-label="Grafik transaksi">
         <TransactionChart />
       </section>
       <OnGoingBookingScheduleSection />

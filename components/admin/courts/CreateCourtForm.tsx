@@ -1,4 +1,5 @@
 'use client';
+import { useAdminCourtSports } from '@/hooks/useAdminCourtSports';
 
 import { mapApiErrorsToForm } from '@/lib/api-error';
 
@@ -34,6 +35,7 @@ const formSchema = z.object({
 type FormSchema = z.infer<typeof formSchema>;
 
 const CreateCourtForm = () => {
+  const { canCreateTennis } = useAdminCourtSports();
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -126,7 +128,9 @@ const CreateCourtForm = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="PADEL">Padel</SelectItem>
-                    <SelectItem value="TENNIS">Tennis</SelectItem>
+                    <SelectItem value="TENNIS" disabled={!canCreateTennis}>
+                      Tennis (Cemara)
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               )}
