@@ -12,14 +12,11 @@
 }
 
 @theme inline {
-  --font-inter: var(--font-inter);
-  --default-font-family:
-    var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
-    Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  --default-font-family: var(--font-jakarta), Arial, Helvetica, sans-serif;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-jakarta), Arial, Helvetica, sans-serif;
   --font-mono: var(--font-geist-mono);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -55,7 +52,7 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  --color-badge: #ff5100;
+  --color-badge: #ad422b;
 }
 
 :root {
@@ -66,8 +63,8 @@
   --card-foreground: oklch(0.141 0.005 285.823);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: #143e2b;
-  --primary-foreground: oklch(0.986 0.031 120.757);
+  --primary: #111111;
+  --primary-foreground: #ffffff;
   --secondary: oklch(0.967 0.001 286.375);
   --secondary-foreground: oklch(0.21 0.006 285.885);
   --muted: #f4f4f5;
@@ -77,20 +74,20 @@
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.92 0.004 286.32);
   --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.841 0.238 128.85);
-  --chart-1: oklch(0.871 0.15 154.449);
-  --chart-2: oklch(0.723 0.219 149.579);
-  --chart-3: oklch(0.627 0.194 149.214);
-  --chart-4: oklch(0.527 0.154 150.069);
-  --chart-5: oklch(0.448 0.119 151.328);
+  --ring: #555555;
+  --chart-1: #e5b6a6;
+  --chart-2: #cf8b73;
+  --chart-3: #ad422b;
+  --chart-4: #803524;
+  --chart-5: #51291f;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: oklch(0.648 0.2 131.684);
-  --sidebar-primary-foreground: oklch(0.986 0.031 120.757);
+  --sidebar-primary: #111111;
+  --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: oklch(0.967 0.001 286.375);
   --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
   --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.841 0.238 128.85);
+  --sidebar-ring: #555555;
 }
 
 .dark {
@@ -100,8 +97,8 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.21 0.006 285.885);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.648 0.2 131.684);
-  --primary-foreground: oklch(0.986 0.031 120.757);
+  --primary: #f8f8f6;
+  --primary-foreground: #111111;
   --secondary: oklch(0.274 0.006 286.033);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.274 0.006 286.033);
@@ -111,20 +108,20 @@
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.405 0.101 131.063);
-  --chart-1: oklch(0.871 0.15 154.449);
-  --chart-2: oklch(0.723 0.219 149.579);
-  --chart-3: oklch(0.627 0.194 149.214);
-  --chart-4: oklch(0.527 0.154 150.069);
-  --chart-5: oklch(0.448 0.119 151.328);
+  --ring: #a3a3a3;
+  --chart-1: #e5b6a6;
+  --chart-2: #cf8b73;
+  --chart-3: #ad422b;
+  --chart-4: #803524;
+  --chart-5: #51291f;
   --sidebar: oklch(0.21 0.006 285.885);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.768 0.233 130.85);
-  --sidebar-primary-foreground: oklch(0.986 0.031 120.757);
+  --sidebar-primary: #f8f8f6;
+  --sidebar-primary-foreground: #111111;
   --sidebar-accent: oklch(0.274 0.006 286.033);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.405 0.101 131.063);
+  --sidebar-ring: #a3a3a3;
 }
 
 @layer base {
@@ -141,6 +138,119 @@
 
 .scrollable {
   -webkit-overflow-scrolling: touch;
+}
+
+body:has([data-slot='mobile-bottom-navigation']) .mobile-header-back {
+  display: none;
+}
+
+.addons-page [data-slot='card'] {
+  gap: 0;
+  padding: 0;
+  border-radius: 0;
+  border-color: rgb(0 0 0 / 15%);
+  background: #f8f8f6;
+  box-shadow: none;
+}
+
+.booking-date-dialog {
+  --color-primary: #111111;
+  --color-primary-foreground: #ffffff;
+  --color-ring: #555555;
+  --primary: #111111;
+  --primary-foreground: #ffffff;
+  --ring: #555555;
+  --accent: #eaeae5;
+  --accent-foreground: #171717;
+  --popover: #ffffff;
+  --foreground: #171717;
+  --muted-foreground: #737373;
+}
+
+.auth-dialog {
+  --color-primary: #111111;
+  --color-primary-foreground: #ffffff;
+  --color-ring: #555555;
+  --primary: #111111;
+  --primary-foreground: #ffffff;
+  --ring: #555555;
+  --input: #d8d8d4;
+  --muted-foreground: #737373;
+  --background: #f8f8f6;
+  --foreground: #171717;
+}
+
+.auth-dialog [data-slot='field-group'] {
+  gap: 1.25rem;
+}
+
+.auth-dialog [data-slot='field'] {
+  gap: 0.5rem;
+}
+
+.auth-dialog [data-slot='field-label'] {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #333333;
+}
+
+.auth-dialog [data-slot='input-group'],
+.auth-dialog input {
+  height: 3rem;
+  border-radius: 0;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.auth-dialog [data-slot='input-group'] {
+  overflow: hidden;
+}
+
+.auth-dialog [data-slot='input-group']:focus-within {
+  border-color: #555555;
+  box-shadow: 0 0 0 2px rgb(17 17 17 / 8%);
+}
+
+.auth-dialog [data-slot='input-group'] input {
+  height: 100%;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.auth-dialog [data-slot='input-group'] > span {
+  border-right: 1px solid #e5e5e2;
+}
+
+.auth-dialog [data-slot='dialog-footer'] {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  align-items: stretch;
+  gap: 0.75rem;
+}
+
+.auth-dialog [data-slot='dialog-footer'] > button {
+  width: 100%;
+  min-width: 0;
+}
+
+.auth-dialog button[type='submit'],
+.auth-dialog [data-slot='dialog-footer'] > button {
+  height: 3rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  box-shadow: none;
+}
+
+.auth-dialog button[type='submit'] {
+  background: #111111;
+  color: #ffffff;
+}
+
+.auth-dialog button[type='submit']:hover {
+  background: #333333;
 }
 
 .coach-whatsapp-widget footer form {
@@ -162,4 +272,158 @@
 .coach-whatsapp-widget footer form button svg {
   width: 26px;
   height: 26px;
+}
+
+/* Admin controls use the same terracotta palette as the public brand. */
+:is(.admin-theme, html[data-admin-theme='true']) {
+  --primary: #ad422b;
+  --primary-foreground: #ffffff;
+  --ring: #737373;
+  --accent: #f7ece8;
+  --accent-foreground: #803524;
+  --secondary: #f7ece8;
+  --secondary-foreground: #803524;
+  --sidebar-primary: #ad422b;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f7ece8;
+  --sidebar-accent-foreground: #803524;
+  --sidebar-ring: #737373;
+}
+
+:where(.admin-theme, html[data-admin-theme='true']) :is(button, a)[data-variant]:not([data-day]) {
+  --admin-button-color: #ad422b;
+  --admin-button-hover: #8e3524;
+  --admin-button-muted: #f7ece8;
+}
+
+:where(.admin-theme, html[data-admin-theme='true'])
+  :is(button, a)[data-variant]:not([data-day]):is(
+    [data-variant='default'],
+    [data-variant='destructive'],
+    [data-variant^='secondary']:not([data-variant='secondary'])
+  ) {
+  border-color: transparent;
+  background-color: var(--admin-button-color);
+  color: #ffffff;
+}
+
+:where(.admin-theme, html[data-admin-theme='true'])
+  :is(button, a)[data-variant]:not([data-day]):is(
+    [data-variant='default'],
+    [data-variant='destructive'],
+    [data-variant^='secondary']:not([data-variant='secondary'])
+  ):hover:not(:disabled) {
+  border-color: transparent;
+  background-color: var(--admin-button-hover);
+}
+
+:where(.admin-theme, html[data-admin-theme='true'])
+  :is(button, a)[data-variant]:not([data-day])[data-variant='outline'] {
+  border-color: var(--border);
+  color: var(--admin-button-color);
+}
+
+:where(.admin-theme, html[data-admin-theme='true'])
+  :is(button, a)[data-variant]:not([data-day]):is(
+    [data-variant='secondary'],
+    [data-variant^='light']
+  ) {
+  background-color: var(--admin-button-muted);
+  color: #803524;
+}
+
+:where(.admin-theme, html[data-admin-theme='true'])
+  :is(button, a)[data-variant]:not([data-day]):is([data-variant='ghost'], [data-variant='link']) {
+  color: var(--admin-button-color);
+}
+
+:where(.admin-theme, html[data-admin-theme='true'])
+  :is(button, a)[data-variant]:not([data-day]):is(
+    [data-variant='outline'],
+    [data-variant='secondary'],
+    [data-variant^='light'],
+    [data-variant='ghost']
+  ):hover:not(:disabled) {
+  background-color: var(--admin-button-muted);
+  color: #803524;
+}
+
+:where(.admin-theme, html[data-admin-theme='true'])
+  :is(button, a)[data-variant]:not([data-day]):focus-visible {
+  border-color: var(--ring);
+  --tw-ring-color: #73737366;
+}
+
+.dark
+  :where(.admin-theme, html[data-admin-theme='true'])
+  :is(button, a)[data-variant]:not([data-day]):is(
+    [data-variant='ghost'],
+    [data-variant='link'],
+    [data-variant='outline']
+  ),
+html.dark[data-admin-theme='true']
+  :is(button, a)[data-variant]:not([data-day]):is(
+    [data-variant='ghost'],
+    [data-variant='link'],
+    [data-variant='outline']
+  ) {
+  color: #e5b6a6;
+}
+
+/* Keep admin outlines neutral, including selected booking cards and hover states. */
+:where(.admin-theme, html[data-admin-theme='true'])
+  :is(
+    [class~='border-primary'],
+    [class~='border-primary/50'],
+    [class~='border-primary/30'],
+    [class~='border-primary/20']
+  ) {
+  border-color: var(--ring);
+}
+
+:where(.admin-theme, html[data-admin-theme='true'])
+  :is([class~='hover:border-primary'], [class~='hover:border-primary/50']):hover {
+  border-color: var(--ring);
+}
+
+/* Readable admin table type at normal browser zoom. */
+.admin-panel table {
+  --admin-table-text-size: 1rem;
+  font-size: var(--admin-table-text-size);
+  line-height: 1.5;
+}
+
+.admin-panel table :is(th, td),
+.admin-panel table .text-sm {
+  font-size: var(--admin-table-text-size);
+  line-height: 1.5;
+}
+
+.admin-panel
+  table
+  :is(.text-xs, [class~='text-[10px]'], [class~='text-[11px]'], [class~='text-[12px]']) {
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.admin-panel table th {
+  font-size: var(--admin-table-text-size);
+  font-weight: 500;
+}
+
+.admin-panel table [data-slot='badge'] {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  min-height: 1.5rem;
+  height: auto;
+}
+
+.admin-panel table[data-slot='table'] th {
+  height: auto;
+  padding: 0.625rem 1rem;
+}
+
+.admin-panel table[data-slot='table'] td {
+  padding: 1rem;
+  vertical-align: middle;
 }

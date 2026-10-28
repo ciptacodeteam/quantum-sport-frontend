@@ -85,7 +85,7 @@ const AdminDashboardLayout = ({ children }: PropsWithChildren) => {
   }
 
   return (
-    <SidebarProvider>
+    <SidebarProvider className="admin-panel">
       <AppSidebar />
       <SidebarInset>
         <AppDashboardHeader />

@@ -7,7 +7,7 @@ import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from '@/component
 import { Textarea } from '@/components/ui/textarea';
 import { useConfirmMutation } from '@/hooks/useConfirmDialog';
 import { adminBanCustomerMutationOptions } from '@/mutations/admin/customer';
-import { adminCustomersQueryOptions } from '@/queries/admin/customer';
+import { adminCustomerQueryOptions, adminCustomersQueryOptions } from '@/queries/admin/customer';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, type SubmitHandler, useForm } from 'react-hook-form';
 import z from 'zod';
@@ -55,7 +55,10 @@ const BanCustomerForm = ({ customerId }: Props) => {
         success: () => 'Data berhasil diban.',
         error: 'Gagal membatasi akses kustomer.'
       },
-      invalidate: adminCustomersQueryOptions.queryKey
+      invalidate: [
+        adminCustomersQueryOptions.queryKey,
+        adminCustomerQueryOptions(customerId).queryKey
+      ]
     }
   );
 

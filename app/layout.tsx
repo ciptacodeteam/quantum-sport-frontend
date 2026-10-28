@@ -1,14 +1,15 @@
 import AppProvider from '@/providers/AppProvider';
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Plus_Jakarta_Sans } from 'next/font/google';
 import '@/styles/globals.css';
 import { cn } from '@/lib/utils';
 
 import Script from 'next/script';
 
-const inter = Inter({
-  variable: '--font-inter',
-  subsets: ['latin']
+const jakarta = Plus_Jakarta_Sans({
+  variable: '--font-jakarta',
+  subsets: ['latin'],
+  display: 'swap'
 });
 
 export const metadata: Metadata = {
@@ -71,7 +72,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id">
-      <body className={cn('antialiased', inter.variable)}>
+      <body className={cn('font-sans antialiased', jakarta.variable)}>
         <AppProvider>{children}</AppProvider>
 
         {/* ✅ JSON-LD Structured Data */}

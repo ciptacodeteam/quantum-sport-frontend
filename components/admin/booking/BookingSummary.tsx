@@ -39,7 +39,7 @@ import type {
   SelectedCoach,
   SelectedInventory
 } from '@/stores/useBookingStore';
-import { IconX } from '@tabler/icons-react';
+import { IconChevronDown, IconX } from '@tabler/icons-react';
 
 /**
  * Props for the BookingSummary component
@@ -267,7 +267,7 @@ export default function BookingSummary({
   onBookingRemove,
   className,
   sticky = true,
-  width = 'w-full xl:w-[400px] xl:shrink-0'
+  width = 'w-full min-w-0'
 }: BookingSummaryProps) {
   // Customer selection states
   const [isCustomerOpen, setIsCustomerOpen] = useState(false);
@@ -297,9 +297,11 @@ export default function BookingSummary({
     setAdminNoteLocal(adminNote || '');
   }, [adminNote]);
 
+  const currentCustomer = selectedCustomer?.id === selectedCustomerId ? selectedCustomer : null;
+
   // Reset selectedCustomer when selectedCustomerId becomes null (e.g., after booking is cleared)
   useEffect(() => {
-    if (!selectedCustomerId) {
+    if (!selectedCustomerId || selectedCustomer?.id !== selectedCustomerId) {
       setSelectedCustomer(null);
       setCustomerSearch('');
       setDebouncedSearch('');
@@ -342,11 +344,28 @@ export default function BookingSummary({
     >
   );
 
+  const equipmentGroups = Array.from(
+    selectedInventories
+      .reduce((groups, item) => {
+        const group = groups.get(item.inventoryId) ?? {
+          inventoryId: item.inventoryId,
+          name: item.inventoryName,
+          items: [] as SelectedInventory[],
+          price: 0
+        };
+        group.items.push(item);
+        group.price += item.price;
+        groups.set(item.inventoryId, group);
+        return groups;
+      }, new Map<string, { inventoryId: string; name: string; items: SelectedInventory[]; price: number }>())
+      .values()
+  );
+
   // Calculate membership discount (always call hook, but use provided data if available)
   const calculatedMembershipDiscount = useMembershipDiscount(
     selectedCustomerId || null,
     bookingItems,
-    selectedCustomer ? { activeMembership: selectedCustomer.activeMembership } : null,
+    currentCustomer ? { activeMembership: currentCustomer.activeMembership } : null,
     false,
     undefined,
     useMembership
@@ -392,26 +411,24 @@ export default function BookingSummary({
   };
 
   return (
-    <div className={cn(width, className)}>
-      <Card className={cn(sticky && 'xl:sticky xl:top-6')}>
-        <CardHeader>
-          <CardTitle>Booking Summary</CardTitle>
+    <div className={cn('min-w-0', width, className)}>
+      <Card className={cn('min-w-0 gap-5 py-5 sm:py-6', sticky && '2xl:sticky 2xl:top-6')}>
+        <CardHeader className="px-5 sm:px-6">
+          <CardTitle className="text-base leading-snug">Booking Summary</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-5 px-5 sm:px-6">
           {/* Customer Selection */}
           {showCustomerSelection && (
             <div className="space-y-2">
               <label className="text-sm font-medium">Pilih Pelanggan</label>
               <div className="flex items-center gap-2">
-                <div className="flex-1">
+                <div className="min-w-0 flex-1">
                   <Popover
                     open={isCustomerOpen}
                     onOpenChange={(o) => {
                       setIsCustomerOpen(o);
-                      if (!o) {
-                        setCustomerSearch('');
-                        setDebouncedSearch('');
-                      }
+                      setCustomerSearch('');
+                      setDebouncedSearch('');
                     }}
                   >
                     <PopoverTrigger asChild>
@@ -419,11 +436,21 @@ export default function BookingSummary({
                         variant="outline"
                         role="combobox"
                         aria-expanded={isCustomerOpen}
-                        className="w-full justify-between"
+                        className="h-11 w-full justify-between gap-2 overflow-hidden [&>span]:truncate"
                       >
-                        {selectedCustomer || (selectedCustomerName && selectedCustomerPhone)
-                          ? `${selectedCustomer?.name || selectedCustomerName}${selectedCustomer?.phone || selectedCustomerPhone ? ` (${selectedCustomer?.phone || selectedCustomerPhone})` : ''}`
-                          : 'Pilih pelanggan...'}
+                        <span className="truncate">
+                          {isCustomerOpen
+                            ? 'Cari pelanggan baru...'
+                            : selectedCustomerId
+                              ? currentCustomer?.name ||
+                                selectedCustomerName ||
+                                'Pilih pelanggan...'
+                              : 'Pilih pelanggan...'}
+                        </span>
+                        <IconChevronDown
+                          className="text-muted-foreground size-4 shrink-0"
+                          aria-hidden="true"
+                        />
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-(--radix-popover-trigger-width) p-0">
@@ -431,7 +458,10 @@ export default function BookingSummary({
                         <CommandInput
                           placeholder="Cari pelanggan (min 2 karakter)..."
                           value={customerSearch}
-                          onValueChange={setCustomerSearch}
+                          onValueChange={(text) => {
+                            setCustomerSearch(text);
+                            setDebouncedSearch('');
+                          }}
                         />
                         <CommandList>
                           {isSearching ? (
@@ -467,7 +497,7 @@ export default function BookingSummary({
                 {/* Walk-in customer capture */}
                 <Dialog open={isWalkInOpen} onOpenChange={setIsWalkInOpen}>
                   <DialogTrigger asChild>
-                    <Button type="button" variant="outline" size="sm">
+                    <Button type="button" variant="outline" size="sm" className="h-11">
                       Walk-in
                     </Button>
                   </DialogTrigger>
@@ -547,38 +577,23 @@ export default function BookingSummary({
                 </div>
               )}
 
-              {/* Show customer details if available */}
-              {selectedCustomerId && (selectedCustomer || selectedCustomerName) && (
-                <div className="bg-muted mt-2 rounded-md border px-3 py-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="mb-1">
-                        <span className="text-muted-foreground font-medium">Pelanggan:</span>
-                      </div>
-                      <div>
-                        <span className="font-semibold">
-                          {selectedCustomer?.name || selectedCustomerName || '-'}
-                        </span>
-                        {(selectedCustomer?.phone || selectedCustomerPhone) && (
-                          <span className="text-muted-foreground ml-1">
-                            ({selectedCustomer?.phone || selectedCustomerPhone})
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedCustomer(null);
-                        onCustomerClear();
-                      }}
-                      className="ml-2 h-6 px-2 text-xs"
-                    >
-                      Hapus
-                    </Button>
-                  </div>
+              {selectedCustomerId && (
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground min-w-0 text-xs break-words">
+                    {currentCustomer?.phone || selectedCustomerPhone || ''}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedCustomer(null);
+                      onCustomerClear();
+                    }}
+                    className="h-9 shrink-0 px-2 text-xs"
+                  >
+                    Hapus
+                  </Button>
                 </div>
               )}
             </div>
@@ -669,13 +684,13 @@ export default function BookingSummary({
                       );
                       const isFree = membershipDiscount.canUseMembership && bookingIndex >= 0;
 
-                      const { normalPrice, discountPrice, displayPrice } = getPricing(booking);
+                      const { displayPrice } = getPricing(booking);
 
                       return (
                         <div
                           key={`${date}-${index}`}
                           className={cn(
-                            'ml-2 flex items-center justify-between gap-2 rounded p-2 text-xs',
+                            'flex flex-wrap items-center justify-between gap-3 rounded-lg p-3 text-xs',
                             isFree ? 'border-l-4 border-l-green-500 bg-green-50' : 'bg-muted'
                           )}
                         >
@@ -694,35 +709,14 @@ export default function BookingSummary({
                             <p className="text-muted-foreground">{booking.timeSlot}</p>
                           </div>
                           <div className="flex shrink-0 items-center gap-2">
-                            <span
-                              className={cn(
-                                'font-semibold',
-                                isFree ? 'text-green-600 line-through' : 'text-primary'
-                              )}
-                            >
-                              {isFree ? (
-                                <>
-                                  <span className="text-muted-foreground">
-                                    {formatCurrency(normalPrice)}
-                                  </span>{' '}
-                                  <span className="ml-1">Gratis</span>
-                                </>
-                              ) : discountPrice > 0 && discountPrice < normalPrice ? (
-                                <span className="flex flex-col items-end">
-                                  <span className="text-muted-foreground text-[10px] line-through">
-                                    {formatCurrency(normalPrice)}
-                                  </span>
-                                  <span>{formatCurrency(displayPrice)}</span>
-                                </span>
-                              ) : (
-                                formatCurrency(displayPrice)
-                              )}
+                            <span className="text-primary font-semibold tabular-nums">
+                              {isFree ? 'Gratis' : formatCurrency(displayPrice)}
                             </span>
                             {onBookingRemove && (
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-6 w-6 p-0 text-red-500 hover:bg-red-50 hover:text-red-700"
+                                className="h-9 w-9 p-0 text-red-500 hover:bg-red-50 hover:text-red-700"
                                 onClick={() =>
                                   onBookingRemove(booking.courtId, booking.timeSlot, booking.date)
                                 }
@@ -741,7 +735,7 @@ export default function BookingSummary({
           )}
 
           {/* Selected Coaches */}
-          {showAddOns && onCoachRemove && (
+          {showAddOns && onCoachRemove && selectedCoaches.length > 0 && (
             <div className="space-y-2">
               <h4 className="text-muted-foreground text-sm font-medium">Selected Coaches</h4>
               {selectedCoaches.length === 0 ? (
@@ -767,7 +761,7 @@ export default function BookingSummary({
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-6 w-6 p-0 text-red-500 hover:bg-red-50 hover:text-red-700"
+                        className="h-9 w-9 p-0 text-red-500 hover:bg-red-50 hover:text-red-700"
                         onClick={() => onCoachRemove(coach.coachId, coach.timeSlot, coach.slotId)}
                       >
                         <IconX className="h-3 w-3" />
@@ -780,7 +774,7 @@ export default function BookingSummary({
           )}
 
           {/* Selected Ballboys */}
-          {showAddOns && onBallboyRemove && (
+          {showAddOns && onBallboyRemove && selectedBallboys.length > 0 && (
             <div className="space-y-2">
               <h4 className="text-muted-foreground text-sm font-medium">Selected Ballboys</h4>
               {selectedBallboys.length === 0 ? (
@@ -807,7 +801,7 @@ export default function BookingSummary({
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-6 w-6 p-0 text-red-500 hover:bg-red-50 hover:text-red-700"
+                        className="h-9 w-9 p-0 text-red-500 hover:bg-red-50 hover:text-red-700"
                         onClick={() =>
                           onBallboyRemove(ballboy.ballboyId, ballboy.timeSlot, ballboy.slotId)
                         }
@@ -821,43 +815,46 @@ export default function BookingSummary({
             </div>
           )}
 
-          {/* Selected Equipment */}
-          {showAddOns && onInventoryRemove && (
-            <div className="space-y-2">
-              <h4 className="text-muted-foreground text-sm font-medium">Selected Equipment</h4>
-              {selectedInventories.length === 0 ? (
-                <div className="bg-muted rounded-lg p-4 text-center">
-                  <p className="text-muted-foreground text-xs">Belum ada equipment yang dipilih</p>
-                </div>
-              ) : (
-                selectedInventories.map((inventory, index) => (
+          {showAddOns && onInventoryRemove && equipmentGroups.length > 0 && (
+            <div className="space-y-3">
+              <h4 className="text-muted-foreground text-sm font-medium">Equipment</h4>
+              {equipmentGroups.map((group) => {
+                const quantities = group.items.map((item) => item.quantity);
+                const min = Math.min(...quantities);
+                const max = Math.max(...quantities);
+                return (
                   <div
-                    key={index}
-                    className="flex items-center justify-between gap-2 rounded bg-green-50 p-2 text-xs"
+                    key={group.inventoryId}
+                    className="bg-muted/50 flex flex-wrap items-center justify-between gap-3 rounded-lg p-3"
                   >
-                    <div className="min-w-0">
-                      <p className="truncate font-medium">{inventory.inventoryName}</p>
-                      <p className="text-muted-foreground">
-                        {dayjs(inventory.date).format('DD MMM')} • {inventory.timeSlot} • Qty:{' '}
-                        {inventory.quantity}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm leading-snug font-medium break-words">{group.name}</p>
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        Qty: {min === max ? min : `${min}–${max}`}
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
-                      <span className="text-primary font-semibold">
-                        {formatCurrency(inventory.price)}
+                      <span className="text-sm font-semibold tabular-nums">
+                        {formatCurrency(group.price)}
                       </span>
                       <Button
-                        size="sm"
+                        type="button"
+                        size="icon"
                         variant="ghost"
-                        className="h-6 w-6 p-0 text-red-500 hover:bg-red-50 hover:text-red-700"
-                        onClick={() => onInventoryRemove(inventory.inventoryId, inventory.timeSlot)}
+                        className="text-muted-foreground size-9"
+                        aria-label={`Hapus ${group.name}`}
+                        onClick={() =>
+                          group.items.forEach((item) =>
+                            onInventoryRemove(item.inventoryId, item.timeSlot)
+                          )
+                        }
                       >
-                        <IconX className="h-3 w-3" />
+                        <IconX className="size-4" />
                       </Button>
                     </div>
                   </div>
-                ))
-              )}
+                );
+              })}
             </div>
           )}
 
@@ -873,9 +870,7 @@ export default function BookingSummary({
             )}
             {membershipDiscount.canUseMembership && membershipDiscount.slotsToDeduct > 0 && (
               <div className="flex items-center justify-between text-xs text-green-600">
-                <span>
-                  Membership Discount ({membershipDiscount.slotsToDeduct} jam)
-                </span>
+                <span>Membership Discount ({membershipDiscount.slotsToDeduct} jam)</span>
                 <span className="font-medium">
                   - {formatCurrency(membershipDiscount.discountAmount)}
                 </span>
@@ -921,7 +916,7 @@ export default function BookingSummary({
             <div className="space-y-2 pt-4">
               {primaryAction && (
                 <Button
-                  className="w-full"
+                  className="h-11 w-full whitespace-normal"
                   size="default"
                   onClick={primaryAction.onClick}
                   disabled={primaryAction.disabled || primaryAction.loading}
@@ -933,7 +928,7 @@ export default function BookingSummary({
                 <Button
                   key={index}
                   variant={action.variant || 'outline'}
-                  className="w-full"
+                  className="h-11 w-full whitespace-normal"
                   size="sm"
                   onClick={action.onClick}
                 >

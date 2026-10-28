@@ -1,142 +1,117 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Carousel, CarouselContent, CarouselDots, CarouselItem } from '@/components/ui/carousel';
 import { bannersQueryOptions } from '@/queries/banner';
 import type { Banner } from '@/types/model';
+import { useBranchStore } from '@/stores/useBranchStore';
 import { useQuery } from '@tanstack/react-query';
 import Autoplay from 'embla-carousel-autoplay';
+import { ArrowUpRight } from 'lucide-react';
 import Image from 'next/image';
-import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import BranchLink from '@/components/branches/BranchLink';
+import { useRef, useState } from 'react';
+import MenuSection from './MenuSection';
+import LocationsSection from './LocationsSection';
+import BrandIntroSection from './BrandIntroSection';
 
-const DEFAULT_IMAGE = 'assets/img/banner.webp';
-const DEFAULT_BANNERS = [
-  {
-    id: 'default-banner',
-    image: DEFAULT_IMAGE
-  }
-];
+const DEFAULT_IMAGE = '/assets/img/court-3.jpg';
+const DEFAULT_BANNERS = [{ id: 'default-court', image: DEFAULT_IMAGE, link: null }];
 
 const getBanners = (banners: Banner[] | undefined) => {
-  if (!banners || banners.length === 0) {
-    return DEFAULT_BANNERS;
-  }
-
-  const filtered = banners
-    .filter((banner) => banner.isActive)
+  const active = (banners ?? [])
+    .filter((banner) => {
+      if (!banner.isActive || !banner.image) return false;
+      // Seed placeholders are replaced by the existing court photography.
+      if (banner.image.includes('picsum.photos/')) return false;
+      if (banner.link && /^\/(?:clubs|my-club|tournaments)(?:\/|\?|$)/.test(banner.link))
+        return false;
+      return true;
+    })
     .sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0));
-
-  if (filtered.length === 0) {
-    return DEFAULT_BANNERS;
-  }
-
-  return filtered;
+  return active.length ? active : DEFAULT_BANNERS;
 };
 
 export default function BannerSection() {
-  const plugin = useRef(Autoplay({ delay: 5000, stopOnInteraction: true }));
-  const { data } = useQuery(bannersQueryOptions());
+  const plugin = useRef(
+    Autoplay({ delay: 5000, stopOnInteraction: false, stopOnMouseEnter: true, stopOnFocusIn: true })
+  );
+  const branchId = useBranchStore((state) => state.branch?.id);
+  const { data } = useQuery({
+    ...bannersQueryOptions(),
+    queryKey: ['banners', branchId || 'unselected'],
+    enabled: !!branchId
+  });
   const banners = getBanners(data);
-
-  // 🔥 Tambahan untuk mendapatkan embla API
-  const [emblaApi, setEmblaApi] = useState<any>(null);
-
-  // 🔥 Re-init ketika jumlah banner berubah
-  useEffect(() => {
-    if (emblaApi) emblaApi.reInit();
-  }, [banners.length, emblaApi]);
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
 
   return (
-    <section className="mx-auto w-11/12 lg:max-w-7xl">
-      {/* --- WRAPPER GRID UNTUK DESKTOP --- */}
-      <div className="block grid-cols-5 lg:grid lg:gap-2">
-        {/* LEFT: CAROUSEL (3/5) */}
-        <div className="lg:col-span-3">
+    <section aria-label="Bermain di Black Padel" className="mx-auto w-full max-w-7xl px-5 sm:px-8">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[1.85fr_1fr]">
+        <div className="min-w-0">
           <Carousel
-            plugins={[plugin.current]}
-            className="group/carousel relative lg:px-0"
-            onMouseEnter={plugin.current.stop}
-            onMouseLeave={plugin.current.reset}
-            setApi={setEmblaApi}
+            opts={{ loop: banners.length > 1 }}
+            plugins={banners.length > 1 ? [plugin.current] : []}
+            className="min-w-0 overflow-hidden"
+            aria-label="Foto dan penawaran lapangan"
           >
-            <CarouselContent className="">
+            <CarouselContent>
               {banners.map((banner, index) => {
-                const image = banner.image || DEFAULT_IMAGE;
-
                 const content = (
-                  <div className="relative aspect-video w-full overflow-hidden rounded-lg">
+                  <div className="relative aspect-video w-full overflow-hidden bg-neutral-200 md:aspect-[2.6/1] md:min-h-[240px]">
                     <Image
-                      src={image}
-                      alt={banner.id ? `Banner ${banner.id}` : `Banner ${index + 1}`}
+                      src={failedImages[banner.id] ? DEFAULT_IMAGE : banner.image || DEFAULT_IMAGE}
+                      alt={`Lapangan padel Black Padel${banners.length > 1 ? ` — ${index + 1}` : ''}`}
                       fill
+                      priority={index === 0}
+                      sizes="(min-width: 1280px) 780px, (min-width: 768px) 65vw, 100vw"
                       unoptimized
                       className="object-cover"
+                      onError={() =>
+                        setFailedImages((previous) => ({ ...previous, [banner.id]: true }))
+                      }
                     />
                   </div>
                 );
-
                 return (
-                  <CarouselItem className="basis-full" key={banner.id || `banner-${index}`}>
-                    <div>
-                      <Card className="py-0 shadow-none">
-                        <CardContent className="flex min-h-40 items-center justify-center p-0 md:min-h-0">
-                          {banner.link ? (
-                            <a
-                              href={banner.link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="block h-full w-full"
-                            >
-                              {content}
-                            </a>
-                          ) : (
-                            content
-                          )}
-                        </CardContent>
-                      </Card>
-                    </div>
+                  <CarouselItem key={banner.id}>
+                    {banner.link ? (
+                      <a
+                        href={banner.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-white"
+                      >
+                        {content}
+                      </a>
+                    ) : (
+                      content
+                    )}
                   </CarouselItem>
                 );
               })}
             </CarouselContent>
-
-            <CarouselDots className="absolute bottom-0 left-1/2 mb-4 -translate-x-1/2 lg:bottom-2" />
+            {banners.length > 1 && (
+              <CarouselDots className="absolute bottom-3 left-1/2 -translate-x-1/2" />
+            )}
           </Carousel>
+          <MenuSection />
         </div>
 
-        {/* RIGHT: CTA (2/5) */}
-        <div className="hidden lg:col-span-2 lg:block">
-          <div className="bg-primary item relative h-full rounded-lg">
-            <div className="grid grid-cols-2 items-center gap-4">
-              <div className="relative z-10 flex h-full flex-col items-center justify-center p-6">
-                <h2 className="mt-28 text-left font-semibold text-white md:text-3xl">
-                  Gabung <br className="lg:hidden" />
-                  Membership <br /> Sekarang!
-                </h2>
+        <BrandIntroSection />
 
-                <span className="text-muted mt-4 text-left text-xs">
-                  Dapatkan prioritas booking dan promo menarik lainnya!
-                </span>
-              </div>
-              <div className="flex items-center justify-end">
-                <Image
-                  src="/assets/img/player.png"
-                  alt="Membership Cta"
-                  preload
-                  width={500}
-                  height={500}
-                  className="absolute right-0 -bottom-30 h-auto w-[400px] -translate-y-1/2 object-contain"
-                />
-              </div>
-            </div>
-            <footer className="flex w-full px-6">
-              <Button asChild variant="secondary" className="mt-14 w-full">
-                <Link href="/membership">Gabung Sekarang</Link>
-              </Button>
-            </footer>
-          </div>
+        <LocationsSection />
+
+        <div className="flex min-h-[220px] flex-col justify-between gap-12 bg-[#111111] p-6 text-white md:min-h-0 md:gap-8 lg:p-7">
+          <h1 className="max-w-sm text-base leading-snug font-medium uppercase lg:text-lg">
+            Are you ready to make your first swing on a padel court?
+          </h1>
+          <BranchLink
+            href="/booking"
+            className="flex min-h-10 w-full items-center justify-center gap-2 rounded-full border border-white/30 px-5 py-3 text-[10px] font-medium tracking-[0.06em] uppercase transition-colors hover:bg-white hover:text-black focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+          >
+            Book a Court
+            <ArrowUpRight className="size-3" strokeWidth={1.5} aria-hidden="true" />
+          </BranchLink>
         </div>
       </div>
     </section>

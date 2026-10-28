@@ -7,7 +7,6 @@ import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarMenu,
-  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSub,
@@ -60,18 +59,14 @@ export function NavMain({ items }: { items: AppSidebarItem[] }) {
                 {item.items?.length ? (
                   <>
                     <CollapsibleTrigger asChild>
-                      <SidebarMenuButton asChild tooltip={item.title} isActive={itemIsActive}>
-                        <div className="flex w-full cursor-pointer items-center gap-2">
-                          <item.icon />
-                          <span>{item.title}</span>
-                        </div>
+                      <SidebarMenuButton
+                        tooltip={item.title}
+                        className="group hover:bg-muted hover:text-sidebar-foreground active:bg-muted active:text-sidebar-foreground data-[state=open]:hover:bg-muted data-[state=open]:hover:text-sidebar-foreground cursor-pointer"
+                      >
+                        <item.icon />
+                        <span>{item.title}</span>
+                        <ChevronRight className="ml-auto transition-transform group-data-[state=open]:rotate-90" />
                       </SidebarMenuButton>
-                    </CollapsibleTrigger>
-                    <CollapsibleTrigger asChild>
-                      <SidebarMenuAction className="data-[state=open]:rotate-90">
-                        <ChevronRight />
-                        <span className="sr-only">Toggle</span>
-                      </SidebarMenuAction>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <SidebarMenuSub>
@@ -80,7 +75,15 @@ export function NavMain({ items }: { items: AppSidebarItem[] }) {
 
                           return (
                             <SidebarMenuSubItem key={subItem.url}>
-                              <SidebarMenuSubButton asChild isActive={subItemIsActive}>
+                              <SidebarMenuSubButton
+                                asChild
+                                isActive={subItemIsActive}
+                                className={
+                                  subItemIsActive
+                                    ? undefined
+                                    : 'hover:bg-muted hover:text-sidebar-foreground active:bg-muted active:text-sidebar-foreground'
+                                }
+                              >
                                 <Link href={subItem.url} prefetch>
                                   <span>{subItem.title}</span>
                                   {subItem.isUnrealeased && (
@@ -99,7 +102,16 @@ export function NavMain({ items }: { items: AppSidebarItem[] }) {
                 ) : (
                   <>
                     {item.url ? (
-                      <SidebarMenuButton asChild tooltip={item.title} isActive={itemIsActive}>
+                      <SidebarMenuButton
+                        asChild
+                        tooltip={item.title}
+                        isActive={itemIsActive}
+                        className={
+                          itemIsActive
+                            ? undefined
+                            : 'hover:bg-muted hover:text-sidebar-foreground active:bg-muted active:text-sidebar-foreground'
+                        }
+                      >
                         <Link href={item.url} prefetch>
                           <item.icon />
                           <span>{item.title}</span>
@@ -111,7 +123,16 @@ export function NavMain({ items }: { items: AppSidebarItem[] }) {
                         </Link>
                       </SidebarMenuButton>
                     ) : (
-                      <SidebarMenuButton asChild tooltip={item.title} isActive={itemIsActive}>
+                      <SidebarMenuButton
+                        asChild
+                        tooltip={item.title}
+                        isActive={itemIsActive}
+                        className={
+                          itemIsActive
+                            ? undefined
+                            : 'hover:bg-muted hover:text-sidebar-foreground active:bg-muted active:text-sidebar-foreground'
+                        }
+                      >
                         <div className="flex w-full cursor-pointer items-center gap-2">
                           <item.icon />
                           <span>{item.title}</span>

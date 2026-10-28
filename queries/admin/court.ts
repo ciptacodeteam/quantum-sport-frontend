@@ -42,10 +42,11 @@ export const adminCourtCostingQueryOptionsById = (id: string, queryParams?: Sear
 export const adminCourtsWithSlotsQueryOptions = (
   date: string,
   courtId?: string,
-  courtSport?: 'PADEL' | 'TENNIS'
+  courtSport?: 'PADEL' | 'TENNIS',
+  includeUnavailable = false
 ) =>
   queryOptions({
-    queryKey: ['admin', 'courts', 'slots', date, courtId, courtSport],
+    queryKey: ['admin', 'courts', 'slots', date, courtId, courtSport, includeUnavailable],
     queryFn: async () => {
       // Get slots for the entire day (06:00 to 23:00)
       // API expects ISO format: 2025-01-20T08:00:00
@@ -68,7 +69,12 @@ export const adminCourtsWithSlotsQueryOptions = (
       // Use the /courts/slots endpoint to get all slots at once (avoids 404s from individual court endpoints)
       let allSlots: Slot[] = [];
       try {
-        const slotsResponse = await getCourtsSlotsApi({ startAt, endAt, ...(courtSport ? { courtSport } : {}) });
+        const slotsResponse = await getCourtsSlotsApi({
+          startAt,
+          endAt,
+          ...(courtSport ? { courtSport } : {}),
+          ...(includeUnavailable ? { includeUnavailable: 'true' } : {})
+        });
         allSlots = (slotsResponse.data || []) as Slot[];
       } catch (error) {
         // If the bulk endpoint fails, fall back to individual court endpoints
@@ -78,7 +84,11 @@ export const adminCourtsWithSlotsQueryOptions = (
         );
         const slotPromises = courts.map(async (court) => {
           try {
-            const slotsResponse = await getCourtSlotsApi(court.id, { startAt, endAt });
+            const slotsResponse = await getCourtSlotsApi(court.id, {
+              startAt,
+              endAt,
+              ...(includeUnavailable ? { includeUnavailable: 'true' } : {})
+            });
             return slotsResponse.data as Slot[];
           } catch {
             // If a court doesn't have slots endpoint or fails, return empty array

@@ -40,7 +40,10 @@ export async function suspendAdminMembershipTransactionApi(
   id: string,
   payload: { reason: string; endDate?: string }
 ) {
-  const { data } = await adminApi.put(`/membership-transactions/${id}/suspend`, payload);
+  const { data } = await adminApi.put(`/membership-transactions/${id}/suspend`, {
+    reason: payload.reason,
+    suspensionEndDate: payload.endDate
+  });
   return data;
 }
 

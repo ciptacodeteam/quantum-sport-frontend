@@ -29,6 +29,7 @@ export const STATUS_BADGE_VARIANT: Record<number, BadgeVariant['variant']> = {
 };
 
 export const ROLE = {
+  SUPER_ADMIN: 'SUPER_ADMIN',
   ADMIN: 'ADMIN',
   ADMIN_VIEWER: 'ADMIN_VIEWER',
   USER: 'USER',
@@ -66,6 +67,7 @@ export const GENDER_BADGE_VARIANT: Record<Gender, BadgeVariant['variant']> = {
 };
 
 export const ROLE_MAP: Record<Role, string> = {
+  [ROLE.SUPER_ADMIN]: 'Super Admin',
   [ROLE.ADMIN]: 'Admin',
   [ROLE.ADMIN_VIEWER]: 'Admin Viewer',
   [ROLE.USER]: 'User',
@@ -75,15 +77,15 @@ export const ROLE_MAP: Record<Role, string> = {
 };
 
 export const ROLE_OPTIONS: Array<{ label: string; value: Role }> = [
+  { label: 'Super Admin', value: ROLE.SUPER_ADMIN },
   { label: 'Admin', value: ROLE.ADMIN },
   { label: 'Admin Viewer', value: ROLE.ADMIN_VIEWER },
   { label: 'User', value: ROLE.USER },
-  { label: 'Ballboy', value: ROLE.BALLBOY },
-  { label: 'Coach', value: ROLE.COACH },
   { label: 'Cashier', value: ROLE.CASHIER }
 ];
 
 export const ROLE_BADGE_VARIANT: Record<Role, BadgeVariant['variant']> = {
+  [ROLE.SUPER_ADMIN]: 'lightSuccess',
   [ROLE.ADMIN]: 'lightSuccess',
   [ROLE.ADMIN_VIEWER]: 'lightNeutral',
   [ROLE.USER]: 'lightNeutral',

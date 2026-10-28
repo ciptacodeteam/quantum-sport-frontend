@@ -3,8 +3,9 @@
 import { mapApiErrorsToForm } from '@/lib/api-error';
 
 import { ResendOtpButton } from '@/components/buttons/ResendOtpButton';
-import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from '@/components/ui/field';
+import { Field, FieldError, FieldGroup, FieldSet } from '@/components/ui/field';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+import { DialogTitle } from '@/components/ui/dialog';
 import { formatPhone } from '@/lib/utils';
 import { registerMutationOptions, verifyPhoneOtpMutationOptions } from '@/mutations/auth';
 import { sendPhoneOtpMutationOptions } from '@/mutations/phone';
@@ -23,7 +24,7 @@ import { toast } from 'sonner';
 import z from 'zod';
 
 const formSchema = z.object({
-  otp: z.string().min(1, 'OTP is required').length(4, 'OTP must be 4 digits'),
+  otp: z.string().min(1, 'Masukkan kode OTP').length(4, 'Kode OTP harus terdiri dari 4 digit'),
   phone: z.string().min(1, 'WhatsApp Number is required').max(15, 'WhatsApp Number is too long'),
   requestId: z.string().min(1, 'Request ID is required')
 });
@@ -173,16 +174,27 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
   // }, [form.watch, handleOtpChange]);
 
   return (
-    <form className="py-6 md:p-8" onSubmit={form.handleSubmit(onSubmit)}>
+    <form className="otp-verification py-1" onSubmit={form.handleSubmit(onSubmit)}>
       <FieldSet>
         <FieldGroup>
           <Field>
-            <div className="flex-center flex-col gap-4">
-              <header className="flex-center flex-col gap-4">
-                <Phone className="text-primary size-10" />
-                <FieldLabel htmlFor="otp" className="max-w-xs text-center leading-relaxed">
-                  Enter the OTP sent to your WhatsApp Number <br /> {formatPhone(phone)}
-                </FieldLabel>
+            <div className="flex w-full flex-col items-center gap-0">
+              <header className="mb-7 flex w-full flex-col items-center text-center">
+                <div className="mb-4 flex size-10 items-center justify-center text-[#ad422b]">
+                  <Phone className="size-7" strokeWidth={1.5} aria-hidden="true" />
+                </div>
+                <DialogTitle className="text-[22px] leading-snug font-medium tracking-tight text-[#171717]">
+                  Verifikasi WhatsApp
+                </DialogTitle>
+                <p
+                  id="whatsapp-otp-description"
+                  className="mt-3 max-w-[260px] text-xs leading-relaxed text-black/50"
+                >
+                  Masukkan 4 digit kode yang dikirim ke WhatsApp
+                </p>
+                <p className="mt-2 text-sm font-medium tracking-wide text-[#171717]">
+                  {formatPhone(phone)}
+                </p>
               </header>
               <Controller
                 name="otp"
@@ -191,7 +203,13 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
                 disabled={isRegisterPending || isPending || isResendOtpPending}
                 render={({ field }) => (
                   <InputOTP
+                    id="otp"
+                    aria-label="Kode OTP WhatsApp"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    containerClassName="w-full justify-center"
                     maxLength={maxLength}
+                    disabled={field.disabled}
                     value={field.value}
                     onChange={(value) => {
                       field.onChange(value);
@@ -200,17 +218,25 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
                       }
                     }}
                   >
-                    <InputOTPGroup>
-                      <InputOTPSlot index={0} className="size-14 md:text-xl" />
-                      <InputOTPSlot index={1} className="size-14 md:text-xl" />
-                      <InputOTPSlot index={2} className="size-14 md:text-xl" />
-                      <InputOTPSlot index={3} className="size-14 md:text-xl" />
+                    <InputOTPGroup className="w-full max-w-[280px] justify-center gap-3">
+                      <InputOTPSlot index={0} variant="separated" />
+                      <InputOTPSlot index={1} variant="separated" />
+                      <InputOTPSlot index={2} variant="separated" />
+                      <InputOTPSlot index={3} variant="separated" />
                     </InputOTPGroup>
                   </InputOTP>
                 )}
               />
-              <FieldError>{form.formState.errors.otp?.message}</FieldError>
-              <div className="mt-2">
+              <FieldError className="mt-3 text-center">
+                {form.formState.errors.otp?.message}
+              </FieldError>
+              {(isPending || isRegisterPending) && (
+                <p role="status" className="mt-3 text-xs text-black/50">
+                  Memverifikasi kode...
+                </p>
+              )}
+              <div className="mt-6 flex w-full flex-wrap items-center justify-center gap-x-2 gap-y-0 [&_button]:min-h-10 [&_button]:border-0 [&_button]:px-0 [&_button]:py-0">
+                <p className="text-xs text-black/45">Belum menerima kode?</p>
                 <ResendOtpButton
                   onSendOtp={handleResendOtp}
                   seconds={process.env.NODE_ENV === 'development' ? 5 : 60}

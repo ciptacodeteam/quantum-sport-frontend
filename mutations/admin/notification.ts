@@ -1,27 +1,9 @@
 import {
-  createAdminNotificationApi,
   markAdminNotificationReadApi,
   markAllNotificationsReadApi
 } from '@/api/admin/notification';
-import type { CreateNotificationPayload } from '@/types/model';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { handleMutationError } from '@/lib/handle-mutation-error';
 import { toast } from 'sonner';
-
-export const useCreateNotificationMutation = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (payload: CreateNotificationPayload) => createAdminNotificationApi(payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'notifications'] });
-      toast.success('Notifikasi berhasil dikirim');
-    },
-    onError: (error: any) => {
-      toast.error(error?.response?.data?.message || 'Gagal mengirim notifikasi');
-    }
-  });
-};
 
 export const useMarkNotificationReadMutation = () => {
   const queryClient = useQueryClient();

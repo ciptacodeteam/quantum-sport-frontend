@@ -1,4 +1,5 @@
 import { api } from '@/lib/api';
+import { clearAdminSessionCookie, hasAdminSessionCookie } from '@/lib/admin-session';
 
 export async function checkAccountApi(payload) {
   const { data } = await api.post('/auth/check-account', payload);
@@ -26,6 +27,15 @@ export async function refreshTokenApi() {
 }
 
 export async function logoutApi() {
+  // The shared profile page can display either a customer or a staff session.
+  // End the same session used by getProfileApiSmart, including its API cookies.
+  if (hasAdminSessionCookie()) {
+    const { logoutApi: logoutAdminApi } = await import('@/api/admin/auth');
+    const data = await logoutAdminApi();
+    clearAdminSessionCookie();
+    return data;
+  }
+
   const { data } = await api.post('/auth/logout');
   return data;
 }
@@ -50,17 +60,15 @@ export async function getProfileApi() {
   return data;
 }
 
-import { hasAdminSessionCookie } from '@/lib/admin-session';
-
-export async function getProfileApiSmart() {
+export async function getProfileApiSmart({ signal }: { signal?: AbortSignal } = {}) {
   const { adminApi } = await import('@/lib/adminApi');
 
   if (hasAdminSessionCookie()) {
-    const { data } = await adminApi.get('/auth/profile');
+    const { data } = await adminApi.get('/auth/profile', { signal });
     return data;
   }
 
-  const { data } = await api.get('/auth/profile');
+  const { data } = await api.get('/auth/profile', { signal });
   return data;
 }
 

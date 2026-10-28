@@ -125,7 +125,7 @@ export default function PhoneChangeModal({ open, phone, onOpenChange, onSuccess 
         onOpenChange(o);
       }}
     >
-      <DialogContent>
+      <DialogContent className="auth-dialog max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-none border-black/15 bg-[#f8f8f6] p-6 text-[#171717] sm:p-8">
         <DialogHeader>
           <DialogTitle>Ubah WhatsApp Number</DialogTitle>
           <DialogDescription>Perbarui dan verifikasi nomor WhatsApp Anda</DialogDescription>

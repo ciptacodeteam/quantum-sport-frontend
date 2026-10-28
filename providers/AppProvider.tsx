@@ -1,5 +1,6 @@
 'use client';
 
+import BranchGate from '@/components/branches/BranchGate';
 import { Suspense, type PropsWithChildren } from 'react';
 import ReactQueryProvider from './ReactQueryProvider';
 
@@ -8,6 +9,7 @@ import '@/lib/dayjs';
 import { Toaster } from 'sonner';
 import { ConfirmDialogProvider } from '@/components/ui/confirm-dialog';
 import AuthModal from '@/components/modals/AuthModal';
+import MainFooter from '@/components/footers/MainFooter';
 import { usePathname } from 'next/navigation';
 
 const AppProvider = ({ children }: Readonly<PropsWithChildren>) => {
@@ -19,7 +21,16 @@ const AppProvider = ({ children }: Readonly<PropsWithChildren>) => {
       <ReactQueryProvider>
         <DialogProvider>
           <ConfirmDialogProvider>
-            {children}
+            {isAdminRoute ? (
+              children
+            ) : (
+              <div className="flex min-h-dvh flex-col">
+                <BranchGate>
+                  <div className="min-w-0 flex-1">{children}</div>
+                  <MainFooter />
+                </BranchGate>
+              </div>
+            )}
             {!isAdminRoute && (
               <Suspense>
                 <AuthModal />

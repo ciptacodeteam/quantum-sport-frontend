@@ -93,10 +93,15 @@ const EditCustomerForm = ({ customerId }: Props) => {
   return (
     <form onSubmit={form.handleSubmit(onSubmit)}>
       <FieldSet>
-        <FieldGroup>
+        <FieldGroup className="gap-5">
           <Field>
             <FieldLabel htmlFor="name">Nama Lengkap</FieldLabel>
-            <Input id="name" type="text" {...form.register('name')} placeholder="e.g. John Doe" />
+            <Input
+              id="name"
+              type="text"
+              {...form.register('name')}
+              placeholder="Nama lengkap kustomer"
+            />
             <FieldError>{form.formState.errors.name?.message}</FieldError>
           </Field>
           <Field>
@@ -107,7 +112,7 @@ const EditCustomerForm = ({ customerId }: Props) => {
                 id="phone"
                 type="tel"
                 {...form.register('phone')}
-                placeholder="e.g. 81234567890"
+                placeholder="81234567890"
                 onBlur={(e) => {
                   const val = e.target.value ?? '';
                   if (val.startsWith('0')) {
@@ -127,8 +132,8 @@ const EditCustomerForm = ({ customerId }: Props) => {
             <FieldError>{form.formState.errors.phone?.message}</FieldError>
           </Field>
           <Field className="mt-2">
-            <Button type="submit" className="w-fit!" loading={isPending}>
-              Save
+            <Button type="submit" className="w-fit! rounded-lg" loading={isPending}>
+              Simpan perubahan
             </Button>
           </Field>
         </FieldGroup>

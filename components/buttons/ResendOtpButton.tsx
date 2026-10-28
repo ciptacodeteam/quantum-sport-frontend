@@ -39,9 +39,9 @@ export function ResendOtpButton({
       onClick={handleClick}
       disabled={loading || isCoolingDown}
       aria-disabled={loading || isCoolingDown}
-      className="inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
+      className="inline-flex min-h-11 items-center justify-center rounded-full border border-black/20 bg-transparent px-5 py-2 text-xs font-medium text-[#ad422b] transition-colors hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ad422b] disabled:cursor-not-allowed disabled:text-black/40"
     >
-      {loading ? 'Sending...' : isCoolingDown ? `Resend in ${label}` : 'Resend OTP'}
+      {loading ? 'Mengirim...' : isCoolingDown ? `Kirim ulang dalam ${label}` : 'Kirim ulang kode'}
     </button>
   );
 }

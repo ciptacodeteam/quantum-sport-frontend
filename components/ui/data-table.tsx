@@ -101,6 +101,11 @@ interface DataTableProps<TData extends RowData> {
   loading?: boolean;
   /** Search box */
   enableGlobalSearch?: boolean;
+  searchPlaceholder?: string;
+  initialColumnVisibility?: VisibilityState;
+  /** Persist column choices for this table in the current browser. */
+  columnVisibilityStorageKey?: string;
+  columnVisibilityLabel?: string;
   /** Optional add button on the top-right */
   addButton?: React.ReactNode;
   /** Extra content above the table (filters, etc.) */
@@ -136,6 +141,10 @@ export function DataTable<TData extends RowData>({
   loading,
   addButton,
   enableGlobalSearch = true,
+  searchPlaceholder = 'Search...',
+  initialColumnVisibility = {},
+  columnVisibilityStorageKey,
+  columnVisibilityLabel = 'View',
   children,
   rightActions,
 
@@ -186,7 +195,40 @@ export function DataTable<TData extends RowData>({
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [columnVisibility, setColumnVisibility] =
+    useState<VisibilityState>(initialColumnVisibility);
+  const visibilityDefaults = useRef(initialColumnVisibility);
+  const [loadedVisibilityKey, setLoadedVisibilityKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    let saved: VisibilityState = {};
+    if (columnVisibilityStorageKey) {
+      try {
+        const raw = window.localStorage.getItem(columnVisibilityStorageKey);
+        const parsed: unknown = raw ? JSON.parse(raw) : null;
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          saved = Object.fromEntries(
+            Object.entries(parsed).filter(([, value]) => typeof value === 'boolean')
+          );
+        }
+      } catch {
+        // Storage may be disabled or contain an invalid preference; keep the defaults.
+      }
+    }
+    setColumnVisibility({ ...visibilityDefaults.current, ...saved });
+    setLoadedVisibilityKey(columnVisibilityStorageKey ?? null);
+  }, [columnVisibilityStorageKey]);
+
+  useEffect(() => {
+    // Wait for restoration before saving, so the initial defaults cannot erase saved choices.
+    if (!columnVisibilityStorageKey || loadedVisibilityKey !== columnVisibilityStorageKey) return;
+    try {
+      window.localStorage.setItem(columnVisibilityStorageKey, JSON.stringify(columnVisibility));
+    } catch {
+      // The table remains usable when browser storage is unavailable.
+    }
+  }, [columnVisibility, columnVisibilityStorageKey, loadedVisibilityKey]);
+
   const [pagination, setPagination] = useState(getInitialPagination());
   const [expanded, setExpanded] = useState({});
   const isInitialMount = useRef(true);
@@ -345,7 +387,7 @@ export function DataTable<TData extends RowData>({
       <div className="flex flex-wrap items-center gap-3 py-4">
         {enableGlobalSearch && (
           <Input
-            placeholder="Search..."
+            placeholder={searchPlaceholder}
             value={table.getState().globalFilter || ''}
             onChange={(e) => handleSearchChange(e.target.value)}
             className="max-w-60 text-sm"
@@ -357,7 +399,7 @@ export function DataTable<TData extends RowData>({
 
         {/* Right-side actions */}
         {(enableColumnVisibility || rightActions) && (
-          <div className="flex-center ml-auto gap-2">
+          <div className="ml-auto flex max-w-full min-w-0 flex-wrap items-center gap-2">
             {rightActions && <div>{rightActions}</div>}
 
             {enableColumnVisibility && (
@@ -365,11 +407,13 @@ export function DataTable<TData extends RowData>({
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="gap-2" disabled={loading}>
                     <Settings2 className="h-4 w-4" />
-                    View
+                    {columnVisibilityLabel}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+                  <DropdownMenuLabel>
+                    {columnVisibilityLabel === 'View' ? 'Toggle Columns' : 'Tampilkan kolom'}
+                  </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   {table
                     .getAllLeafColumns()
@@ -381,12 +425,14 @@ export function DataTable<TData extends RowData>({
                         checked={column.getIsVisible()}
                         onCheckedChange={(v) => column.toggleVisibility(!!v)}
                       >
-                        {column.id === 'id'
-                          ? 'ID'
-                          : column.id
-                              .replace(/([A-Z])/g, ' $1')
-                              .trim()
-                              .toLowerCase()}
+                        {typeof column.columnDef.header === 'string'
+                          ? column.columnDef.header
+                          : column.id === 'id'
+                            ? 'ID'
+                            : column.id
+                                .replace(/([A-Z])/g, ' $1')
+                                .trim()
+                                .toLowerCase()}
                       </DropdownMenuCheckboxItem>
                     ))}
                 </DropdownMenuContent>

@@ -1,15 +1,17 @@
 'use client';
+import BranchLabel from '@/components/branches/BranchLabel';
 
+import PaymentLoading, { PaymentProcessingOverlay } from '@/components/invoice/PaymentLoading';
 import MainHeader from '@/components/headers/MainHeader';
-import BottomNavigationWrapper from '@/components/ui/BottomNavigationWrapper';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 import SavedCardSelector from '@/components/forms/payment/SavedCardSelector';
 import CreditCardForm, { type CreditCardFormData } from '@/components/forms/payment/CreditCardForm';
 import { useMembershipDiscount } from '@/hooks/useMembershipDiscount';
-import { useXenditCardCollection } from '@/hooks/useXenditTokenization';
+import { getCardToken } from '@/lib/midtrans';
 import { cn, resolveMediaUrl } from '@/lib/utils';
+import { getCheckoutSelections } from '@/lib/checkout-selections';
 import { applyPromoMutationOptions, checkoutMutationOptions } from '@/mutations/booking';
 import { paymentMethodsQueryOptions } from '@/queries/paymentMethod';
 import { profileQueryOptions } from '@/queries/profile';
@@ -17,14 +19,14 @@ import useAuthModalStore from '@/stores/useAuthModalStore';
 import useAuthRedirectStore from '@/stores/useAuthRedirectStore';
 import { useBookingStore } from '@/stores/useBookingStore';
 import type { PaymentMethod, CreditCard } from '@/types/model';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs, { nowJakarta } from '@/lib/dayjs';
 import 'dayjs/locale/id';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
-import { X } from 'lucide-react';
+import { ArrowUpRight, ShoppingBag } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 dayjs.locale('id');
@@ -83,17 +85,7 @@ export default function CheckoutPage() {
   // const pathname = usePathname();
   // const searchParams = useSearchParams();
   const bookingItems = useBookingStore((state) => state.bookingItems);
-  const coachTotal = useBookingStore((state) => state.coachTotal);
-  const ballboyTotal = useBookingStore((state) => state.ballboyTotal);
-  const inventoryTotal = useBookingStore((state) => state.inventoryTotal);
-  const selectedCoaches = useBookingStore((state) => state.selectedCoaches);
-  const selectedBallboys = useBookingStore((state) => state.selectedBallboys);
-  const selectedInventories = useBookingStore((state) => state.selectedInventories);
-  // const removeCoach = useBookingStore((state) => state.removeCoach);
-  const removeBallboy = useBookingStore((state) => state.removeBallboy);
-  const removeInventory = useBookingStore((state) => state.removeInventory);
-
-  const addOnsTotal = coachTotal + ballboyTotal + inventoryTotal;
+  const hasCheckoutItems = bookingItems.length > 0;
 
   // Authentication check
   const { data: user, isPending: isUserPending } = useQuery(profileQueryOptions);
@@ -120,12 +112,19 @@ export default function CheckoutPage() {
   // Apply membership discount to court total
   const courtSubtotal = membershipDiscount.originalTotal;
   const discountedCourtTotal = membershipDiscount.discountedTotal;
-  const grandTotal = discountedCourtTotal + addOnsTotal;
+  const grandTotal = discountedCourtTotal;
+  const isCoveredByMembership =
+    useMembership &&
+    bookingItems.length > 0 &&
+    membershipDiscount.canUseMembership &&
+    membershipDiscount.slotsToDeduct > 0 &&
+    grandTotal === 0;
 
   const { data: paymentMethods = [], isPending: isLoadingPaymentMethods } = useQuery(
     paymentMethodsQueryOptions()
   );
 
+  const [isNavigatingToPayment, setNavigatingToPayment] = useState(false);
   const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
   const [selectedCard, setSelectedCard] = useState<CreditCard | null>(null);
@@ -151,18 +150,38 @@ export default function CheckoutPage() {
     }
   }, []);
 
-  const { collectCard, isLoading: isCollectingCard } = useXenditCardCollection();
+  const [isTokenizingCard, setTokenizingCard] = useState(false);
+  const cardPayTab = useRef<Window | null>(null);
   const confirm = useConfirm();
+  const queryClient = useQueryClient();
 
   const checkoutMutation = useMutation(
     checkoutMutationOptions({
       onSuccess: (data) => {
-        // For card payments, don't redirect to invoice yet
-        // Redirect will happen after 3DS authentication completes
-        if (selectedPaymentMethod?.channel === 'CARDS') {
-          return; // Skip invoice redirect for card payments
+        void queryClient.invalidateQueries({ queryKey: ['memberships', 'my'] });
+        void queryClient.invalidateQueries({ queryKey: ['courts', 'slots'] });
+        const paymentUrl = data?.data?.paymentUrl;
+        const needsCard3ds =
+          selectedPaymentMethod?.channel === 'CARDS' &&
+          paymentUrl &&
+          data?.data?.paymentStatus !== 'PAID';
+        if (needsCard3ds) {
+          const tab = cardPayTab.current;
+          cardPayTab.current = null;
+          if (tab && !tab.closed) {
+            tab.location.href = paymentUrl;
+            tab.opener = null;
+          } else {
+            setNavigatingToPayment(true);
+            window.location.href = paymentUrl;
+            return;
+          }
+        } else {
+          cardPayTab.current?.close();
+          cardPayTab.current = null;
         }
 
+        setNavigatingToPayment(true);
         // Clear booking store after successful checkout (non-card payments only)
         persistPaymentMethodId(null);
         useBookingStore.getState().clearAll();
@@ -193,7 +212,7 @@ export default function CheckoutPage() {
             promoCode: appliedPromoCode || undefined,
             breakdown: data.breakdown || {
               courtTotal: courtSubtotal,
-              addOnsTotal,
+              addOnsTotal: 0,
               processingFee: paymentFeeBreakdown.totalFee,
               promoDiscount: promoDiscountAmount,
               total: totalAfterPromo
@@ -202,6 +221,10 @@ export default function CheckoutPage() {
           sessionStorage.setItem('checkoutData', JSON.stringify(enhancedData));
           router.push('/checkout/payment');
         }
+      },
+      onError: () => {
+        void queryClient.invalidateQueries({ queryKey: ['memberships', 'my'] });
+        void queryClient.invalidateQueries({ queryKey: ['courts', 'slots'] });
       }
     })
   );
@@ -215,14 +238,14 @@ export default function CheckoutPage() {
   // }, [pathname, searchParams]);
 
   useEffect(() => {
-    if (!isUserPending && !isAuthenticated && bookingItems.length > 0) {
+    if (!isUserPending && !isAuthenticated && hasCheckoutItems) {
       // setRedirectPath(currentPath);
       openAuthModal();
     }
   }, [
     isUserPending,
     isAuthenticated,
-    bookingItems.length,
+    hasCheckoutItems,
     openAuthModal,
     setRedirectPath
     // currentPath
@@ -256,7 +279,7 @@ export default function CheckoutPage() {
   }, [selectedPaymentMethod, persistPaymentMethodId]);
 
   const paymentFeeBreakdown = (() => {
-    if (!selectedPaymentMethod) {
+    if (isCoveredByMembership || !selectedPaymentMethod) {
       return {
         fixedFee: 0,
         percentageRate: 0,
@@ -282,34 +305,16 @@ export default function CheckoutPage() {
   const totalWithPaymentFee = grandTotal + paymentFeeBreakdown.totalFee;
   const totalAfterPromo = Math.max(0, totalWithPaymentFee - promoDiscountAmount);
 
-  const buildCheckoutSelections = useCallback(() => {
-    const courtSlots = bookingItems
-      .filter((item) => {
-        if (!item.slotId) return false;
-        const isConstructed = /-\d{2}:\d{2}$/.test(item.slotId);
-        return !isConstructed;
-      })
-      .map((item) => item.slotId);
-
-    const coachSlots = selectedCoaches.filter((coach) => coach.slotId).map((coach) => coach.slotId);
-
-    const ballboySlots = selectedBallboys
-      .filter((ballboy) => ballboy.slotId && ballboy.courtSlotId)
-      .map((ballboy) => ({
-        slotId: ballboy.slotId as string,
-        courtSlotId: ballboy.courtSlotId as string
-      }));
-
-    const inventories = selectedInventories
-      .filter((inventory) => inventory.inventoryId && inventory.quantity > 0)
-      .map((inventory) => ({
-        inventoryId: inventory.inventoryId,
-        quantity: inventory.quantity,
-        ...(inventory.courtSlotId ? { courtSlotId: inventory.courtSlotId } : {})
-      }));
-
-    return { courtSlots, coachSlots, ballboySlots, inventories };
-  }, [bookingItems, selectedBallboys, selectedCoaches, selectedInventories]);
+  const buildCheckoutSelections = useCallback(
+    () =>
+      getCheckoutSelections({
+        bookingItems,
+        selectedCoaches: [],
+        selectedBallboys: [],
+        selectedInventories: []
+      }),
+    [bookingItems]
+  );
 
   const groupedCourts = useMemo(() => {
     const map = new Map<
@@ -344,21 +349,35 @@ export default function CheckoutPage() {
     );
   }, [bookingItems]);
 
-  if (bookingItems.length === 0) {
+  if (isNavigatingToPayment)
     return (
-      <div className="bg-background min-h-screen">
+      <PaymentLoading
+        title="Menyiapkan pesanan"
+        description="Mohon tunggu, pesanan Anda sedang dimuat."
+      />
+    );
+
+  if (!hasCheckoutItems) {
+    return (
+      <div className="min-h-dvh">
         <MainHeader
           title="Detail Pembayaran"
           backHref={bookingHref}
           withCartBadge
           withLogo={false}
         />
-        <main className="flex min-h-[calc(100vh-96px)] flex-col items-center justify-center gap-4 px-6 text-center">
-          <h1 className="text-xl font-semibold">Tidak ada pesanan</h1>
+        <main className="checkout-page mx-auto flex min-h-[calc(100dvh-76px)] w-full max-w-7xl flex-col items-center justify-center gap-3 px-6 pt-28 pb-12 text-center">
+          <ShoppingBag className="mb-2 size-10 text-black/25" strokeWidth={1} aria-hidden="true" />
+          <h1 className="text-2xl font-medium tracking-tight text-[#171717]">Belum ada pesanan</h1>
           <p className="text-muted-foreground text-sm">
-            Tambahkan slot booking terlebih dahulu untuk melihat ringkasan pembayaran.
+            Pilih jadwal lapangan atau peralatan tambahan untuk melanjutkan.
           </p>
-          <Button onClick={() => router.push(bookingHref)}>Kembali ke Booking</Button>
+          <Button
+            className="mt-3 h-12 gap-3 rounded-full bg-[#111111] px-7 text-sm text-white hover:bg-black/80 has-[>svg]:px-7"
+            onClick={() => router.push(bookingHref)}
+          >
+            Pilih jadwal <ArrowUpRight className="size-4" aria-hidden="true" />
+          </Button>
         </main>
       </div>
     );
@@ -405,10 +424,7 @@ export default function CheckoutPage() {
     applyPromoMutation.mutate(
       {
         promoCode: trimmedCode,
-        courtSlots: selections.courtSlots,
-        coachSlots: selections.coachSlots,
-        ballboySlots: selections.ballboySlots,
-        inventories: selections.inventories
+        courtSlots: selections.courtSlots
       },
       {
         onSuccess: (response) => {
@@ -448,16 +464,26 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (!selectedPaymentMethod) {
+    if (!isCoveredByMembership && !selectedPaymentMethod) {
       return;
     }
 
     // For CARDS channel, check if card is selected or new card data is provided
-    if (selectedPaymentMethod.channel === 'CARDS' && !selectedCard && !newCardData) {
+    if (
+      !isCoveredByMembership &&
+      selectedPaymentMethod?.channel === 'CARDS' &&
+      !selectedCard &&
+      !newCardData
+    ) {
       return;
     }
 
-    if (selectedPaymentMethod.channel === 'CARDS' && selectedCard && !selectedCardCvv) {
+    if (
+      !isCoveredByMembership &&
+      selectedPaymentMethod?.channel === 'CARDS' &&
+      selectedCard &&
+      !selectedCardCvv
+    ) {
       return;
     }
 
@@ -474,14 +500,16 @@ export default function CheckoutPage() {
       return;
     }
 
-    const { courtSlots, coachSlots, ballboySlots, inventories } = buildCheckoutSelections();
+    const { courtSlots } = buildCheckoutSelections();
 
     const payload: any = {
-      paymentMethodId: selectedPaymentMethod.id,
-      useMembership
+      ...(!isCoveredByMembership && selectedPaymentMethod
+        ? { paymentMethodId: selectedPaymentMethod.id }
+        : {}),
+      useMembership: bookingItems.length > 0 && useMembership
     };
 
-    if (appliedPromoCode) {
+    if (appliedPromoCode && !isCoveredByMembership) {
       payload.promoCode = appliedPromoCode;
     }
 
@@ -489,20 +517,8 @@ export default function CheckoutPage() {
       payload.courtSlots = courtSlots;
     }
 
-    if (coachSlots.length > 0) {
-      payload.coachSlots = coachSlots;
-    }
-
-    if (ballboySlots.length > 0) {
-      payload.ballboySlots = ballboySlots;
-    }
-
-    if (inventories.length > 0) {
-      payload.inventories = inventories;
-    }
-
     // Add card payment data if CARDS channel
-    if (selectedPaymentMethod.channel === 'CARDS') {
+    if (!isCoveredByMembership && selectedPaymentMethod?.channel === 'CARDS') {
       if (selectedCard) {
         // Use saved card
         payload.cardPayment = {
@@ -510,10 +526,7 @@ export default function CheckoutPage() {
           cvv: selectedCardCvv
         };
       } else if (newCardData) {
-        // Use new card - just send saveCard flag
-        payload.cardPayment = {
-          saveCard: newCardData.saveCard || false
-        };
+        payload.cardPayment = { saveCard: newCardData.saveCard || false };
       }
     }
 
@@ -522,7 +535,7 @@ export default function CheckoutPage() {
         <div className="space-y-2">
           <p>
             Khusus booking tennis, ballboy dari luar tidak diperkenankan. Jika membutuhkan layanan
-            ballboy, silakan gunakan ballboy resmi yang tersedia di Quantum Sport.
+            ballboy, silakan gunakan ballboy resmi yang tersedia di Black Padel.
           </p>
           <p>Reschedule berlaku H-3. Pastikan pesanan Anda sudah sesuai.</p>
         </div>
@@ -530,114 +543,118 @@ export default function CheckoutPage() {
         'Reschedule berlaku H-3. Pastikan pesanan Anda sudah sesuai.'
       );
 
+    const willTokenizeCard =
+      !isCoveredByMembership && selectedPaymentMethod?.channel === 'CARDS' && !!newCardData;
+    if (willTokenizeCard) {
+      cardPayTab.current?.close();
+      cardPayTab.current = window.open('', '_blank');
+    }
+
     // Ask for user confirmation before sending to backend to create Payment Session
     try {
       const ok = await confirm({
         title: 'Konfirmasi Pemesanan',
-        description: checkoutConfirmationDescription,
-        confirmText: 'Bayar Sekarang',
+        description: isCoveredByMembership ? (
+          <div className="space-y-2">
+            <p>
+              {membershipDiscount.slotsToDeduct} jam akan dipotong dari Value Pack. Tidak ada
+              pembayaran tambahan.
+            </p>
+            {checkoutConfirmationDescription}
+          </div>
+        ) : (
+          checkoutConfirmationDescription
+        ),
+        confirmText: isCoveredByMembership ? 'Konfirmasi booking' : 'Bayar Sekarang',
         cancelText: 'Cek Lagi',
         dismissible: true
       });
 
-      if (!ok) return;
-    } catch (e) {
-      // If confirm throws or is rejected, bail out
+      if (!ok) {
+        cardPayTab.current?.close();
+        cardPayTab.current = null;
+        return;
+      }
+    } catch {
+      cardPayTab.current?.close();
+      cardPayTab.current = null;
       return;
+    }
+
+    if (!isCoveredByMembership && selectedPaymentMethod?.channel === 'CARDS' && newCardData) {
+      setTokenizingCard(true);
+      try {
+        const tokenId = await getCardToken({
+          cardNumber: newCardData.cardNumber,
+          expiryMonth: newCardData.expiryMonth,
+          expiryYear: newCardData.expiryYear,
+          cvv: newCardData.cvv
+        });
+        payload.cardPayment = { tokenId, saveCard: newCardData.saveCard || false };
+      } catch (err: any) {
+        cardPayTab.current?.close();
+        cardPayTab.current = null;
+        toast.error(err.message || 'Card processing failed. Please try again.');
+        setTokenizingCard(false);
+        return;
+      }
+      setTokenizingCard(false);
     }
 
     // Send to backend to create Payment Session
     checkoutMutation.mutate(payload, {
-      onSuccess: (response) => {
-        // If card payment and payment session created, collect card data
-        if (
-          selectedPaymentMethod.channel === 'CARDS' &&
-          newCardData &&
-          response.data.paymentSessionId
-        ) {
-          void (async () => {
-            try {
-              console.log('Payment Session created:', response.data.paymentSessionId);
-              toast.info('Processing card payment...');
-
-              // Collect card data using card_session.js
-              const cardResult = await collectCard({
-                paymentSessionId: response.data.paymentSessionId,
-                cardNumber: newCardData.cardNumber.trim().replace(/\s+/g, ''),
-                expiryMonth: newCardData.expiryMonth,
-                expiryYear: newCardData.expiryYear,
-                cvv: newCardData.cvv,
-                cardholderFirstName: user?.name?.split(' ')[0] || 'Cardholder',
-                cardholderLastName: user?.name?.split(' ').slice(1).join(' ') || 'User',
-                cardholderEmail: user?.email,
-                cardholderPhoneNumber: user?.phone || undefined
-              });
-
-              console.log('Payment Request created:', cardResult.paymentRequestId);
-              console.log('Redirecting to 3DS:', cardResult.actionUrl);
-
-              sessionStorage.setItem(
-                'payment_3ds_data',
-                JSON.stringify({
-                  invoiceId: response.data?.invoiceId,
-                  invoiceNumber: response.data?.invoiceNumber,
-                  bookingId: response.data?.bookingId,
-                  paymentStatus: 'REQUIRES_ACTION',
-                  paymentUrl: cardResult.actionUrl
-                })
-              );
-
-              // External bank/Xendit URL — full navigation, not Next router
-              window.location.href = cardResult.actionUrl;
-            } catch (err: any) {
-              console.error('Card collection failed:', err);
-
-              // Show error to user
-              toast.error(err.message || 'Card processing failed. Please try again.');
-
-              // Cancel booking and payment session
-              void (async () => {
-                try {
-                  const invoiceId = response.data?.invoiceNumber || response.data?.invoiceId;
-                  const sessionId = response.data?.paymentSessionId;
-
-                  // Cancel booking if invoice was created
-                  if (invoiceId) {
-                    console.log('Cancelling booking:', invoiceId);
-                    const { cancelBookingApi } = await import('@/api/booking');
-                    await cancelBookingApi(invoiceId, {
-                      reason: 'Card payment processing failed'
-                    });
-                    console.log('Booking cancelled successfully');
-                  }
-
-                  // Cancel payment session
-                  if (sessionId) {
-                    console.log('Cancelling payment session:', sessionId);
-                    const { cancelPaymentSession } = await import('@/api/payment-session');
-                    await cancelPaymentSession({ sessionId });
-                    console.log('Payment session cancelled successfully');
-                  }
-                } catch (cancelErr) {
-                  console.error('Failed to cancel booking/session:', cancelErr);
-                  // Don't show error to user - the main error is already shown
-                }
-              })();
-
-              // Reset checkout mutation state to allow retry
-              checkoutMutation.reset();
-            }
-          })();
-        } else if (selectedPaymentMethod.channel !== 'CARDS') {
-          // Non-card payment success - proceed normally
-          toast.success('Checkout berhasil!');
-        }
+      onError: () => {
+        cardPayTab.current?.close();
+        cardPayTab.current = null;
       }
     });
   };
 
+  const checkoutAction = (
+    <Button
+      size="lg"
+      className="h-12 w-full min-w-0 rounded-full bg-[#111111] px-3 text-xs font-medium text-white hover:bg-black/80 disabled:bg-black/15 disabled:text-black/40 disabled:opacity-100"
+      onClick={handleCheckout}
+      disabled={
+        isAuthenticated &&
+        (checkoutMutation.isPending ||
+          isTokenizingCard ||
+          (!isCoveredByMembership &&
+            (!selectedPaymentMethod ||
+              (selectedPaymentMethod.channel === 'CARDS' && !selectedCard && !newCardData) ||
+              (selectedPaymentMethod.channel === 'CARDS' && !!selectedCard && !selectedCardCvv))))
+      }
+    >
+      {isUserPending
+        ? 'Memuat...'
+        : !isAuthenticated
+          ? 'Login untuk Checkout'
+          : isTokenizingCard
+            ? 'Memproses Kartu...'
+            : checkoutMutation.isPending
+              ? 'Memproses...'
+              : isCoveredByMembership
+                ? 'Konfirmasi booking'
+                : selectedPaymentMethod?.channel === 'CARDS' && !selectedCard && !newCardData
+                  ? 'Pilih Kartu'
+                  : selectedPaymentMethod
+                    ? 'Bayar Sekarang'
+                    : 'Pilih Metode'}
+    </Button>
+  );
+
   return (
-    <div className="min-h-screen pb-16">
+    <div className="min-h-dvh">
+      {(checkoutMutation.isPending || isTokenizingCard) && (
+        <PaymentProcessingOverlay
+          title={isCoveredByMembership ? 'Mengonfirmasi pesanan' : undefined}
+          description={
+            isCoveredByMembership
+              ? 'Mohon tunggu, jadwal dan penggunaan Value Pack sedang dikonfirmasi.'
+              : undefined
+          }
+        />
+      )}
       <MainHeader
         title="Detail Pembayaran"
         backHref={bookingHref}
@@ -646,490 +663,349 @@ export default function CheckoutPage() {
         withBorder
       />
 
-      <main className="mx-auto flex w-11/12 max-w-4xl flex-col gap-6 pt-28 pb-10">
-        <section className="border-muted space-y-4 rounded-lg border bg-white p-4">
-          {groupedCourts.map((group, index) => (
-            <div
-              key={`${group.courtName}-${group.date}`}
-              className={cn(
-                'space-y-3',
-                index < groupedCourts.length - 1 && 'border-muted/80 border-b border-dashed pb-4'
-              )}
-            >
-              <header className="space-y-1">
-                <h2 className="text-primary text-base font-semibold">{group.courtName}</h2>
-                <p className="text-muted-foreground text-sm">
-                  {dayjs(group.date).format('dddd, DD MMM YYYY')}
-                </p>
-              </header>
+      <main className="checkout-page mx-auto w-full max-w-7xl px-5 pt-24 pb-[calc(8rem+env(safe-area-inset-bottom))] text-[#171717] sm:px-8 lg:pb-16 xl:pt-32">
+        <header className="mb-6 flex items-center justify-between gap-4 border-b border-black/15 pb-5">
+          <h1 className="text-2xl font-medium tracking-tight sm:text-3xl">Checkout</h1>
+        </header>
+        <BranchLabel detailed />
+        <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-6">
+          <div className="min-w-0 space-y-4">
+            {groupedCourts.length > 0 && (
+              <section className="space-y-4 border border-black/15 bg-[#f8f8f6] p-5 sm:p-6">
+                {groupedCourts.map((group, index) => (
+                  <div
+                    key={`${group.courtName}-${group.date}`}
+                    className={cn(
+                      'space-y-3',
+                      index < groupedCourts.length - 1 &&
+                        'border-b border-dashed border-black/10 pb-4'
+                    )}
+                  >
+                    <header className="space-y-1">
+                      <h2 className="text-base font-medium text-[#171717]">{group.courtName}</h2>
+                      <p className="text-muted-foreground text-sm">
+                        {dayjs(group.date).format('dddd, DD MMM YYYY')}
+                      </p>
+                    </header>
 
-              <div className="space-y-2">
-                {[...group.slots]
-                  .sort((a, b) => {
-                    const dateCompare = a.date.localeCompare(b.date);
-                    if (dateCompare !== 0) return dateCompare;
-                    return a.timeSlot.localeCompare(b.timeSlot);
-                  })
-                  .map((slot, slotIndex) => {
-                    // Check if this slot is free due to membership
-                    const sortedBookings = [...bookingItems].sort((a, b) => {
-                      const dateCompare = a.date.localeCompare(b.date);
-                      if (dateCompare !== 0) return dateCompare;
-                      return a.timeSlot.localeCompare(b.timeSlot);
-                    });
-                    const bookingIndex = sortedBookings.findIndex(
-                      (b) =>
-                        b.courtId === slot.courtId &&
-                        b.timeSlot === slot.timeSlot &&
-                        b.date === slot.date
-                    );
-                    const isFree = membershipDiscount.canUseMembership && bookingIndex >= 0;
+                    <div className="space-y-2">
+                      {[...group.slots]
+                        .sort((a, b) => {
+                          const dateCompare = a.date.localeCompare(b.date);
+                          if (dateCompare !== 0) return dateCompare;
+                          return a.timeSlot.localeCompare(b.timeSlot);
+                        })
+                        .map((slot, slotIndex) => {
+                          // Check if this slot is free due to membership
+                          const sortedBookings = [...bookingItems].sort((a, b) => {
+                            const dateCompare = a.date.localeCompare(b.date);
+                            if (dateCompare !== 0) return dateCompare;
+                            return a.timeSlot.localeCompare(b.timeSlot);
+                          });
+                          const bookingIndex = sortedBookings.findIndex(
+                            (b) =>
+                              b.courtId === slot.courtId &&
+                              b.timeSlot === slot.timeSlot &&
+                              b.date === slot.date
+                          );
+                          const isFree = membershipDiscount.canUseMembership && bookingIndex >= 0;
 
-                    return (
-                      <div
-                        key={`${slot.courtId}-${slot.timeSlot}-${slotIndex}`}
-                        className={cn(
-                          'border-muted/60 flex items-center justify-between rounded-md border px-4 py-3',
-                          isFree ? 'border-green-200 bg-green-50' : 'bg-muted/50'
-                        )}
-                      >
-                        <div className="flex flex-col">
-                          {(() => {
-                            const range = getSlotDisplayRange(slot.timeSlot);
-                            return (
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-medium">
-                                  {range.start} - {range.end}
-                                </span>
-                                {isFree && (
-                                  <span className="text-xs font-medium text-green-600">
-                                    (Gratis)
-                                  </span>
-                                )}
+                          return (
+                            <div
+                              key={`${slot.courtId}-${slot.timeSlot}-${slotIndex}`}
+                              className={cn(
+                                'flex items-center justify-between rounded-none border border-black/10 px-4 py-3',
+                                isFree ? 'border-[#ad422b]/25 bg-[#ad422b]/5' : 'bg-muted/50'
+                              )}
+                            >
+                              <div className="flex flex-col">
+                                {(() => {
+                                  const range = getSlotDisplayRange(slot.timeSlot);
+                                  return (
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm font-medium">
+                                        {range.start} - {range.end}
+                                      </span>
+                                      {isFree && (
+                                        <span className="text-xs font-medium text-[#ad422b]">
+                                          (Gratis)
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
                               </div>
-                            );
-                          })()}
-                        </div>
-                        <span
-                          className={cn(
-                            'text-sm font-semibold',
-                            isFree && 'text-green-600 line-through'
-                          )}
-                        >
-                          {isFree ? (
-                            <>
-                              <span className="text-muted-foreground">
-                                {formatCurrency(slot.price)}
-                              </span>{' '}
-                              <span className="ml-1">Gratis</span>
-                            </>
-                          ) : (
-                            formatCurrency(slot.price)
-                          )}
-                        </span>
+                              <span
+                                className={cn('text-sm font-semibold', isFree && 'text-[#ad422b]')}
+                              >
+                                {isFree ? (
+                                  <>
+                                    <span className="text-muted-foreground line-through">
+                                      {formatCurrency(slot.price)}
+                                    </span>{' '}
+                                    <span className="ml-1">Gratis</span>
+                                  </>
+                                ) : (
+                                  formatCurrency(slot.price)
+                                )}
+                              </span>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                ))}
+              </section>
+            )}
+            {/* Coach section - commented out as not in use */}
+            <section className="grid min-w-0 gap-4">
+              {!isCoveredByMembership && (
+                <div className="min-w-0 border border-black/15 bg-[#f8f8f6] p-5 sm:p-6">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      {selectedPaymentMethod ? (
+                        resolveMediaUrl(selectedPaymentMethod.logo) ? (
+                          <Image
+                            src={resolveMediaUrl(selectedPaymentMethod.logo)!}
+                            alt={selectedPaymentMethod.name}
+                            width={48}
+                            height={48}
+                            className="h-12 w-12 rounded-none object-contain"
+                            unoptimized
+                          />
+                        ) : (
+                          <div className="bg-muted text-muted-foreground flex h-12 w-12 items-center justify-center rounded-none text-sm font-semibold">
+                            {selectedPaymentMethod.name.slice(0, 2).toUpperCase()}
+                          </div>
+                        )
+                      ) : null}
+                      <div>
+                        <p className="text-sm font-medium">
+                          {selectedPaymentMethod
+                            ? selectedPaymentMethod.name
+                            : 'Pilih Metode Pembayaran'}
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          {selectedPaymentMethod
+                            ? 'Konfirmasi Instan'
+                            : 'Klik untuk memilih metode pembayaran'}
+                        </p>
                       </div>
-                    );
-                  })}
-              </div>
-            </div>
-          ))}
-        </section>
-
-        {/* Coach section - commented out as not in use */}
-        {/* {selectedCoaches.length > 0 && (
-          <section className="border-muted space-y-3 rounded-lg border bg-white p-4">
-            <header className="space-y-1">
-              <h3 className="text-base font-semibold">Coach</h3>
-              <p className="text-muted-foreground text-sm">{selectedCoaches.length} sesi dipilih</p>
-            </header>
-            <div className="space-y-2">
-              {selectedCoaches.map((coach, index) => (
-                <div
-                  key={`${coach.coachId}-${coach.slotId ?? coach.timeSlot}-${index}`}
-                  className="border-muted/70 flex items-center justify-between rounded-md border px-4 py-3"
-                >
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium">{coach.coachName}</span>
-                    <span className="text-muted-foreground text-xs">
-                      {dayjs(coach.date).format('DD MMM YYYY')} • {coach.timeSlot}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-semibold">{formatCurrency(coach.price)}</span>
+                    </div>
                     <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      className="text-muted-foreground hover:text-destructive h-8 w-8"
-                      aria-label="Hapus coach"
-                      onClick={() => removeCoach(coach.coachId, coach.timeSlot, coach.slotId)}
+                      variant="link"
+                      className="h-10 rounded-full border border-black/15 px-4 text-xs text-[#ad422b] no-underline hover:bg-black/5"
+                      onClick={handlePaymentMethodClick}
                     >
-                      <X className="h-4 w-4" />
+                      Ganti Metode
                     </Button>
                   </div>
                 </div>
-              ))}
-            </div>
-          </section>
-        )} */}
+              )}
 
-        {selectedBallboys.length > 0 && (
-          <section className="border-muted space-y-3 rounded-lg border bg-white p-4">
-            <header className="space-y-1">
-              <h3 className="text-base font-semibold">Ballboy</h3>
-              <p className="text-muted-foreground text-sm">
-                {selectedBallboys.length} sesi dipilih
-              </p>
-            </header>
-            <div className="space-y-2">
-              {selectedBallboys.map((ballboy, index) => (
-                <div
-                  key={`${ballboy.ballboyId}-${ballboy.slotId ?? ballboy.timeSlot}-${index}`}
-                  className="border-muted/70 flex items-center justify-between rounded-md border px-4 py-3"
-                >
-                  <div className="flex min-w-0 flex-col">
-                    <span className="truncate text-sm font-medium">{ballboy.ballboyName}</span>
-                    <span className="text-muted-foreground text-xs">
-                      {dayjs(ballboy.date).format('DD MMM YYYY')} • {ballboy.timeSlot}
-                      {ballboy.courtName ? ` • ${ballboy.courtName}` : ''}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-semibold">{formatCurrency(ballboy.price)}</span>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      className="text-muted-foreground hover:text-destructive h-8 w-8"
-                      aria-label="Hapus ballboy"
-                      onClick={() =>
-                        removeBallboy(ballboy.ballboyId, ballboy.timeSlot, ballboy.slotId)
-                      }
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {selectedInventories.length > 0 && (
-          <section className="border-muted space-y-3 rounded-lg border bg-white p-4">
-            <header className="space-y-1">
-              <h3 className="text-base font-semibold">Peralatan</h3>
-              <p className="text-muted-foreground text-sm">
-                {selectedInventories.length} jenis dipilih
-              </p>
-            </header>
-            <div className="space-y-2">
-              {selectedInventories.map((inventory, index) => (
-                <div
-                  key={`${inventory.inventoryId}-${inventory.timeSlot ?? 'default'}-${index}`}
-                  className="border-muted/70 flex items-center justify-between rounded-md border px-4 py-3"
-                >
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium">{inventory.inventoryName}</span>
-                    <span className="text-muted-foreground text-xs">
-                      {inventory.courtName ? `${inventory.courtName} • ` : ''}
-                      {inventory.date ? `${dayjs(inventory.date).format('DD MMM YYYY')} • ` : ''}
-                      {inventory.timeSlot && inventory.timeSlot !== 'default'
-                        ? `${inventory.timeSlot} • `
-                        : ''}
-                      Qty: {inventory.quantity}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-semibold">{formatCurrency(inventory.price)}</span>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      className="text-muted-foreground hover:text-destructive h-8 w-8"
-                      aria-label="Hapus peralatan"
-                      onClick={() =>
-                        removeInventory(inventory.inventoryId, inventory.timeSlot ?? 'default')
-                      }
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        <section className="grid gap-4">
-          <Button
-            variant="outline"
-            className="border-primary/50 bg-primary/5 text-primary hover:bg-primary/10 flex items-center justify-center gap-2 rounded-2xl border border-dashed py-3 text-sm font-semibold transition-colors"
-            onClick={() => router.push('/add-ons')}
-          >
-            Tambah Add-Ons
-          </Button>
-
-          <div className="border-muted rounded-lg border bg-white p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {selectedPaymentMethod ? (
-                  resolveMediaUrl(selectedPaymentMethod.logo) ? (
-                    <Image
-                      src={resolveMediaUrl(selectedPaymentMethod.logo)!}
-                      alt={selectedPaymentMethod.name}
-                      width={48}
-                      height={48}
-                      className="h-12 w-12 rounded-md object-contain"
-                      unoptimized
+              {/* Card Payment Selection - Show only if CARDS channel is selected */}
+              {!isCoveredByMembership && selectedPaymentMethod?.channel === 'CARDS' && (
+                <div className="min-w-0 border border-black/15 bg-[#f8f8f6] p-5 sm:p-6">
+                  {!newCardData ? (
+                    <SavedCardSelector
+                      onCardSelect={(card, cvv) => {
+                        setSelectedCard(card);
+                        setSelectedCardCvv(cvv);
+                      }}
+                      onAddNewCard={handleAddNewCard}
+                      isLoading={checkoutMutation.isPending}
                     />
                   ) : (
-                    <div className="bg-muted text-muted-foreground flex h-12 w-12 items-center justify-center rounded-md text-sm font-semibold">
-                      {selectedPaymentMethod.name.slice(0, 2).toUpperCase()}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium">Kartu Baru</p>
+                          <p className="text-muted-foreground text-xs">
+                            {newCardData.cardholderName}
+                          </p>
+                          <p className="text-muted-foreground text-xs">
+                            •••• •••• •••• {newCardData.cardNumber.slice(-4)}
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setNewCardData(null)}
+                        >
+                          Ganti Kartu
+                        </Button>
+                      </div>
                     </div>
-                  )
-                ) : null}
-                <div>
-                  <p className="text-sm font-medium">
-                    {selectedPaymentMethod ? selectedPaymentMethod.name : 'Pilih Metode Pembayaran'}
-                  </p>
-                  <p className="text-muted-foreground text-xs">
-                    {selectedPaymentMethod
-                      ? 'Konfirmasi Instan'
-                      : 'Klik untuk memilih metode pembayaran'}
-                  </p>
+                  )}
                 </div>
-              </div>
-              <Button
-                variant="link"
-                className="text-primary px-0"
-                onClick={handlePaymentMethodClick}
-              >
-                Ganti Metode
-              </Button>
-            </div>
-          </div>
+              )}
 
-          {/* Card Payment Selection - Show only if CARDS channel is selected */}
-          {selectedPaymentMethod?.channel === 'CARDS' && (
-            <div className="border-muted rounded-lg border bg-white p-4">
-              {!newCardData ? (
-                <SavedCardSelector
-                  onCardSelect={(card, cvv) => {
-                    setSelectedCard(card);
-                    setSelectedCardCvv(cvv);
-                  }}
-                  onAddNewCard={handleAddNewCard}
-                  isLoading={checkoutMutation.isPending}
-                />
-              ) : (
-                <div className="space-y-4">
+              {!isCoveredByMembership && (
+                <div className="space-y-3 border border-black/15 bg-[#f8f8f6] p-5 sm:p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium">Kartu Baru</p>
-                      <p className="text-muted-foreground text-xs">{newCardData.cardholderName}</p>
+                      <p className="text-sm font-medium">Kode Promo</p>
                       <p className="text-muted-foreground text-xs">
-                        •••• •••• •••• {newCardData.cardNumber.slice(-4)}
+                        Masukkan kode promo untuk mendapatkan diskon
                       </p>
                     </div>
+                    {appliedPromoCode && promoDiscountAmount > 0 && (
+                      <span className="text-xs font-semibold text-[#ad422b]">Terpasang</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="text"
+                      aria-label="Kode promo"
+                      placeholder="Masukkan kode promo"
+                      value={promoCode}
+                      onChange={(event) => handlePromoInputChange(event.target.value)}
+                      className="h-11 min-w-0 flex-1 border border-black/15 bg-white px-3 text-base transition outline-none placeholder:text-sm placeholder:font-normal placeholder:text-black/40 focus:border-[#ad422b] focus:ring-2 focus:ring-[#ad422b]/10 sm:text-sm"
+                    />
                     <Button
                       type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setNewCardData(null)}
+                      className="h-11 shrink-0 rounded-full bg-[#111111] px-5 text-xs text-white hover:bg-black/80"
+                      onClick={handleApplyPromo}
+                      disabled={
+                        !selectedPaymentMethod || applyPromoMutation.isPending || !promoCode.trim()
+                      }
                     >
-                      Ganti Kartu
+                      {applyPromoMutation.isPending ? 'Memproses...' : 'Gunakan'}
                     </Button>
                   </div>
+                  {promoError && <p className="text-xs text-red-600">{promoError}</p>}
+                  {!promoError && appliedPromoCode && promoDiscountAmount > 0 && (
+                    <p className="text-xs text-[#ad422b]">
+                      Diskon {formatCurrency(promoDiscountAmount)} diterapkan
+                    </p>
+                  )}
                 </div>
               )}
-            </div>
-          )}
 
-          <div className="border-muted space-y-3 rounded-lg border bg-white p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">Kode Promo</p>
-                <p className="text-muted-foreground text-xs">
-                  Masukkan kode promo untuk mendapatkan diskon
-                </p>
-              </div>
-              {appliedPromoCode && promoDiscountAmount > 0 && (
-                <span className="text-xs font-semibold text-green-600">Terpasang</span>
-              )}
-            </div>
-            <div className="flex items-center gap-3">
-              <input
-                type="text"
-                placeholder="Contoh: HEMAT10"
-                value={promoCode}
-                onChange={(event) => handlePromoInputChange(event.target.value)}
-                className="border-muted/70 focus:border-primary focus:ring-primary/20 h-11 flex-1 rounded-md border bg-white px-3 text-sm transition outline-none"
-              />
-              <Button
-                type="button"
-                className="h-11 px-5"
-                onClick={handleApplyPromo}
-                disabled={
-                  !selectedPaymentMethod || applyPromoMutation.isPending || !promoCode.trim()
-                }
-              >
-                {applyPromoMutation.isPending ? 'Memproses...' : 'Gunakan'}
-              </Button>
-            </div>
-            {promoError && <p className="text-xs text-red-600">{promoError}</p>}
-            {!promoError && appliedPromoCode && promoDiscountAmount > 0 && (
-              <p className="text-xs text-green-600">
-                Diskon {formatCurrency(promoDiscountAmount)} diterapkan
-              </p>
-            )}
+              {/* Membership Information */}
+              {isAuthenticated &&
+                bookingItems.length > 0 &&
+                membershipDiscount.activeMembership && (
+                  <div className="rounded-none border border-black/15 bg-[#ad422b]/5 p-4">
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="text-sm font-medium text-[#ad422b]">Membership Aktif</span>
+                      <span
+                        className={
+                          membershipDiscount.activeMembership.isExpired ||
+                          membershipDiscount.activeMembership.isSuspended
+                            ? 'text-xs text-red-600'
+                            : 'text-xs text-[#ad422b]'
+                        }
+                      >
+                        {membershipDiscount.activeMembership.isExpired
+                          ? 'Expired'
+                          : membershipDiscount.activeMembership.isSuspended
+                            ? 'Suspended'
+                            : 'Active'}
+                      </span>
+                    </div>
+                    <div className="space-y-1 text-xs">
+                      <div>
+                        <span className="text-muted-foreground">Paket:</span>{' '}
+                        <span className="font-medium">
+                          {membershipDiscount.activeMembership.membership.name}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Sisa Sesi:</span>{' '}
+                        <span className="font-medium">
+                          {membershipDiscount.remainingSessions} sesi
+                        </span>
+                      </div>
+                      <label className="bg-background mt-2 flex items-center justify-between gap-3 rounded-none border border-[#ad422b]/20 px-3 py-2">
+                        <span className="text-foreground font-medium">Gunakan Value Pack</span>
+                        <input
+                          type="checkbox"
+                          checked={useMembership}
+                          onChange={(event) => setUseMembership(event.target.checked)}
+                          className="h-4 w-4 accent-[#ad422b]"
+                        />
+                      </label>
+                      {membershipDiscount.canUseMembership && bookingItems.length > 0 && (
+                        <div className="mt-1 font-medium text-[#ad422b]">
+                          {membershipDiscount.slotsToDeduct} jam akan dipotong dari membership
+                        </div>
+                      )}
+                      {!useMembership && (
+                        <div className="text-muted-foreground mt-1">
+                          Paket tidak dipakai untuk booking ini.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+            </section>
           </div>
-
-          {/* Membership Information */}
-          {isAuthenticated && membershipDiscount.activeMembership && (
-            <div className="border-muted bg-primary/5 rounded-lg border p-4">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-primary text-sm font-medium">Membership Aktif</span>
-                <span
-                  className={
-                    membershipDiscount.activeMembership.isExpired ||
-                    membershipDiscount.activeMembership.isSuspended
-                      ? 'text-xs text-red-600'
-                      : 'text-xs text-green-600'
-                  }
-                >
-                  {membershipDiscount.activeMembership.isExpired
-                    ? 'Expired'
-                    : membershipDiscount.activeMembership.isSuspended
-                      ? 'Suspended'
-                      : 'Active'}
-                </span>
-              </div>
-              <div className="space-y-1 text-xs">
-                <div>
-                  <span className="text-muted-foreground">Paket:</span>{' '}
-                  <span className="font-medium">
-                    {membershipDiscount.activeMembership.membership.name}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Sisa Sesi:</span>{' '}
-                  <span className="font-medium">{membershipDiscount.remainingSessions} sesi</span>
-                </div>
-                <label className="border-primary/20 bg-background mt-2 flex items-center justify-between gap-3 rounded-md border px-3 py-2">
-                  <span className="text-foreground font-medium">Gunakan Value Pack</span>
-                  <input
-                    type="checkbox"
-                    checked={useMembership}
-                    onChange={(event) => setUseMembership(event.target.checked)}
-                    className="accent-primary h-4 w-4"
-                  />
-                </label>
-                {membershipDiscount.canUseMembership && bookingItems.length > 0 && (
-                  <div className="text-primary mt-1 font-medium">
-                    {membershipDiscount.slotsToDeduct} jam akan dipotong dari membership
-                  </div>
-                )}
-                {!useMembership && (
-                  <div className="text-muted-foreground mt-1">
-                    Paket tidak dipakai untuk booking ini.
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          <div className="border-muted mb-5 rounded-lg border bg-white p-4">
-            <h3 className="mb-3 text-base font-semibold">Ringkasan Pembayaran</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Subtotal</span>
-                <span className="text-foreground font-medium">{formatCurrency(courtSubtotal)}</span>
-              </div>
-              {membershipDiscount.canUseMembership && membershipDiscount.slotsToDeduct > 0 && (
-                <div className="flex items-center justify-between text-green-600">
-                  <span>Membership Discount ({membershipDiscount.slotsToDeduct} jam)</span>
-                  <span className="font-medium">
-                    - {formatCurrency(membershipDiscount.discountAmount)}
-                  </span>
-                </div>
-              )}
-              {addOnsTotal > 0 && (
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Add-ons Subtotal</span>
-                  <span className="text-foreground font-medium">{formatCurrency(addOnsTotal)}</span>
-                </div>
-              )}
-              {selectedPaymentMethod && paymentFeeBreakdown.totalFee > 0 && (
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Biaya Layanan</span>
+          <aside
+            aria-label="Ringkasan pembayaran"
+            className="min-w-0 border border-black/15 bg-[#f8f8f6] p-5 sm:p-6 lg:sticky lg:top-28"
+          >
+            <div className="space-y-4">
+              <h3 className="mb-4 text-lg font-medium tracking-tight">Ringkasan pembayaran</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-muted-foreground">Subtotal</span>
                   <span className="text-foreground font-medium">
-                    {formatCurrency(paymentFeeBreakdown.totalFee)}
+                    {formatCurrency(courtSubtotal)}
                   </span>
                 </div>
-              )}
-              {promoDiscountAmount > 0 && (
-                <div className="flex items-center justify-between text-green-600">
-                  <span>Promo {appliedPromoCode}</span>
-                  <span className="font-medium">- {formatCurrency(promoDiscountAmount)}</span>
+                {membershipDiscount.canUseMembership && membershipDiscount.slotsToDeduct > 0 && (
+                  <div className="flex items-start justify-between gap-3 text-[#ad422b]">
+                    <span>Potongan Value Pack ({membershipDiscount.slotsToDeduct} jam)</span>
+                    <span className="font-medium">
+                      - {formatCurrency(membershipDiscount.discountAmount)}
+                    </span>
+                  </div>
+                )}
+                {selectedPaymentMethod && paymentFeeBreakdown.totalFee > 0 && (
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="text-muted-foreground">Biaya Layanan</span>
+                    <span className="text-foreground font-medium">
+                      {formatCurrency(paymentFeeBreakdown.totalFee)}
+                    </span>
+                  </div>
+                )}
+                {!isCoveredByMembership && promoDiscountAmount > 0 && (
+                  <div className="flex items-start justify-between gap-3 text-[#ad422b]">
+                    <span>Promo {appliedPromoCode}</span>
+                    <span className="font-medium">- {formatCurrency(promoDiscountAmount)}</span>
+                  </div>
+                )}
+                <div className="flex items-end justify-between gap-4 border-t border-black/15 pt-4 text-sm font-medium">
+                  <span>Total Pembayaran</span>
+                  <span className="text-[#ad422b]">{formatCurrency(totalAfterPromo)}</span>
                 </div>
-              )}
-              <div className="border-muted flex items-center justify-between border-t border-dashed pt-2 text-base font-semibold">
-                <span>Total Pembayaran</span>
-                <span className="text-primary">{formatCurrency(totalAfterPromo)}</span>
               </div>
             </div>
-          </div>
-        </section>
+            <div className="mt-5 hidden border-t border-black/15 pt-5 lg:block">
+              {checkoutAction}
+            </div>
+          </aside>
+        </div>
       </main>
 
-      <BottomNavigationWrapper className="pb-4">
-        <div className="mx-auto w-11/12 py-4 lg:max-w-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-muted-foreground text-xs">Total Pembayaran</p>
-              <p className="text-primary text-lg font-semibold">
-                {formatCurrency(totalAfterPromo)}
-              </p>
-            </div>
-            <Button
-              size="lg"
-              className="min-w-40"
-              onClick={handleCheckout}
-              disabled={
-                ((!selectedPaymentMethod ||
-                  checkoutMutation.isPending ||
-                  isCollectingCard ||
-                  (selectedPaymentMethod?.channel === 'CARDS' && !selectedCard && !newCardData) ||
-                  (selectedPaymentMethod?.channel === 'CARDS' &&
-                    !!selectedCard &&
-                    !selectedCardCvv)) &&
-                  isAuthenticated) ||
-                false
-              }
-            >
-              {isUserPending
-                ? 'Memuat...'
-                : !isAuthenticated
-                  ? 'Login untuk Checkout'
-                  : isCollectingCard
-                    ? 'Memproses Kartu...'
-                    : checkoutMutation.isPending
-                      ? 'Memproses...'
-                      : selectedPaymentMethod?.channel === 'CARDS' && !selectedCard && !newCardData
-                        ? 'Pilih Kartu'
-                        : selectedPaymentMethod
-                          ? 'Bayar Sekarang'
-                          : 'Pilih Metode'}
-            </Button>
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-black/15 bg-[#f8f8f6] px-5 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:hidden">
+        <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] items-center gap-3">
+          <div className="min-w-0">
+            <p className="text-[10px] text-black/50">Total pembayaran</p>
+            <p className="mt-1 text-xl font-medium tracking-tight tabular-nums">
+              {formatCurrency(totalAfterPromo)}
+            </p>
           </div>
+          {checkoutAction}
         </div>
-      </BottomNavigationWrapper>
+      </div>
 
       <Dialog open={isPaymentModalOpen} onOpenChange={setPaymentModalOpen}>
-        <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-lg">
+        <DialogContent className="auth-dialog max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-none border-black/15 bg-[#f8f8f6] p-5 text-[#171717] sm:max-w-lg sm:p-7">
           <DialogHeader>
-            <DialogTitle className="text-center text-lg font-semibold">
+            <DialogTitle className="pr-6 text-left text-xl font-medium tracking-tight text-[#171717]">
               Pilih Metode Pembayaran
             </DialogTitle>
           </DialogHeader>
@@ -1155,30 +1031,30 @@ export default function CheckoutPage() {
                     key={method.id}
                     onClick={() => handleSelectPaymentMethod(method)}
                     className={cn(
-                      'flex w-full items-center justify-between rounded-md border p-4 transition-colors',
+                      'flex w-full items-center justify-between gap-3 border p-4 text-left transition-colors',
                       isSelected
-                        ? 'border-primary bg-primary/5 shadow-sm'
-                        : 'border-muted hover:border-primary/60 hover:bg-muted/10'
+                        ? 'border-[#ad422b] bg-[#ad422b]/5'
+                        : 'hover:bg-muted/10 border-black/15 hover:border-[#ad422b]/40'
                     )}
                   >
                     {/* Kiri: Logo + Nama */}
-                    <div className="flex items-center gap-4">
+                    <div className="flex min-w-0 items-center gap-3">
                       {resolveMediaUrl(method.logo) ? (
                         <Image
                           src={resolveMediaUrl(method.logo)!}
                           alt={method.name}
                           width={48}
                           height={48}
-                          className="h-12 w-12 rounded-md bg-white object-contain p-1"
+                          className="h-12 w-12 rounded-none bg-white object-contain p-1"
                           unoptimized
                         />
                       ) : (
-                        <div className="bg-muted text-muted-foreground flex h-12 w-12 items-center justify-center rounded-md text-sm font-semibold">
+                        <div className="bg-muted text-muted-foreground flex h-12 w-12 items-center justify-center rounded-none text-sm font-semibold">
                           {method.name.slice(0, 2).toUpperCase()}
                         </div>
                       )}
 
-                      <div className="flex flex-col items-start">
+                      <div className="flex min-w-0 flex-col items-start">
                         <p className="text-foreground text-sm leading-tight font-semibold">
                           {method.name}
                         </p>
@@ -1193,7 +1069,9 @@ export default function CheckoutPage() {
                       <div
                         className={cn(
                           'mt-1 flex h-5 w-5 items-center justify-center rounded-full border transition-all',
-                          isSelected ? 'border-primary bg-primary' : 'border-muted bg-background'
+                          isSelected
+                            ? 'border-[#ad422b] bg-[#ad422b]'
+                            : 'bg-background border-black/15'
                         )}
                       >
                         {isSelected && <span className="h-2.5 w-2.5 rounded-full bg-white" />}
@@ -1209,9 +1087,9 @@ export default function CheckoutPage() {
 
       {/* Add New Card Dialog */}
       <Dialog open={isAddCardModalOpen} onOpenChange={setAddCardModalOpen}>
-        <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-lg">
+        <DialogContent className="auth-dialog max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-none border-black/15 bg-[#f8f8f6] p-5 text-[#171717] sm:max-w-lg sm:p-7">
           <DialogHeader>
-            <DialogTitle className="text-center text-lg font-semibold">
+            <DialogTitle className="pr-6 text-left text-xl font-medium tracking-tight text-[#171717]">
               Tambah Kartu Baru
             </DialogTitle>
           </DialogHeader>

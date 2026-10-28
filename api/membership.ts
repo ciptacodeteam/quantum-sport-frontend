@@ -28,3 +28,10 @@ export async function getMyMembershipApi() {
   const { data } = await api.get('/memberships/my/active');
   return data;
 }
+
+export async function getMyMembershipTrackingApi() {
+  const { data } = await api.get<{
+    data: import('@/types/membership-tracking').MembershipTracking;
+  }>('/memberships/my/tracking');
+  return data;
+}

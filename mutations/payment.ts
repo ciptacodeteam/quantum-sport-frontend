@@ -113,11 +113,9 @@ export const cardCheckoutMutationOptions = ({ onSuccess, onError }: MutationFunc
     mutationFn: cardCheckoutApi,
     onSuccess: (data) => {
       // Check if 3DS authentication is required
-      if (data.paymentStatus === 'REQUIRES_ACTION' && data.paymentUrl) {
-        // Redirect to 3DS challenge page
-        // Store data for post-authentication handling
+      if (data.paymentUrl && data.paymentStatus !== 'PAID' && data.paymentStatus !== 'SUCCEEDED') {
         sessionStorage.setItem('payment_3ds_data', JSON.stringify(data));
-        window.location.href = data.paymentUrl;
+        window.open(data.paymentUrl, '_blank', 'noopener,noreferrer');
         return;
       }
 
@@ -156,7 +154,7 @@ export const membershipCardCheckoutMutationOptions = ({
       if (data.paymentStatus === 'REQUIRES_ACTION' && data.paymentUrl) {
         // Redirect to 3DS challenge page
         sessionStorage.setItem('payment_3ds_data', JSON.stringify(data));
-        window.location.href = data.paymentUrl;
+        window.open(data.paymentUrl, '_blank', 'noopener,noreferrer');
         return;
       }
 

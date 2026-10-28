@@ -1,4 +1,5 @@
 'use client';
+import { useAdminCourtSports } from '@/hooks/useAdminCourtSports';
 
 import { mapApiErrorsToForm } from '@/lib/api-error';
 
@@ -41,6 +42,7 @@ type Props = {
 };
 
 const EditCourtForm = ({ courtId }: Props) => {
+  const { canCreateTennis } = useAdminCourtSports();
   const { data } = useSuspenseQuery(adminCourtQueryOptions(courtId));
 
   const form = useForm({
@@ -149,7 +151,9 @@ const EditCourtForm = ({ courtId }: Props) => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="PADEL">Padel</SelectItem>
-                    <SelectItem value="TENNIS">Tennis</SelectItem>
+                    <SelectItem value="TENNIS" disabled={!canCreateTennis}>
+                      Tennis (Cemara)
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               )}

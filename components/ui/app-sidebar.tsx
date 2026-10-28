@@ -1,8 +1,9 @@
 'use client';
 
-import { Command, LifeBuoy } from 'lucide-react';
+import { LifeBuoy } from 'lucide-react';
 import * as React from 'react';
 
+import { useAdminCourtSports } from '@/hooks/useAdminCourtSports';
 import { NavMain } from '@/components/ui/nav-main';
 import { NavSecondary } from '@/components/ui/nav-secondary';
 import { NavUser } from '@/components/ui/nav-user';
@@ -24,17 +25,14 @@ import {
   IconCategory,
   IconChartBar,
   IconDatabase,
-  IconLaurelWreath1,
   IconScan,
-  IconSchool,
   IconShoppingCart,
   IconUser,
-  IconUsers,
-  IconUsersGroup
+  IconUsers
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
+import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 
 const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
   navMain: [
@@ -106,14 +104,6 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
           url: '/admin/kelola-pemesanan/inventori'
         },
         {
-          title: 'Coach',
-          url: '/admin/kelola-pemesanan/coach'
-        },
-        {
-          title: 'Ballboy',
-          url: '/admin/kelola-pemesanan/ballboy'
-        },
-        {
           title: 'Value Pack',
           url: '/admin/kelola-pemesanan/membership'
         }
@@ -156,25 +146,9 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
     //   items: []
     // },
     {
-      title: 'Kelola Turnamen',
-      url: '/admin/kelola-turnamen',
-      icon: IconLaurelWreath1,
-      items: []
-    },
-    {
-      title: 'Kelola Club',
-      url: '/admin/kelola-club',
-      icon: IconUsersGroup,
-      items: []
-    },
-    {
       title: 'Marketing',
       icon: IconAd2,
       items: [
-        {
-          title: 'Push Notification',
-          url: '/admin/kelola-notifikasi'
-        },
         {
           title: 'Kelola Banner',
           url: '/admin/kelola-banner'
@@ -225,29 +199,18 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const pathname = usePathname();
-  const isDashboardActive = pathname === '/admin/dashboard' || pathname === '/admin/dashboard/';
+  const { branchId: activeBranchId } = useAdminCourtSports();
   const { data: me, isLoading } = useQuery(adminProfileQueryOptions);
-  const isCoach = me?.role?.toUpperCase?.() === ROLE.COACH;
   const isCashier = me?.role?.toUpperCase?.() === ROLE.CASHIER;
   const isAdminViewer = me?.role?.toUpperCase?.() === ROLE.ADMIN_VIEWER;
-  const isAdmin = me?.role?.toUpperCase?.() === ROLE.ADMIN;
+  const isAdmin = [ROLE.ADMIN, ROLE.SUPER_ADMIN].includes(
+    me?.role?.toUpperCase?.() as typeof ROLE.ADMIN | typeof ROLE.SUPER_ADMIN
+  );
 
   const navMainItems = React.useMemo<AppSidebarItem[]>(() => {
     // If still loading user data, return empty array to avoid menu flash
     if (isLoading || !me) {
       return [];
-    }
-
-    if (isCoach) {
-      return [
-        {
-          title: 'Jadwal Saya',
-          url: '/admin/kelola-karyawan',
-          icon: IconSchool,
-          items: []
-        }
-      ];
     }
 
     if (isCashier) {
@@ -293,14 +256,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             {
               title: 'Inventori',
               url: '/admin/kelola-pemesanan/inventori'
-            },
-            {
-              title: 'Coach',
-              url: '/admin/kelola-pemesanan/coach'
-            },
-            {
-              title: 'Ballboy',
-              url: '/admin/kelola-pemesanan/ballboy'
             }
           ]
         },
@@ -328,17 +283,26 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       );
     }
 
+    if (me.role !== ROLE.SUPER_ADMIN)
+      return data.navMain.map((item) => ({
+        ...item,
+        items: item.items?.filter(
+          (child) =>
+            !['/admin/kelola-membership', '/admin/kelola-metode-pembayaran'].includes(
+              child.url || ''
+            )
+        )
+      }));
     return data.navMain;
-  }, [isCoach, isCashier, isAdminViewer, isLoading, me]);
+  }, [isCashier, isAdminViewer, isLoading, me]);
 
   // Get appropriate dashboard link based on role
   const dashboardLink = React.useMemo(() => {
     if (isLoading || !me) return '/admin/dashboard';
-    if (isCoach) return '/admin/kelola-karyawan';
     if (isCashier) return '/admin/booking-lapangan';
     if (isAdminViewer) return '/admin/booking-lapangan';
     return '/admin/dashboard';
-  }, [isCoach, isCashier, isAdminViewer, isLoading, me]);
+  }, [isCashier, isAdminViewer, isLoading, me]);
 
   // Get appropriate subtitle based on role
   const subtitle = React.useMemo(() => {
@@ -352,13 +316,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild isActive={isDashboardActive}>
+            <SidebarMenuButton
+              size="lg"
+              asChild
+              className="hover:text-sidebar-foreground active:text-sidebar-foreground hover:bg-transparent active:bg-transparent"
+            >
               <Link href={dashboardLink} prefetch>
-                <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                  <Command className="size-4" />
-                </div>
+                <Image
+                  src="/favicon.ico"
+                  alt=""
+                  width={32}
+                  height={32}
+                  unoptimized
+                  className="size-8 shrink-0 rounded-lg object-contain"
+                />
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">Quantum Sport</span>
+                  <span className="truncate font-medium">Black Padel</span>
                   <span className="truncate text-xs">{subtitle}</span>
                 </div>
               </Link>
@@ -367,7 +340,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={navMainItems} />
+        <NavMain
+          items={navMainItems.map((item) => ({
+            ...item,
+            items: item.items?.filter(
+              (child) =>
+                !activeBranchId ||
+                activeBranchId === 'cemara' ||
+                !child.url?.includes('courtSport=TENNIS')
+            )
+          }))}
+        />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>

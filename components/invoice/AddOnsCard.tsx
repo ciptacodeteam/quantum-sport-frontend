@@ -18,11 +18,11 @@ export default function AddOnsCard({
   if ((coaches.length || ballboys.length || inventories.length) === 0) return null;
 
   return (
-    <Card className="mb-6">
-      <CardHeader>
+    <Card className="gap-4 rounded-none border-0 py-0 shadow-none">
+      <CardHeader className="px-0">
         <CardTitle className="flex items-center gap-2">Layanan Tambahan</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 px-0">
         {coaches.length > 0 && (
           <div>
             <h4 className="mb-2 font-semibold">Pelatih</h4>

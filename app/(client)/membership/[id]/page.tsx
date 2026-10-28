@@ -1,21 +1,17 @@
 'use client';
 
 import MainHeader from '@/components/headers/MainHeader';
-import { Badge } from '@/components/ui/badge';
-import BottomNavigationWrapper from '@/components/ui/BottomNavigationWrapper';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SanitizedHtml } from '@/components/ui/sanitized-html';
 import { Skeleton } from '@/components/ui/skeleton';
-import { STATUS_BADGE_VARIANT, STATUS_MAP } from '@/lib/constants';
 import { membershipTypeDescriptions, membershipTypeLabels } from '@/lib/membership-hours';
 import { membershipQueryOptions } from '@/queries/membership';
 import { profileQueryOptions } from '@/queries/profile';
 import useAuthModalStore from '@/stores/useAuthModalStore';
-import { IconCheck, IconTrophy } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import React from 'react';
+import { ArrowUpRight, Check } from 'lucide-react';
 
 const currencyFormatter = new Intl.NumberFormat('id-ID', {
   style: 'currency',
@@ -49,13 +45,18 @@ export default function MembershipDetailPage({ params }: { params: Promise<{ id:
     router.push('/membership/checkout');
   };
 
+  const pageClassName =
+    'value-pack-page mx-auto w-full max-w-7xl px-5 pt-24 pb-[calc(7rem+env(safe-area-inset-bottom))] text-[#171717] sm:px-8 lg:pb-16 xl:pt-32';
+
   if (isMembershipLoading) {
     return (
       <>
-        <MainHeader title="Detail Membership" backHref="/valuepack" withLogo={false} withBorder />
-        <main className="mx-auto mt-28 w-11/12 max-w-4xl space-y-4 pb-12">
-          <Skeleton className="h-48 w-full" />
-          <Skeleton className="h-64 w-full" />
+        <MainHeader backHref="/membership" />
+        <main className={pageClassName} aria-label="Memuat detail paket">
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+            <Skeleton className="h-80 w-full rounded-none" />
+            <Skeleton className="h-60 w-full rounded-none" />
+          </div>
         </main>
       </>
     );
@@ -64,249 +65,150 @@ export default function MembershipDetailPage({ params }: { params: Promise<{ id:
   if (!membership) {
     return (
       <>
-        <MainHeader title="Detail Membership" backHref="/membership" withLogo={false} withBorder />
-        <main className="mx-auto mt-28 w-11/12 max-w-4xl pb-12">
-          <div className="text-muted-foreground py-10 text-center">Membership tidak ditemukan</div>
+        <MainHeader backHref="/membership" />
+        <main className={pageClassName}>
+          <section className="border border-dashed border-black/20 bg-[#f8f8f6] px-5 py-14 text-center">
+            <h1 className="text-xl font-medium">Paket tidak ditemukan</h1>
+            <Button
+              className="mt-6 h-12 rounded-full bg-[#111111] px-6 text-white hover:bg-black/80"
+              onClick={() => router.push('/membership')}
+            >
+              Lihat Value Pack
+            </Button>
+          </section>
         </main>
       </>
     );
   }
 
+  const hourlyPrice =
+    membership.sessions > 0 ? Math.round(membership.price / membership.sessions) : null;
+
   return (
     <>
-      <MainHeader title="Detail Membership" backHref="/membership" withLogo={false} withBorder />
-      <main className="mx-auto mt-24 w-11/12 max-w-4xl space-y-4 pb-32 sm:space-y-6">
-        {/* Membership Header Card */}
-        <Card className="overflow-hidden py-0">
-          <div className="from-primary/10 via-primary/5 bg-linear-to-br to-transparent p-4 sm:p-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-              <div className="flex-1">
-                <CardTitle className="mb-2 text-xl font-bold tracking-tight uppercase sm:text-2xl lg:text-3xl">
-                  {membership.name}
-                </CardTitle>
-                {membership.description && (
-                  <p className="text-muted-foreground text-sm">{membership.description}</p>
-                )}
+      <MainHeader backHref="/membership" />
+      <main className={pageClassName}>
+        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-7">
+          <div className="min-w-0 space-y-5">
+            <section className="border border-black/15 bg-[#f8f8f6] p-5 sm:p-8">
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-3 text-[10px] font-medium tracking-[0.12em] uppercase">
+                <span className="text-black/45">
+                  {membership.sport === 'TENNIS' ? 'Tennis' : 'Padel'} / Value Pack
+                </span>
+                <span className="border border-[#ad422b]/25 px-2.5 py-1.5 text-[#ad422b]">
+                  {membership.isActive ? 'Tersedia' : 'Tidak tersedia'}
+                </span>
               </div>
-              {membership.isActive && (
-                <Badge
-                  variant={STATUS_BADGE_VARIANT[Number(membership.isActive)]}
-                  className="w-fit"
-                >
-                  {STATUS_MAP[Number(membership.isActive)]}
-                </Badge>
-              )}
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-baseline gap-2 sm:mt-6">
-              <span className="text-primary text-2xl font-extrabold sm:text-2xl lg:text-3xl">
-                {formatCurrency(membership.price)}
-              </span>
-              <span className="text-muted-foreground text-sm">
-                untuk {membership.duration} hari
-              </span>
-            </div>
-          </div>
-
-          <CardContent className="p-4 sm:p-6">
-            <div className="grid grid-cols-1 gap-3 sm:gap-4">
-              <div className="bg-card flex items-center gap-3 rounded-lg border p-3 sm:p-4">
-                <div className="bg-primary/10 text-primary rounded-lg p-2 sm:p-2.5">
-                  <IconTrophy className="h-5 w-5 sm:h-6 sm:w-6" />
-                </div>
-                <div>
-                  <p className="text-base font-bold sm:text-xl">
-                    {membershipTypeLabels[membership.type]}
-                  </p>
-                  <p className="text-muted-foreground text-xs">
-                    {membershipTypeDescriptions[membership.type]}
-                  </p>
-                </div>
-              </div>
-
-              {/* Sessions Info */}
-              <div className="bg-card flex items-center gap-3 rounded-lg border p-3 sm:p-4">
-                <div className="bg-primary/10 text-primary rounded-lg p-2 sm:p-2.5">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5 sm:h-6 sm:w-6"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-base font-bold sm:text-xl">{membership.sessions}</p>
-                  <p className="text-muted-foreground text-xs">Total Jam</p>
-                </div>
-              </div>
-
-              {/* Duration Info */}
-              <div className="bg-card flex items-center gap-3 rounded-lg border p-3 sm:p-4">
-                <div className="bg-primary/10 text-primary rounded-lg p-2 sm:p-2.5">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5 sm:h-6 sm:w-6"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-base font-bold sm:text-xl">{membership.duration}</p>
-                  <p className="text-muted-foreground text-xs">Hari Aktif</p>
-                </div>
-              </div>
-
-              {/* Price per Session */}
-              <div className="bg-card flex items-center gap-3 rounded-lg border p-3 sm:p-4">
-                <div className="bg-primary/10 text-primary rounded-lg p-2 sm:p-2.5">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5 sm:h-6 sm:w-6"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-base font-bold sm:text-lg">
-                    {formatCurrency(Math.round(membership.price / membership.sessions))}
-                  </p>
-                  <p className="text-muted-foreground text-xs">Per Jam</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Benefits Card */}
-        {membership.benefits && membership.benefits.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <IconTrophy className="text-primary h-6 w-6" />
-                <span>Benefit & Keuntungan</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="mt-2">
-              <ul className="grid gap-2.5 sm:grid-cols-2 sm:gap-3">
-                {membership.benefits.map((benefit) => (
-                  <li
-                    key={benefit.id}
-                    className="bg-muted/30 flex items-start gap-2.5 rounded-lg border p-2.5 sm:gap-3 sm:p-3"
-                  >
-                    <div className="bg-primary/10 text-primary mt-0.5 rounded-full p-1 shadow-sm">
-                      <IconCheck className="h-4 w-4 stroke-3" />
-                    </div>
-                    <span className="flex-1 text-sm leading-relaxed">{benefit.benefit}</span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Content Card */}
-        {membership.content && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="text-primary h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h7" />
-                </svg>
-                <span>Detail Membership</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="mt-2">
-              <SanitizedHtml
-                className="prose prose-sm max-w-none text-sm"
-                html={membership?.contentHtml ?? ''}
-              />
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Additional Info */}
-        <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="p-4 py-2 sm:px-6">
-            <div className="flex items-start gap-2.5 sm:gap-3">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="text-primary mt-0.5 h-4 w-4 shrink-0 sm:h-5 sm:w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <div className="space-y-1 text-xs sm:text-sm">
-                <p className="font-medium">Informasi Penting:</p>
-                <ul className="text-muted-foreground space-y-1 text-xs sm:text-sm">
-                  <li>
-                    • Membership berlaku selama {membership.duration} hari sejak tanggal aktivasi
-                  </li>
-                  <li>• Total {membership.sessions} jam dapat digunakan dalam periode aktif</li>
-                  <li>• Jam yang tidak terpakai akan hangus setelah masa aktif berakhir</li>
-                  <li>• Membership tidak dapat dikembalikan atau dipindahtangankan</li>
-                </ul>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Buy Button - Fixed at bottom */}
-        <BottomNavigationWrapper>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-            <div className="flex items-center justify-between sm:block">
-              <p className="text-muted-foreground text-xs">Total Pembayaran</p>
-              <p className="text-primary text-lg font-bold sm:text-xl">
+              <h1 className="text-2xl leading-tight font-medium tracking-tight break-words uppercase sm:text-3xl">
+                {membership.name}
+              </h1>
+              <p className="mt-5 text-3xl font-medium tracking-[-0.04em] tabular-nums sm:text-4xl">
                 {formatCurrency(membership.price)}
               </p>
-            </div>
-            <Button
-              size="lg"
-              className="w-full sm:w-auto sm:min-w-[180px]"
-              onClick={handleBuyNow}
-              disabled={!membership.isActive || isUserPending}
-            >
-              {!membership.isActive ? 'Tidak Tersedia' : 'Beli Sekarang'}
-            </Button>
+              <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs">
+                <span className="text-[#ad422b]">{membershipTypeLabels[membership.type]}</span>
+                <span className="h-3 border-l border-black/20" aria-hidden="true" />
+                <span className="text-black/50">{membershipTypeDescriptions[membership.type]}</span>
+              </div>
+              <dl className="mt-6 grid grid-cols-2 border-y border-black/15 py-5">
+                <div className="border-r border-black/15 pr-4">
+                  <dt className="mb-2 text-[10px] tracking-wider text-black/45 uppercase">
+                    Waktu bermain
+                  </dt>
+                  <dd className="text-2xl font-medium">
+                    {membership.sessions}{' '}
+                    <span className="text-xs font-normal text-black/50">jam</span>
+                  </dd>
+                </div>
+                <div className="pl-5">
+                  <dt className="mb-2 text-[10px] tracking-wider text-black/45 uppercase">
+                    Masa berlaku
+                  </dt>
+                  <dd className="text-2xl font-medium">
+                    {membership.duration}{' '}
+                    <span className="text-xs font-normal text-black/50">hari</span>
+                  </dd>
+                </div>
+              </dl>
+              {hourlyPrice !== null && (
+                <p className="mt-4 text-xs text-black/50">
+                  Setara{' '}
+                  <span className="font-medium text-[#ad422b]">{formatCurrency(hourlyPrice)}</span>{' '}
+                  / jam
+                </p>
+              )}
+            </section>
+
+            {!!membership.benefits?.length && (
+              <section className="border border-black/15 p-5 sm:p-8">
+                <h2 className="text-lg font-medium tracking-tight">Termasuk dalam paket</h2>
+                <ul className="mt-5 grid gap-4 sm:grid-cols-2">
+                  {membership.benefits.map((benefit) => (
+                    <li
+                      key={benefit.id}
+                      className="flex items-start gap-3 text-sm leading-relaxed text-black/60"
+                    >
+                      <Check
+                        className="mt-0.5 size-4 shrink-0 text-[#ad422b]"
+                        strokeWidth={1.5}
+                        aria-hidden="true"
+                      />
+                      <span className="min-w-0 break-words">{benefit.benefit}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {membership.contentHtml && (
+              <section className="border border-black/15 p-5 sm:p-8">
+                <h2 className="mb-4 text-lg font-medium tracking-tight">Detail paket</h2>
+                <SanitizedHtml
+                  className="prose prose-sm prose-headings:font-medium prose-headings:text-[#171717] prose-a:text-[#ad422b] max-w-none text-sm leading-relaxed break-words text-black/60"
+                  html={membership.contentHtml}
+                />
+              </section>
+            )}
+
+            <section className="border border-black/15 bg-[#f8f8f6] p-5 sm:p-8">
+              <h2 className="text-lg font-medium tracking-tight">Informasi penting</h2>
+              <ul className="mt-4 list-disc space-y-2 pl-4 text-xs leading-relaxed text-black/50 marker:text-[#ad422b]">
+                <li>Value Pack berlaku selama {membership.duration} hari sejak tanggal aktivasi</li>
+                <li>Total {membership.sessions} jam dapat digunakan dalam periode aktif</li>
+                <li>Jam yang tidak terpakai akan hangus setelah masa aktif berakhir</li>
+                <li>Value Pack tidak dapat dikembalikan atau dipindahtangankan</li>
+              </ul>
+            </section>
           </div>
-        </BottomNavigationWrapper>
+
+          <aside
+            aria-label="Pembelian paket"
+            className="fixed inset-x-0 bottom-0 z-40 border-t border-black/15 bg-[#f8f8f6] px-5 pb-[env(safe-area-inset-bottom)] lg:sticky lg:inset-x-auto lg:top-28 lg:z-auto lg:border lg:p-6 lg:pb-6"
+          >
+            <h2 className="hidden text-lg font-medium tracking-tight lg:block">
+              Ringkasan pembelian
+            </h2>
+            <p className="mt-4 hidden text-sm text-black/55 lg:block">{membership.name}</p>
+            <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-4 lg:mt-5 lg:h-auto lg:flex-col lg:items-stretch lg:gap-6 lg:border-t lg:border-black/15 lg:pt-5">
+              <div className="min-w-0 lg:flex lg:items-center lg:justify-between lg:gap-3">
+                <p className="text-[10px] text-black/50 lg:text-xs">Total pembayaran</p>
+                <p className="mt-1 text-xl font-medium tracking-tight tabular-nums lg:mt-0">
+                  {formatCurrency(membership.price)}
+                </p>
+              </div>
+              <Button
+                onClick={handleBuyNow}
+                disabled={!membership.isActive || isUserPending}
+                className="h-12 shrink-0 gap-2 rounded-full bg-[#111111] px-5 text-xs text-white shadow-none hover:bg-black/80 has-[>svg]:px-5 lg:w-full"
+              >
+                {membership.isActive ? 'Beli sekarang' : 'Tidak tersedia'}
+                {membership.isActive && (
+                  <ArrowUpRight className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                )}
+              </Button>
+            </div>
+          </aside>
+        </div>
       </main>
     </>
   );

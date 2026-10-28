@@ -1,10 +1,10 @@
 export const getStatusColor = (status: string) => {
   const statusMap: Record<string, string> = {
-    HOLD: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    PENDING: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    PAID: 'bg-green-100 text-green-800 border-green-200',
-    CONFIRMED: 'bg-green-100 text-green-800 border-green-200',
-    FAILED: 'bg-red-100 text-red-800 border-red-200',
+    HOLD: 'bg-[#ad422b]/5 text-[#ad422b] border-[#ad422b]/20',
+    PENDING: 'bg-[#ad422b]/5 text-[#ad422b] border-[#ad422b]/20',
+    PAID: 'bg-[#111111] text-white border-[#111111]',
+    CONFIRMED: 'bg-[#111111] text-white border-[#111111]',
+    FAILED: 'bg-[#ad422b]/5 text-[#ad422b] border-[#ad422b]/20',
     CANCELLED: 'bg-gray-100 text-gray-800 border-gray-200',
     EXPIRED: 'bg-gray-100 text-gray-800 border-gray-200'
   };
@@ -19,7 +19,7 @@ export const getStatusLabel = (status: string) => {
     CONFIRMED: 'Terkonfirmasi',
     FAILED: 'Gagal',
     CANCELLED: 'Dibatalkan',
-    EXPIRED: 'Kadaluarsa'
+    EXPIRED: 'Kedaluwarsa'
   };
   return labels[status] || status;
 };

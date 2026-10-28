@@ -1,19 +1,12 @@
 'use client';
 
 import MainHeader from '@/components/headers/MainHeader';
+import MainBottomNavigation from '@/components/footers/MainBottomNavigation';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle
-} from '@/components/ui/card';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { membershipTypeDescriptions, membershipTypeLabels } from '@/lib/membership-hours';
 import { membershipsQueryOptions } from '@/queries/membership';
 import { useQuery } from '@tanstack/react-query';
+import { ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
@@ -25,172 +18,143 @@ const sportLabels: Record<MembershipSport, string> = {
 };
 
 export default function MembershipPage() {
-  const { data, isLoading, isError } = useQuery(membershipsQueryOptions());
+  const { data, isLoading, isError, refetch } = useQuery(membershipsQueryOptions());
   const [selectedSport, setSelectedSport] = useState<MembershipSport>('PADEL');
-  const activeMemberships = useMemo(
-    () => (data ?? []).filter((membership) => membership.isActive),
-    [data]
-  );
   const memberships = useMemo(
-    () => activeMemberships.filter((membership) => (membership.sport ?? 'PADEL') === selectedSport),
-    [activeMemberships, selectedSport]
+    () => (data ?? []).filter((pack) => pack.isActive && (pack.sport ?? 'PADEL') === selectedSport),
+    [data, selectedSport]
   );
 
   return (
     <>
       <MainHeader backHref="/" title="Value Pack" withLogo={false} withBorder />
-
-      <main className="mx-auto flex w-11/12 max-w-7xl flex-col gap-4 pt-24 pb-12 md:pt-28">
-        {!isLoading && !isError && (
-          <div className="pt-2">
-            <Tabs
-              value={selectedSport}
-              onValueChange={(value) => setSelectedSport(value as MembershipSport)}
+      <main className="value-pack-page mx-auto w-full max-w-7xl px-5 pt-24 pb-8 text-[#171717] sm:px-8 lg:pb-16 xl:pt-32">
+        <div
+          className="mb-6 grid grid-cols-2 border-b border-black/15 sm:max-w-lg"
+          role="group"
+          aria-label="Jenis olahraga"
+        >
+          {(['PADEL', 'TENNIS'] as const).map((sport) => (
+            <button
+              key={sport}
+              type="button"
+              aria-pressed={selectedSport === sport}
+              onClick={() => setSelectedSport(sport)}
+              className={`relative min-h-12 px-2 pb-3 text-sm transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#ad422b] ${selectedSport === sport ? 'font-medium text-[#171717] after:absolute after:inset-x-0 after:bottom-[-1px] after:h-0.5 after:bg-[#ad422b]' : 'text-black/40 hover:text-black/75'}`}
             >
-              <TabsList className="grid h-10 w-full grid-cols-2 sm:w-fit">
-                <TabsTrigger value="PADEL">Padel</TabsTrigger>
-                <TabsTrigger value="TENNIS">Tennis</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-        )}
+              {sportLabels[sport]}
+            </button>
+          ))}
+        </div>
 
-        {/* Loading state */}
         {isLoading && (
-          <div className="flex min-h-[40vh] flex-col items-center justify-center gap-2 text-center">
-            <p className="text-muted-foreground text-sm">Memuat membership...</p>
+          <div
+            className="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
+            role="status"
+            aria-label="Memuat Value Pack"
+          >
+            {[0, 1, 2].map((item) => (
+              <div
+                key={item}
+                className="h-96 animate-pulse border border-black/10 bg-[#f8f8f6] p-6 motion-reduce:animate-none"
+              >
+                <div className="mb-8 h-5 w-1/2 bg-black/5" />
+                <div className="mb-8 h-10 w-2/3 bg-black/5" />
+                <div className="h-24 bg-black/5" />
+              </div>
+            ))}
+            <span className="sr-only">Memuat paket...</span>
           </div>
         )}
 
-        {/* Error state */}
         {isError && !isLoading && (
-          <div className="flex min-h-[40vh] flex-col items-center justify-center gap-2 text-center">
-            <p className="text-destructive text-sm">Gagal memuat membership. Silakan coba lagi.</p>
+          <div role="alert" className="border border-black/15 bg-[#f8f8f6] px-6 py-12 text-center">
+            <h2 className="text-lg font-medium">Paket belum dapat dimuat</h2>
+            <p className="mt-2 text-sm text-black/50">
+              Silakan coba lagi untuk melihat paket yang tersedia.
+            </p>
+            <Button
+              onClick={() => refetch()}
+              className="mt-5 rounded-full bg-[#111111] px-6 text-white hover:bg-black/80"
+            >
+              Coba lagi
+            </Button>
           </div>
         )}
 
-        {/* Empty state */}
         {!isLoading && !isError && memberships.length === 0 && (
-          <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-center">
-            <p className="text-lg font-semibold">Belum ada Paket {sportLabels[selectedSport]}</p>
-            <p className="text-muted-foreground max-w-sm text-sm">
-              Kami sedang menyiapkan paket terbaik untuk kategori ini. Silahkan tunggu beberapa
-              saat.
+          <div className="border border-dashed border-black/20 bg-[#f8f8f6] px-6 py-16 text-center">
+            <h2 className="text-xl font-medium tracking-tight">
+              Belum ada paket {sportLabels[selectedSport]}
+            </h2>
+            <p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-black/50">
+              Paket untuk kategori ini belum tersedia. Silakan cek kembali nanti atau lihat kategori
+              lainnya.
             </p>
           </div>
         )}
 
-        {/* Membership list */}
         {!isLoading && !isError && memberships.length > 0 && (
-          <section className="grid gap-6 pt-4 pb-12">
+          <section
+            aria-label={`Paket ${sportLabels[selectedSport]}`}
+            className="grid items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3"
+          >
             {memberships.map((pack) => (
-              <Card key={pack.id} className="flex flex-col">
-                <CardHeader>
-                  <div className="mb-2 flex items-start justify-between gap-2">
-                    <CardTitle className="text-xl font-bold tracking-tight uppercase">
-                      {pack.name}
-                    </CardTitle>
-                    {pack.isActive && (
-                      <span className="bg-primary/10 text-primary rounded-full px-2.5 py-0.5 text-xs font-medium">
-                        Aktif
-                      </span>
-                    )}
+              <article
+                key={pack.id}
+                className="flex min-w-0 flex-col border border-black/15 bg-[#f8f8f6] p-6 transition-colors hover:border-black/35 sm:p-7"
+              >
+                <div className="mb-5 flex flex-wrap items-center justify-between gap-2 text-[10px] font-medium tracking-[0.12em] uppercase">
+                  <span className="text-black/45">{sportLabels[selectedSport]} / Value Pack</span>
+                  <span className="border border-[#ad422b]/20 px-2 py-1 text-[#ad422b]">
+                    {membershipTypeLabels[pack.type]}
+                  </span>
+                </div>
+                <h2 className="text-xl leading-tight font-medium tracking-tight break-words uppercase">
+                  {pack.name}
+                </h2>
+                <div className="mt-5 mb-6">
+                  <p className="text-3xl font-medium tracking-[-0.04em] tabular-nums">
+                    Rp{pack.price.toLocaleString('id-ID')}
+                  </p>
+                  <p className="mt-2 text-xs text-black/50">
+                    {membershipTypeDescriptions[pack.type]}
+                  </p>
+                </div>
+                <dl className="mb-4 grid grid-cols-2 border-y border-black/15 py-4">
+                  <div className="border-r border-black/15 pr-4">
+                    <dt className="mb-1 text-[10px] tracking-wider text-black/45 uppercase">
+                      Waktu bermain
+                    </dt>
+                    <dd className="text-lg font-medium">
+                      {pack.sessions} <span className="text-xs font-normal text-black/50">jam</span>
+                    </dd>
                   </div>
-                  <div className="bg-muted text-muted-foreground w-fit rounded px-2 py-1 text-xs font-medium">
-                    {membershipTypeLabels[pack.type]} · {membershipTypeDescriptions[pack.type]}
+                  <div className="pl-4">
+                    <dt className="mb-1 text-[10px] tracking-wider text-black/45 uppercase">
+                      Masa berlaku
+                    </dt>
+                    <dd className="text-lg font-medium">
+                      {pack.duration}{' '}
+                      <span className="text-xs font-normal text-black/50">hari</span>
+                    </dd>
                   </div>
-
-                  <div className="space-y-2">
-                    <div className="text-primary text-2xl font-bold">
-                      Rp {pack.price.toLocaleString('id-ID')}
-                    </div>
-
-                    {/* Key Information */}
-                    <div className="flex flex-wrap gap-3 pt-2">
-                      <div className="flex items-center gap-1.5 text-sm">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="text-muted-foreground h-4 w-4"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth={2}
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-                          />
-                        </svg>
-                        <span className="text-foreground font-medium">{pack.sessions}</span>
-                        <span className="text-muted-foreground">Jam</span>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 text-sm">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="text-muted-foreground h-4 w-4"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                          strokeWidth={2}
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                          />
-                        </svg>
-                        <span className="text-foreground font-medium">{pack.duration}</span>
-                        <span className="text-muted-foreground">Hari</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {pack.description && (
-                    <CardDescription className="line-clamp-2 pt-2">
-                      {pack.description}
-                    </CardDescription>
-                  )}
-                </CardHeader>
-
-                <CardContent className="flex-1">
-                  {pack.benefits && pack.benefits.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-semibold">Benefit:</h4>
-                      <ul className="space-y-2">
-                        {pack.benefits.map((benefit, idx) => (
-                          <li key={idx} className="flex items-start gap-2 text-sm">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="text-primary mt-0.5 h-4 w-4 shrink-0"
-                              viewBox="0 0 20 20"
-                              fill="currentColor"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
-                            <span className="text-muted-foreground">{benefit.benefit}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </CardContent>
-
-                <CardFooter className="pt-4">
-                  <Button className="w-full" size="lg" asChild>
-                    <Link href={`/membership/${pack.id}`}>Pesan Sekarang</Link>
-                  </Button>
-                </CardFooter>
-              </Card>
+                </dl>
+                <Button
+                  className="mt-auto h-12 w-full rounded-full bg-[#111111] text-sm font-medium text-white hover:bg-black/80"
+                  asChild
+                >
+                  <Link href={`/membership/${pack.id}`} aria-label={`Pilih paket ${pack.name}`}>
+                    Pilih paket{' '}
+                    <ArrowUpRight className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                  </Link>
+                </Button>
+              </article>
             ))}
           </section>
         )}
       </main>
+      <MainBottomNavigation />
     </>
   );
 }

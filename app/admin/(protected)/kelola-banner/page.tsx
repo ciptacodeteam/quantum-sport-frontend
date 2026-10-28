@@ -28,7 +28,7 @@ const ManageBannerPage = () => {
       <Section>
         <SectionHeader>
           <SectionTitle title="Kelola Banner" />
-          <SectionDescription description="Atur dan pantau banner Anda di sini." />
+          <SectionDescription description="Kelola banner yang ditampilkan bersama di seluruh cabang." />
         </SectionHeader>
         <SectionContent>
           <BannerTable />

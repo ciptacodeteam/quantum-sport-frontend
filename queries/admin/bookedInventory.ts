@@ -2,6 +2,28 @@ import { getBookedInventoriesApi, getBookedInventoryApi } from '@/api/admin/book
 import { queryOptions } from '@tanstack/react-query';
 import type { SearchParamsData } from '@/types';
 
+export type BookedCustomer = {
+  id: string;
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  image?: string | null;
+};
+export type BookedInvoice = {
+  id: string;
+  number: string;
+  status: string;
+  total: number;
+  payment?: { method?: string | { name?: string } | null } | null;
+};
+export type BookedCourtSlot = {
+  court?: { id: string; name: string } | null;
+  startAt?: string;
+  endAt?: string;
+  date?: string;
+  time?: string;
+  slot?: { id?: string; startAt: string; endAt: string };
+};
 export type AdminBookedInventoryListItem = {
   id: string;
   itemType?: 'inventory' | 'ballboy' | 'coach';
@@ -21,80 +43,31 @@ export type AdminBookedInventoryListItem = {
     id: string;
     status: string;
     totalPrice: number;
-    customer?: {
-      id: string;
-      name: string;
-      email: string;
-      phone: string | null;
-      image: string | null;
-    } | null;
-    invoice?: {
-      id: string;
-      number: string;
-      status: string;
-      total: number;
-    } | null;
-    courtSlots?: Array<{
-      court: { id: string; name: string } | null;
-      startAt: string;
-      endAt: string;
-      date: string;
-      time: string;
-    }>;
+    customer?: BookedCustomer | null;
+    user?: BookedCustomer | null;
+    invoice?: BookedInvoice | null;
+    courtSlots?: BookedCourtSlot[];
     createdAt?: string;
   };
-  serviceStaff?: {
-    id: string;
-    name: string;
-    email?: string | null;
-    phone?: string | null;
-  } | null;
-  coachType?: {
-    id: string;
-    name: string;
-    description?: string | null;
-  } | null;
-  slot?: {
-    startAt: string;
-    endAt: string;
-  };
+  customer?: BookedCustomer | null;
+  invoice?: BookedInvoice | null;
+  courtSlots?: BookedCourtSlot[];
+  serviceStaff?: { id: string; name: string; email?: string | null; phone?: string | null } | null;
+  coachType?: { id: string; name: string; description?: string | null } | null;
+  slot?: { startAt: string; endAt: string; court?: { id: string; name: string } | null } | null;
   createdAt: string;
   updatedAt: string;
 };
-
 export type AdminBookedInventoryDetail = AdminBookedInventoryListItem & {
-  courtSlots?: Array<{
-    court: { id: string; name: string } | null;
-    slot: {
-      id: string;
-      startAt: string;
-      endAt: string;
-      date: string;
-      startTime: string;
-      endTime: string;
-    };
-  }>;
-  coaches: Array<{
+  coaches?: Array<{
     staff: { id: string; name: string };
-    coachType: string;
+    coachType: string | { name?: string };
     slot: { startAt: string; endAt: string };
   }>;
-  ballboys: Array<{
+  ballboys?: Array<{
     staff: { id: string; name: string };
     slot: { startAt: string; endAt: string };
   }>;
-  invoice?:
-    | ({
-        id: string;
-        number: string;
-        status: string;
-        total: number;
-      } & {
-        payment?: {
-          method?: string | null;
-        } | null;
-      })
-    | null;
 };
 
 export const adminBookedInventoriesQueryOptions = (queryParams?: SearchParamsData) =>

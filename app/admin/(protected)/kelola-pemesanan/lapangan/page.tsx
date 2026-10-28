@@ -19,15 +19,15 @@ const ManageBookingPage = async ({ searchParams }: ManageBookingPageProps) => {
   const courtSportLabel = courtSport === 'TENNIS' ? 'Tennis' : 'Padel';
 
   return (
-    <main>
-      <Section>
-        <SectionHeader>
+    <main className="w-full min-w-0">
+      <Section className="min-w-0 bg-transparent pt-0">
+        <SectionHeader className="px-0">
           <SectionTitle title={`Kelola Pemesanan Lapangan ${courtSportLabel}`} />
           <SectionDescription
             description={`Atur dan pantau pemesanan lapangan ${courtSportLabel.toLowerCase()} Anda di sini.`}
           />
         </SectionHeader>
-        <SectionContent>
+        <SectionContent className="min-w-0 px-0">
           <BookingTable courtSport={courtSport} />
         </SectionContent>
       </Section>

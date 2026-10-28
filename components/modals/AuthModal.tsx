@@ -22,7 +22,6 @@ const AuthModal = () => {
   const pathname = usePathname();
 
   const [otpOpen, setOtpOpen] = useState(false);
-  const [registerOpen, setRegisterOpen] = useState(false);
   const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
 
   const [verifyType, setVerifyType] = useState<'global' | 'register'>('global');
@@ -33,6 +32,17 @@ const AuthModal = () => {
   const isOpen = useAuthModalStore((state) => state.isOpen);
   const setOpen = useAuthModalStore((state) => state.setOpen);
   const openModal = useAuthModalStore((state) => state.open);
+  const view = useAuthModalStore((state) => state.view);
+  const openRegister = useAuthModalStore((state) => state.openRegister);
+  const registerOpen = isOpen && view === 'register';
+  const setRegisterOpen = (open: boolean) => {
+    if (open) {
+      setVerifyType('register');
+      openRegister();
+    } else {
+      setOpen(false);
+    }
+  };
 
   // Open login modal if requireLogin param is true
   // e.g. /?requireLogin=true
@@ -72,6 +82,7 @@ const AuthModal = () => {
   };
 
   const handleAfterRegister = () => {
+    setVerifyType('register');
     setRegisterOpen(false);
     setOtpOpen(true);
   };
@@ -85,8 +96,8 @@ const AuthModal = () => {
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-        <DialogContent>
+      <Dialog open={isOpen && view === 'login'} onOpenChange={handleOpenChange}>
+        <DialogContent className="auth-dialog max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-none border-black/15 bg-[#f8f8f6] p-6 pt-10 text-[#171717] shadow-2xl sm:max-w-[480px] sm:p-10">
           <main>
             <LoginForm
               openVerifyPhoneOtpModal={handleLoginToVerifyPhone}
@@ -112,7 +123,7 @@ const AuthModal = () => {
           }
         }}
       >
-        <DialogContent>
+        <DialogContent className="auth-dialog max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-none border-black/15 bg-[#f8f8f6] p-6 pt-10 text-[#171717] shadow-2xl sm:max-w-[480px] sm:p-10">
           <main>
             <RegisterForm
               onRegisterSuccess={handleAfterRegister}
@@ -132,7 +143,10 @@ const AuthModal = () => {
           }
         }}
       >
-        <DialogContent>
+        <DialogContent
+          aria-describedby="whatsapp-otp-description"
+          className="auth-dialog max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-none border-black/15 bg-[#f8f8f6] px-6 pt-10 pb-6 text-[#171717] shadow-2xl sm:max-w-[400px] sm:px-8 sm:pt-10 sm:pb-7"
+        >
           <main>
             <VerifyPhoneOtpForm
               type={verifyType}
@@ -163,7 +177,7 @@ const AuthModal = () => {
           }
         }}
       >
-        <DialogContent>
+        <DialogContent className="auth-dialog max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-none border-black/15 bg-[#f8f8f6] p-6 pt-10 text-[#171717] shadow-2xl sm:max-w-[480px] sm:p-10">
           <main>
             <ResetPasswordForm
               onSuccess={() => {

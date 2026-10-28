@@ -1,124 +1,79 @@
 'use client';
 
+import { useLogoutConfirmation } from '@/hooks/useLogoutConfirmation';
+
 import MainBottomNavigation from '@/components/footers/MainBottomNavigation';
 import MainHeader from '@/components/headers/MainHeader';
-import EmailChangeModal from '@/components/profile/EmailChangeModal';
 import PasswordChangeModal from '@/components/profile/PasswordChangeModal';
-import PhoneChangeModal from '@/components/profile/PhoneChangeModal';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle
-} from '@/components/ui/dialog';
-import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getPlaceholderImageUrl, cn, formatPhone } from '@/lib/utils';
+import { formatPhone } from '@/lib/utils';
 import { logoutMutationOptions } from '@/mutations/auth';
-import { leaveClubMutationOptions } from '@/mutations/club';
 import { myMembershipsQueryOptions } from '@/queries/membership';
 import { profileQueryOptions } from '@/queries/profile';
 import useAuthStore from '@/stores/useAuthStore';
 import type { UserProfile } from '@/types/model';
-import { IconCalendar, IconLogout, IconMail, IconPhone, IconFileText } from '@tabler/icons-react';
-import { Badge } from '@/components/ui/badge';
+import { IconLogout, IconPhone, IconFileText } from '@tabler/icons-react';
 import { sendVerificationOtpMutationOptions } from '@/mutations/verification';
 import { VerifyContactOtpDialog } from '@/components/profile/VerifyContactOtpDialog';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import dayjs from 'dayjs';
+import dayjs from '@/lib/dayjs';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { ArrowUpRight, BadgeCheck, LockKeyhole } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 export default function ProfilePage() {
   const router = useRouter();
+  const confirmLogout = useLogoutConfirmation();
+  const hasLoggedOut = useRef(false);
   const queryClient = useQueryClient();
   const { data: user, isPending, isError } = useQuery(profileQueryOptions);
-  const { data: myMemberships, isPending: isMembershipsLoading } =
-    useQuery(myMembershipsQueryOptions);
-  // const {
-  //   data: memberClubs,
-  //   isLoading: isLoadingMemberClubs,
-  //   error: memberClubsError
-  // } = useQuery(clubMembershipsQueryOptions());
+  const isStaffAccount = !!user && 'role' in user;
+  const {
+    data: myMemberships,
+    isPending: isMembershipsLoading,
+    isError: isMembershipsError
+  } = useQuery({
+    ...myMembershipsQueryOptions,
+    queryKey: ['memberships', 'my', user?.id ?? 'guest'],
+    enabled: !isPending && !!user?.id && !isStaffAccount
+  });
   const logout = useAuthStore((state) => state.logout);
-  const [clubToLeave, setClubToLeave] = useState<{ id: string; name: string } | null>(null);
-  // Name (not edited via modal in this iteration)
-  const [editEmail, setEditEmail] = useState('');
-  const [editPhone, setEditPhone] = useState('');
-  // Email modal
-  const [emailModalOpen, setEmailModalOpen] = useState(false);
-
-  // Phone modal
-  const [phoneModalOpen, setPhoneModalOpen] = useState(false);
-
   // Password modal (two-step)
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   // Generic verification dialog state
   const [verifyDialogOpen, setVerifyDialogOpen] = useState(false);
-  const [verifyType, setVerifyType] = useState<'phone' | 'email' | null>(null);
+  const [verifyType, setVerifyType] = useState<'phone' | null>(null);
   const [verificationRequestId, setVerificationRequestId] = useState<string | null>(null);
 
   // Debug logging removed
 
   const { mutate: logoutMutation, isPending: isLoggingOut } = useMutation(
     logoutMutationOptions({
-      onSuccess: () => {
+      onSuccess: async () => {
+        hasLoggedOut.current = true;
+        await queryClient.cancelQueries();
         queryClient.clear();
         logout();
-        router.push('/');
+        queryClient.setQueryData(profileQueryOptions.queryKey, { data: null });
+        router.replace('/');
       }
     })
   );
-
-  const { mutate: leaveClub, isPending: isLeavingClub } = useMutation(
-    leaveClubMutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['clubs', 'my'] });
-        queryClient.invalidateQueries({ queryKey: ['clubs'] });
-        setClubToLeave(null);
-      }
-    })
-  );
-
-  // Update local form state when user loaded
-  useEffect(() => {
-    if (user) {
-      setEditEmail(user.email || '');
-      setEditPhone(user.phone || '');
-    }
-  }, [user]);
-
-  // Email/Phone updates are handled in modal components
-
-  // Email OTP handled in EmailChangeModal
-
-  // Phone OTP handled in PhoneChangeModal
-
-  // Password change handled in PasswordChangeModal
 
   // Redirect to home if not authenticated
   useEffect(() => {
-    if (!isPending && (isError || !user?.id)) {
+    if (!hasLoggedOut.current && !isPending && (isError || !user?.id)) {
       router.push('/?requireLogin=true');
     }
   }, [isPending, isError, user, router]);
 
-  const handleLogout = () => {
-    logoutMutation();
-  };
-
-  // const handleLeaveClubClick = (clubId: string, clubName: string) => {
-  //   setClubToLeave({ id: clubId, name: clubName });
-  // };
-
-  const confirmLeaveClub = () => {
-    if (clubToLeave) {
-      leaveClub(clubToLeave.id);
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+    if (await confirmLogout()) {
+      logoutMutation();
     }
   };
 
@@ -134,7 +89,7 @@ export default function ProfilePage() {
     })
   );
 
-  const handleStartVerification = (type: 'phone' | 'email') => {
+  const handleStartVerification = (type: 'phone') => {
     if (!user) return;
     setVerifyType(type);
     if (type === 'phone' && user.phone && !(user as UserProfile).phoneVerified) {
@@ -142,8 +97,6 @@ export default function ProfilePage() {
         type: 'phone',
         phone: formatPhone(user.phone)
       });
-    } else if (type === 'email' && user.email && !(user as UserProfile).emailVerified) {
-      sendVerificationOtp({ type: 'email', email: user.email });
     }
   };
 
@@ -154,8 +107,6 @@ export default function ProfilePage() {
         type: 'phone',
         phone: formatPhone(user.phone)
       });
-    } else if (verifyType === 'email' && user.email) {
-      sendVerificationOtp({ type: 'email', email: user.email });
     }
   };
 
@@ -163,17 +114,22 @@ export default function ProfilePage() {
     return (
       <>
         <MainHeader backHref="/" title="Profile" withLogo={false} />
-        <main className="mt-24 min-h-[calc(100dvh-180px)] w-full p-4 md:mt-14">
-          <div className="mx-auto max-w-2xl space-y-6">
-            <Skeleton className="h-48 w-full" />
-            <Skeleton className="h-64 w-full" />
+        <main
+          className="profile-page mx-auto w-full max-w-7xl px-5 pt-24 pb-8 sm:px-8 xl:pt-32"
+          aria-busy="true"
+          aria-label="Memuat profil"
+        >
+          <div className="grid items-start gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
+            <Skeleton className="h-64 rounded-none" />
+            <Skeleton className="h-96 rounded-none" />
           </div>
         </main>
+        <MainBottomNavigation />
       </>
     );
   }
 
-  if (!user) {
+  if (isError || !user) {
     return null;
   }
 
@@ -181,321 +137,283 @@ export default function ProfilePage() {
     <>
       <MainHeader title="Akun Saya" withLogo={false} withBorder />
 
-      <main className="mt-24 pb-24 lg:mt-28">
-        <div className="mx-auto w-11/12 max-w-7xl space-y-4">
-          {/* Profile Header Card */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex flex-col items-center space-y-4">
-                {/* Profile Image */}
-                <div className="border-primary/10 relative h-24 w-24 overflow-hidden rounded-full border-4">
+      <main className="profile-page mx-auto w-full max-w-7xl px-5 pt-24 pb-8 text-[#171717] sm:px-8 lg:pb-16 xl:pt-32">
+        <div className="grid items-start gap-4 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-6">
+          <aside className="min-w-0 bg-[#111111] p-5 text-white sm:p-6 lg:sticky lg:top-28">
+            <div className="flex items-center gap-4 lg:flex-col lg:items-start lg:gap-5">
+              <div className="relative flex size-16 shrink-0 items-center justify-center overflow-hidden bg-[#ad422b] text-2xl font-medium text-white lg:size-20">
+                {user.image ? (
                   <Image
-                    src={
-                      user.image ||
-                      getPlaceholderImageUrl({
-                        width: 200,
-                        height: 200,
-                        text: user.name.charAt(0).toUpperCase()
-                      })
-                    }
+                    src={user.image}
                     alt={user.name}
                     fill
                     className="object-cover"
                     unoptimized
                   />
-                </div>
-
-                {/* Name */}
-                <div className="text-center">
-                  <h1 className="text-2xl font-bold capitalize">{user.name}</h1>
-                  {'banned' in user && (user as any).banned && (
-                    <p className="text-destructive mt-1 text-sm">Account Banned</p>
-                  )}
-                </div>
+                ) : (
+                  <span aria-hidden="true">
+                    {user.name
+                      .trim()
+                      .split(/\s+/)
+                      .slice(0, 2)
+                      .map((part) => part.charAt(0))
+                      .join('')
+                      .toUpperCase()}
+                  </span>
+                )}
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Profile Details Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="mb-1">Informasi Akun</CardTitle>
-              <CardDescription>Detail akun dan status akun</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Email */}
-              <div className="flex items-center gap-3">
-                <IconMail className="bg-primary size-4 h-10 w-10 rounded-md p-2 text-white" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Email</p>
-                  <button
-                    type="button"
-                    className="text-muted-foreground text-sm underline-offset-2 hover:underline"
-                    onClick={() => {
-                      setEditEmail(user.email || '');
-                      setEmailModalOpen(true);
-                    }}
-                  >
-                    {user.email || 'Not provided'}
-                  </button>
-                  {user.email && 'emailVerified' in user && (
-                    <Badge
-                      variant={(user as any).emailVerified ? 'lightSuccess' : 'lightDestructive'}
-                      className={cn('ml-2 select-none', user.emailVerified ? '' : 'cursor-pointer')}
-                      onClick={() => handleStartVerification('email')}
-                      aria-disabled={isSendingVerification}
-                    >
-                      {(user as any).emailVerified ? 'Email Terverifikasi' : 'Verifikasi Email'}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Phone */}
-              <div className="flex items-center gap-3">
-                <IconPhone className="bg-primary size-4 h-10 w-10 rounded-md p-2 text-white" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Nomor WhatsApp</p>
-
-                  <div className="flex">
-                    <button
-                      type="button"
-                      className="text-muted-foreground me-2 text-sm underline-offset-2 hover:underline"
-                      onClick={() => {
-                        setEditPhone(user.phone || '');
-                        setPhoneModalOpen(true);
-                      }}
-                    >
-                      {user.phone || 'Not provided'}
-                    </button>
-
-                    {'phoneVerified' in user && (
-                      <Badge
-                        variant={
-                          (user as UserProfile).phoneVerified ? 'lightSuccess' : 'lightDestructive'
-                        }
-                        className={cn('select-none', user.phoneVerified ? '' : 'cursor-pointer')}
-                        onClick={() => handleStartVerification('phone')}
-                        aria-disabled={isSendingVerification}
-                      >
-                        {(user as UserProfile).phoneVerified
-                          ? 'Nomor Terverifikasi'
-                          : 'Verifikasi Nomor'}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Member Since */}
-              <div className="flex items-center gap-3">
-                <IconCalendar className="bg-primary size-4 h-10 w-10 rounded-md p-2 text-white" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Membership sejak</p>
-                  <p className="text-muted-foreground text-sm">
-                    {dayjs(user.createdAt).format('DD MMMM YYYY')}
-                  </p>
-                </div>
-              </div>
-
-              {'banned' in user && (user as any).banned && 'banReason' in user && (
-                <>
-                  <Separator />
-                  <div className="bg-destructive/10 rounded-lg p-3">
-                    <p className="text-destructive text-sm font-medium">Ban Reason</p>
-                    <p className="text-destructive/80 text-sm">{(user as any).banReason}</p>
-                    {'banExpires' in user && (user as any).banExpires && (
-                      <p className="text-destructive/70 mt-1 text-xs">
-                        Expires: {dayjs((user as any).banExpires).format('DD MMMM YYYY HH:mm')}
+              <div className="min-w-0">
+                <h1 className="text-xl leading-tight font-medium tracking-tight break-words capitalize sm:text-2xl">
+                  {user.name}
+                </h1>
+                <div className="mt-2 space-y-2" aria-label="Status membership">
+                  {isStaffAccount ? (
+                    <p className="text-xs leading-relaxed text-white/55">
+                      Membership khusus akun pelanggan.
+                    </p>
+                  ) : isMembershipsLoading ? (
+                    <p className="text-xs text-white/55" role="status">
+                      Memuat status membership...
+                    </p>
+                  ) : isMembershipsError || !myMemberships ? (
+                    <p className="text-xs leading-relaxed text-white/55">
+                      Status membership belum dapat dimuat.
+                    </p>
+                  ) : myMemberships.active.length > 0 ? (
+                    myMemberships.active.map((pack) => (
+                      <div key={pack.id} className="space-y-1">
+                        <p className="text-xs leading-relaxed font-medium text-[#efb7a6]">
+                          Membership aktif · {pack.membership.name}
+                        </p>
+                        <p className="text-[11px] leading-relaxed text-white/60">
+                          {pack.endDate && dayjs(pack.endDate).isValid()
+                            ? `Aktif hingga ${dayjs(pack.endDate).tz('Asia/Jakarta').format('DD MMM YYYY')}`
+                            : 'Tanggal berakhir belum tersedia'}
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="space-y-1">
+                      <p className="text-xs leading-relaxed text-white/80">
+                        {myMemberships.suspended.length > 0
+                          ? 'Membership ditangguhkan'
+                          : myMemberships.expired.length > 0
+                            ? 'Membership sudah berakhir'
+                            : myMemberships.total > 0
+                              ? 'Membership belum aktif'
+                              : 'Belum memiliki membership'}
                       </p>
-                    )}
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Active Membership Card */}
-          {!isMembershipsLoading && myMemberships && myMemberships.active.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="mb-1">Membership Aktif</CardTitle>
-                <CardDescription>Informasi membership yang sedang aktif</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {myMemberships.active.map((userMembership) => (
-                  <div key={userMembership.id} className="rounded-lg border p-4">
-                    <div className="mb-3 flex items-start justify-between">
-                      <div>
-                        <h3 className="text-lg font-bold">{userMembership.membership.name}</h3>
-                        {userMembership.membership.description && (
-                          <p className="text-muted-foreground text-sm">
-                            {userMembership.membership.description}
-                          </p>
-                        )}
-                      </div>
-                      <span className="bg-primary/10 text-primary rounded-full px-2.5 py-0.5 text-xs font-medium">
-                        Aktif
-                      </span>
                     </div>
+                  )}
+                </div>
+                {'banned' in user && user.banned && (
+                  <p className="mt-2 text-xs text-[#efb7a6]">Akun diblokir</p>
+                )}
+              </div>
+            </div>
+          </aside>
 
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="bg-muted rounded-md p-3">
-                        <p className="text-muted-foreground mb-1 text-xs">Berlaku Hingga</p>
-                        <p className="font-semibold">
-                          {dayjs(userMembership.endDate).format('DD MMMM YYYY')}
-                        </p>
-                        <p className="text-muted-foreground text-xs">
-                          {userMembership.remainingDuration} hari tersisa
-                        </p>
-                      </div>
-
-                      <div className="bg-muted rounded-md p-3">
-                        <p className="text-muted-foreground mb-1 text-xs">Sisa Jam</p>
-                        <p className="font-semibold">
-                          {userMembership.remainingSessions} dari{' '}
-                          {userMembership.membership.sessions} jam
-                        </p>
-                        <p className="text-muted-foreground text-xs">
-                          {Math.round(
-                            (userMembership.remainingSessions /
-                              userMembership.membership.sessions) *
-                              100
-                          )}
-                          % tersisa
-                        </p>
-                      </div>
-                    </div>
-
-                    {userMembership.membership.benefits &&
-                      userMembership.membership.benefits.length > 0 && (
-                        <div className="mt-3">
-                          <p className="mb-2 text-sm font-medium">Benefit:</p>
-                          <ul className="space-y-1">
-                            {userMembership.membership.benefits.map((benefit) => (
-                              <li key={benefit.id} className="flex items-start gap-2 text-sm">
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="text-primary mt-0.5 h-4 w-4 shrink-0"
-                                  viewBox="0 0 20 20"
-                                  fill="currentColor"
-                                >
-                                  <path
-                                    fillRule="evenodd"
-                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                    clipRule="evenodd"
-                                  />
-                                </svg>
-                                <span className="text-muted-foreground">{benefit.benefit}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Change Password (trigger) */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="mb-1">Kata Sandi</CardTitle>
-              <CardDescription>Mengelola Kata Sandi</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button variant="outline" onClick={() => setPasswordModalOpen(true)}>
-                Ganti Kata Sandi
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Terms & Conditions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="mb-1">Syarat & Ketentuan</CardTitle>
-              <CardDescription>Baca ketentuan penggunaan layanan kami</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button variant="outline" onClick={() => router.push('/terms-and-conditions')}>
-                <IconFileText className="mr-2 size-4" />
-                Lihat Syarat & Ketentuan
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Logout Button */}
-          <footer className="mb-6">
-            <Button
-              variant="destructive"
-              className="w-full"
-              size="lg"
-              onClick={handleLogout}
-              disabled={isLoggingOut}
-              loading={isLoggingOut}
+          <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+            <section
+              aria-labelledby="account-info-title"
+              className="min-w-0 border border-black/15 bg-[#f8f8f6] p-5 sm:col-span-2 sm:p-6"
             >
-              <IconLogout className="size-5" />
-              Keluar
-            </Button>
-          </footer>
+              <h2 id="account-info-title" className="text-lg font-medium tracking-tight">
+                Informasi akun
+              </h2>
+              <p className="mt-1 text-xs leading-relaxed text-black/45">
+                Informasi kontak dan status verifikasi akun Anda.
+              </p>
+              <div className="mt-5 divide-y divide-black/10">
+                <div className="flex items-start gap-3">
+                  <span className="flex size-10 shrink-0 items-center justify-center border border-[#ad422b]/20 text-[#ad422b]">
+                    <IconPhone className="size-5" strokeWidth={1.5} aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="mb-1 text-[10px] font-medium tracking-wider text-black/45 uppercase">
+                      Nomor WhatsApp
+                    </h3>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="min-w-0 text-sm leading-relaxed break-all text-[#171717]">
+                        {user.phone || 'Belum diisi'}
+                      </p>
+                      {'phoneVerified' in user && user.phoneVerified && (
+                        <span
+                          className="inline-flex shrink-0 items-center gap-1 text-[10px] text-[#ad422b]"
+                          aria-label="Nomor WhatsApp terverifikasi"
+                        >
+                          <BadgeCheck className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                          Terverifikasi
+                        </span>
+                      )}
+                      {'phoneVerified' in user && !user.phoneVerified && user.phone && (
+                        <button
+                          type="button"
+                          className="text-[10px] font-medium text-[#ad422b] underline-offset-4 hover:underline disabled:opacity-50"
+                          disabled={isSendingVerification}
+                          onClick={() => handleStartVerification('phone')}
+                        >
+                          {isSendingVerification ? 'Mengirim kode...' : 'Verifikasi WhatsApp'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {'banned' in user && user.banned && 'banReason' in user && (
+                <div className="mt-5 border border-[#ad422b]/25 bg-[#ad422b]/5 p-4">
+                  <p className="text-xs font-medium text-[#ad422b]">Alasan pemblokiran</p>
+                  <p className="mt-1 text-sm text-black/60">{user.banReason}</p>
+                  {'banExpires' in user && user.banExpires && (
+                    <p className="mt-2 text-xs text-black/45">
+                      Berakhir: {dayjs(user.banExpires).format('DD MMMM YYYY HH:mm')}
+                    </p>
+                  )}
+                </div>
+              )}
+            </section>
+
+            {!isMembershipsLoading && myMemberships && myMemberships.active.length > 0 && (
+              <section
+                aria-labelledby="profile-memberships-title"
+                className="min-w-0 border border-black/15 bg-[#f8f8f6] p-5 sm:col-span-2 sm:p-6"
+              >
+                <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                  <h2 id="profile-memberships-title" className="text-lg font-medium tracking-tight">
+                    Value Pack aktif
+                  </h2>
+                  <Link
+                    href="/my-packages"
+                    className="inline-flex items-center gap-1 text-xs text-[#ad422b] hover:underline"
+                  >
+                    Lihat pemakaian <ArrowUpRight className="size-3.5" aria-hidden="true" />
+                  </Link>
+                </div>
+                <div className="divide-y divide-black/10">
+                  {myMemberships.active.map((userMembership) => (
+                    <div key={userMembership.id} className="py-5 first:pt-0 last:pb-0">
+                      <div className="mb-4 flex items-start justify-between gap-3">
+                        <h3 className="min-w-0 text-base font-medium break-words">
+                          {userMembership.membership.name}
+                        </h3>
+                        <span className="shrink-0 text-[10px] font-medium text-[#ad422b]">
+                          Aktif
+                        </span>
+                      </div>
+                      <dl className="grid grid-cols-2 gap-3 border-t border-black/10 pt-4">
+                        <div>
+                          <dt className="mb-1 text-[10px] tracking-wide text-black/45 uppercase">
+                            Berlaku hingga
+                          </dt>
+                          <dd className="text-sm font-medium">
+                            {dayjs(userMembership.endDate).format('DD MMM YYYY')}
+                          </dd>
+                          <dd className="mt-1 text-xs text-black/45">
+                            {userMembership.remainingDuration} hari tersisa
+                          </dd>
+                        </div>
+                        <div className="border-l border-black/10 pl-3">
+                          <dt className="mb-1 text-[10px] tracking-wide text-black/45 uppercase">
+                            Sisa waktu bermain
+                          </dt>
+                          <dd className="text-sm font-medium">
+                            {userMembership.remainingSessions}{' '}
+                            <span className="text-xs font-normal text-black/45">
+                              / {userMembership.membership.sessions} jam
+                            </span>
+                          </dd>
+                        </div>
+                      </dl>
+                      {userMembership.membership.benefits &&
+                        userMembership.membership.benefits.length > 0 && (
+                          <details className="mt-4 border-t border-black/10 pt-3">
+                            <summary className="cursor-pointer text-xs text-[#ad422b]">
+                              Detail benefit
+                            </summary>
+                            <ul className="mt-3 space-y-2">
+                              {userMembership.membership.benefits.map((benefit) => (
+                                <li
+                                  key={benefit.id}
+                                  className="text-xs leading-relaxed text-black/55"
+                                >
+                                  {benefit.benefit}
+                                </li>
+                              ))}
+                            </ul>
+                          </details>
+                        )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            <section
+              aria-labelledby="password-title"
+              className="flex min-w-0 flex-col border border-black/15 bg-[#f8f8f6] p-5 sm:p-6"
+            >
+              <LockKeyhole
+                className="mb-4 size-5 text-[#ad422b]"
+                strokeWidth={1.5}
+                aria-hidden="true"
+              />
+              <h2 id="password-title" className="text-lg font-medium tracking-tight">
+                Kata sandi
+              </h2>
+              <p className="mt-2 mb-5 text-xs leading-relaxed text-black/50">
+                Perbarui kata sandi untuk menjaga keamanan akun Anda.
+              </p>
+              <Button
+                variant="outline"
+                className="mt-auto h-10 w-fit rounded-full border-black/20 bg-transparent px-5 text-xs text-[#171717] shadow-none hover:bg-black/5"
+                onClick={() => setPasswordModalOpen(true)}
+              >
+                Ganti kata sandi
+              </Button>
+            </section>
+            <section
+              aria-labelledby="terms-title"
+              className="flex min-w-0 flex-col border border-black/15 bg-[#f8f8f6] p-5 sm:p-6"
+            >
+              <IconFileText
+                className="mb-4 size-5 text-[#ad422b]"
+                strokeWidth={1.5}
+                aria-hidden="true"
+              />
+              <h2 id="terms-title" className="text-lg font-medium tracking-tight">
+                Syarat & ketentuan
+              </h2>
+              <p className="mt-2 mb-5 text-xs leading-relaxed text-black/50">
+                Informasi dan ketentuan penggunaan layanan Black Padel.
+              </p>
+              <Button
+                variant="outline"
+                className="mt-auto h-10 w-fit rounded-full border-black/20 bg-transparent px-5 text-xs text-[#171717] shadow-none hover:bg-black/5"
+                onClick={() => router.push('/terms-and-conditions')}
+              >
+                Lihat ketentuan <ArrowUpRight className="size-3.5" aria-hidden="true" />
+              </Button>
+            </section>
+            <div className="border-t border-black/15 pt-4 sm:col-span-2">
+              <Button
+                variant="outline"
+                className="h-11 w-full rounded-full border-black/20 bg-transparent px-6 text-xs text-[#ad422b] shadow-none hover:border-[#ad422b]/40 hover:bg-[#ad422b]/5 sm:w-auto"
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                loading={isLoggingOut}
+              >
+                <IconLogout className="size-4" strokeWidth={1.5} />
+                Keluar dari akun
+              </Button>
+            </div>
+          </div>
         </div>
       </main>
 
-      {/* Leave Club Confirmation Dialog */}
-      <Dialog open={!!clubToLeave} onOpenChange={(open) => !open && setClubToLeave(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Leave Club</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to leave <strong>{clubToLeave?.name}</strong>? You will need to
-              request to join again if it&#39;s a private club.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setClubToLeave(null)} disabled={isLeavingClub}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmLeaveClub}
-              disabled={isLeavingClub}
-              loading={isLeavingClub}
-            >
-              Leave Club
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       <MainBottomNavigation />
 
-      {/* Email Change Modal */}
-      <EmailChangeModal
-        open={emailModalOpen}
-        email={editEmail}
-        onOpenChange={setEmailModalOpen}
-        onSuccess={() => queryClient.invalidateQueries({ queryKey: profileQueryOptions.queryKey })}
-      />
-
-      {/* Phone Change Modal */}
-      <PhoneChangeModal
-        open={phoneModalOpen}
-        phone={editPhone}
-        onOpenChange={setPhoneModalOpen}
-        onSuccess={() => queryClient.invalidateQueries({ queryKey: profileQueryOptions.queryKey })}
-      />
-
       {/* Password Change Modal */}
-      <PasswordChangeModal
-        open={passwordModalOpen}
-        userEmail={user.email}
-        onOpenChange={setPasswordModalOpen}
-      />
+      <PasswordChangeModal open={passwordModalOpen} onOpenChange={setPasswordModalOpen} />
 
       {/* Generic Verification OTP Dialog */}
       {verifyType && (

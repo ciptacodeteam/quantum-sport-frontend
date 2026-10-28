@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { format, subDays } from 'date-fns';
+import { startOfDay, subDays } from 'date-fns';
+import { getAnalyticsDateRange } from '@/lib/analytics-date-range';
 import AppSectionHeader from '@/components/ui/app-section-header';
 import DateRangeInput from '@/components/ui/date-range-input';
 import { paymentMethodsAnalyticsQueryOptions } from '@/queries/admin/analytics';
@@ -10,28 +11,28 @@ import PaymentMethodsSection from '@/components/admin/analytics/PaymentMethodsSe
 import type { DateRange } from 'react-day-picker';
 
 export default function PaymentMethodsPage() {
-  const [range, setRange] = useState<DateRange | undefined>({
-    from: subDays(new Date(), 30),
-    to: new Date()
-  });
+  const [range, setRange] = useState<DateRange | undefined>(() => ({
+    from: subDays(startOfDay(new Date()), 29),
+    to: startOfDay(new Date())
+  }));
 
-  const startDate = range?.from ? format(range.from, "yyyy-MM-dd'T'00:00:00'Z'") : undefined;
-  const endDate = range?.to ? format(range.to, "yyyy-MM-dd'T'23:59:59'Z'") : undefined;
+  const { startDate, endDate } = getAnalyticsDateRange(range);
 
   const { data: paymentData, isLoading } = useQuery(
     paymentMethodsAnalyticsQueryOptions(startDate, endDate)
   );
 
   return (
-    <main className="space-y-6">
+    <div className="flex min-w-0 flex-col gap-6">
       <AppSectionHeader
         title="Payment Methods Analytics"
         description="Payment method usage and revenue distribution"
+        className="mb-0 gap-4 pb-0 sm:items-center"
       >
         <DateRangeInput value={range} onValueChange={(r) => setRange(r ?? undefined)} />
       </AppSectionHeader>
 
       <PaymentMethodsSection data={paymentData} isLoading={isLoading} />
-    </main>
+    </div>
   );
 }

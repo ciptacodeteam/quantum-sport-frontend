@@ -139,6 +139,7 @@ export function isAdminToken(token: string | null): boolean {
     const decoded: any = jwtDecode(token);
     // Check if token has admin role
     return (
+      decoded?.role === ROLE.SUPER_ADMIN ||
       decoded?.role === ROLE.ADMIN ||
       decoded?.role === ROLE.ADMIN_VIEWER ||
       decoded?.role === ROLE.COACH ||

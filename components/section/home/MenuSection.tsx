@@ -1,69 +1,43 @@
-import MenuItem from './MenuItem';
-import BookingMenuIcon from '@/assets/icons/menus/booking.svg';
-import ClubMenuIcon from '@/assets/icons/menus/club.svg';
-import MembershipMenuIcon from '@/assets/icons/menus/membership.svg';
-import PadelCourtIcon from '@/assets/icons/menus/padelcourt.webp';
-import SracademyLogo from '@/assets/icons/menus/sr.webp';
 import Image from 'next/image';
+import BranchLink from '@/components/branches/BranchLink';
 
-const MenuSection = () => {
-  const menuList = [
-    {
-      title: 'Padel',
-      subtitle: 'Pesan lapangan dengan mudah dan bermain tanpa ribet.',
-      url: '/booking',
-      icon: (
-        <Image
-          src={PadelCourtIcon}
-          alt=""
-          className="size-9 object-contain mix-blend-multiply lg:size-10"
-          aria-hidden
-        />
-      )
-    },
-    {
-      title: 'Tennis',
-      subtitle: 'Booking lapangan tennis dengan alur yang sama.',
-      url: '/booking/tennis',
-      icon: <BookingMenuIcon className="size-13 lg:size-12" />
-    },
-    {
-      title: 'Coach',
-      subtitle: 'Lihat profil coach, pengalaman, dan portfolio latihan.',
-      url: '/coaches',
-      icon: (
-        <Image
-          src={SracademyLogo}
-          alt=""
-          className="size-9 object-contain lg:size-10"
-          aria-hidden
-        />
-      )
-    },
-    {
-      title: 'Club',
-      subtitle: 'Temukan informasi lengkap tentang klub yang tersedia.',
-      url: '/clubs',
-      icon: <ClubMenuIcon className="size-9 lg:size-10" />
-    },
-    {
-      title: 'Value Pack',
-      subtitle: 'Dapatkan paket hemat dengan berbagai keuntungan eksklusif.',
-      url: '/membership',
-      icon: <MembershipMenuIcon className="size-9 lg:size-10" />
-    }
-  ];
+const menus = [
+  { title: 'Padel', href: '/booking', image: '/assets/icons/mobile-menu/padel.png' },
+  { title: 'Tennis', href: '/booking/tennis', image: '/assets/icons/mobile-menu/tennis.png' },
+  { title: 'Value Pack', href: '/membership', image: '/assets/icons/mobile-menu/value-pack.png' }
+];
 
+export default function MenuSection() {
   return (
-    <section className="mx-auto my-7 w-11/12 max-w-7xl">
-      <div className="mx-auto grid w-full grid-cols-5 gap-2 sm:gap-3 lg:gap-4">
-        {menuList.map((item) => (
-          <div key={item.title} className="flex justify-center">
-            <MenuItem item={item} />
-          </div>
+    <nav aria-label="Menu olahraga" className="py-6 lg:hidden">
+      <ul className="mx-auto grid max-w-md grid-cols-3 gap-2">
+        {menus.map((menu) => (
+          <li key={menu.href}>
+            <BranchLink
+              href={menu.href}
+              className="group flex min-h-28 flex-col items-center justify-center gap-2.5 rounded-2xl text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ad422b]"
+            >
+              <span className="relative block size-16 transition-transform duration-200 group-hover:-translate-y-1 group-active:scale-95 motion-reduce:transform-none min-[375px]:size-[72px] sm:size-[88px]">
+                <span
+                  aria-hidden="true"
+                  className="absolute top-0 left-1/2 size-14 -translate-x-1/2 rounded-2xl bg-[#ad422b]/80 min-[375px]:size-[60px] sm:size-[72px] sm:rounded-[20px]"
+                />
+                <Image
+                  src={menu.image}
+                  alt=""
+                  width={80}
+                  height={80}
+                  sizes="(min-width: 640px) 80px, (min-width: 375px) 68px, 64px"
+                  className="absolute -right-1 bottom-0 size-16 max-w-none object-contain min-[375px]:size-[68px] sm:-right-2 sm:size-20"
+                />
+              </span>
+              <span className="text-[11px] font-medium tracking-tight text-[#171717] sm:text-xs">
+                {menu.title}
+              </span>
+            </BranchLink>
+          </li>
         ))}
-      </div>
-    </section>
+      </ul>
+    </nav>
   );
-};
-export default MenuSection;
+}

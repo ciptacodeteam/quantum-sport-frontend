@@ -1,4 +1,5 @@
 'use client';
+import { useAdminCourtSports } from '@/hooks/useAdminCourtSports';
 
 import { BookingBallboySection } from '@/components/admin/bookings/BookingBallboySection';
 import { Badge } from '@/components/ui/badge';
@@ -28,7 +29,6 @@ import {
   getCoachTypeLabel
 } from '@/lib/constants';
 import { formatSlotTime } from '@/lib/time-utils';
-import { formatBallboyBadgeLabel, getBallboyNames } from '@/lib/ballboy-utils';
 import { formatPhone } from '@/lib/utils';
 import { adminScheduleQueryOptions } from '@/queries/admin/booking';
 import { adminCourtsQueryOptions, adminCourtsWithSlotsQueryOptions } from '@/queries/admin/court';
@@ -46,7 +46,9 @@ import {
   IconUser,
   IconShoppingCart,
   IconMaximize,
-  IconMinimize
+  IconMinimize,
+  IconChevronLeft,
+  IconChevronRight
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
@@ -251,6 +253,7 @@ export default function SchedulePage() {
   today.setHours(0, 0, 0, 0);
 
   const [selectedDate, setSelectedDate] = useState<Date>(today);
+  const { branchId: activeBranchId } = useAdminCourtSports();
   const [courtSport, setCourtSport] = useState<'PADEL' | 'TENNIS'>('PADEL');
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
@@ -762,122 +765,164 @@ export default function SchedulePage() {
   const isLoading = isCourtsLoading || isBookingsLoading || isSlotsLoading;
 
   return (
-    <div className="min-w-0">
-      <Section className="min-w-0">
-        <SectionHeader>
+    <div className="w-full min-w-0">
+      <Section className="min-w-0 gap-5 bg-transparent pt-0">
+        <SectionHeader className="px-0">
           <SectionTitle title="Jadwal Lapangan" />
           <SectionDescription description="Lihat jadwal pemesanan lapangan untuk tanggal tertentu." />
         </SectionHeader>
-        <SectionContent className="min-w-0">
-          <div className="min-w-0 space-y-6">
-            {/* Date Filter */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Filter Jadwal</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <Tabs
-                  value={courtSport}
-                  onValueChange={(value) => setCourtSport(value as 'PADEL' | 'TENNIS')}
+        <SectionContent className="min-w-0 px-0">
+          <div className="min-w-0 space-y-4">
+            <div className="flex flex-col flex-wrap justify-between gap-3 sm:flex-row sm:items-center">
+              <Tabs
+                value={courtSport}
+                onValueChange={(value) => setCourtSport(value as 'PADEL' | 'TENNIS')}
+              >
+                <TabsList className="grid h-10 w-full grid-cols-2 sm:w-52">
+                  <TabsTrigger value="PADEL">Padel</TabsTrigger>
+                  <TabsTrigger
+                    value="TENNIS"
+                    disabled={!!activeBranchId && activeBranchId !== 'cemara'}
+                  >
+                    Tennis
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  className="h-10 rounded-lg shadow-none"
+                  onClick={() => setSelectedDate(today)}
                 >
-                  <TabsList className="grid h-10 w-full grid-cols-2 sm:w-[240px]">
-                    <TabsTrigger value="PADEL">Padel</TabsTrigger>
-                    <TabsTrigger value="TENNIS">Tennis</TabsTrigger>
-                  </TabsList>
-                </Tabs>
-                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full gap-2 sm:w-auto">
-                      <IconCalendar className="h-4 w-4" />
-                      <span>{formatDate(selectedDate, 'DD MMM YYYY')}</span>
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={selectedDate}
-                      onSelect={(date) => {
-                        if (date) {
-                          setSelectedDate(date);
-                          setCalendarOpen(false);
-                        }
-                      }}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </CardContent>
-            </Card>
+                  Hari ini
+                </Button>
+                <div className="bg-background flex items-center overflow-hidden rounded-lg border">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-10 rounded-none"
+                    aria-label="Tanggal sebelumnya"
+                    onClick={() => setSelectedDate(dayjs(selectedDate).subtract(1, 'day').toDate())}
+                  >
+                    <IconChevronLeft className="size-4" />
+                  </Button>
+                  <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="h-10 min-w-40 gap-2 rounded-none border-x border-y-0 shadow-none"
+                        aria-label="Pilih tanggal jadwal"
+                      >
+                        <IconCalendar className="h-4 w-4" />
+                        <span>{formatDate(selectedDate, 'DD MMM YYYY')}</span>
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent align="end" className="w-auto rounded-xl p-0">
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={(date) => {
+                          if (date) {
+                            setSelectedDate(date);
+                            setCalendarOpen(false);
+                          }
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-10 rounded-none"
+                    aria-label="Tanggal berikutnya"
+                    onClick={() => setSelectedDate(dayjs(selectedDate).add(1, 'day').toDate())}
+                  >
+                    <IconChevronRight className="size-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
 
             {/* Schedule Table */}
             <Card
               className={cn(
-                'min-w-0',
+                'min-w-0 gap-0 overflow-hidden pb-0 shadow-none',
                 isFullScreen &&
-                  'fade-in-0 zoom-in-95 animate-in fixed inset-0 z-50 h-screen w-screen overflow-auto rounded-none p-4 shadow-none duration-200'
+                  'fixed inset-0 z-50 flex h-dvh w-full flex-col rounded-none border-0'
               )}
             >
-              <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                <CardTitle>
-                  Jadwal {courtSport === 'TENNIS' ? 'Tennis' : 'Padel'}{' '}
-                  {formatDate(selectedDate, 'DD MMM YYYY')}
-                </CardTitle>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={toggleFullScreen}
-                  title={isFullScreen ? 'Keluar Layar Penuh' : 'Layar Penuh'}
-                >
-                  {isFullScreen ? (
-                    <IconMinimize className="h-4 w-4" />
-                  ) : (
-                    <IconMaximize className="h-4 w-4" />
-                  )}
-                </Button>
+              <CardHeader className="flex shrink-0 flex-row flex-wrap items-center justify-between gap-3 pb-4">
+                <div className="space-y-1.5">
+                  <CardTitle className="text-base">
+                    {formatDate(selectedDate, 'dddd, DD MMM YYYY')}
+                  </CardTitle>
+                  <p className="text-muted-foreground text-xs">
+                    {courtSport === 'TENNIS' ? 'Tennis' : 'Padel'} · {courts.length} lapangan ·
+                    Waktu dalam WIB
+                  </p>
+                </div>
+                <div className="ml-auto flex items-center gap-4">
+                  <div className="text-muted-foreground hidden flex-wrap items-center gap-3 text-xs sm:flex">
+                    <span className="flex items-center gap-1.5">
+                      <span className="size-2 rounded-full bg-green-500" />
+                      Dikonfirmasi
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="size-2 rounded-full bg-yellow-500" />
+                      Ditahan
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="size-2 rounded-full bg-red-400" />
+                      Dibatalkan
+                    </span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={toggleFullScreen}
+                    title={isFullScreen ? 'Keluar Layar Penuh' : 'Layar Penuh'}
+                    aria-label={isFullScreen ? 'Keluar layar penuh' : 'Layar penuh'}
+                  >
+                    {isFullScreen ? (
+                      <IconMinimize className="h-4 w-4" />
+                    ) : (
+                      <IconMaximize className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               </CardHeader>
-              <CardContent className="min-w-0">
+              <CardContent className="min-h-0 min-w-0 flex-1 px-0">
                 {isLoading ? (
                   <div className="py-8 text-center">
                     <p className="text-muted-foreground text-sm">Memuat jadwal...</p>
                   </div>
                 ) : (
-                  <div className="w-full max-w-full overflow-x-auto">
+                  <div
+                    className={cn(
+                      'isolate overflow-auto border-t',
+                      isFullScreen ? 'h-full' : 'max-h-[65vh]'
+                    )}
+                  >
                     {courts.length === 0 ? (
-                      <div className="py-4 text-center">
-                        <p className="text-muted-foreground mb-4 text-sm">
-                          Tidak ada lapangan tersedia.
-                        </p>
-                        {/* Show empty table structure */}
-                        <table className="w-full border-collapse">
-                          <thead>
-                            <tr>
-                              <th className="border-border bg-muted sticky left-0 z-10 w-[150px] max-w-[150px] min-w-[150px] border px-4 py-2 text-left text-sm font-semibold">
-                                Waktu
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {timeSlotRanges.map((timeSlot) => (
-                              <tr key={timeSlot.startTime}>
-                                <td className="border-border bg-background sticky left-0 z-10 w-[150px] max-w-[150px] min-w-[150px] border px-4 py-3 text-sm font-medium">
-                                  {timeSlot.startTime} - {timeSlot.endTime}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                      <div className="text-muted-foreground py-16 text-center text-sm">
+                        Tidak ada lapangan untuk cabang dan olahraga ini.
                       </div>
                     ) : (
-                      <table className="w-max min-w-full border-collapse">
+                      <table
+                        className="w-full table-fixed border-separate border-spacing-0"
+                        style={{ minWidth: 128 + courts.length * 240 }}
+                        aria-label="Jadwal pemesanan lapangan"
+                      >
                         <thead>
                           <tr>
-                            <th className="border-border bg-muted sticky left-0 z-10 w-[150px] max-w-[150px] min-w-[150px] border px-4 py-2 text-left text-sm font-semibold">
+                            <th className="border-border bg-muted sticky top-0 left-0 z-30 w-32 min-w-32 border-r border-b px-3 py-2 text-left text-base font-semibold">
                               Waktu
                             </th>
                             {courts.map((court) => (
                               <th
                                 key={court.id}
-                                className="border-border bg-muted min-w-[200px] border px-4 py-2 text-center text-sm font-semibold"
+                                className="border-border bg-muted sticky top-0 z-20 min-w-[240px] border-r border-b px-3 py-2 text-center text-sm font-medium last:border-r-0"
                               >
                                 {court.name}
                               </th>
@@ -887,7 +932,7 @@ export default function SchedulePage() {
                         <tbody>
                           {timeSlotRanges.map(({ startTime, endTime }) => (
                             <tr key={startTime} className="hover:bg-muted/50 transition-colors">
-                              <td className="border-border bg-background sticky left-0 z-10 w-[150px] max-w-[150px] min-w-[150px] border px-4 py-3 text-sm font-medium">
+                              <td className="border-border bg-background sticky left-0 z-10 w-32 min-w-32 border-r border-b px-3 py-2 text-base font-medium whitespace-nowrap tabular-nums">
                                 {startTime} - {endTime}
                               </td>
                               {courts.map((court) => {
@@ -909,7 +954,7 @@ export default function SchedulePage() {
                                   <td
                                     key={court.id}
                                     className={cn(
-                                      'border px-2 py-2 text-center transition-colors',
+                                      'border-border h-16 border-r border-b p-0 text-center align-middle transition-colors last:border-r-0',
                                       isBooked
                                         ? cn('cursor-pointer', statusClasses[status])
                                         : 'border-border bg-background'
@@ -920,124 +965,30 @@ export default function SchedulePage() {
                                         id={`schedule-booking-${bookingCell.booking.id}-${court.id}-${startTime}`}
                                       >
                                         <DialogTrigger asChild>
-                                          <div className="space-y-1">
-                                            <div className="rounded px-2 py-1.5 text-xs">
-                                              <div className="mb-1 flex items-center justify-center gap-1">
-                                                <div className="truncate text-xs font-semibold">
-                                                  {bookingCell.customerName}
-                                                </div>
-                                                <Badge
-                                                  variant={BOOKING_STATUS_BADGE_VARIANT[status]}
-                                                  className="h-4 px-1 py-0 text-[10px]"
-                                                >
-                                                  {BOOKING_STATUS_MAP[status]}
-                                                </Badge>
-                                              </div>
-                                              <div className="text-muted-foreground text-[10px]">
-                                                {formatPhone(bookingCell.customerPhone)}
-                                              </div>
-                                              {/* Show add-ons indicators */}
-                                              {(() => {
-                                                // Check if coaches is BookingCoach[] or Staff[]
-                                                const coachesArray =
-                                                  bookingCell.booking.coaches || [];
-                                                const isBookingCoachArray =
-                                                  coachesArray.length > 0 &&
-                                                  'slot' in coachesArray[0];
-                                                const bookingCoaches = isBookingCoachArray
-                                                  ? getCoachesForBookingCell(bookingCell)
-                                                  : bookingCell.booking.bookingCoaches || [];
-                                                const staffCoaches = !isBookingCoachArray
-                                                  ? (coachesArray as any[] as Staff[])
-                                                  : [];
-
-                                                // Get coach names
-                                                const coachNames: string[] = [];
-                                                bookingCoaches.forEach((bookingCoach) => {
-                                                  const coach = bookingCoach.slot?.staff;
-                                                  if (coach?.name) {
-                                                    coachNames.push(coach.name);
-                                                  }
-                                                });
-                                                staffCoaches.forEach((coach) => {
-                                                  if (coach.name) {
-                                                    coachNames.push(coach.name);
-                                                  }
-                                                });
-
-                                                // Get inventory names
-                                                const inventoriesArray =
-                                                  getInventoriesForBookingCell(bookingCell);
-                                                const isBookingInventoryArray =
-                                                  inventoriesArray.length > 0 &&
-                                                  'inventory' in inventoriesArray[0];
-                                                const inventoryNames: string[] = [];
-
-                                                if (isBookingInventoryArray) {
-                                                  (
-                                                    inventoriesArray as any[] as BookingInventory[]
-                                                  ).forEach((bookingInventory) => {
-                                                    if (bookingInventory.inventory?.name) {
-                                                      inventoryNames.push(
-                                                        bookingInventory.inventory.name
-                                                      );
-                                                    }
-                                                  });
-                                                } else {
-                                                  (
-                                                    inventoriesArray as any[] as Inventory[]
-                                                  ).forEach((inventory) => {
-                                                    if (inventory.name) {
-                                                      inventoryNames.push(inventory.name);
-                                                    }
-                                                  });
-                                                }
-
-                                                const hasCoaches = coachNames.length > 0;
-                                                const hasInventories = inventoryNames.length > 0;
-                                                const ballboyNames = getBallboyNames(
-                                                  getBallboysForBookingCell(bookingCell)
-                                                );
-                                                const hasBallboys = ballboyNames.length > 0;
-
-                                                if (!hasCoaches && !hasInventories && !hasBallboys)
-                                                  return null;
-
-                                                // Build display text
-                                                const parts: string[] = [];
-                                                if (hasCoaches) {
-                                                  const coachDisplay =
-                                                    coachNames.length === 1
-                                                      ? coachNames[0]
-                                                      : `${coachNames[0]}${coachNames.length > 1 ? ` +${coachNames.length - 1}` : ''}`;
-                                                  parts.push(`Coach: ${coachDisplay}`);
-                                                }
-                                                const ballboyLabel =
-                                                  formatBallboyBadgeLabel(ballboyNames);
-                                                if (ballboyLabel) {
-                                                  parts.push(ballboyLabel);
-                                                }
-                                                if (hasInventories) {
-                                                  const inventoryDisplay =
-                                                    inventoryNames.length === 1
-                                                      ? inventoryNames[0]
-                                                      : `${inventoryNames[0]}${inventoryNames.length > 1 ? ` +${inventoryNames.length - 1}` : ''}`;
-                                                  parts.push(`Inventory: ${inventoryDisplay}`);
-                                                }
-
-                                                return (
-                                                  <div className="mt-1 flex items-center justify-center">
-                                                    <Badge
-                                                      variant="outline"
-                                                      className="h-4 border-gray-200 bg-gray-50 px-1.5 py-0 text-[9px] text-gray-700"
-                                                    >
-                                                      {parts.join(', ')}
-                                                    </Badge>
-                                                  </div>
-                                                );
-                                              })()}
-                                            </div>
-                                          </div>
+                                          <button
+                                            type="button"
+                                            className="focus-visible:ring-ring flex min-h-16 w-full flex-col items-center justify-center gap-0.5 px-3 py-2 text-center outline-none focus-visible:ring-2 focus-visible:ring-inset"
+                                            aria-label={`Detail booking ${bookingCell.customerName}, ${court.name}, ${startTime}`}
+                                          >
+                                            <span
+                                              className="max-w-full truncate text-xs font-medium"
+                                              title={bookingCell.customerName}
+                                            >
+                                              {bookingCell.customerName}
+                                            </span>
+                                            {bookingCell.customerPhone &&
+                                              bookingCell.customerPhone !== '-' && (
+                                                <span className="text-muted-foreground text-xs tabular-nums">
+                                                  {formatPhone(bookingCell.customerPhone)}
+                                                </span>
+                                              )}
+                                            <Badge
+                                              variant={BOOKING_STATUS_BADGE_VARIANT[status]}
+                                              className="shrink-0 px-2 py-0 text-xs font-normal"
+                                            >
+                                              {BOOKING_STATUS_MAP[status]}
+                                            </Badge>
+                                          </button>
                                         </DialogTrigger>
                                         <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col">
                                           <DialogHeader className="mb-4 shrink-0">
@@ -1492,7 +1443,12 @@ export default function SchedulePage() {
                                         </DialogContent>
                                       </ManagedDialog>
                                     ) : (
-                                      <span className="text-muted-foreground text-sm">-</span>
+                                      <span
+                                        className="text-muted-foreground/30 text-xs"
+                                        aria-label="Tidak ada booking"
+                                      >
+                                        ·
+                                      </span>
                                     )}
                                   </td>
                                 );

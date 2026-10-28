@@ -18,7 +18,18 @@ const nextConfig: NextConfig = {
   },
   /* config options here */
   redirects: async () => {
-    return [];
+    return [
+      ...['/clubs/:path*', '/my-club/:path*', '/tournaments/:path*'].map((source) => ({
+        source,
+        destination: '/',
+        permanent: true
+      })),
+      ...[
+        '/admin/kelola-club/:path*',
+        '/admin/kelola-turnamen/:path*',
+        '/admin/turnamen/:path*'
+      ].map((source) => ({ source, destination: '/admin/dashboard', permanent: true }))
+    ];
   },
   // Add proxy to avoid CORS issues
   async rewrites() {

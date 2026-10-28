@@ -37,11 +37,10 @@ type ChangePasswordFormData = z.infer<typeof changePasswordSchema>;
 
 type Props = {
   open: boolean;
-  userEmail: string | null | undefined;
   onOpenChange: (open: boolean) => void;
 };
 
-export default function PasswordChangeModal({ open, userEmail, onOpenChange }: Props) {
+export default function PasswordChangeModal({ open, onOpenChange }: Props) {
   const [step, setStep] = useState<'verify' | 'change'>('verify');
 
   const verifyForm = useForm<VerifyPasswordFormData>({
@@ -102,7 +101,7 @@ export default function PasswordChangeModal({ open, userEmail, onOpenChange }: P
 
   return (
     <Dialog open={open} onOpenChange={close}>
-      <DialogContent>
+      <DialogContent className="auth-dialog max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-none border-black/15 bg-[#f8f8f6] p-6 text-[#171717] sm:p-8">
         <DialogHeader>
           <DialogTitle>
             {step === 'verify' ? 'Verifikasi Kata Sandi Saat Ini' : 'Atur Kata Sandi Baru'}
@@ -128,11 +127,21 @@ export default function PasswordChangeModal({ open, userEmail, onOpenChange }: P
                 )}
               </Field>
             </FieldGroup>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <DialogFooter className="grid grid-cols-2 gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-12 w-full rounded-full border-black/20 bg-transparent text-sm shadow-none hover:bg-black/5"
+                onClick={() => onOpenChange(false)}
+              >
                 Tutup
               </Button>
-              <Button type="submit" loading={isVerifying} disabled={isVerifying}>
+              <Button
+                type="submit"
+                className="h-12 w-full rounded-full text-sm"
+                loading={isVerifying}
+                disabled={isVerifying}
+              >
                 Konfirmasi
               </Button>
             </DialogFooter>
@@ -165,11 +174,21 @@ export default function PasswordChangeModal({ open, userEmail, onOpenChange }: P
                 )}
               </Field>
             </FieldGroup>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <DialogFooter className="grid grid-cols-2 gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-12 w-full rounded-full border-black/20 bg-transparent text-sm shadow-none hover:bg-black/5"
+                onClick={() => onOpenChange(false)}
+              >
                 Tutup
               </Button>
-              <Button type="submit" loading={isChanging} disabled={isChanging}>
+              <Button
+                type="submit"
+                className="h-12 w-full rounded-full text-sm"
+                loading={isChanging}
+                disabled={isChanging}
+              >
                 Ubah Kata Sandi
               </Button>
             </DialogFooter>

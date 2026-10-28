@@ -17,7 +17,6 @@ import { useQuery } from '@tanstack/react-query';
 import { IconBell } from '@tabler/icons-react';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import Link from 'next/link';
 import { Badge } from './badge';
 import { Button } from './button';
 
@@ -45,12 +44,12 @@ const AppNotificationDropdown = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <IconBell className="size-6!" />
+        <Button variant="ghost" size="icon" className="relative size-10 shrink-0 rounded-lg">
+          <IconBell className="size-5!" />
           <span className="sr-only">Open notifications</span>
           {hasUnread && (
             <span
-              className="absolute top-1 right-1 inline-block h-2 w-2 rounded-full bg-red-500"
+              className="ring-background absolute top-2 right-2 inline-block h-2 w-2 rounded-full bg-red-500 ring-2"
               aria-label="Unread notifications"
             />
           )}
@@ -117,15 +116,6 @@ const AppNotificationDropdown = () => {
                   )}
                 </div>
               ))}
-
-              <div className="flex-center px-4 py-2">
-                <Link
-                  href="/admin/kelola-notifikasi"
-                  className="text-muted-foreground inline-block px-4 py-2 text-xs"
-                >
-                  View all notifications
-                </Link>
-              </div>
             </>
           ) : (
             <div className="px-4 py-2">

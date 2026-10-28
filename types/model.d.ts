@@ -1,4 +1,5 @@
 enum Role {
+  SUPER_ADMIN = 'SUPER_ADMIN',
   ADMIN = 'ADMIN',
   ADMIN_VIEWER = 'ADMIN_VIEWER',
   COACH = 'COACH',
@@ -7,6 +8,8 @@ enum Role {
 }
 
 export type AdminProfile = {
+  branchId: string;
+  branch: import('./branch').Branch;
   id: string;
   name: string;
   email: string;
@@ -165,76 +168,9 @@ export type Court = {
   updatedAt: Date;
 };
 
-export type Tournament = {
-  id: string;
-  name: string;
-  description: string | null;
-  rules: string | null;
-  rulesHtml: string | null;
-  image: string | null;
-  startDate: Date;
-  endDate: Date;
-  startTime: string;
-  endTime: string;
-  maxTeams: number;
-  teamSize: number;
-  entryFee: number;
-  location: string;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-export type ClubJoinRequest = {
-  id: string;
-  clubId: string;
-  userId: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
-  createdAt: string;
-  updatedAt: string;
-  user: {
-    id: string;
-    name: string;
-    email: string;
-    image?: string | null;
-  };
-};
-
-export type Club = {
-  id: string;
-  name: string;
-  description: string | null;
-  logo: string | null;
-  rules: string | null;
-  leaderId: string;
-  visibility: 'PUBLIC' | 'PRIVATE';
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-  _count?: {
-    clubMember: number;
-  };
-
-  leader?: {
-    id: string;
-    name: string;
-    email: string;
-    phone?: string;
-    image?: string | null;
-  };
-  clubMember?: Array<{
-    user: {
-      id: string;
-      name: string;
-      image?: string | null;
-    };
-  }>;
-  joinRequests?: ClubJoinRequest[];
-  isMember?: boolean;
-  hasRequestedToJoin?: boolean;
-};
-
 export type Staff = {
+  branchId: string;
+  branch?: import('./branch').Branch;
   id: string;
   name: string;
   email: string;
@@ -309,6 +245,7 @@ export type MembershipInvoice = {
   paymentUrl: string | null;
   paymentRequestId: string | null;
   expiresAt: Date | null;
+  dueDate?: Date | null;
   paidAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -316,6 +253,8 @@ export type MembershipInvoice = {
     id: string;
     amount: number;
     fee: number;
+    fees?: number;
+    externalRef?: string | null;
     referenceId: string;
     paymentMethodId: string;
     createdAt: Date;
@@ -389,6 +328,7 @@ export type ClassBookingDetail = {
 };
 
 export type Invoice = {
+  branch?: import('./branch').Branch;
   id: string;
   bookingId: string;
   classBookingId: string | null;
@@ -448,6 +388,7 @@ export type Slot = {
   discountPrice?: number | null;
   normalPrice?: number | null;
   isAvailable: boolean;
+  availabilityStatus?: 'AVAILABLE' | 'ON_HOLD' | 'BOOKED' | 'UNAVAILABLE';
   createdAt: Date;
   updatedAt: Date;
 
@@ -764,7 +705,8 @@ export type CreditCard = {
 };
 
 export type CardPaymentNewCard = {
-  saveCard?: boolean; // true for PAY_AND_SAVE, false/undefined for PAY
+  saveCard?: boolean;
+  tokenId?: string;
 };
 
 export type CardPaymentSavedCard = {
@@ -790,7 +732,7 @@ export type CheckoutResponse = {
   total?: number;
   subtotal?: number;
   status?: string;
-  paymentStatus: 'PENDING' | 'REQUIRES_ACTION' | 'SUCCEEDED' | 'FAILED';
+  paymentStatus: 'PENDING' | 'PAID' | 'REQUIRES_ACTION' | 'SUCCEEDED' | 'FAILED';
   paymentActions?: ThreeDSChallenge[];
   paymentUrl?: string;
 };
