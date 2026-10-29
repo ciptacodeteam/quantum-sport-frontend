@@ -55,7 +55,7 @@ export async function deleteCourtApi(id: string) {
 }
 
 export async function createCourtCostApi(payload: CreateMutationPayload) {
-  const { data } = await adminApi.post('/court-costs', payload);
+  const { data } = await adminApi.put('/court-costs/rolling', payload);
   return data;
 }
 

@@ -3,7 +3,6 @@
 import { mapApiErrorsToForm } from '@/lib/api-error';
 
 import { Button } from '@/components/ui/button';
-import DatePickerInput from '@/components/ui/date-picker-input';
 import { useDialog } from '@/components/ui/dialog-context';
 import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from '@/components/ui/field';
 import MultiSelectInput from '@/components/ui/multi-select-input';
@@ -11,25 +10,36 @@ import { NumberInput } from '@/components/ui/number-input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { daysOfWeek, hoursInDay } from '@/lib/constants';
 import { adminCreateCourtCostMutationOptions } from '@/mutations/admin/court';
-import { adminCourtCostingQueryOptionsById } from '@/queries/admin/court';
+import { adminCourtQueryOptions } from '@/queries/admin/court';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { IconInfoCircle } from '@tabler/icons-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import dayjs from 'dayjs';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { Controller, type SubmitHandler, useForm } from 'react-hook-form';
 import z from 'zod';
 
-export const formSchema = z.object({
-  courtId: z.string(),
-  fromDate: z.date(),
-  toDate: z.date(),
-  days: z.array(z.number().min(0).max(7)),
-  happyHourPrice: z.number().min(0),
-  happyHourDiscountPrice: z.number().min(0),
-  peakHourPrice: z.number().min(0),
-  peakHourDiscountPrice: z.number().min(0),
-  closedHours: z.array(z.number()).optional()
-});
+export const formSchema = z
+  .object({
+    courtId: z.string(),
+    months: z.number().int().min(1).max(12),
+    days: z.array(z.number().int().min(1).max(7)).min(1, 'Pilih minimal satu hari.'),
+    happyHourPrice: z.number().int().min(0).max(2147483647),
+    happyHourDiscountPrice: z.number().int().min(0).max(2147483647),
+    peakHourPrice: z.number().int().min(0).max(2147483647),
+    peakHourDiscountPrice: z.number().int().min(0).max(2147483647),
+    closedHours: z.array(z.number().int().min(0).max(23))
+  })
+  .superRefine((value, ctx) => {
+    for (const band of ['happyHour', 'peakHour'] as const) {
+      if (value[`${band}DiscountPrice`] > value[`${band}Price`]) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [`${band}DiscountPrice`],
+          message: 'Harga diskon tidak boleh melebihi harga normal.'
+        });
+      }
+    }
+  });
 
 type FormSchema = z.infer<typeof formSchema>;
 
@@ -44,9 +54,8 @@ const CreateCourtCostForm = ({ courtId }: Props) => {
     resolver: zodResolver(formSchema),
     defaultValues: {
       courtId: courtId,
-      fromDate: dayjs().toDate(),
-      toDate: dayjs().add(7, 'day').toDate(),
-      days: [],
+      months: 1,
+      days: [1, 2, 3, 4, 5, 6, 7],
       happyHourPrice: 0,
       happyHourDiscountPrice: 0,
       peakHourPrice: 0,
@@ -54,6 +63,17 @@ const CreateCourtCostForm = ({ courtId }: Props) => {
       closedHours: []
     }
   });
+
+  const {
+    data: court,
+    isPending: isCourtLoading,
+    isError: isCourtError
+  } = useQuery(adminCourtQueryOptions(courtId));
+  useEffect(() => {
+    if (court?.rollingPricing) {
+      form.reset({ ...court.rollingPricing, courtId, months: court.bookingWindowMonths ?? 1 });
+    }
+  }, [court, courtId, form]);
 
   const queryClient = useQueryClient();
 
@@ -68,7 +88,8 @@ const CreateCourtCostForm = ({ courtId }: Props) => {
         queryClient.invalidateQueries({
           queryKey: ['courts', 'slots']
         });
-        form.reset();
+        queryClient.invalidateQueries({ queryKey: ['admin', 'courts', courtId] });
+        queryClient.invalidateQueries({ queryKey: ['courts', 'booking-window'] });
         closeDialog('create-court-costing');
       },
       onError: (err) => {
@@ -78,19 +99,14 @@ const CreateCourtCostForm = ({ courtId }: Props) => {
   );
 
   const onSubmit: SubmitHandler<FormSchema> = (formData) => {
-    console.log(formData);
-    mutate({
-      ...formData,
-      fromDate: dayjs(formData.fromDate).startOf('day').format('YYYY-MM-DD'),
-      toDate: dayjs(formData.toDate).endOf('day').format('YYYY-MM-DD')
-    });
+    mutate(formData);
   };
-
-  const today = dayjs().startOf('day').toDate();
-  const maxYear = dayjs().add(5, 'year').endOf('year').toDate();
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)}>
+      {isCourtError && (
+        <p role="alert">Pengaturan gagal dimuat. Buka kembali form untuk mencoba lagi.</p>
+      )}
       <FieldSet>
         <FieldGroup>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -185,40 +201,29 @@ const CreateCourtCostForm = ({ courtId }: Props) => {
               <FieldError>{form.formState.errors.peakHourDiscountPrice?.message}</FieldError>
             </Field>
           </div>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Field>
-              <FieldLabel htmlFor="fromDate">Mulai Dari</FieldLabel>
-              <Controller
-                control={form.control}
-                name="fromDate"
-                render={({ field }) => (
-                  <DatePickerInput
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    minDate={today}
-                    maxDate={maxYear}
-                  />
-                )}
-              />
-              <FieldError>{form.formState.errors.fromDate?.message}</FieldError>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="toDate">Sampai pada</FieldLabel>
-              <Controller
-                control={form.control}
-                name="toDate"
-                render={({ field }) => (
-                  <DatePickerInput
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    minDate={today}
-                    maxDate={maxYear}
-                  />
-                )}
-              />
-              <FieldError>{form.formState.errors.toDate?.message}</FieldError>
-            </Field>
-          </div>
+          <Field>
+            <FieldLabel htmlFor="months">Buka booking sampai (bulan ke depan)</FieldLabel>
+            <Controller
+              control={form.control}
+              name="months"
+              render={({ field }) => (
+                <NumberInput
+                  id="months"
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  min={1}
+                  max={12}
+                  allowNegative={false}
+                  decimalScale={0}
+                />
+              )}
+            />
+            <p className="text-muted-foreground text-sm">
+              Rentang otomatis maju setiap hari mengikuti waktu Jakarta. Simpan untuk mengganti
+              aturan mingguan lapangan ini. Booking yang sudah ada tetap pada jadwal semula.
+            </p>
+            <FieldError>{form.formState.errors.months?.message}</FieldError>
+          </Field>
           <Field>
             <div className="inline-flex gap-2">
               <FieldLabel htmlFor="days">Hari Operasional</FieldLabel>
@@ -254,7 +259,7 @@ const CreateCourtCostForm = ({ courtId }: Props) => {
                 />
               )}
             />
-            <FieldError>{form.formState.errors.toDate?.message}</FieldError>
+            <FieldError>{form.formState.errors.days?.message}</FieldError>
           </Field>
           <Field>
             <div className="inline-flex gap-2">
@@ -298,7 +303,7 @@ const CreateCourtCostForm = ({ courtId }: Props) => {
                 />
               )}
             />
-            <FieldError>{form.formState.errors.toDate?.message}</FieldError>
+            <FieldError>{form.formState.errors.closedHours?.message}</FieldError>
           </Field>
           <Field className="mt-2 ml-auto w-fit">
             <div className="flex items-center gap-4">
@@ -309,7 +314,7 @@ const CreateCourtCostForm = ({ courtId }: Props) => {
               >
                 Batal
               </Button>
-              <Button type="submit" loading={isPending}>
+              <Button type="submit" loading={isPending} disabled={isCourtLoading || isCourtError}>
                 Simpan
               </Button>
             </div>

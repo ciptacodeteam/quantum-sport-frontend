@@ -198,7 +198,7 @@ export default function InvoiceDetailPage() {
   if (!invoice)
     return (
       <>
-        <MainHeader />
+        <MainHeader showBack backHref="/invoice" />
         <main className="invoice-page mx-auto max-w-2xl px-5 pt-28 pb-12">
           <PaymentOutcomeCard status="UNKNOWN">
             <div className="flex flex-col gap-3">
@@ -238,7 +238,7 @@ export default function InvoiceDetailPage() {
   const canPay = pending && (!invoice.dueDate || Date.now() < new Date(invoice.dueDate).getTime());
   return (
     <>
-      <MainHeader />
+      <MainHeader showBack backHref="/invoice" />
       <main className="invoice-page mx-auto w-full max-w-7xl px-5 pt-24 pb-12 text-[#171717] sm:px-8 lg:pb-16 xl:pt-32">
         <header className="mb-5">
           {pending && (
@@ -325,7 +325,11 @@ export default function InvoiceDetailPage() {
                   {!!details.length && (
                     <BookingDetailsCard
                       details={details}
-                      coveredByMembership={(booking?.membershipSessionsUsed ?? 0) > 0}
+                      membershipApplied={(booking?.membershipSessionsUsed ?? 0) > 0}
+                      coveredByMembership={
+                        (booking?.membershipSessionsUsed ?? 0) > 0 &&
+                        booking?.courtDiscountPrice === 0
+                      }
                     />
                   )}
                   {booking && (

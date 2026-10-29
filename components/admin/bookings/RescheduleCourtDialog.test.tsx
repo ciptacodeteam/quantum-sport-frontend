@@ -124,3 +124,25 @@ it('shows booked and current sessions but never lets them be selected', () => {
   expect(mocks.mutate).not.toHaveBeenCalled();
   expect(screen.getByRole('button', { name: /10:00–11:00/ })).toBeEnabled();
 });
+
+it('disables rescheduling less than 48 hours before the original slot', () => {
+  const source = detail('PADEL');
+  source.slot!.startAt = new Date(Date.now() + 48 * 3600000 - 1000);
+  render(<RescheduleCourtDialog detail={source} canReschedule />);
+  expect(screen.getByRole('button', { name: 'Reschedule' })).toBeDisabled();
+  expect(mocks.mutate).not.toHaveBeenCalled();
+});
+
+it('prevents saving when the H-2 deadline passes while the dialog is open', () => {
+  const time = vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2040-01-03T01:59:59Z'));
+  try {
+    render(<RescheduleCourtDialog detail={detail('PADEL')} canReschedule />);
+    fireEvent.click(screen.getByRole('button', { name: 'Reschedule' }));
+    fireEvent.click(screen.getByRole('button', { name: /10:00–11:00/ }));
+    time.mockReturnValue(Date.parse('2040-01-03T02:00:00.001Z'));
+    fireEvent.click(screen.getByRole('button', { name: 'Simpan jadwal' }));
+    expect(mocks.mutate).not.toHaveBeenCalled();
+  } finally {
+    time.mockRestore();
+  }
+});

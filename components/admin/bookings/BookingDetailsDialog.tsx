@@ -129,7 +129,14 @@ export default function BookingDetailsDialog({
                           {detail.slot && status !== BookingStatus.CANCELLED && (
                             <RescheduleCourtDialog
                               detail={detail as BookingDetailWithSlot}
-                              canReschedule
+                              canReschedule={
+                                status === BookingStatus.CONFIRMED &&
+                                (!booking.invoice || booking.invoice.status === 'PAID')
+                              }
+                              membershipCovered={
+                                (booking.membershipSessionsUsed ?? 0) > 0 &&
+                                (booking.courtDiscountPrice === 0 || detail.discountPrice === 0)
+                              }
                               onSuccess={onRescheduleSuccess}
                             />
                           )}

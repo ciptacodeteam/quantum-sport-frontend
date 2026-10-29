@@ -27,6 +27,8 @@ type DatePickerModalProps = {
   value?: Date | null;
   onChange?: (date: Date | null) => void;
   label?: string;
+  minDate?: Date;
+  maxDate?: Date;
   children?: React.ReactNode;
 };
 
@@ -34,6 +36,8 @@ function DatePickerModal({
   value,
   onChange,
   label = 'Pilih tanggal',
+  minDate,
+  maxDate,
   children
 }: DatePickerModalProps) {
   const [open, setOpen] = useState(false);
@@ -70,7 +74,8 @@ function DatePickerModal({
             showOutsideDays={false}
             defaultMonth={selectedDate ?? new Date()}
             className="w-full bg-transparent p-0 [--cell-size:2rem]"
-            disabled={{ before: new Date() }}
+            disabled={[{ before: minDate ?? new Date() }, ...(maxDate ? [{ after: maxDate }] : [])]}
+            endMonth={maxDate}
             classNames={{
               root: 'w-full',
               month: 'flex w-full flex-col gap-5',

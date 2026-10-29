@@ -1,11 +1,9 @@
+import { selectMembershipSlots } from '@/lib/membership-slot-selection';
 import { useQuery } from '@tanstack/react-query';
 import { adminCustomerMembershipQueryOptions } from '@/queries/admin/customer';
 import { myMembershipQueryOptions } from '@/queries/membership';
 import type { BookingItem } from '@/stores/useBookingStore';
-import {
-  isTimeAllowedForMembershipType,
-  type MembershipType
-} from '@/lib/membership-hours';
+import { isTimeAllowedForMembershipType, type MembershipType } from '@/lib/membership-hours';
 import { useMemo } from 'react';
 
 function parseTimeOnDate(date: string, time: string): Date | null {
@@ -66,6 +64,7 @@ export interface ActiveMembership {
     id: string;
     name: string;
     price: number;
+    sessions?: number;
     sport?: 'PADEL' | 'TENNIS';
     type?: MembershipType;
   };
@@ -79,6 +78,8 @@ export interface MembershipDiscountResult {
   discountAmount: number;
   originalTotal: number;
   discountedTotal: number;
+  membershipSlotIds?: string[];
+  membershipSlotReasons?: Record<string, string>;
 }
 
 /**
@@ -95,7 +96,8 @@ export function useMembershipDiscount(
   membershipData?: { activeMembership: ActiveMembership | null } | null,
   isUser: boolean = false,
   courtSport?: 'PADEL' | 'TENNIS',
-  useMembership: boolean = true
+  useMembership: boolean = true,
+  requestedSlotIds?: string[] | null
 ): MembershipDiscountResult {
   // Fetch membership for current user if isUser is true
   const { data: userMembershipData } = useQuery({
@@ -114,6 +116,18 @@ export function useMembershipDiscount(
 
   return useMemo(() => {
     const activeMembership = activeMembershipData?.activeMembership ?? null;
+    if (requestedSlotIds !== undefined) {
+      return {
+        activeMembership,
+        remainingSessions: activeMembership?.remainingSessions ?? 0,
+        ...selectMembershipSlots(
+          bookingItems,
+          activeMembership,
+          useMembership ? requestedSlotIds : [],
+          courtSport
+        )
+      };
+    }
     const membershipSport = activeMembership?.membership.sport ?? 'PADEL';
     const membershipType = activeMembership?.membership.type ?? 'ALL_HOUR';
     const bookingSport = courtSport ?? bookingItems[0]?.sport;
@@ -163,5 +177,5 @@ export function useMembershipDiscount(
       originalTotal,
       discountedTotal
     };
-  }, [activeMembershipData, bookingItems, courtSport, useMembership]);
+  }, [activeMembershipData, bookingItems, courtSport, useMembership, requestedSlotIds]);
 }

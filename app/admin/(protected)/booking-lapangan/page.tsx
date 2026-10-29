@@ -840,7 +840,7 @@ export default function BookingLapangan() {
                     </p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,240px),1fr))] gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                     {courts.map((court) => {
                       // Total slots is based on standard time slots (06:00-23:00)
                       const totalSlotsCount = allowedStandardTimeSlots.length;

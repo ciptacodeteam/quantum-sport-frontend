@@ -78,6 +78,7 @@ const ToggleSlotModal = ({ slot, courtId, dialogId }: ToggleSlotModalProps) => {
         <DialogDescription>
           Slot: {formatSlotTimeRange(slot.startAt, slot.endAt)}
           <br />
+          {slot.scheduleClosed && <>Ditutup oleh aturan jadwal. Ubah hari atau jam melalui Atur Jadwal Otomatis.<br /></>}
           Status saat ini: <strong>{isAvailable ? 'Tersedia' : 'Tidak Tersedia'}</strong>
         </DialogDescription>
       </DialogHeader>
@@ -90,7 +91,7 @@ const ToggleSlotModal = ({ slot, courtId, dialogId }: ToggleSlotModalProps) => {
           onClick={() => {
             updateSlotAvailability({ slotId: slot.id, isAvailable: !isAvailable });
           }}
-          disabled={isUpdating}
+          disabled={isUpdating || Boolean(slot.scheduleClosed)}
         >
           {isUpdating ? 'Memproses...' : isAvailable ? 'Nonaktifkan' : 'Aktifkan'}
         </Button>
@@ -602,12 +603,12 @@ const CourtCostingTable = ({ courtId }: Props) => {
             <DialogTrigger asChild>
               <Button>
                 <IconPlus />
-                Tambah
+                Atur Jadwal Otomatis
               </Button>
             </DialogTrigger>
             <DialogContent className="lg:min-w-xl">
               <DialogHeader className="mb-4">
-                <DialogTitle>Buat Cost Lapangan</DialogTitle>
+                <DialogTitle>Atur Jadwal Berjalan</DialogTitle>
               </DialogHeader>
               <CreateCourtCostForm courtId={courtId} />
             </DialogContent>

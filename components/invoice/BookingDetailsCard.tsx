@@ -6,12 +6,19 @@ const time = (value: string) => value.slice(11).replace(':', '.');
 
 export default function BookingDetailsCard({
   details,
-  coveredByMembership = false
+  coveredByMembership = false,
+  membershipApplied = false
 }: {
   details: BookingScheduleDetail[];
   coveredByMembership?: boolean;
+  membershipApplied?: boolean;
 }) {
-  const schedule = groupBookingSchedule(details);
+  const schedule = groupBookingSchedule(
+    details.map((detail) => ({
+      ...detail,
+      membershipCovered: coveredByMembership || (membershipApplied && detail.discountPrice === 0)
+    }))
+  );
 
   return (
     <section aria-label="Jadwal lapangan" className="space-y-6">
@@ -45,7 +52,7 @@ export default function BookingDetailsCard({
                           {time(range.start)} - {time(range.end)}
                         </p>
                         <p className="font-medium">
-                          {coveredByMembership ? 'Value Pack' : money(range.price)}
+                          {range.membershipCovered ? 'Value Pack' : money(range.price)}
                         </p>
                       </div>
                     ))}

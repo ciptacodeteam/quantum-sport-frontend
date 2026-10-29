@@ -9,8 +9,10 @@ import { useConfirm } from '@/components/ui/confirm-dialog';
 import SavedCardSelector from '@/components/forms/payment/SavedCardSelector';
 import CreditCardForm, { type CreditCardFormData } from '@/components/forms/payment/CreditCardForm';
 import { useMembershipDiscount } from '@/hooks/useMembershipDiscount';
+import { cheaperRegularRate } from '@/lib/membership-rate';
 import { getCardToken } from '@/lib/midtrans';
 import { cn, resolveMediaUrl } from '@/lib/utils';
+import { isCourtSlotBookable } from '@/lib/booking-time-policy';
 import { getCheckoutSelections } from '@/lib/checkout-selections';
 import { applyPromoMutationOptions, checkoutMutationOptions } from '@/mutations/booking';
 import { paymentMethodsQueryOptions } from '@/queries/paymentMethod';
@@ -92,7 +94,7 @@ export default function CheckoutPage() {
   const isAuthenticated = !!user?.id;
   const openAuthModal = useAuthModalStore((state) => state.open);
   const setRedirectPath = useAuthRedirectStore((state) => state.setRedirectPath);
-  const [useMembership, setUseMembership] = useState(true);
+  const [membershipSelection, setMembershipSelection] = useState<string[] | null>(null);
   const courtSport = useMemo(
     () => bookingItems.find((item) => item.sport)?.sport ?? 'PADEL',
     [bookingItems]
@@ -106,15 +108,23 @@ export default function CheckoutPage() {
     undefined,
     true, // isUser = true, so it fetches membership for current logged-in user
     courtSport,
-    useMembership
+    true,
+    membershipSelection
   );
+  const membershipSlotIds = membershipDiscount.membershipSlotIds ?? [];
+  const allMembershipSlotsSelected =
+    membershipSlotIds.length > 0 &&
+    bookingItems.every(
+      (item) =>
+        membershipSlotIds.includes(item.slotId) ||
+        !!membershipDiscount.membershipSlotReasons?.[item.slotId]
+    );
 
   // Apply membership discount to court total
   const courtSubtotal = membershipDiscount.originalTotal;
   const discountedCourtTotal = membershipDiscount.discountedTotal;
   const grandTotal = discountedCourtTotal;
   const isCoveredByMembership =
-    useMembership &&
     bookingItems.length > 0 &&
     membershipDiscount.canUseMembership &&
     membershipDiscount.slotsToDeduct > 0 &&
@@ -156,6 +166,7 @@ export default function CheckoutPage() {
   const queryClient = useQueryClient();
 
   const checkoutMutation = useMutation(
+    // eslint-disable-next-line react-hooks/refs -- The factory stores callbacks; the card tab ref is only accessed after checkout completes.
     checkoutMutationOptions({
       onSuccess: (data) => {
         void queryClient.invalidateQueries({ queryKey: ['memberships', 'my'] });
@@ -173,7 +184,7 @@ export default function CheckoutPage() {
             tab.opener = null;
           } else {
             setNavigatingToPayment(true);
-            window.location.href = paymentUrl;
+            window.location.assign(paymentUrl);
             return;
           }
         } else {
@@ -292,13 +303,16 @@ export default function CheckoutPage() {
     const fixedFee = Number.isFinite(selectedPaymentMethod.fees)
       ? Number(selectedPaymentMethod.fees)
       : 0;
-    const percentageFee = Math.round((grandTotal * percentageRate) / 100);
+    const percentageFee = Math.round(
+      (Math.max(0, grandTotal - promoDiscountAmount) * percentageRate) / 100
+    );
+    const baseFee = fixedFee + percentageFee;
 
     return {
       fixedFee,
       percentageRate,
       percentageFee,
-      totalFee: Math.round(fixedFee + percentageFee)
+      totalFee: baseFee + Math.round(baseFee * 0.11)
     };
   })();
 
@@ -363,6 +377,7 @@ export default function CheckoutPage() {
         <MainHeader
           title="Detail Pembayaran"
           backHref={bookingHref}
+          showBack
           withCartBadge
           withLogo={false}
         />
@@ -424,7 +439,7 @@ export default function CheckoutPage() {
     applyPromoMutation.mutate(
       {
         promoCode: trimmedCode,
-        courtSlots: selections.courtSlots
+        courtSlots: selections.courtSlots.filter((id) => !membershipSlotIds.includes(id))
       },
       {
         onSuccess: (response) => {
@@ -490,7 +505,7 @@ export default function CheckoutPage() {
     const checkoutTime = nowJakarta();
     const hasExpiredCourtSlot = bookingItems.some((item) => {
       const slotStart = getBookingItemStart(item);
-      return !slotStart || !slotStart.isAfter(checkoutTime);
+      return !slotStart || !isCourtSlotBookable(slotStart.valueOf(), checkoutTime.valueOf());
     });
 
     if (hasExpiredCourtSlot) {
@@ -506,7 +521,11 @@ export default function CheckoutPage() {
       ...(!isCoveredByMembership && selectedPaymentMethod
         ? { paymentMethodId: selectedPaymentMethod.id }
         : {}),
-      useMembership: bookingItems.length > 0 && useMembership
+      useMembership: membershipSlotIds.length > 0,
+      membershipCourtSlotIds: membershipSlotIds,
+      ...(membershipSlotIds.length > 0 && membershipDiscount.activeMembership
+        ? { membershipUserId: membershipDiscount.activeMembership.id }
+        : {})
     };
 
     if (appliedPromoCode && !isCoveredByMembership) {
@@ -530,18 +549,21 @@ export default function CheckoutPage() {
       }
     }
 
-    const checkoutConfirmationDescription =
-      courtSport === 'TENNIS' ? (
-        <div className="space-y-2">
+    const checkoutConfirmationDescription = (
+      <div className="space-y-3">
+        <p>Pastikan pesanan sudah sesuai.</p>
+        <p>
+          Reschedule: <span className="text-foreground font-medium">hubungi admin</span> maksimal
+          H-2.
+        </p>
+        {courtSport === 'TENNIS' && (
           <p>
             Khusus booking tennis, ballboy dari luar tidak diperkenankan. Jika membutuhkan layanan
             ballboy, silakan gunakan ballboy resmi yang tersedia di Black Padel.
           </p>
-          <p>Reschedule berlaku H-3. Pastikan pesanan Anda sudah sesuai.</p>
-        </div>
-      ) : (
-        'Reschedule berlaku H-3. Pastikan pesanan Anda sudah sesuai.'
-      );
+        )}
+      </div>
+    );
 
     const willTokenizeCard =
       !isCoveredByMembership && selectedPaymentMethod?.channel === 'CARDS' && !!newCardData;
@@ -554,11 +576,13 @@ export default function CheckoutPage() {
     try {
       const ok = await confirm({
         title: 'Konfirmasi Pemesanan',
-        description: isCoveredByMembership ? (
+        description: membershipDiscount.canUseMembership ? (
           <div className="space-y-2">
             <p>
-              {membershipDiscount.slotsToDeduct} jam akan dipotong dari Value Pack. Tidak ada
-              pembayaran tambahan.
+              {membershipDiscount.slotsToDeduct} sesi Value Pack digunakan.
+              {isCoveredByMembership
+                ? ' Tidak ada pembayaran tambahan.'
+                : ` Sisa pembayaran ${formatCurrency(totalAfterPromo)}.`}
             </p>
             {checkoutConfirmationDescription}
           </div>
@@ -658,6 +682,7 @@ export default function CheckoutPage() {
       <MainHeader
         title="Detail Pembayaran"
         backHref={bookingHref}
+        showBack
         withCartBadge
         withLogo={false}
         withBorder
@@ -682,7 +707,33 @@ export default function CheckoutPage() {
                     )}
                   >
                     <header className="space-y-1">
-                      <h2 className="text-base font-medium text-[#171717]">{group.courtName}</h2>
+                      <div className="flex items-center justify-between gap-4">
+                        <h2 className="text-base font-medium text-[#171717]">{group.courtName}</h2>
+                        {index === 0 && (
+                          <button
+                            type="button"
+                            className="text-sm font-medium text-[#ad422b] underline underline-offset-4 disabled:cursor-not-allowed disabled:opacity-40"
+                            disabled={
+                              !membershipDiscount.activeMembership ||
+                              membershipDiscount.activeMembership.isExpired ||
+                              membershipDiscount.activeMembership.isSuspended ||
+                              membershipDiscount.remainingSessions <= 0 ||
+                              checkoutMutation.isPending ||
+                              applyPromoMutation.isPending ||
+                              isNavigatingToPayment ||
+                              isTokenizingCard
+                            }
+                            onClick={() => {
+                              setMembershipSelection(allMembershipSlotsSelected ? [] : null);
+                              setAppliedPromoCode(null);
+                              setPromoDiscountAmount(0);
+                              setPromoError(null);
+                            }}
+                          >
+                            {allMembershipSlotsSelected ? 'Batalkan pilihan' : 'Pilih semua'}
+                          </button>
+                        )}
+                      </div>
                       <p className="text-muted-foreground text-sm">
                         {dayjs(group.date).format('dddd, DD MMM YYYY')}
                       </p>
@@ -696,59 +747,99 @@ export default function CheckoutPage() {
                           return a.timeSlot.localeCompare(b.timeSlot);
                         })
                         .map((slot, slotIndex) => {
-                          // Check if this slot is free due to membership
-                          const sortedBookings = [...bookingItems].sort((a, b) => {
-                            const dateCompare = a.date.localeCompare(b.date);
-                            if (dateCompare !== 0) return dateCompare;
-                            return a.timeSlot.localeCompare(b.timeSlot);
-                          });
-                          const bookingIndex = sortedBookings.findIndex(
-                            (b) =>
-                              b.courtId === slot.courtId &&
-                              b.timeSlot === slot.timeSlot &&
-                              b.date === slot.date
-                          );
-                          const isFree = membershipDiscount.canUseMembership && bookingIndex >= 0;
+                          const isFree = membershipSlotIds.includes(slot.slotId);
+                          const membershipReason =
+                            membershipDiscount.membershipSlotReasons?.[slot.slotId];
+                          const rateComparison =
+                            (!membershipReason ||
+                              membershipReason === 'Sisa sesi tidak mencukupi') &&
+                            membershipDiscount.remainingSessions > 0
+                              ? cheaperRegularRate(
+                                  slot,
+                                  membershipDiscount.activeMembership?.membership
+                                )
+                              : null;
+                          const range = getSlotDisplayRange(slot.timeSlot);
+                          const cashPrice =
+                            (slot.discountPrice ?? 0) > 0 ? slot.discountPrice! : slot.price;
 
                           return (
                             <div
                               key={`${slot.courtId}-${slot.timeSlot}-${slotIndex}`}
                               className={cn(
-                                'flex items-center justify-between rounded-none border border-black/10 px-4 py-3',
+                                'space-y-3 rounded-none border border-black/10 px-4 py-3',
                                 isFree ? 'border-[#ad422b]/25 bg-[#ad422b]/5' : 'bg-muted/50'
                               )}
                             >
-                              <div className="flex flex-col">
-                                {(() => {
-                                  const range = getSlotDisplayRange(slot.timeSlot);
-                                  return (
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-sm font-medium">
-                                        {range.start} - {range.end}
-                                      </span>
-                                      {isFree && (
-                                        <span className="text-xs font-medium text-[#ad422b]">
-                                          (Gratis)
-                                        </span>
-                                      )}
-                                    </div>
-                                  );
-                                })()}
-                              </div>
-                              <span
-                                className={cn('text-sm font-semibold', isFree && 'text-[#ad422b]')}
-                              >
-                                {isFree ? (
-                                  <>
-                                    <span className="text-muted-foreground line-through">
-                                      {formatCurrency(slot.price)}
-                                    </span>{' '}
-                                    <span className="ml-1">Gratis</span>
-                                  </>
-                                ) : (
-                                  formatCurrency(slot.price)
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <span className="text-sm font-medium">
+                                  {range.start} - {range.end}
+                                </span>
+                                {!isFree && (
+                                  <span className="text-sm font-semibold">
+                                    {formatCurrency(cashPrice)}
+                                  </span>
                                 )}
-                              </span>
+                              </div>
+                              <label className="flex items-center justify-between gap-3 border-t border-black/10 pt-3 text-sm">
+                                <span>Pakai membership</span>
+                                <input
+                                  type="checkbox"
+                                  aria-label={`Pakai membership untuk ${slot.courtName} ${slot.date} ${range.start}`}
+                                  checked={isFree}
+                                  disabled={
+                                    !!membershipReason ||
+                                    checkoutMutation.isPending ||
+                                    applyPromoMutation.isPending ||
+                                    isNavigatingToPayment ||
+                                    isTokenizingCard
+                                  }
+                                  onChange={(event) => {
+                                    setMembershipSelection(
+                                      event.target.checked
+                                        ? [...membershipSlotIds, slot.slotId]
+                                        : membershipSlotIds.filter((id) => id !== slot.slotId)
+                                    );
+                                    setAppliedPromoCode(null);
+                                    setPromoDiscountAmount(0);
+                                    setPromoError(null);
+                                  }}
+                                  className="size-4 shrink-0 accent-[#ad422b] disabled:opacity-40"
+                                />
+                              </label>
+                              {rateComparison && (
+                                <aside
+                                  aria-label="Perbandingan harga per jam"
+                                  className="space-y-2 border-l-2 border-[#ad422b]/50 bg-white/70 px-3 py-3"
+                                >
+                                  <p className="text-sm font-medium text-[#171717]">
+                                    Harga reguler lebih rendah
+                                  </p>
+                                  <p className="text-sm leading-relaxed text-black/60">
+                                    Reguler{' '}
+                                    <span className="font-medium text-[#171717] tabular-nums">
+                                      {formatCurrency(Math.round(rateComparison.regularPerHour))}
+                                      /jam
+                                    </span>{' '}
+                                    · Membership rata-rata{' '}
+                                    <span className="font-medium tabular-nums">
+                                      {formatCurrency(Math.round(rateComparison.membershipPerHour))}
+                                      /jam
+                                    </span>
+                                    .
+                                  </p>
+                                  <p className="text-xs leading-relaxed text-black/50">
+                                    Rata-rata dihitung dari harga paket ÷ total jam. Simpan kuota
+                                    membership untuk jam lain.
+                                  </p>
+                                  <p className="text-xs text-black/45">
+                                    Perbandingan tarif lapangan, sebelum biaya layanan.
+                                  </p>
+                                </aside>
+                              )}
+                              {membershipReason && (
+                                <p className="text-muted-foreground text-xs">{membershipReason}</p>
+                              )}
                             </div>
                           );
                         })}
@@ -918,21 +1009,12 @@ export default function CheckoutPage() {
                           {membershipDiscount.remainingSessions} sesi
                         </span>
                       </div>
-                      <label className="bg-background mt-2 flex items-center justify-between gap-3 rounded-none border border-[#ad422b]/20 px-3 py-2">
-                        <span className="text-foreground font-medium">Gunakan Value Pack</span>
-                        <input
-                          type="checkbox"
-                          checked={useMembership}
-                          onChange={(event) => setUseMembership(event.target.checked)}
-                          className="h-4 w-4 accent-[#ad422b]"
-                        />
-                      </label>
                       {membershipDiscount.canUseMembership && bookingItems.length > 0 && (
                         <div className="mt-1 font-medium text-[#ad422b]">
                           {membershipDiscount.slotsToDeduct} jam akan dipotong dari membership
                         </div>
                       )}
-                      {!useMembership && (
+                      {membershipSlotIds.length === 0 && (
                         <div className="text-muted-foreground mt-1">
                           Paket tidak dipakai untuk booking ini.
                         </div>

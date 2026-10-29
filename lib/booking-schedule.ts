@@ -1,5 +1,6 @@
 import { formatSlotTime } from './time-utils';
 export type BookingScheduleDetail = {
+  membershipCovered?: boolean;
   id?: string;
   price?: number;
   discountPrice?: number | null;
@@ -13,7 +14,7 @@ export type BookingScheduleDetail = {
     court?: { id?: string; name?: string };
   };
 };
-type Range = { start: string; end: string; price: number };
+type Range = { start: string; end: string; price: number; membershipCovered?: boolean };
 type CourtGroup = { name: string; ranges: Range[] };
 
 export function groupBookingSchedule(details: BookingScheduleDetail[]) {
@@ -34,7 +35,14 @@ export function groupBookingSchedule(details: BookingScheduleDetail[]) {
     courts.get(courtKey)!.ranges.push({
       start,
       end,
-      price: discount > 0 ? discount : detail.price || detail.slot.price || 0
+      ...(detail.membershipCovered !== undefined
+        ? { membershipCovered: detail.membershipCovered }
+        : {}),
+      price: detail.membershipCovered
+        ? 0
+        : discount > 0
+          ? discount
+          : detail.price || detail.slot.price || 0
     });
   }
 
@@ -46,7 +54,11 @@ export function groupBookingSchedule(details: BookingScheduleDetail[]) {
         const merged: Range[] = [];
         for (const range of [...court.ranges].sort((a, b) => a.start.localeCompare(b.start))) {
           const last = merged[merged.length - 1];
-          if (last && last.end === range.start) {
+          if (
+            last &&
+            last.end === range.start &&
+            last.membershipCovered === range.membershipCovered
+          ) {
             last.end = range.end;
             last.price += range.price;
           } else merged.push({ ...range });

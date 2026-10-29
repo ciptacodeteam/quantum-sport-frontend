@@ -1,9 +1,11 @@
 'use client';
 
+import { getCourtBookingWindowApi } from '@/api/court';
 import MainHeader from '@/components/headers/MainHeader';
 import { Button } from '@/components/ui/button';
 import { DatePickerModal, DatePickerModalTrigger } from '@/components/ui/date-picker-modal';
 import { Separator } from '@/components/ui/separator';
+import { isCourtSlotBookable } from '@/lib/booking-time-policy';
 import { getCourtSlotLabel } from '@/lib/court-slot-status';
 import { formatSlotTime } from '@/lib/time-utils';
 import { isTimeAllowedForMembershipType, type MembershipType } from '@/lib/membership-hours';
@@ -143,6 +145,14 @@ export default function BookingPage() {
     refetchInterval: 60_000,
     refetchOnWindowFocus: true
   });
+  const { data: bookingWindow } = useQuery({
+    queryKey: ['courts', 'booking-window', courtSport],
+    queryFn: () => getCourtBookingWindowApi(courtSport),
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true
+  });
+  const windowMonths = bookingWindow?.months ?? 3;
+  const todayKey = currentTime.format('YYYY-MM-DD');
   const { data: userMembershipData } = useQuery({
     ...myMembershipQueryOptions,
     enabled: isAuthenticated
@@ -166,16 +176,15 @@ export default function BookingPage() {
 
     if (!isToday) return membershipFilteredSlots;
 
-    const currentHour = currentTime.hour();
     return membershipFilteredSlots.filter((time) => {
-      const slotHour = parseInt(time.split(':')[0], 10);
-      return slotHour > currentHour;
+      const slotStart = dayjs.tz(`${selectedFullDate}T${time}:00`, 'Asia/Jakarta');
+      return isCourtSlotBookable(slotStart.valueOf(), currentTime.valueOf());
     });
   }, [selectedFullDate, hasMounted, activeMembershipType, currentTime]);
 
   useEffect(() => {
     const updateCurrentTime = () => setCurrentTime(nowJakarta());
-    const intervalId = window.setInterval(updateCurrentTime, 60_000);
+    const intervalId = window.setInterval(updateCurrentTime, 1000);
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') updateCurrentTime();
     };
@@ -201,7 +210,7 @@ export default function BookingPage() {
       Object.entries(previous).forEach(([dateKey, selections]) => {
         const validSelections = selections.filter((selection) => {
           const slotStart = dayjs.tz(`${selection.dateKey}T${selection.time}:00`, 'Asia/Jakarta');
-          const isValid = slotStart.isAfter(currentTime);
+          const isValid = isCourtSlotBookable(slotStart.valueOf(), currentTime.valueOf());
           if (!isValid) changed = true;
           return isValid;
         });
@@ -465,7 +474,7 @@ export default function BookingPage() {
 
   useEffect(() => {
     const today = nowJakarta();
-    const endDate = today.add(3, 'month');
+    const endDate = today.add(windowMonths, 'month');
     const updatedDates: {
       label: string;
       date: string;
@@ -485,7 +494,8 @@ export default function BookingPage() {
     }
 
     setDateList(updatedDates);
-  }, []);
+    setSelectedDate(previous => previous < todayKey || previous > endDate.format('YYYY-MM-DD') ? todayKey : previous);
+  }, [windowMonths, todayKey]);
 
   const handleSelectDate = (date: Date | null) => {
     if (!date) return;
@@ -522,6 +532,8 @@ export default function BookingPage() {
                     value={dayjs(selectedDate).toDate()}
                     onChange={handleSelectDate}
                     label="Pilih tanggal bermain"
+                    minDate={dayjs(todayKey).toDate()}
+                    maxDate={dayjs(todayKey).add(windowMonths, 'month').toDate()}
                   >
                     <DatePickerModalTrigger>
                       <Button

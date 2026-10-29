@@ -34,3 +34,8 @@ export async function getAllCourtsSlotsApi(date: string) {
   });
   return data;
 }
+
+export async function getCourtBookingWindowApi(courtSport: 'PADEL' | 'TENNIS') {
+  const { data } = await api.get('/courts/booking-window', { params: { courtSport } });
+  return data.data as { months: number };
+}

@@ -119,9 +119,14 @@ export default function PaymentActionCard({
               {info.billerCode ? 'Kode bayar' : 'Nomor Virtual Account'}
             </p>
             <div className="mt-3 flex items-center justify-between gap-3">
-              <p className="min-w-0 text-xl font-medium break-all tabular-nums select-all sm:text-2xl">
-                {info.vaNumber}
-              </p>
+              <div className="min-w-0 flex-1 [container-type:inline-size]">
+                <p
+                  className="font-medium whitespace-nowrap tabular-nums select-all"
+                  style={{ fontSize: `min(1.5rem, ${100 / (info.vaNumber.length * 0.65)}cqw)` }}
+                >
+                  {info.vaNumber}
+                </p>
+              </div>
               <Button
                 variant="ghost"
                 size="icon"

@@ -209,7 +209,7 @@ export default function TermsAndConditionsPage() {
               </h2>
               <ul className="list-disc space-y-2 pl-5 marker:text-[#ad422b]">
                 <li>Tidak bisa refund, hanya bisa reschedule</li>
-                <li>Reschedule maksimal H-3 (3 hari sebelum jadwal bermain)</li>
+                <li>Reschedule maksimal H-2 (minimal 48 jam sebelum jadwal bermain)</li>
                 <li>Reschedule hanya berlaku sekali per pemesanan</li>
               </ul>
             </section>

@@ -158,6 +158,17 @@ export type Partnership = {
 };
 
 export type Court = {
+  bookingWindowMonths?: number | null;
+  rollingPricing?: {
+    courtId: string;
+    months: number;
+    days: number[];
+    happyHourPrice: number;
+    happyHourDiscountPrice: number;
+    peakHourPrice: number;
+    peakHourDiscountPrice: number;
+    closedHours: number[];
+  } | null;
   id: string;
   name: string;
   description: string | null;
@@ -378,6 +389,7 @@ enum SlotType {
 }
 
 export type Slot = {
+  scheduleClosed?: boolean;
   id: string;
   type: SlotType;
   courtId: string | null;
@@ -411,6 +423,8 @@ export type Booking = {
   processingFee: number;
   courtNormalPrice?: number;
   courtDiscountPrice?: number;
+  membershipUserId?: string | null;
+  membershipSessionsUsed?: number;
   createdAt: Date;
   updatedAt: Date;
   holdExpiresAt: Date | null;

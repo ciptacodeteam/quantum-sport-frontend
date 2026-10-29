@@ -75,17 +75,7 @@ function HistoryItem({ invoice }: { invoice: Invoice }) {
     >
       <div className="flex items-start justify-between gap-3">
         <h2 className="min-w-0 text-lg font-medium tracking-tight break-words">
-          {membership?.name ||
-            (details.length
-              ? schedule[0]?.name || 'Pemesanan lapangan'
-              : invoice.booking
-                ? 'Add Ons'
-                : 'Pemesanan Anda')}
-          {schedule.length > 1 && (
-            <span className="ml-2 text-xs font-normal text-black/45">
-              +{schedule.length - 1} lainnya
-            </span>
-          )}
+          Invoice
         </h2>
         <span className={`shrink-0 border px-2 py-1 text-[10px] ${getStatusColor(invoice.status)}`}>
           {getStatusLabel(invoice.status)}

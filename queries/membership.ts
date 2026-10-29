@@ -59,6 +59,7 @@ export type UserMembershipResponse = {
       id: string;
       name: string;
       price: number;
+      sessions?: number;
       sport?: 'PADEL' | 'TENNIS';
       type?: 'ALL_HOUR' | 'HAPPY_HOUR' | 'AFTER_HOUR';
     };
