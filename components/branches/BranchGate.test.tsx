@@ -135,11 +135,11 @@ it('does not ask for a remembered branch when opening Home', () => {
   expect(screen.getByText('Booking content')).toBeInTheDocument();
   expect(screen.queryByRole('dialog')).toBeNull();
 });
-it('continues on Value Pack after choosing a branch from a direct link', async () => {
+it('continues directly to Value Pack even with a remembered booking branch', async () => {
   mocks.path = '/membership';
   useBranchStore.setState({ branch: branches[0] });
   show();
-  fireEvent.click(await screen.findByRole('button', { name: /^Black Padel Cemara/ }));
+  expect(screen.queryByRole('dialog')).toBeNull();
   expect(await screen.findByText('Booking content')).toBeInTheDocument();
   expect(mocks.replace).not.toHaveBeenCalled();
   expect(mocks.push).not.toHaveBeenCalled();
@@ -147,7 +147,6 @@ it('continues on Value Pack after choosing a branch from a direct link', async (
 
 it.each([
   ['/booking', 'Booking Lapangan Padel'],
-  ['/membership', 'Value Pack'],
   ['/booking/tennis', 'Tennis']
 ])('asks for a branch after clicking %s and continues to that destination', async (href, label) => {
   mocks.path = '/';
@@ -184,14 +183,14 @@ it('asks for a branch again on a booking click even with a confirmed branch', as
   render(
     <QueryClientProvider client={client}>
       <BranchGate>
-        <BranchLink href="/membership">Value Pack</BranchLink>
+        <BranchLink href="/booking">Booking</BranchLink>
       </BranchGate>
     </QueryClientProvider>
   );
-  fireEvent.click(screen.getByRole('link', { name: 'Value Pack' }));
+  fireEvent.click(screen.getByRole('link', { name: 'Booking' }));
   expect(await screen.findByRole('dialog')).toBeInTheDocument();
   fireEvent.click(await screen.findByRole('button', { name: /^Black Padel Cemara/ }));
-  await waitFor(() => expect(mocks.push).toHaveBeenCalledWith('/membership'));
+  await waitFor(() => expect(mocks.push).toHaveBeenCalledWith('/booking'));
 });
 it('keeps the requested destination when confirming a switch with items in the cart', async () => {
   mocks.path = '/';
@@ -235,3 +234,14 @@ it('filters a pending Tennis destination while leaving the current Padel selecti
   expect(screen.queryByRole('button', { name: /Black Padel S. Parman/ })).toBeNull();
   expect(useBranchStore.getState().branch?.id).toBe('s-parman');
 });
+it.each(['/membership', '/membership/pack', '/membership/checkout', '/my-packages'])(
+  'does not interrupt the shared Value Pack flow with a branch selection on %s',
+  async (path) => {
+    mocks.path = path;
+    show();
+    expect(await screen.findByText('Booking content')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(useBranchStore.getState().branch).toBeNull();
+    expect(mocks.getBranches).not.toHaveBeenCalled();
+  }
+);

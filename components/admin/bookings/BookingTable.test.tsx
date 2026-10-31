@@ -57,7 +57,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 async function choose(label: string) {
-  fireEvent.keyDown(screen.getByRole('combobox', { name: 'Jenis checkout' }), { key: 'Enter' });
+  fireEvent.keyDown(screen.getByRole('combobox', { name: 'Jenis pemesanan' }), { key: 'Enter' });
   fireEvent.click(await screen.findByRole('option', { name: label }));
 }
 it.each([
@@ -79,6 +79,6 @@ it.each([
 it('removes the checkout filter when all checkouts are selected', async () => {
   render(<BookingTable courtSport="TENNIS" />);
   await choose('Membership');
-  await choose('Semua checkout');
+  await choose('Semua pemesanan');
   expect(mocks.queries.mock.lastCall?.[0].at(-1)).toEqual({ courtSport: 'TENNIS' });
 });

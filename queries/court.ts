@@ -30,10 +30,10 @@ export const courtsWithSlotsQueryOptions = (date: string) =>
   queryOptions({
     queryKey: ['courts', 'slots', date],
     queryFn: async () => {
-      // Get slots for the entire day (06:00 to 23:00)
+      // Get the full playing day so configurable tariff bands can include midnight hours
       // API expects ISO format: 2025-01-20T08:00:00
-      const startAt = dayjs(date).startOf('day').add(6, 'hour').toISOString();
-      const endAt = dayjs(date).startOf('day').add(23, 'hour').toISOString();
+      const startAt = dayjs(date).startOf('day').toISOString();
+      const endAt = dayjs(date).endOf('day').toISOString();
 
       // First, fetch courts filtered by date (only courts with available slots)
       const courtsResponse = await getCourtsApi({ startAt, endAt });

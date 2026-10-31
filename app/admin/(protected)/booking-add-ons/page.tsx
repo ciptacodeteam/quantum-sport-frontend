@@ -41,6 +41,7 @@ import { toast } from 'sonner';
 export default function BookingAddOns() {
   const router = useRouter();
   const {
+    recurringBooking,
     bookingItems,
     // selectedDate,
     selectedCustomerId,
@@ -92,7 +93,9 @@ export default function BookingAddOns() {
     selectedCustomer ? { activeMembership: selectedCustomer.activeMembership } : null,
     false,
     courtSport,
-    useMembership
+    recurringBooking ? true : useMembership,
+    undefined,
+    !!recurringBooking
   );
 
   // Update store with membership discount
@@ -496,7 +499,8 @@ export default function BookingAddOns() {
       courtSlots: courtSlots.length > 0 ? courtSlots : undefined,
       inventories: inventories.length > 0 ? inventories : undefined,
       adminNote: bookingAdminNote || undefined,
-      useMembership
+      useMembership: recurringBooking ? true : useMembership,
+      ...(recurringBooking ? { recurringBooking } : {})
     };
 
     if (selectedCustomerId) {
@@ -521,6 +525,8 @@ export default function BookingAddOns() {
         description="Choose equipment and quantities for your booking"
         className="mb-0 pb-0"
       />
+
+      {recurringBooking && <div className="rounded border p-4 text-sm">Booking rutin khusus membership. Kuota jadwal ini belum dipotong saat checkout; pemotongan dilakukan pada jam bermain dan saldo boleh minus.</div>}
 
       <div className="grid min-w-0 grid-cols-1 items-start gap-6 2xl:grid-cols-[minmax(0,1fr)_420px]">
         {/* Main Content */}
@@ -817,8 +823,8 @@ export default function BookingAddOns() {
           inventoryTotal={inventoryTotal}
           totalAmount={totalAmount}
           membershipDiscountDetails={membershipDiscount}
-          useMembership={useMembership}
-          onUseMembershipChange={setUseMembership}
+          useMembership={recurringBooking ? true : useMembership}
+          onUseMembershipChange={recurringBooking ? undefined : setUseMembership}
           primaryAction={{
             label: isConfirming ? 'Processing...' : 'Confirm Booking',
             onClick: handleConfirmBooking,

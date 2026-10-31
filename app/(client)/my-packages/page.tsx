@@ -321,6 +321,18 @@ export default function MyPackagesPage() {
                         <dt className="text-black/45">Terpakai pada booking</dt>
                         <dd>{number(pack.usedHours)} jam</dd>
                       </div>
+                      {!!pack.debtTransferredHours && (
+                        <div className="flex justify-between gap-4">
+                          <dt className="text-black/45">Minus dialihkan ke paket baru</dt>
+                          <dd>{number(pack.debtTransferredHours)} jam</dd>
+                        </div>
+                      )}
+                      {!!pack.debtSettledHours && (
+                        <div className="flex justify-between gap-4">
+                          <dt className="text-black/45">Kuota untuk pelunasan minus</dt>
+                          <dd>{number(pack.debtSettledHours)} jam</dd>
+                        </div>
+                      )}
                       {pack.heldHours > 0 && (
                         <div className="flex justify-between gap-4">
                           <dt className="text-black/45">Ditahan untuk pembayaran</dt>
@@ -339,7 +351,9 @@ export default function MyPackagesPage() {
                     asChild
                     className="mt-6 h-11 w-full rounded-full bg-[#111111] text-xs text-white"
                   >
-                    <BranchLink href={`/invoice/${encodeURIComponent(pack.purchaseInvoice.number)}`}>
+                    <BranchLink
+                      href={`/invoice/${encodeURIComponent(pack.purchaseInvoice.number)}`}
+                    >
                       Lanjutkan pembayaran
                     </BranchLink>
                   </Button>

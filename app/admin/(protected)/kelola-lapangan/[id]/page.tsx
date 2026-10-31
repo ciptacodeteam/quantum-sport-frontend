@@ -12,6 +12,9 @@ import type { IdParams } from '@/types';
 import { dehydrate, HydrationBoundary } from '@tanstack/react-query';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CourtCostingTable from '@/components/admin/courts/CourtCostingTable';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft, CalendarDays, Settings2 } from 'lucide-react';
+import Link from 'next/link';
 
 const EditCourtPage = async ({ params }) => {
   const param = (await params) as IdParams;
@@ -23,24 +26,42 @@ const EditCourtPage = async ({ params }) => {
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <Section>
-        <SectionHeader>
-          <SectionTitle title="Edit Lapangan" />
-          <SectionDescription description="Edit data lapangan yang telah tersedia." />
+      <Section className="gap-6">
+        <SectionHeader className="gap-3">
+          <Button asChild variant="ghost" size="sm" className="text-muted-foreground -ml-2 w-fit">
+            <Link href="/admin/kelola-lapangan">
+              <ArrowLeft />
+              Kembali ke daftar lapangan
+            </Link>
+          </Button>
+          <SectionTitle title="Pengaturan Lapangan" className="text-2xl tracking-tight" />
+          <SectionDescription description="Kelola informasi lapangan, jadwal ketersediaan, dan harga dalam satu tempat." />
         </SectionHeader>
         <SectionContent>
-          <Tabs defaultValue="edit" className="mt-2">
-            <TabsList>
-              <TabsTrigger value="edit">Edit</TabsTrigger>
-              <TabsTrigger value="costing">Costing</TabsTrigger>
+          <Tabs defaultValue="edit" className="gap-6">
+            <TabsList className="h-auto w-full justify-start rounded-xl p-1 sm:w-fit">
+              <TabsTrigger
+                value="edit"
+                className="px-3 py-2.5 text-xs sm:px-4 sm:text-sm [&>svg]:hidden sm:[&>svg]:block"
+              >
+                <Settings2 />
+                Informasi Lapangan
+              </TabsTrigger>
+              <TabsTrigger
+                value="costing"
+                className="px-3 py-2.5 text-xs sm:px-4 sm:text-sm [&>svg]:hidden sm:[&>svg]:block"
+              >
+                <CalendarDays />
+                Jadwal & Harga
+              </TabsTrigger>
             </TabsList>
             <TabsContent value="edit">
-              <div className="mt-4">
+              <div>
                 <EditCourtForm courtId={param.id} />
               </div>
             </TabsContent>
             <TabsContent value="costing">
-              <div className="mt-4">
+              <div>
                 <CourtCostingTable courtId={param.id} />
               </div>
             </TabsContent>

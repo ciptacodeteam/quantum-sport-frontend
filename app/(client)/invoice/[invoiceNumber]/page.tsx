@@ -238,7 +238,7 @@ export default function InvoiceDetailPage() {
   const canPay = pending && (!invoice.dueDate || Date.now() < new Date(invoice.dueDate).getTime());
   return (
     <>
-      <MainHeader showBack backHref="/invoice" />
+      <MainHeader showBack backHref="/invoice" withBranchLabel={!invoice.membershipUser} />
       <main className="invoice-page mx-auto w-full max-w-7xl px-5 pt-24 pb-12 text-[#171717] sm:px-8 lg:pb-16 xl:pt-32">
         <header className="mb-5">
           {pending && (
@@ -246,7 +246,7 @@ export default function InvoiceDetailPage() {
           )}
           <p className="text-xs break-all text-black/45">Invoice {invoice.number}</p>
         </header>
-        {invoice.branch && (
+        {invoice.branch && !invoice.membershipUser && (
           <section
             aria-label="Lokasi transaksi"
             className="mb-6 border border-black/15 bg-[#f8f8f6] p-5"

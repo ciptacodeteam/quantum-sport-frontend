@@ -229,6 +229,7 @@ export type MembershipBenefit = {
 };
 
 export type MembershipUser = {
+  debtSettledSessions?: number;
   id: string;
   membershipId: string;
   userId: string;

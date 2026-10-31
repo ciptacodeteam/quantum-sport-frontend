@@ -1,6 +1,8 @@
+import type { RecurringBookingRule } from '@/lib/recurring-booking';
 import { adminApi } from '@/lib/adminApi';
 
 export type AdminCheckoutPayload = {
+  recurringBooking?: RecurringBookingRule;
   userId?: string;
   name?: string;
   phone?: string;

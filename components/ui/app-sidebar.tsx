@@ -47,6 +47,10 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
       icon: IconChartBar,
       items: [
         {
+          title: 'Court Performance',
+          url: '/admin/analytics/court-performance'
+        },
+        {
           title: 'Income by Source',
           url: '/admin/analytics/income-by-source'
         },
@@ -106,7 +110,8 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
         {
           title: 'Value Pack',
           url: '/admin/kelola-pemesanan/membership'
-        }
+        },
+        { title: 'Tunggakan Value Pack', url: '/admin/kelola-pemesanan/tunggakan-value-pack' }
       ]
     },
     // {
@@ -166,6 +171,10 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
         {
           title: 'Kelola Lapangan',
           url: '/admin/kelola-lapangan'
+        },
+        {
+          title: 'Pengaturan Jam Tarif',
+          url: '/admin/pengaturan-jam-tarif'
         },
         {
           title: 'Kelola Value Pack',

@@ -92,6 +92,11 @@ export default function MembershipTransactionDetailsDialog({
                 / {membership?.sessions ?? '—'} sesi
               </span>
             </Field>
+            {!!transaction.debtSettledSessions && (
+              <Field label="Kuota untuk pelunasan minus">
+                {transaction.debtSettledSessions} sesi
+              </Field>
+            )}
             <Field label="Sisa masa berlaku">
               <span className="tabular-nums">{transaction.remainingDuration} hari</span>
             </Field>

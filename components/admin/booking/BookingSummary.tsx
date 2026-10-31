@@ -32,6 +32,8 @@ import {
   type CustomerSearchResult
 } from '@/queries/admin/customer';
 import { useMembershipDiscount } from '@/hooks/useMembershipDiscount';
+import { useTariffPeriods } from '@/hooks/useTariffPeriods';
+import { resolveTariffPeriod, tariffBand, type TariffRule } from '@/lib/tariff-period';
 import { cn } from '@/lib/utils';
 import type {
   BookingItem,
@@ -99,6 +101,7 @@ export interface BookingSummaryProps {
 
   /** Membership discount details (optional - will be calculated if not provided) */
   membershipDiscountDetails?: {
+    deferredUsage?: boolean;
     canUseMembership: boolean;
     slotsToDeduct: number;
     discountAmount: number;
@@ -185,7 +188,11 @@ const formatCurrency = (value: number) => {
 };
 
 // Calculate bundled discount for court + coach at the same time slot
-const calculateBundleDiscount = (courts: BookingItem[], coaches: SelectedCoach[]): number => {
+const calculateBundleDiscount = (
+  courts: BookingItem[],
+  coaches: SelectedCoach[],
+  tariffRules: TariffRule[] = []
+): number => {
   if (courts.length === 0 || coaches.length === 0) return 0;
 
   // Build a set of keys (date|timeSlot) that have at least one coach
@@ -215,9 +222,19 @@ const calculateBundleDiscount = (courts: BookingItem[], coaches: SelectedCoach[]
     let slotDiscount = 0;
     if (booking.sport === 'TENNIS') {
       slotDiscount = 100_000;
-    } else if (hour >= 6 && hour <= 14) {
+    } else if (
+      tariffBand(
+        booking.timeSlot,
+        resolveTariffPeriod(tariffRules, booking.date, booking.sport)
+      ) === 'happyHour'
+    ) {
       slotDiscount = 100_000;
-    } else if (hour >= 15 && hour <= 23) {
+    } else if (
+      tariffBand(
+        booking.timeSlot,
+        resolveTariffPeriod(tariffRules, booking.date, booking.sport)
+      ) === 'peakHour'
+    ) {
       slotDiscount = 70_000;
     }
 
@@ -362,6 +379,7 @@ export default function BookingSummary({
   );
 
   // Calculate membership discount (always call hook, but use provided data if available)
+  const { rules: tariffRules } = useTariffPeriods(true);
   const calculatedMembershipDiscount = useMembershipDiscount(
     selectedCustomerId || null,
     bookingItems,
@@ -385,7 +403,7 @@ export default function BookingSummary({
   // Bundled discount is only relevant when add-ons (coaches) are shown
   const bundleDiscount =
     showAddOns && selectedCoaches.length > 0
-      ? calculateBundleDiscount(bookingItems, selectedCoaches)
+      ? calculateBundleDiscount(bookingItems, selectedCoaches, tariffRules)
       : 0;
 
   const courtSubtotal = membershipDiscount.originalTotal ?? courtTotal;
@@ -648,7 +666,10 @@ export default function BookingSummary({
                 )}
                 {membershipDiscount.canUseMembership && bookingItems.length > 0 && (
                   <div className="text-primary mt-1 font-medium">
-                    {membershipDiscount.slotsToDeduct} jam akan dipotong dari membership
+                    {membershipDiscount.slotsToDeduct} jam{' '}
+                    {membershipDiscount.deferredUsage
+                      ? 'dipotong saat jam bermain; saldo boleh minus'
+                      : 'akan dipotong dari membership'}
                   </div>
                 )}
               </div>

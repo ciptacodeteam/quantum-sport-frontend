@@ -37,5 +37,5 @@ export async function getAllCourtsSlotsApi(date: string) {
 
 export async function getCourtBookingWindowApi(courtSport: 'PADEL' | 'TENNIS') {
   const { data } = await api.get('/courts/booking-window', { params: { courtSport } });
-  return data.data as { months: number };
+  return data.data as { months: number; startDate: string; endDate: string };
 }

@@ -23,6 +23,7 @@ type Props = {
   withBorder?: boolean;
   withNotificationBadge?: boolean;
   withCartBadge?: boolean;
+  withBranchLabel?: boolean;
 };
 
 const navItems = [
@@ -34,7 +35,7 @@ const navItems = [
   { title: 'Riwayat', path: '/invoice', requiresAuth: true }
 ];
 
-const MainHeader = ({ onBack, backHref, showBack = false }: Props) => {
+const MainHeader = ({ onBack, backHref, showBack = false, withBranchLabel = true }: Props) => {
   const { data: user } = useQuery(profileQueryOptions);
   const pathname = usePathname();
   const router = useRouter();
@@ -90,7 +91,10 @@ const MainHeader = ({ onBack, backHref, showBack = false }: Props) => {
                   className="h-auto w-[92px] sm:w-[104px]"
                 />
               </Link>
-              {pathname !== '/' && <BranchLabel />}
+              {withBranchLabel &&
+                pathname !== '/' &&
+                !pathname.startsWith('/membership') &&
+                !pathname.startsWith('/my-packages') && <BranchLabel />}
             </div>
           </div>
           <nav

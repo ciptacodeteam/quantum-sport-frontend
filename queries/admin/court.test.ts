@@ -41,3 +41,11 @@ it('keeps available-only requests and cache entries separate for other consumers
     adminCourtsWithSlotsQueryOptions('2040-01-05', undefined, 'PADEL', true).queryKey
   );
 });
+
+it('requests the full day including the 23:00–24:00 slot', async () => {
+  const options = adminCourtsWithSlotsQueryOptions('2040-01-05', undefined, 'PADEL');
+  if (typeof options.queryFn !== 'function') throw new Error('Missing query function');
+  await options.queryFn({} as never);
+  const { startAt, endAt } = mocks.slots.mock.calls[0][0];
+  expect(new Date(endAt).getTime() - new Date(startAt).getTime()).toBe(86_399_999);
+});

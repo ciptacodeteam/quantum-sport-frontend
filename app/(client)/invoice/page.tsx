@@ -74,15 +74,15 @@ function HistoryItem({ invoice }: { invoice: Invoice }) {
       className="group flex min-w-0 flex-col border border-black/15 bg-white p-5 transition-colors hover:border-[#ad422b]/50 focus-visible:outline-2 focus-visible:outline-[#ad422b] sm:p-6"
     >
       <div className="flex items-start justify-between gap-3">
-        <h2 className="min-w-0 text-lg font-medium tracking-tight break-words">
-          Invoice
-        </h2>
+        <h2 className="min-w-0 text-lg font-medium tracking-tight break-words">Invoice</h2>
         <span className={`shrink-0 border px-2 py-1 text-[10px] ${getStatusColor(invoice.status)}`}>
           {getStatusLabel(invoice.status)}
         </span>
       </div>
       <p className="mt-1 text-xs break-all text-black/45">{invoice.number}</p>
-      {invoice.branch && <p className="mt-2 text-xs text-[#ad422b]">{invoice.branch.name}</p>}
+      {invoice.branch && !membership && (
+        <p className="mt-2 text-xs text-[#ad422b]">{invoice.branch.name}</p>
+      )}
       <div className="my-4 flex-1 border-y border-black/10 py-3 text-sm">
         {membership ? (
           <p className="text-black/55">
@@ -175,7 +175,7 @@ export default function InvoiceHistoryPage() {
   ] as const;
   return (
     <div className="flex min-h-dvh flex-col bg-white text-[#171717]">
-      <MainHeader />
+      <MainHeader withBranchLabel={typeFilter !== 'MEMBERSHIP'} />
       <main className="history-page mx-auto w-full max-w-7xl flex-1 px-5 pt-24 pb-6 sm:px-8 lg:pb-12 xl:pt-32">
         {needsAccount ? (
           <div className="mx-auto max-w-2xl">

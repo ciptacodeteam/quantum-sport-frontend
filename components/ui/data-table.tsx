@@ -123,6 +123,7 @@ interface DataTableProps<TData extends RowData> {
   /** Start with all columns visible; user can show/hide via dropdown (default: true) */
   enableColumnVisibility?: boolean;
   enableExpandAllRows?: boolean;
+  expandAllLabels?: { expand: string; collapse: string };
   enablePagination?: boolean;
   enablePageSize?: boolean;
 
@@ -155,6 +156,7 @@ export function DataTable<TData extends RowData>({
 
   enableColumnVisibility = true,
   enableExpandAllRows = false,
+  expandAllLabels = { expand: 'Expand All', collapse: 'Collapse All' },
   enablePagination = true,
   enablePageSize = true,
 
@@ -395,7 +397,7 @@ export function DataTable<TData extends RowData>({
           />
         )}
 
-        <div className="flex items-center gap-2">{addButton}</div>
+        {addButton && <div className="flex flex-wrap items-center gap-2">{addButton}</div>}
 
         {/* Right-side actions */}
         {(enableColumnVisibility || rightActions) && (
@@ -405,7 +407,7 @@ export function DataTable<TData extends RowData>({
             {enableColumnVisibility && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2" disabled={loading}>
+                  <Button variant="outline" className="gap-2" disabled={loading}>
                     <Settings2 className="h-4 w-4" />
                     {columnVisibilityLabel}
                   </Button>
@@ -443,8 +445,8 @@ export function DataTable<TData extends RowData>({
 
         {enableExpandAllRows && (
           <div className="flex-center">
-            <Button variant="outline" size="sm" onClick={handleExpandAll} disabled={loading}>
-              {table.getIsAllRowsExpanded() ? 'Collapse All' : 'Expand All'}
+            <Button variant="outline" onClick={handleExpandAll} disabled={loading}>
+              {table.getIsAllRowsExpanded() ? expandAllLabels.collapse : expandAllLabels.expand}
             </Button>
           </div>
         )}

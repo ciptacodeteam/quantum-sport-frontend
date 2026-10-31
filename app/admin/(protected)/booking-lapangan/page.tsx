@@ -1,5 +1,11 @@
 'use client';
 
+import { useTariffPeriods } from '@/hooks/useTariffPeriods';
+import { resolveTariffPeriod, tariffBand } from '@/lib/tariff-period';
+
+import RecurringBookingRules from '@/components/admin/booking/RecurringBookingRules';
+import RecurringBookingDialog from '@/components/admin/booking/RecurringBookingDialog';
+import { mergeBookingItems } from '@/lib/recurring-booking';
 import BookingSummary from '@/components/admin/booking/BookingSummary';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -96,6 +102,8 @@ export default function BookingLapangan() {
   const courtSportLabel = courtSport === 'TENNIS' ? 'Tennis' : 'Padel';
   const queryClient = useQueryClient();
   const {
+    recurringBooking,
+    setRecurringBooking,
     bookingItems,
     selectedDate,
     selectedCustomerId,
@@ -190,7 +198,10 @@ export default function BookingLapangan() {
     bookingItemsForDiscount,
     selectedCustomer ? { activeMembership: selectedCustomer.activeMembership } : null,
     false,
-    courtSport
+    courtSport,
+    true,
+    undefined,
+    !!recurringBooking
   );
 
   // Update store with membership discount
@@ -331,19 +342,26 @@ export default function BookingLapangan() {
 
   // Generate standard time slots (06:00 to 23:00) to ensure all possible slots are shown
   // even if they're not in the API response (e.g., fully booked)
+  const { rules: tariffRules } = useTariffPeriods(true);
   const standardTimeSlots = useMemo(() => {
     const slots: string[] = [];
-    for (let hour = 6; hour <= 23; hour++) {
+    for (let hour = 0; hour <= 23; hour++) {
       slots.push(`${String(hour).padStart(2, '0')}:00`);
     }
     return slots;
   }, []);
   const allowedStandardTimeSlots = useMemo(
     () =>
-      standardTimeSlots.filter((timeSlot) =>
-        isTimeAllowedForMembershipType(activeMembershipType, timeSlot)
+      standardTimeSlots.filter(
+        (timeSlot) =>
+          tariffBand(timeSlot, resolveTariffPeriod(tariffRules, selectedDateString, courtSport)) &&
+          isTimeAllowedForMembershipType(activeMembershipType, timeSlot, {
+            rules: tariffRules,
+            date: selectedDateString,
+            sport: courtSport
+          })
       ),
-    [activeMembershipType, standardTimeSlots]
+    [activeMembershipType, standardTimeSlots, tariffRules, selectedDateString, courtSport]
   );
 
   // Get time slots filtered by selected court (if a court is selected)
@@ -384,8 +402,19 @@ export default function BookingLapangan() {
 
     // Convert to array and sort
     return Array.from(timeSet).sort((a, b) => a.localeCompare(b));
-  }, [slots, selectedDateString, selectedCourt, allowedStandardTimeSlots]).filter((timeSlot) =>
-    isTimeAllowedForMembershipType(activeMembershipType, timeSlot)
+  }, [
+    slots,
+    selectedDateString,
+    selectedCourt,
+    allowedStandardTimeSlots,
+    tariffRules,
+    courtSport
+  ]).filter((timeSlot) =>
+    isTimeAllowedForMembershipType(activeMembershipType, timeSlot, {
+      rules: tariffRules,
+      date: selectedDateString,
+      sport: courtSport
+    })
   );
 
   // Sync with store when component mounts
@@ -395,21 +424,34 @@ export default function BookingLapangan() {
 
   useEffect(() => {
     setSelectedTimeSlots((prev) =>
-      prev.filter((timeSlot) => isTimeAllowedForMembershipType(activeMembershipType, timeSlot))
+      prev.filter((timeSlot) =>
+        isTimeAllowedForMembershipType(activeMembershipType, timeSlot, {
+          rules: tariffRules,
+          date: selectedDateString,
+          sport: courtSport
+        })
+      )
     );
     setBookings((prev) =>
       prev.filter((booking) =>
-        isTimeAllowedForMembershipType(activeMembershipType, booking.timeSlot)
+        isTimeAllowedForMembershipType(activeMembershipType, booking.timeSlot, {
+          rules: tariffRules,
+          date: booking.date,
+          sport: courtSport
+        })
       )
     );
     setBookingItems(
-      useBookingStore
-        .getState()
-        .bookingItems.filter((item) =>
-          isTimeAllowedForMembershipType(activeMembershipType, item.timeSlot)
-        )
+      useBookingStore.getState().bookingItems.filter((item) =>
+        isTimeAllowedForMembershipType(activeMembershipType, item.timeSlot, {
+          rules: tariffRules,
+          date: item.date,
+          sport: item.sport ?? courtSport,
+          endAt: item.endAt ?? item.endTime
+        })
+      )
     );
-  }, [activeMembershipType, setBookingItems]);
+  }, [activeMembershipType, setBookingItems, tariffRules, courtSport]);
 
   // Get current week for horizontal scroll
   const getWeekDates = () => {
@@ -473,7 +515,7 @@ export default function BookingLapangan() {
 
     // Create new bookings with the current selected date
     const currentDateFormatted = formatDateString(localSelectedDate);
-    const newBookings = selectedSlots.map(({ slot, timeSlot }) => {
+    const newBookings = selectedSlots.map(({ slot }) => {
       // Use simple time format without timezone conversion
       const startTime = formatSlotTime(slot.startAt);
       const endTime = formatSlotTime(slot.endAt);
@@ -790,6 +832,49 @@ export default function BookingLapangan() {
             </PopoverContent>
           </Popover>
         </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <RecurringBookingDialog
+            templates={bookingItems.filter(
+              (item) =>
+                item.date === formatDateString(localSelectedDate) && item.sport === courtSport
+            )}
+            membershipEligible={
+              !!membershipDiscount.activeMembership &&
+              !membershipDiscount.activeMembership.isSuspended &&
+              (membershipDiscount.activeMembership.membership.sport ?? 'PADEL') === courtSport
+            }
+            startDate={formatDateString(localSelectedDate)}
+            sport={courtSport}
+            onApply={(items, rule) => {
+              const merged = mergeBookingItems(bookingItems, items);
+              setBookings(merged);
+              setBookingItems(merged);
+              setRecurringBooking(rule);
+            }}
+          />
+          <p className="text-muted-foreground text-xs">
+            Pilih pelanggan membership dan tambahkan jadwal pada tanggal terpilih, lalu ulangi
+            mingguan.
+          </p>
+        </div>
+
+        {recurringBooking && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded border p-3 text-sm">
+            <p>
+              Booking rutin membership:{' '}
+              {recurringBooking.mode === 'ROLLING'
+                ? 'mengikuti rolling tanpa tanggal berhenti'
+                : `${recurringBooking.months} bulan`}
+              . Aturan aktif setelah checkout. Kuota dipotong saat bermain.
+            </p>
+            <Button variant="ghost" size="sm" onClick={() => setRecurringBooking(null)}>
+              Hapus aturan rutin
+            </Button>
+          </div>
+        )}
+
+        <RecurringBookingRules />
 
         {/* Date Navigation */}
         <Card className="min-w-0 py-3">

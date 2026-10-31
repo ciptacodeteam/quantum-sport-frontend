@@ -1,4 +1,7 @@
 import EditMembershipForm from '@/components/admin/memberships/EditMembershipForm';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 import {
   Section,
   SectionContent,
@@ -20,13 +23,19 @@ const EditMembershipPage = async ({ params }) => {
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <main>
-        <Section>
-          <SectionHeader>
-            <SectionTitle title="Kelola Value Pack" />
-            <SectionDescription description="Atur dan pantau membership Anda di sini." />
+      <main className="w-full min-w-0">
+        <Section className="gap-6">
+          <SectionHeader className="gap-3">
+            <Button asChild variant="ghost" size="sm" className="text-muted-foreground -ml-2 w-fit">
+              <Link href="/admin/kelola-membership">
+                <ArrowLeft />
+                Kembali ke daftar Value Pack
+              </Link>
+            </Button>
+            <SectionTitle title="Edit Value Pack" className="text-2xl tracking-tight" />
+            <SectionDescription description="Perbarui informasi, harga, kuota jam, dan benefit Value Pack." />
           </SectionHeader>
-          <SectionContent className="mt-4">
+          <SectionContent>
             <EditMembershipForm membershipId={param.id} />
           </SectionContent>
         </Section>

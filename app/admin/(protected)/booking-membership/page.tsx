@@ -1,5 +1,7 @@
 'use client';
 
+import { MembershipHoursDescription } from '@/components/booking/MembershipHoursDescription';
+
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -29,7 +31,7 @@ import {
 } from '@/components/ui/command';
 import { IconCalendar, IconCheck, IconUser, IconUserPlus } from '@tabler/icons-react';
 import { cn } from '@/lib/utils';
-import { membershipTypeDescriptions, membershipTypeLabels } from '@/lib/membership-hours';
+import { membershipTypeLabels } from '@/lib/membership-hours';
 import { toast } from 'sonner';
 import { adminMembershipsQueryOptions } from '@/queries/admin/membership';
 import type { AdminMembershipCheckoutPayload } from '@/api/admin/membership';
@@ -228,7 +230,11 @@ const BookingMembershipPage = () => {
                         </p>
                         <p className="text-muted-foreground text-xs">
                           {membershipTypeLabels[membership.type]} ·{' '}
-                          {membershipTypeDescriptions[membership.type]}
+                          <MembershipHoursDescription
+                            type={membership.type}
+                            sport={membership.sport}
+                            admin
+                          />
                         </p>
                       </div>
                       <div className="min-h-16 space-y-2 border-t pt-3 text-xs">

@@ -24,11 +24,11 @@ const ManageInventoryPage = () => {
     );
   }
   return (
-    <main>
+    <main className="w-full min-w-0">
       <Section>
         <SectionHeader>
           <SectionTitle title="Kelola Inventori" />
-          <SectionDescription description="Atur dan pantau inventori produk Anda di sini." />
+          <SectionDescription description="Kelola alat, jumlah unit, harga, dan status inventori." />
         </SectionHeader>
         <SectionContent>
           <InventoryTable />

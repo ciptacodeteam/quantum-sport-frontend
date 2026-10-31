@@ -1,6 +1,9 @@
 'use client';
 
 import { mapApiErrorsToForm } from '@/lib/api-error';
+import { useTariffPeriods } from '@/hooks/useTariffPeriods';
+import { formatTariffHour, resolveTariffPeriod } from '@/lib/tariff-period';
+import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
 import { useDialog } from '@/components/ui/dialog-context';
@@ -69,6 +72,8 @@ const CreateCourtCostForm = ({ courtId }: Props) => {
     isPending: isCourtLoading,
     isError: isCourtError
   } = useQuery(adminCourtQueryOptions(courtId));
+  const tariff = useTariffPeriods(true);
+  const bands = resolveTariffPeriod(tariff.rules, undefined, court?.sport);
   useEffect(() => {
     if (court?.rollingPricing) {
       form.reset({ ...court.rollingPricing, courtId, months: court.bookingWindowMonths ?? 1 });
@@ -109,6 +114,30 @@ const CreateCourtCostForm = ({ courtId }: Props) => {
       )}
       <FieldSet>
         <FieldGroup>
+          <div className="bg-muted/30 space-y-2 rounded-lg border p-4 text-sm">
+            <p className="font-medium">Jam Tarif Cabang</p>
+            {tariff.isPending ? (
+              <p>Memuat jam tarif...</p>
+            ) : tariff.isError ? (
+              <p role="alert">
+                Jam tarif gagal dimuat. Periksa pengaturan jam tarif sebelum menyimpan.
+              </p>
+            ) : (
+              <p>
+                Happy Hour {formatTariffHour(bands.happyStart)}–{formatTariffHour(bands.happyEnd)} ·
+                Peak Hour {formatTariffHour(bands.peakStart)}–{formatTariffHour(bands.peakEnd)} WIB
+              </p>
+            )}
+            <p className="text-muted-foreground text-xs">
+              Aturan terjadwal mengikuti tanggal bermain. Harga tetap diatur per lapangan.
+            </p>
+            <Link
+              href="/admin/pengaturan-jam-tarif"
+              className="text-primary inline-block underline underline-offset-4"
+            >
+              Atur Jam Tarif
+            </Link>
+          </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <Field>
               <FieldLabel htmlFor="happyHourPrice">Happy Hour Price</FieldLabel>
@@ -220,7 +249,8 @@ const CreateCourtCostForm = ({ courtId }: Props) => {
             />
             <p className="text-muted-foreground text-sm">
               Rentang otomatis maju setiap hari mengikuti waktu Jakarta. Simpan untuk mengganti
-              aturan mingguan lapangan ini. Booking yang sudah ada tetap pada jadwal semula.
+              aturan mingguan lapangan ini. Booking yang sudah ada tetap pada jadwal semula. Aturan
+              bulk rolling tetap berlaku saat durasi atau harga dasar diubah.
             </p>
             <FieldError>{form.formState.errors.months?.message}</FieldError>
           </Field>
@@ -314,7 +344,11 @@ const CreateCourtCostForm = ({ courtId }: Props) => {
               >
                 Batal
               </Button>
-              <Button type="submit" loading={isPending} disabled={isCourtLoading || isCourtError}>
+              <Button
+                type="submit"
+                loading={isPending}
+                disabled={isCourtLoading || isCourtError || tariff.isPending || tariff.isError}
+              >
                 Simpan
               </Button>
             </div>

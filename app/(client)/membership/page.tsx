@@ -1,11 +1,11 @@
 'use client';
 
+import { MembershipHoursDescription } from '@/components/booking/MembershipHoursDescription';
+
 import MainHeader from '@/components/headers/MainHeader';
 import MainBottomNavigation from '@/components/footers/MainBottomNavigation';
 import { Button } from '@/components/ui/button';
-import { membershipTypeDescriptions, membershipTypeLabels } from '@/lib/membership-hours';
-import { branchSupportsTennis } from '@/lib/court-branch-policy';
-import { useBranchStore } from '@/stores/useBranchStore';
+import { membershipTypeLabels } from '@/lib/membership-hours';
 import { membershipsQueryOptions } from '@/queries/membership';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowUpRight } from 'lucide-react';
@@ -21,10 +21,9 @@ const sportLabels: Record<MembershipSport, string> = {
 
 export default function MembershipPage() {
   const { data, isLoading, isError, refetch } = useQuery(membershipsQueryOptions());
-  const branch = useBranchStore((state) => state.branch);
-  const showSportTabs = branchSupportsTennis(branch?.id);
+  const showSportTabs = true;
   const [sportChoice, setSelectedSport] = useState<MembershipSport>('PADEL');
-  const selectedSport = showSportTabs ? sportChoice : 'PADEL';
+  const selectedSport = sportChoice;
   const memberships = useMemo(
     () => (data ?? []).filter((pack) => pack.isActive && (pack.sport ?? 'PADEL') === selectedSport),
     [data, selectedSport]
@@ -125,7 +124,7 @@ export default function MembershipPage() {
                     Rp{pack.price.toLocaleString('id-ID')}
                   </p>
                   <p className="mt-2 text-xs text-black/50">
-                    {membershipTypeDescriptions[pack.type]}
+                    <MembershipHoursDescription shared type={pack.type} sport={pack.sport} />
                   </p>
                 </div>
                 <dl className="mb-4 grid grid-cols-2 border-y border-black/15 py-4">

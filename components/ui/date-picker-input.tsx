@@ -8,20 +8,27 @@ import dayjs from 'dayjs';
 import { CalendarIcon } from 'lucide-react';
 
 type Props = {
+  id?: string;
+  className?: string;
   value: Date | undefined | null;
   onValueChange: (date: Date | undefined | null) => void;
   minDate?: Date;
   maxDate?: Date;
 };
 
-const DatePickerInput = ({ value, onValueChange, minDate, maxDate }: Props) => {
+const DatePickerInput = ({ id, className, value, onValueChange, minDate, maxDate }: Props) => {
   return (
     <Popover>
       <PopoverTrigger asChild>
         <Button
+          id={id}
           variant="outline"
           type="button"
-          className={cn('w-full pl-3 text-left font-normal', !value && 'text-muted-foreground')}
+          className={cn(
+            'w-full pl-3 text-left font-normal',
+            !value && 'text-muted-foreground',
+            className
+          )}
         >
           <div className="flex-between w-full">
             {value ? dayjs(value).format('DD/MM/YYYY') : <span>dd/MM/YYYY</span>}
@@ -38,6 +45,7 @@ const DatePickerInput = ({ value, onValueChange, minDate, maxDate }: Props) => {
             fromYear={minDate ? dayjs(minDate).year() : dayjs().year()}
             toYear={maxDate ? dayjs(maxDate).year() : dayjs().add(5, 'year').year()}
             selected={value ? dayjs(value).toDate() : undefined}
+            defaultMonth={value ? dayjs(value).toDate() : undefined}
             onSelect={(date) => onValueChange(date)}
             autoFocus
             disabled={(date) => {

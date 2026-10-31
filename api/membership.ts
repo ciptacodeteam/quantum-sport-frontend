@@ -35,3 +35,10 @@ export async function getMyMembershipTrackingApi() {
   }>('/memberships/my/tracking');
   return data;
 }
+
+export async function getMembershipRenewalPreviewApi(id: string) {
+  const { data } = await api.get<{
+    data: { packageSessions: number; debtSessions: number; remainingAfterPurchase: number };
+  }>(`/memberships/${id}/renewal-preview`);
+  return data.data;
+}

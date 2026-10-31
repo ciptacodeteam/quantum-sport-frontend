@@ -5,6 +5,7 @@ export function membershipStatus(transaction: MembershipUser) {
   if (['CANCELLED', 'REFUNDED', 'FAILED'].includes(payment || '')) return 'Dibatalkan';
   if (payment === 'EXPIRED') return 'Kedaluwarsa';
   if (payment !== 'PAID') return 'Menunggu pembayaran';
+  if (transaction.remainingSessions < 0) return 'Saldo minus';
   if (transaction.isExpired) return 'Kedaluwarsa';
   if (transaction.isSuspended) return 'Ditangguhkan';
   if (transaction.remainingSessions <= 0) return 'Sesi habis';

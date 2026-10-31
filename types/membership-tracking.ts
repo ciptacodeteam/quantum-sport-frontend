@@ -13,6 +13,8 @@ export type TrackedPackage = {
     | 'EXHAUSTED'
     | 'UPCOMING';
   totalHours: number;
+  debtSettledHours?: number;
+  debtTransferredHours?: number;
   remainingHours: number;
   usedHours: number;
   heldHours: number;

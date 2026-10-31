@@ -4,7 +4,7 @@ import Link from 'next/link';
 import type { ComponentProps } from 'react';
 import { useBranchStore } from '@/stores/useBranchStore';
 
-// Ask for the playing location when entering a booking or package flow.
+// Ask for the playing location when entering a booking flow.
 export default function BranchLink({ onClick, ...props }: ComponentProps<typeof Link>) {
   const openSelector = useBranchStore((state) => state.openSelector);
   return (
@@ -23,7 +23,7 @@ export default function BranchLink({ onClick, ...props }: ComponentProps<typeof 
         )
           return;
         const href = typeof props.href === 'string' ? props.href : props.href.pathname;
-        if (href && /^\/(booking(?:\/tennis)?|membership|add-ons)\/?(?:[?#].*)?$/.test(href)) {
+        if (href && /^\/(booking(?:\/tennis)?|add-ons)\/?(?:[?#].*)?$/.test(href)) {
           event.preventDefault();
           openSelector(href);
         }

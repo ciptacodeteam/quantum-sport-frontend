@@ -1,3 +1,4 @@
+import type { TariffRule } from '@/lib/tariff-period';
 import type { BookingItem } from '@/stores/useBookingStore';
 import { isTimeAllowedForMembershipType, type MembershipType } from '@/lib/membership-hours';
 
@@ -29,7 +30,8 @@ export function selectMembershipSlots(
   membership: Membership | null,
   requestedIds: string[] | null,
   sport?: 'PADEL' | 'TENNIS',
-  now = Date.now()
+  now = Date.now(),
+  tariffRules: TariffRule[] = []
 ) {
   const reasons: Record<string, string> = {};
   const eligible = items.filter((item) => {
@@ -42,7 +44,12 @@ export function selectMembershipSlots(
     else if ((membership.membership.sport ?? 'PADEL') !== (item.sport ?? sport ?? 'PADEL'))
       reason = 'Olahraga tidak sesuai paket';
     else if (
-      !isTimeAllowedForMembershipType(membership.membership.type ?? 'ALL_HOUR', item.timeSlot)
+      !isTimeAllowedForMembershipType(membership.membership.type ?? 'ALL_HOUR', item.timeSlot, {
+        rules: tariffRules,
+        date: item.date,
+        sport: item.sport ?? sport,
+        endAt: item.endAt ?? item.endTime
+      })
     )
       reason = 'Jam di luar ketentuan paket';
     if (reason) reasons[item.slotId] = reason;

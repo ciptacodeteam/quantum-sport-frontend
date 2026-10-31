@@ -8,6 +8,7 @@ import {
 } from '@/api/admin/booking';
 import BookingDetailsDialog from '@/components/admin/bookings/BookingDetailsDialog';
 import BookingStatusDialog from '@/components/admin/bookings/BookingStatusDialog';
+import { isMembershipBooking } from '@/lib/booking-membership';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/clipboard-copy';
@@ -181,6 +182,15 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
           );
         }
       }),
+      colHelper.accessor((booking) => (isMembershipBooking(booking) ? 'Membership' : 'Reguler'), {
+        id: 'checkoutType',
+        header: 'Jenis pemesanan',
+        cell: (info) => (
+          <Badge variant={info.getValue() === 'Membership' ? 'lightInfo' : 'outline'}>
+            {info.getValue()}
+          </Badge>
+        )
+      }),
       colHelper.accessor('status', {
         header: 'Status',
         cell: (info) => {
@@ -352,14 +362,14 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-2">
               <label htmlFor="checkout-filter" className="sr-only">
-                Jenis checkout
+                Jenis pemesanan
               </label>
               <Select value={checkoutType} onValueChange={setCheckoutType}>
                 <SelectTrigger id="checkout-filter" className="h-9 w-48 rounded-lg shadow-none">
-                  <SelectValue placeholder="Semua checkout" />
+                  <SelectValue placeholder="Semua pemesanan" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Semua checkout</SelectItem>
+                  <SelectItem value="all">Semua pemesanan</SelectItem>
                   <SelectItem value="regular">Reguler</SelectItem>
                   <SelectItem value="membership">Membership</SelectItem>
                 </SelectContent>

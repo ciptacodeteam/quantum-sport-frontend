@@ -1,3 +1,4 @@
+import { useTariffPeriods } from '@/hooks/useTariffPeriods';
 import { selectMembershipSlots } from '@/lib/membership-slot-selection';
 import { useQuery } from '@tanstack/react-query';
 import { adminCustomerMembershipQueryOptions } from '@/queries/admin/customer';
@@ -72,6 +73,7 @@ export interface ActiveMembership {
 
 export interface MembershipDiscountResult {
   activeMembership: ActiveMembership | null;
+  deferredUsage?: boolean;
   canUseMembership: boolean;
   remainingSessions: number;
   slotsToDeduct: number;
@@ -97,8 +99,14 @@ export function useMembershipDiscount(
   isUser: boolean = false,
   courtSport?: 'PADEL' | 'TENNIS',
   useMembership: boolean = true,
-  requestedSlotIds?: string[] | null
+  requestedSlotIds?: string[] | null,
+  deferredUsage: boolean = false
 ): MembershipDiscountResult {
+  const {
+    rules: tariffRules,
+    isPending: isTariffLoading,
+    isError: isTariffError
+  } = useTariffPeriods(!isUser);
   // Fetch membership for current user if isUser is true
   const { data: userMembershipData } = useQuery({
     ...myMembershipQueryOptions,
@@ -122,9 +130,11 @@ export function useMembershipDiscount(
         remainingSessions: activeMembership?.remainingSessions ?? 0,
         ...selectMembershipSlots(
           bookingItems,
-          activeMembership,
+          isTariffLoading || isTariffError ? null : activeMembership,
           useMembership ? requestedSlotIds : [],
-          courtSport
+          courtSport,
+          Date.now(),
+          tariffRules
         )
       };
     }
@@ -133,7 +143,12 @@ export function useMembershipDiscount(
     const bookingSport = courtSport ?? bookingItems[0]?.sport;
     const isMatchingSport = !bookingSport || membershipSport === bookingSport;
     const eligibleBookingItems = bookingItems.filter((booking) =>
-      isTimeAllowedForMembershipType(membershipType, booking.timeSlot)
+      isTimeAllowedForMembershipType(membershipType, booking.timeSlot, {
+        rules: tariffRules,
+        date: booking.date,
+        sport: booking.sport ?? courtSport,
+        endAt: booking.endAt ?? booking.endTime
+      })
     );
     const allBookingItemsEligible =
       bookingItems.length === 0 || eligibleBookingItems.length === bookingItems.length;
@@ -142,12 +157,14 @@ export function useMembershipDiscount(
     const canUseMembership =
       activeMembership &&
       useMembership &&
+      !isTariffLoading &&
+      !isTariffError &&
       !activeMembership.isExpired &&
       !activeMembership.isSuspended &&
       isMatchingSport &&
       allBookingItemsEligible &&
       sessionsToDeduct > 0 &&
-      remainingSessions >= sessionsToDeduct;
+      (deferredUsage || remainingSessions >= sessionsToDeduct);
 
     // Calculate original total
     const originalTotal = bookingItems.reduce((sum, booking) => {
@@ -172,10 +189,21 @@ export function useMembershipDiscount(
       activeMembership,
       canUseMembership: !!canUseMembership,
       remainingSessions,
+      deferredUsage,
       slotsToDeduct: sessionsToDeduct,
       discountAmount,
       originalTotal,
       discountedTotal
     };
-  }, [activeMembershipData, bookingItems, courtSport, useMembership, requestedSlotIds]);
+  }, [
+    activeMembershipData,
+    bookingItems,
+    courtSport,
+    useMembership,
+    requestedSlotIds,
+    deferredUsage,
+    tariffRules,
+    isTariffLoading,
+    isTariffError
+  ]);
 }

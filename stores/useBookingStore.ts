@@ -1,5 +1,6 @@
 'use client';
 
+import type { RecurringBookingRule } from '@/lib/recurring-booking';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
@@ -111,6 +112,8 @@ export interface SelectedInventory {
 }
 
 interface BookingState {
+  recurringBooking: RecurringBookingRule | null;
+  setRecurringBooking: (rule: RecurringBookingRule | null) => void;
   // Court bookings
   bookingItems: BookingItem[];
   selectedDate: Date;
@@ -166,6 +169,8 @@ interface BookingState {
 export const useBookingStore = create<BookingState>()(
   persist(
     (set, get) => ({
+      recurringBooking: null,
+      setRecurringBooking: (recurringBooking) => set({ recurringBooking }),
       bookingItems: [],
       selectedDate: new Date(),
       selectedCustomerId: null,
@@ -193,7 +198,10 @@ export const useBookingStore = create<BookingState>()(
           (ballboy) => !ballboy.courtSlotId || validCourtSlotIds.has(ballboy.courtSlotId)
         );
         const ballboyTotal = selectedBallboys.reduce((sum, ballboy) => sum + ballboy.price, 0);
-        set({ bookingItems: items, selectedBallboys, courtTotal, ballboyTotal });
+        const rule = get().recurringBooking;
+        const recurringBooking =
+          rule && rule.sourceSlotIds.every((id) => validCourtSlotIds.has(id)) ? rule : null;
+        set({ bookingItems: items, selectedBallboys, courtTotal, ballboyTotal, recurringBooking });
       },
 
       removeBookingItem: (courtId, timeSlot, date) => {
@@ -207,7 +215,16 @@ export const useBookingStore = create<BookingState>()(
           (ballboy) => !ballboy.courtSlotId || validCourtSlotIds.has(ballboy.courtSlotId)
         );
         const ballboyTotal = selectedBallboys.reduce((sum, ballboy) => sum + ballboy.price, 0);
-        set({ bookingItems: newItems, selectedBallboys, courtTotal, ballboyTotal });
+        const rule = state.recurringBooking;
+        const recurringBooking =
+          rule && rule.sourceSlotIds.every((id) => validCourtSlotIds.has(id)) ? rule : null;
+        set({
+          bookingItems: newItems,
+          selectedBallboys,
+          courtTotal,
+          ballboyTotal,
+          recurringBooking
+        });
       },
 
       setSelectedDate: (date) => set({ selectedDate: date }),
@@ -357,6 +374,7 @@ export const useBookingStore = create<BookingState>()(
 
       clearAll: () =>
         set({
+          recurringBooking: null,
           bookingItems: [],
           selectedCoaches: [],
           selectedBallboys: [],
@@ -392,6 +410,7 @@ export const useBookingStore = create<BookingState>()(
       name: 'booking-storage',
       storage: typeof window !== 'undefined' ? createJSONStorage(() => sessionStorage) : undefined,
       partialize: (state) => ({
+        recurringBooking: state.recurringBooking,
         bookingItems: state.bookingItems,
         selectedDate: state.selectedDate,
         selectedCustomerId: state.selectedCustomerId,

@@ -1,0 +1,72 @@
+export type PerformanceTotals = {
+  hours: number;
+  pastHours: number;
+  upcomingHours: number;
+  paidRevenue: number;
+  membershipAllocation: number;
+  revenue: number;
+  realizedRevenue: number;
+  bookings: number;
+  unvaluedMembershipHours: number;
+};
+export type PerformanceRow = {
+  id: string;
+  bookingId: string;
+  invoiceId: string | null;
+  invoiceNumber: string | null;
+  customer: string;
+  courtId: string;
+  court: string;
+  branchId: string;
+  branch: string;
+  sport: string;
+  startAt: string;
+  endAt: string;
+  createdAt: string;
+  categoryId: string;
+  category: string;
+  band: string;
+  hours: number;
+  pastHours: number;
+  upcomingHours: number;
+  unvaluedMembershipHours: number;
+  normalPrice: number;
+  paidRevenue: number;
+  membershipAllocation: number;
+  revenue: number;
+  realizedRevenue: number;
+};
+export type CourtPerformance = {
+  startDate: string;
+  endDate: string;
+  generatedAt: string;
+  courts: { id: string; name: string; sport: string; branchId: string; branch: string }[];
+  summary: PerformanceTotals & {
+    capacityHours: number;
+    occupiedHours: number;
+    occupancy: number;
+    membershipHours: number;
+    nonMembershipHours: number;
+  };
+  courtSummary: (PerformanceTotals & {
+    id: string;
+    name: string;
+    sport: string;
+    branchId: string;
+    branch: string;
+    capacityHours: number;
+    occupiedHours: number;
+    occupancy: number;
+  })[];
+  branchSummary: (PerformanceTotals & {
+    id: string;
+    name: string;
+    courts: number;
+    capacityHours: number;
+    occupiedHours: number;
+    occupancy: number;
+    revenueShare: number;
+  })[];
+  categories: (PerformanceTotals & { id: string; name: string })[];
+  rows: PerformanceRow[];
+};

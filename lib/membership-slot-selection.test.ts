@@ -60,9 +60,13 @@ it.each([
   { ...membership, isSuspended: true },
   { ...membership, endDate: '2026-10-27' },
   { ...membership, remainingSessions: 0 },
+  { ...membership, remainingSessions: -2 },
   { ...membership, membership: { ...membership.membership, sport: 'TENNIS' as const } }
 ])('does not use an unavailable or mismatched membership %j', (pack) => {
-  expect(selectMembershipSlots(items, pack, null, 'PADEL', now).membershipSlotIds).toEqual([]);
+  const result = selectMembershipSlots(items, pack, null, 'PADEL', now);
+  expect(result.membershipSlotIds).toEqual([]);
+  expect(result.discountedTotal).toBe(550000);
+  expect(result.slotsToDeduct).toBe(0);
 });
 it('enables another eligible hour after a selected hour is deselected', () => {
   const result = selectMembershipSlots(items, membership, ['slot-0'], 'PADEL', now);
