@@ -328,39 +328,68 @@ export default function SchedulePage() {
   );
   const slots = slotsData?.slots || [];
 
+  // Court closedHours from rolling schedule (e.g. 00:00–05:00) must not create empty grid rows
+  const closedHoursByCourtId = useMemo(() => {
+    const map = new Map<string, Set<number>>();
+    for (const court of courts) {
+      map.set(court.id, new Set(court.rollingPricing?.closedHours ?? []));
+    }
+    return map;
+  }, [courts]);
+
   // Extract unique time slots with end times, or use standard time slots
   const timeSlotRanges = useMemo(() => {
     const map = new Map<string, string>();
+    const bookedStarts = new Set<string>();
 
-    // Add time slots from API slots data
-    if (slots.length > 0) {
-      slots.forEach((slot) => {
-        const slotDate = getDateStringFromISO(slot.startAt);
-        if (slotDate === selectedDateString) {
-          const startTime = formatSlotTime(slot.startAt);
-          const endTime = formatSlotTime(slot.endAt);
-          if (!map.has(startTime) || (endTime && endTime > (map.get(startTime) || ''))) {
-            map.set(startTime, endTime);
-          }
-        }
-      });
-    }
+    const addRange = (startAt: string | Date, endAt: string | Date) => {
+      const slotDate = getDateStringFromISO(startAt);
+      if (slotDate !== selectedDateString) return;
+      const startTime = formatSlotTime(startAt);
+      const endTime = formatSlotTime(endAt);
+      if (!startTime || startTime === '-') return;
+      if (!map.has(startTime) || (endTime && endTime > (map.get(startTime) || ''))) {
+        map.set(startTime, endTime && endTime !== '-' ? endTime : addOneHourToTime(startTime));
+      }
+    };
 
-    // Also add time slots from bookings to ensure booked slots are visible even if not in slots API
+    // Bookings always keep their rows (even if the hour was later marked closed)
     bookings.forEach((booking) => {
       booking.details?.forEach((detail) => {
         if (detail.slot) {
-          const slotDate = getDateStringFromISO(detail.slot.startAt);
-          if (slotDate === selectedDateString) {
-            const startTime = formatSlotTime(detail.slot.startAt);
-            const endTime = formatSlotTime(detail.slot.endAt);
-            if (!map.has(startTime) || (endTime && endTime > (map.get(startTime) || ''))) {
-              map.set(startTime, endTime);
-            }
-          }
+          addRange(detail.slot.startAt, detail.slot.endAt);
+          const startTime = formatSlotTime(detail.slot.startAt);
+          if (startTime && startTime !== '-') bookedStarts.add(startTime);
         }
       });
     });
+
+    // Available open slots only — skip closed / unavailable / configured closedHours
+    if (slots.length > 0) {
+      slots.forEach((slot) => {
+        if (slot.scheduleClosed || slot.isAvailable === false) return;
+        const startTime = formatSlotTime(slot.startAt);
+        if (!startTime || startTime === '-') return;
+        const hour = Number.parseInt(startTime.slice(0, 2), 10);
+        const courtClosed = slot.courtId
+          ? closedHoursByCourtId.get(slot.courtId)
+          : undefined;
+        if (courtClosed?.has(hour) && !bookedStarts.has(startTime)) return;
+        addRange(slot.startAt, slot.endAt);
+      });
+    }
+
+    // Drop empty closed-hour rows that only exist from stale slot data
+    for (const startTime of [...map.keys()]) {
+      if (bookedStarts.has(startTime)) continue;
+      const hour = Number.parseInt(startTime.slice(0, 2), 10);
+      const allCourtsCloseThisHour =
+        courts.length > 0 &&
+        courts.every((court) =>
+          (court.rollingPricing?.closedHours ?? []).includes(hour)
+        );
+      if (allCourtsCloseThisHour) map.delete(startTime);
+    }
 
     const uniqueStarts = Array.from(map.keys()).sort((a, b) => a.localeCompare(b));
     if (uniqueStarts.length > 0) {
@@ -375,7 +404,7 @@ export default function SchedulePage() {
       startTime,
       endTime: addOneHourToTime(startTime)
     }));
-  }, [slots, selectedDateString, standardTimeSlots, bookings]);
+  }, [slots, selectedDateString, standardTimeSlots, bookings, closedHoursByCourtId, courts]);
 
   // Create a map of bookings by court and time slot
   // Prioritize non-cancelled bookings over cancelled ones

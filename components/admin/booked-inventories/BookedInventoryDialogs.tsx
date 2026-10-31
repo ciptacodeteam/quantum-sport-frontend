@@ -12,7 +12,7 @@ import {
   DialogTitle
 } from '@/components/ui/dialog';
 import { BOOKING_STATUS_BADGE_VARIANT } from '@/lib/constants';
-import { formatBookingDate } from '@/lib/booking-display';
+import { formatBookingDate, formatBookingSlotDate } from '@/lib/booking-display';
 import { formatPhone } from '@/lib/utils';
 import {
   hasText,
@@ -196,8 +196,8 @@ export function BookedInventoryDetailsDialog({ item }: { item: AdminBookedInvent
                       <p className="text-sm font-medium">{coach.staff.name}</p>
                       {coach.slot?.startAt && coach.slot?.endAt && (
                         <p className="text-muted-foreground text-xs">
-                          {formatBookingDate(coach.slot.startAt, 'HH:mm')}–
-                          {formatBookingDate(coach.slot.endAt, 'HH:mm')} WIB
+                          {formatBookingSlotDate(coach.slot.startAt, 'HH:mm')}–
+                          {formatBookingSlotDate(coach.slot.endAt, 'HH:mm')} WIB
                         </p>
                       )}
                     </div>

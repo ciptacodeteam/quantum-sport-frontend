@@ -1,4 +1,4 @@
-import { formatBookingDate } from '@/lib/booking-display';
+import { formatBookingDate, formatBookingSlotDate } from '@/lib/booking-display';
 import type {
   AdminBookedInventoryListItem,
   BookedCourtSlot
@@ -39,8 +39,8 @@ function normalize(slot: BookedCourtSlot): InventorySchedule | null {
   const start = slot.slot?.startAt ?? slot.startAt;
   const end = slot.slot?.endAt ?? slot.endAt;
   if (!start || !end) return null;
-  const startLocal = formatBookingDate(start, 'YYYY-MM-DD HH:mm');
-  const endLocal = formatBookingDate(end, 'YYYY-MM-DD HH:mm');
+  const startLocal = formatBookingSlotDate(start, 'YYYY-MM-DD HH:mm');
+  const endLocal = formatBookingSlotDate(end, 'YYYY-MM-DD HH:mm');
   if (startLocal === '-' || endLocal === '-') return null;
   return {
     court: hasText(slot.court?.name) ? slot.court.name : undefined,

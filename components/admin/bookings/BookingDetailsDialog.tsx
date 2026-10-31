@@ -11,14 +11,14 @@ import {
   DialogTitle
 } from '@/components/ui/dialog';
 import { getBallboyCourtName } from '@/lib/ballboy-utils';
-import { formatBookingDate } from '@/lib/booking-display';
+import { formatBookingDate, formatBookingSlotDate } from '@/lib/booking-display';
 import { BOOKING_STATUS_BADGE_VARIANT, BookingStatus } from '@/lib/constants';
 import { formatPhone } from '@/lib/utils';
 import type { Booking, BookingDetail } from '@/types/model';
 import { RescheduleCourtDialog, type BookingDetailWithSlot } from './RescheduleCourtDialog';
 
 const currency = (value: number) => `Rp ${new Intl.NumberFormat('id-ID').format(value)}`;
-const time = (value: Date | string) => formatBookingDate(value, 'HH:mm');
+const time = (value: Date | string) => formatBookingSlotDate(value, 'HH:mm');
 
 export default function BookingDetailsDialog({
   booking,
@@ -31,7 +31,9 @@ export default function BookingDetailsDialog({
 }) {
   const groups = new Map<string, { name: string; date: string; details: BookingDetail[] }>();
   for (const detail of booking.details || []) {
-    const date = detail.slot ? formatBookingDate(detail.slot.startAt, 'YYYY-MM-DD') : '';
+    const date = detail.slot
+      ? formatBookingSlotDate(detail.slot.startAt, 'YYYY-MM-DD')
+      : '';
     const key = `${detail.court?.id || detail.courtId || detail.court?.name}-${date}`;
     if (!groups.has(key))
       groups.set(key, { name: detail.court?.name || 'Lapangan', date, details: [] });
@@ -111,7 +113,7 @@ export default function BookingDetailsDialog({
                 <div className="bg-muted/40 flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2.5">
                   <p className="text-sm font-medium">{group.name}</p>
                   <p className="text-muted-foreground text-xs">
-                    {group.date ? formatBookingDate(group.date, 'DD MMM YYYY') : '-'}
+                    {group.date ? formatBookingSlotDate(group.date, 'DD MMM YYYY') : '-'}
                   </p>
                 </div>
                 <div className="divide-y">

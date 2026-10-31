@@ -7,7 +7,8 @@ import { id as indonesia } from 'date-fns/locale';
 import { IconCalendar, IconCheck } from '@tabler/icons-react';
 import { toast } from 'sonner';
 import { rescheduleBookedCourtApi } from '@/api/admin/bookedCourt';
-import { formatBookingDate } from '@/lib/booking-display';
+import { formatBookingSlotDate } from '@/lib/booking-display';
+import { parseScheduleDatetime } from '@/lib/admin-schedule-time';
 import { canRescheduleAt, RESCHEDULE_NOTICE } from '@/lib/reschedule-policy';
 import { cn } from '@/lib/utils';
 import { adminCourtQueryOptions, adminCourtsWithSlotsQueryOptions } from '@/queries/admin/court';
@@ -33,11 +34,8 @@ type Props = {
   onSuccess?: () => void;
 };
 const currency = (value: number) => `Rp ${new Intl.NumberFormat('id-ID').format(value)}`;
-const time = (value: Date | string) => formatBookingDate(value, 'HH:mm');
-const slotMoment = (value: Date | string) =>
-  typeof value === 'string' && !/(?:Z|[+-]\d{2}:?\d{2})$/i.test(value)
-    ? dayjs.tz(value, 'Asia/Jakarta')
-    : dayjs(value);
+const time = (value: Date | string) => formatBookingSlotDate(value, 'HH:mm');
+const slotMoment = (value: Date | string) => parseScheduleDatetime(value);
 
 export function RescheduleCourtDialog({
   detail,
@@ -66,7 +64,7 @@ export function RescheduleCourtDialog({
   const sportLabel = courtSport === 'TENNIS' ? 'tenis' : 'padel';
   const [calendarOpen, setCalendarOpen] = useState(false);
   const initialDateKey = detail.slot?.startAt
-    ? formatBookingDate(detail.slot.startAt, 'YYYY-MM-DD')
+    ? formatBookingSlotDate(detail.slot.startAt, 'YYYY-MM-DD')
     : dayjs().tz('Asia/Jakarta').format('YYYY-MM-DD');
   const defaultDate = useMemo(() => new Date(`${initialDateKey}T00:00:00`), [initialDateKey]);
   const [selectedDate, setSelectedDate] = useState(defaultDate);
@@ -90,7 +88,7 @@ export function RescheduleCourtDialog({
       if (
         !courtId ||
         !allowedIds.has(courtId) ||
-        formatBookingDate(slot.startAt, 'YYYY-MM-DD') !== selectedDateString
+        formatBookingSlotDate(slot.startAt, 'YYYY-MM-DD') !== selectedDateString
       )
         continue;
       if (!map.has(courtId)) map.set(courtId, []);
@@ -211,7 +209,7 @@ export function RescheduleCourtDialog({
                 </p>
                 <p className="text-muted-foreground text-xs tabular-nums">
                   {detail.slot
-                    ? `${formatBookingDate(detail.slot.startAt, 'DD MMM YYYY')} · ${time(detail.slot.startAt)}–${time(detail.slot.endAt)} WIB`
+                    ? `${formatBookingSlotDate(detail.slot.startAt, 'DD MMM YYYY')} · ${time(detail.slot.startAt)}–${time(detail.slot.endAt)} WIB`
                     : '-'}
                 </p>
               </div>

@@ -11,7 +11,11 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog';
-import { bookingScheduleInJakarta, formatBookingDate } from '@/lib/booking-display';
+import {
+  bookingScheduleInJakarta,
+  formatBookingDate,
+  formatBookingSlotDate
+} from '@/lib/booking-display';
 import { BOOKING_STATUS_BADGE_VARIANT, BookingStatus } from '@/lib/constants';
 import { cn, formatPhone } from '@/lib/utils';
 import type { Booking } from '@/types/model';
@@ -112,7 +116,7 @@ export default function BookingStatusDialog({
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                       <p className="text-sm font-medium">{court.name}</p>
                       <p className="text-muted-foreground text-xs">
-                        {formatBookingDate(date.date, 'DD MMM YYYY')}
+                        {formatBookingSlotDate(date.date, 'DD MMM YYYY')}
                       </p>
                     </div>
                     {court.ranges.map((range) => (

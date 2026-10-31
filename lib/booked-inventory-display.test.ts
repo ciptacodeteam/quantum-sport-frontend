@@ -2,13 +2,13 @@ import { expect, it } from 'vitest';
 import type { AdminBookedInventoryListItem } from '@/queries/admin/bookedInventory';
 import { hasAmount, hasText, itemSchedules, scheduleTime } from './booked-inventory-display';
 const slot = (hour: number) => ({
-  startAt: `2040-01-05T0${hour}:00:00Z`,
-  endAt: `2040-01-05T0${hour + 1}:00:00Z`,
+  startAt: `2040-01-05T${String(hour).padStart(2, '0')}:00:00Z`,
+  endAt: `2040-01-05T${String(hour + 1).padStart(2, '0')}:00:00Z`,
   court: { id: 'court', name: 'Padel 1' }
 });
 const item = {
-  booking: { courtSlots: [slot(2), slot(3)] },
-  slot: slot(3)
+  booking: { courtSlots: [slot(9), slot(10)] },
+  slot: slot(10)
 } as unknown as AdminBookedInventoryListItem;
 it('shows the specific inventory session instead of repeating the first booking slot', () => {
   const schedules = itemSchedules(item);
@@ -17,7 +17,7 @@ it('shows the specific inventory session instead of repeating the first booking 
   expect(schedules[0].court).toBe('Padel 1');
 });
 it('infers the service court only from overlapping sessions', () => {
-  const schedules = itemSchedules({ ...item, slot: { ...slot(3), court: null } });
+  const schedules = itemSchedules({ ...item, slot: { ...slot(10), court: null } });
   expect(schedules[0].court).toBe('Padel 1');
   expect(scheduleTime(schedules[0])).toBe('10:00–11:00 WIB');
 });
@@ -26,7 +26,7 @@ it('keeps legacy nested schedules and omits missing or invalid schedules', () =>
     ...item,
     slot: null,
     booking: { ...item.booking, courtSlots: [] },
-    courtSlots: [{ court: { id: 'court', name: 'Padel 1' }, slot: slot(2) }]
+    courtSlots: [{ court: { id: 'court', name: 'Padel 1' }, slot: slot(9) }]
   };
   expect(scheduleTime(itemSchedules(legacy)[0])).toBe('09:00–10:00 WIB');
   expect(
