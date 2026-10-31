@@ -3,8 +3,7 @@ import type { Metadata } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import '@/styles/globals.css';
 import { cn } from '@/lib/utils';
-
-import Script from 'next/script';
+import seoShareImage from '@/assets/img/imagebp.png';
 
 const jakarta = Plus_Jakarta_Sans({
   variable: '--font-jakarta',
@@ -12,57 +11,86 @@ const jakarta = Plus_Jakarta_Sans({
   display: 'swap'
 });
 
+// SEO utama website: ubah title, description, dan keywords di bagian ini.
+const seoTitle = 'Black Padel | Booking Online Jadi Lebih Gampang Melalui Website';
+const seoDescription =
+  'Temukan pengalaman bermain padel yang menyenangkan bersama Black Padel. Hadir di 2 cabang di Medan, dengan kemudahan memilih jadwal dan booking lapangan secara online.';
+// Domain mengikuti canonical website yang sudah digunakan sebelumnya.
+const siteUrl = 'https://quantumsocialclub.id';
+const shareImage = new URL(seoShareImage.src, siteUrl).toString();
+
 export const metadata: Metadata = {
-  title: 'Quantum Sport & Social Club - Booking Lapangan Online Mudah, Cepat & Terpercaya',
-  description:
-    'Booking lapangan olahraga kini lebih praktis di Quantum Sport. Cek jadwal, pilih lapangan, dan pesan secara online dalam hitungan detik. Mudah, cepat, aman, dan tanpa ribet!',
-
+  metadataBase: new URL(siteUrl),
+  applicationName: 'Black Padel',
+  title: seoTitle,
+  description: seoDescription,
   keywords: [
-    'pxdl',
-    'komunitas padel',
-    'quantum padel',
-    'lapngan quantum',
-    'Quantum social club',
-    'padel medan',
-    'padel',
-    'booking lapangan padel',
-    'lapangan tennis',
+    'black padel',
+    'blackpadel',
+    'black padel medan',
     'lapangan padel medan',
-    'lapangan padel',
-    'booking lapangan online',
-    'sewa lapangan olahraga',
-    'booking badminton online',
-    'Quantum Sport',
-    'lapangan olahraga terdekat',
-    'booking lapangan cepat'
+    'booking padel medan',
+    'sewa lapangan padel medan',
+    'padel medan',
+    'booking lapangan padel',
+    'tempat main padel medan',
+    'booking padel online'
   ],
-
-  alternates: {
-    canonical: 'https://quantumsocialclub.id/'
-  },
-
+  alternates: { canonical: `${siteUrl}/` },
   openGraph: {
-    title: 'Quantum Sport & Social Club - Booking Lapangan Online Mudah, Cepat & Terpercaya',
-    description:
-      'Pesan lapangan olahraga favoritmu secara online dengan mudah, cepat, dan aman hanya di Quantum Sport.',
-    url: 'https://quantumsocialclub.id/',
-    siteName: 'Quantum Sport and Social Club',
+    title: seoTitle,
+    description: seoDescription,
+    url: `${siteUrl}/`,
+    siteName: 'Black Padel',
     images: [
       {
-        url: 'https://quantumsocialclub.id/assets/img/og-image.webp',
-        width: 1200,
-        height: 1200,
-        alt: 'Quantum Sport - Booking Lapangan Online'
+        url: shareImage,
+        width: seoShareImage.width,
+        height: seoShareImage.height,
+        alt: 'Black Padel — Booking Lapangan Padel di Medan'
       }
     ],
     locale: 'id_ID',
     type: 'website'
   },
-
+  twitter: {
+    card: 'summary_large_image',
+    title: seoTitle,
+    description: seoDescription,
+    images: [shareImage]
+  },
   icons: {
     icon: '/favicon.ico',
     apple: '/apple-touch-icon.png'
   }
+};
+
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': `${siteUrl}/#organization`,
+      name: 'Black Padel',
+      description: seoDescription,
+      url: `${siteUrl}/`,
+      areaServed: { '@type': 'City', name: 'Medan' },
+      potentialAction: {
+        '@type': 'ReserveAction',
+        target: { '@type': 'EntryPoint', urlTemplate: `${siteUrl}/booking` },
+        result: { '@type': 'Reservation', name: 'Booking Lapangan Padel' }
+      }
+    },
+    {
+      '@type': 'WebSite',
+      '@id': `${siteUrl}/#website`,
+      name: 'Black Padel',
+      url: `${siteUrl}/`,
+      description: seoDescription,
+      inLanguage: 'id-ID',
+      publisher: { '@id': `${siteUrl}/#organization` }
+    }
+  ]
 };
 
 export default function RootLayout({
@@ -75,53 +103,11 @@ export default function RootLayout({
       <body className={cn('font-sans antialiased', jakarta.variable)}>
         <AppProvider>{children}</AppProvider>
 
-        {/* ✅ JSON-LD Structured Data */}
-        <Script
-          id="json-ld-quantum-sport"
+        <script
+          id="json-ld-black-padel"
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              '@context': 'https://schema.org',
-              '@type': 'SportsActivityLocation',
-              name: 'Quantum Sport & Social Club',
-              description:
-                'Fasilitas olahraga untuk booking lapangan secara online dengan mudah, cepat, dan aman.',
-              url: 'https://quantumsocialclub.id/',
-              image: 'https://quantumsocialclub.id/assets/img/og-image.webp',
-              logo: 'https://quantumsocialclub.id/assets/img/og-image.webp',
-              address: {
-                '@type': 'PostalAddress',
-                addressCountry: 'ID',
-                addressRegion: 'Indonesia'
-              },
-              openingHoursSpecification: [
-                {
-                  '@type': 'OpeningHoursSpecification',
-                  dayOfWeek: [
-                    'Monday',
-                    'Tuesday',
-                    'Wednesday',
-                    'Thursday',
-                    'Friday',
-                    'Saturday',
-                    'Sunday'
-                  ],
-                  opens: '06:00',
-                  closes: '00:00'
-                }
-              ],
-              potentialAction: {
-                '@type': 'ReserveAction',
-                target: {
-                  '@type': 'EntryPoint',
-                  urlTemplate: 'https://quantumsocialclub.id/booking'
-                },
-                result: {
-                  '@type': 'Reservation',
-                  name: 'Booking Lapangan Olahraga'
-                }
-              }
-            })
+            __html: JSON.stringify(structuredData).replace(/</g, '\\u003c')
           }}
         />
       </body>
