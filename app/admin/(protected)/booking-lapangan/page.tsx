@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useMembershipDiscount } from '@/hooks/useMembershipDiscount';
 import { isTimeAllowedForMembershipType, type MembershipType } from '@/lib/membership-hours';
 import { formatSlotTime } from '@/lib/time-utils';
+import { currentAdminBookingDate, jakartaCalendarDate } from '@/lib/admin-booking-date';
 import { cn } from '@/lib/utils';
 import { adminCourtCostingQueryOptions } from '@/queries/admin/court';
 import type { CustomerSearchResult } from '@/queries/admin/customer';
@@ -50,10 +51,6 @@ const getDateStringFromISO = (isoString: string): string => {
   // Always extract the raw calendar date part to avoid implicit timezone conversion.
   // Supports: "YYYY-MM-DDTHH:mm:ss..." and "YYYY-MM-DD HH:mm:ss".
   return isoString.slice(0, 10);
-};
-
-const startOfDay = (date: Date | string): Date => {
-  return dayjs(date).startOf('day').toDate();
 };
 
 const isSameDay = (date1: Date | string, date2: Date | string): boolean => {
@@ -124,7 +121,10 @@ export default function BookingLapangan() {
     walkInPhone: storeWalkInPhone
   } = useBookingStore();
 
-  const [localSelectedDate, setLocalSelectedDate] = useState<Date>(selectedDate);
+  const [localSelectedDate, setLocalSelectedDate] = useState<Date>(() =>
+    currentAdminBookingDate(selectedDate)
+  );
+  const today = jakartaCalendarDate();
   const [selectedTimeSlots, setSelectedTimeSlots] = useState<string[]>([]);
   const [selectedCourt, setSelectedCourt] = useState<string | null>(null);
   const [localCustomerId, setLocalCustomerId] = useState<string>(selectedCustomerId ?? '');
@@ -158,19 +158,16 @@ export default function BookingLapangan() {
     return activeMembership.membership.type ?? 'ALL_HOUR';
   }, [courtSport, selectedCustomer]);
 
-  // Fetch slots for the selected date
-  // Include next day's 00:00 slot (which is actually the end of the current day in Jakarta time)
+  // Slot API bounds use Jakarta wall components, matching the selected calendar day.
   const selectedDateString = formatDateString(localSelectedDate);
   const slotQueryParams = useMemo(() => {
-    const start = startOfDay(localSelectedDate);
-    const end = startOfDay(addDays(localSelectedDate, 1));
     return {
-      startAt: start.toISOString(),
-      endAt: end.toISOString(),
+      startAt: `${selectedDateString}T00:00:00.000Z`,
+      endAt: `${selectedDateString}T23:59:59.999Z`,
       includeUnavailable: 'true',
       courtSport
     };
-  }, [localSelectedDate, courtSport]);
+  }, [selectedDateString, courtSport]);
 
   const { data: slotsData, isLoading: isSlotsLoading } = useQuery(
     // courtsSlotsQueryOptions(slotQueryParams)
@@ -420,10 +417,28 @@ export default function BookingLapangan() {
     })
   );
 
-  // Sync with store when component mounts
+  // Revalidate persisted dates on mount and after session storage hydrates.
   useEffect(() => {
-    setLocalSelectedDate(selectedDate);
-  }, [selectedDate]);
+    const date = currentAdminBookingDate(selectedDate);
+    setLocalSelectedDate(date);
+    setSelectedTimeSlots([]);
+    if (!(selectedDate instanceof Date) || +date !== +selectedDate) setStoreDate(date);
+  }, [selectedDate, setStoreDate]);
+
+  useEffect(() => {
+    const refreshDate = () => {
+      if (document.visibilityState === 'hidden') return;
+      const saved = useBookingStore.getState().selectedDate;
+      const date = currentAdminBookingDate(saved);
+      if (!(saved instanceof Date) || +date !== +saved) setStoreDate(date);
+    };
+    window.addEventListener('focus', refreshDate);
+    document.addEventListener('visibilitychange', refreshDate);
+    return () => {
+      window.removeEventListener('focus', refreshDate);
+      document.removeEventListener('visibilitychange', refreshDate);
+    };
+  }, [setStoreDate]);
 
   useEffect(() => {
     setSelectedTimeSlots((prev) =>
@@ -461,7 +476,6 @@ export default function BookingLapangan() {
     const start = startOfWeek(localSelectedDate);
     return Array.from({ length: 14 }, (_, i) => {
       const date = addDays(start, i);
-      const today = new Date();
       return {
         date: date,
         day: formatDate(date, 'ddd'),
@@ -826,10 +840,11 @@ export default function BookingLapangan() {
                 onSelect={(date) => {
                   if (date) {
                     setLocalSelectedDate(date);
+                    setStoreDate(date);
                     setCalendarOpen(false);
                   }
                 }}
-                disabled={(date) => isBefore(date, new Date(), 'day')}
+                disabled={(date) => isBefore(date, today, 'day')}
                 autoFocus
               />
             </PopoverContent>
@@ -850,8 +865,11 @@ export default function BookingLapangan() {
                     dateInfo.isToday && 'border-primary border-2'
                   )}
                   aria-pressed={isSameDay(localSelectedDate, dateInfo.date)}
-                  onClick={() => setLocalSelectedDate(dateInfo.date)}
-                  disabled={isBefore(dateInfo.date, new Date(), 'day')}
+                  onClick={() => {
+                    setLocalSelectedDate(dateInfo.date);
+                    setStoreDate(dateInfo.date);
+                  }}
+                  disabled={isBefore(dateInfo.date, today, 'day')}
                 >
                   <span className="text-xs leading-tight font-medium">{dateInfo.day}</span>
                   <span className="text-lg leading-none font-bold">{dateInfo.dayNumber}</span>
