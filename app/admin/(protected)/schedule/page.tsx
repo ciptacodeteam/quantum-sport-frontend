@@ -28,7 +28,10 @@ import {
   BookingStatus,
   getCoachTypeLabel
 } from '@/lib/constants';
-import { formatSlotTime } from '@/lib/time-utils';
+import {
+  parseScheduleDatetime as parseDatetime,
+  formatScheduleSlotTime as formatSlotTime
+} from '@/lib/admin-schedule-time';
 import { formatPhone } from '@/lib/utils';
 import { adminScheduleQueryOptions } from '@/queries/admin/booking';
 import { adminCourtsQueryOptions, adminCourtsWithSlotsQueryOptions } from '@/queries/admin/court';
@@ -62,25 +65,9 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.extend(isBetween);
 
-// Helper to parse datetime string - handles both ISO format and space-separated format
-const parseDatetime = (value: string | Date): dayjs.Dayjs => {
-  if (value instanceof Date) {
-    return dayjs(value);
-  }
-
-  // Check if it's space-separated format "YYYY-MM-DD HH:mm:ss"
-  if (typeof value === 'string' && value.includes(' ') && !value.includes('T')) {
-    // Parse as "YYYY-MM-DD HH:mm:ss" format
-    return dayjs(value, 'YYYY-MM-DD HH:mm:ss');
-  }
-
-  // Otherwise parse as ISO or standard format
-  return dayjs(value);
-};
-
 // Helper to format date as YYYY-MM-DD
 const formatDateString = (date: Date | string): string => {
-  return parseDatetime(date).format('YYYY-MM-DD');
+  return dayjs(date).format('YYYY-MM-DD');
 };
 
 // Helper to extract date from ISO string or Date object
@@ -249,7 +236,7 @@ interface BookingCell {
 }
 
 export default function SchedulePage() {
-  const today = new Date();
+  const today = new Date(dayjs().tz('Asia/Jakarta').format('YYYY-MM-DD') + 'T00:00:00');
   today.setHours(0, 0, 0, 0);
 
   const [selectedDate, setSelectedDate] = useState<Date>(today);
