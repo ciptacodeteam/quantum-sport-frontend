@@ -103,6 +103,30 @@ beforeEach(() => {
   };
 });
 afterEach(cleanup);
+it.each([
+  ['2026-10-31T19:00:00.000Z', '2026-10-31T20:00:00.000Z', '19:00–20:00'],
+  ['2026-10-31T23:00:00.000Z', '2026-11-01T00:00:00.000Z', '23:00–00:00']
+])(
+  'keeps slot wall time %s on October 31 while converting booking creation to WIB',
+  (startAt, endAt, range) => {
+    mocks.data.rows = [
+      {
+        ...row,
+        startAt,
+        endAt,
+        createdAt: '2026-10-14T04:55:00.000Z',
+        band: 'peakHour'
+      }
+    ];
+    render(<CourtPerformancePage />);
+    const cells = within(screen.getByText('Andi').closest('tr')!).getAllByRole('cell');
+    expect(cells[1]).toHaveTextContent('31 Okt 2026');
+    expect(cells[1]).toHaveTextContent(`${range} WIB · Peak`);
+    expect(cells[1]).not.toHaveTextContent('1 Nov 2026');
+    expect(cells[7]).toHaveTextContent('14 Okt 2026');
+    expect(cells[7]).toHaveTextContent(/11[.:]55 WIB/);
+  }
+);
 it('shows capacity, occupancy and separate payment/package valuation without a native calendar', () => {
   render(<CourtPerformancePage />);
   expect(screen.getByText('50%')).toBeInTheDocument();

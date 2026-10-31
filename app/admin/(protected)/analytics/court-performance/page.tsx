@@ -8,6 +8,7 @@ import type { DateRange } from 'react-day-picker';
 import { Download, Clock3, Users, CalendarDays, Banknote, ArrowDown, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { adminApi } from '@/lib/adminApi';
+import { formatScheduleSlotTime } from '@/lib/admin-schedule-time';
 import { useBranchStore } from '@/stores/useBranchStore';
 import useAuthStore from '@/stores/useAuthStore';
 import DateRangeInput from '@/components/ui/date-range-input';
@@ -32,13 +33,6 @@ const localDate = (v: string, time = false) =>
     month: 'short',
     year: 'numeric',
     ...(time ? { hour: '2-digit', minute: '2-digit' } : {})
-  }).format(new Date(v));
-const clock = (v: string) =>
-  new Intl.DateTimeFormat('id-ID', {
-    timeZone: 'Asia/Jakarta',
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23'
   }).format(new Date(v));
 const th = 'px-5 py-3 text-left text-sm font-medium whitespace-nowrap';
 const td = 'px-5 py-4 text-sm';
@@ -627,9 +621,10 @@ function CourtPerformanceContent({ branch }: { branch: string | null | undefined
                         )}
                       </td>
                       <td className={`${td} whitespace-nowrap`}>
-                        {localDate(r.startAt)}
+                        {formatScheduleSlotTime(r.startAt, 'D MMM YYYY')}
                         <p className="text-muted-foreground mt-1 text-xs">
-                          {clock(r.startAt)}–{clock(r.endAt)} WIB ·{' '}
+                          {formatScheduleSlotTime(r.startAt)}–{formatScheduleSlotTime(r.endAt)} WIB
+                          ·{' '}
                           {r.band === 'peakHour'
                             ? 'Peak'
                             : r.band === 'happyHour'
