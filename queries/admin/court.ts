@@ -7,7 +7,6 @@ import {
 } from '@/api/admin/court';
 import type { Court, Slot } from '@/types/model';
 import { queryOptions } from '@tanstack/react-query';
-import dayjs from '@/lib/dayjs';
 import type { SearchParamsData } from '@/types';
 
 export const adminCourtsQueryOptions = (queryParams?: SearchParamsData) =>
@@ -48,10 +47,9 @@ export const adminCourtsWithSlotsQueryOptions = (
   queryOptions({
     queryKey: ['admin', 'courts', 'slots', date, courtId, courtSport, includeUnavailable],
     queryFn: async () => {
-      // Get the full playing day so configurable tariff bands can include midnight hours
-      // API expects ISO format: 2025-01-20T08:00:00
-      const startAt = dayjs.tz(date, 'Asia/Jakarta').startOf('day').toISOString();
-      const endAt = dayjs.tz(date, 'Asia/Jakarta').endOf('day').toISOString();
+      // Wall-clock day bounds (slots are stored as Jakarta wall in timestamp w/o tz)
+      const startAt = `${date}T00:00:00.000Z`;
+      const endAt = `${date}T23:59:59.999Z`;
 
       // First, fetch all courts (don't filter by availability)
       const courtsResponse = await getCourtsApi(courtSport ? { courtSport } : undefined);
