@@ -10,7 +10,7 @@ import SavedCardSelector from '@/components/forms/payment/SavedCardSelector';
 import CreditCardForm, { type CreditCardFormData } from '@/components/forms/payment/CreditCardForm';
 import { useMembershipDiscount } from '@/hooks/useMembershipDiscount';
 import { cheaperRegularRate } from '@/lib/membership-rate';
-import { getCardToken } from '@/lib/midtrans';
+import { getCardToken, getMidtransConfig, payWithSnap } from '@/lib/midtrans';
 import { cn, resolveMediaUrl } from '@/lib/utils';
 import { isCourtSlotBookable } from '@/lib/booking-time-policy';
 import { getCheckoutSelections } from '@/lib/checkout-selections';
@@ -161,9 +161,35 @@ export default function CheckoutPage() {
   }, []);
 
   const [isTokenizingCard, setTokenizingCard] = useState(false);
+  const [checkoutMode, setCheckoutMode] = useState<'snap' | 'core'>('snap');
   const cardPayTab = useRef<Window | null>(null);
   const confirm = useConfirm();
   const queryClient = useQueryClient();
+  const useSnapCheckout = checkoutMode === 'snap';
+
+  useEffect(() => {
+    void getMidtransConfig()
+      .then((config) => {
+        if (config.checkoutMode === 'core' || config.checkoutMode === 'snap') {
+          setCheckoutMode(config.checkoutMode);
+        }
+      })
+      .catch(() => undefined);
+  }, []);
+
+  const goToInvoice = useCallback(
+    (invoiceNumber?: string | null) => {
+      setNavigatingToPayment(true);
+      persistPaymentMethodId(null);
+      useBookingStore.getState().clearAll();
+      if (invoiceNumber) {
+        router.push(`/invoice/${invoiceNumber}`);
+        return;
+      }
+      router.push('/checkout/payment');
+    },
+    [persistPaymentMethodId, router]
+  );
 
   const checkoutMutation = useMutation(
     // eslint-disable-next-line react-hooks/refs -- The factory stores callbacks; the card tab ref is only accessed after checkout completes.
@@ -171,6 +197,24 @@ export default function CheckoutPage() {
       onSuccess: (data) => {
         void queryClient.invalidateQueries({ queryKey: ['memberships', 'my'] });
         void queryClient.invalidateQueries({ queryKey: ['courts', 'slots'] });
+        const invoiceNumber = data?.data?.invoiceNumber as string | undefined;
+        const snapToken = data?.data?.snapToken as string | undefined;
+
+        if (snapToken) {
+          cardPayTab.current?.close();
+          cardPayTab.current = null;
+          void payWithSnap(snapToken, {
+            onSuccess: () => goToInvoice(invoiceNumber),
+            onPending: () => goToInvoice(invoiceNumber),
+            onError: () => goToInvoice(invoiceNumber),
+            onClose: () => goToInvoice(invoiceNumber)
+          }).catch((err: Error) => {
+            toast.error(err.message || 'Gagal membuka pembayaran Snap');
+            goToInvoice(invoiceNumber);
+          });
+          return;
+        }
+
         const paymentUrl = data?.data?.paymentUrl;
         const needsCard3ds =
           selectedPaymentMethod?.channel === 'CARDS' &&
@@ -198,7 +242,6 @@ export default function CheckoutPage() {
         useBookingStore.getState().clearAll();
 
         // Redirect to invoice page using the invoice number from response
-        const invoiceNumber = data?.data?.invoiceNumber;
         if (invoiceNumber) {
           router.push(`/invoice/${invoiceNumber}`);
         } else {
@@ -483,8 +526,9 @@ export default function CheckoutPage() {
       return;
     }
 
-    // For CARDS channel, check if card is selected or new card data is provided
+    // For CARDS channel in Core mode, require card details (Snap handles cards itself)
     if (
+      !useSnapCheckout &&
       !isCoveredByMembership &&
       selectedPaymentMethod?.channel === 'CARDS' &&
       !selectedCard &&
@@ -494,6 +538,7 @@ export default function CheckoutPage() {
     }
 
     if (
+      !useSnapCheckout &&
       !isCoveredByMembership &&
       selectedPaymentMethod?.channel === 'CARDS' &&
       selectedCard &&
@@ -536,8 +581,12 @@ export default function CheckoutPage() {
       payload.courtSlots = courtSlots;
     }
 
-    // Add card payment data if CARDS channel
-    if (!isCoveredByMembership && selectedPaymentMethod?.channel === 'CARDS') {
+    // Add card payment data if CARDS channel (Core API only; Snap collects card in popup)
+    if (
+      !useSnapCheckout &&
+      !isCoveredByMembership &&
+      selectedPaymentMethod?.channel === 'CARDS'
+    ) {
       if (selectedCard) {
         // Use saved card
         payload.cardPayment = {
@@ -566,7 +615,10 @@ export default function CheckoutPage() {
     );
 
     const willTokenizeCard =
-      !isCoveredByMembership && selectedPaymentMethod?.channel === 'CARDS' && !!newCardData;
+      !useSnapCheckout &&
+      !isCoveredByMembership &&
+      selectedPaymentMethod?.channel === 'CARDS' &&
+      !!newCardData;
     if (willTokenizeCard) {
       cardPayTab.current?.close();
       cardPayTab.current = window.open('', '_blank');
@@ -605,7 +657,12 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (!isCoveredByMembership && selectedPaymentMethod?.channel === 'CARDS' && newCardData) {
+    if (
+      !useSnapCheckout &&
+      !isCoveredByMembership &&
+      selectedPaymentMethod?.channel === 'CARDS' &&
+      newCardData
+    ) {
       setTokenizingCard(true);
       try {
         const tokenId = await getCardToken({
@@ -645,8 +702,14 @@ export default function CheckoutPage() {
           isTokenizingCard ||
           (!isCoveredByMembership &&
             (!selectedPaymentMethod ||
-              (selectedPaymentMethod.channel === 'CARDS' && !selectedCard && !newCardData) ||
-              (selectedPaymentMethod.channel === 'CARDS' && !!selectedCard && !selectedCardCvv))))
+              (!useSnapCheckout &&
+                selectedPaymentMethod.channel === 'CARDS' &&
+                !selectedCard &&
+                !newCardData) ||
+              (!useSnapCheckout &&
+                selectedPaymentMethod.channel === 'CARDS' &&
+                !!selectedCard &&
+                !selectedCardCvv))))
       }
     >
       {isUserPending
@@ -659,7 +722,10 @@ export default function CheckoutPage() {
               ? 'Memproses...'
               : isCoveredByMembership
                 ? 'Konfirmasi booking'
-                : selectedPaymentMethod?.channel === 'CARDS' && !selectedCard && !newCardData
+                : !useSnapCheckout &&
+                    selectedPaymentMethod?.channel === 'CARDS' &&
+                    !selectedCard &&
+                    !newCardData
                   ? 'Pilih Kartu'
                   : selectedPaymentMethod
                     ? 'Bayar Sekarang'

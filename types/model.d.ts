@@ -750,6 +750,8 @@ export type CheckoutResponse = {
   paymentStatus: 'PENDING' | 'PAID' | 'REQUIRES_ACTION' | 'SUCCEEDED' | 'FAILED';
   paymentActions?: ThreeDSChallenge[];
   paymentUrl?: string;
+  snapToken?: string;
+  snapRedirectUrl?: string;
 };
 
 export type SaveCreditCardResponse = {

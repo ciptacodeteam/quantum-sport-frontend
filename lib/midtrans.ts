@@ -1,11 +1,32 @@
 import { api } from '@/lib/api';
 
-type MidtransConfig = { clientKey: string; sandbox: boolean };
+type MidtransConfig = {
+  clientKey: string;
+  sandbox: boolean;
+  checkoutMode?: 'snap' | 'core';
+  snapJsUrl?: string;
+};
+
 type TokenResponse = {
   token_id?: string;
   status_code?: string;
   status_message?: string;
   validation_messages?: string[];
+};
+
+type SnapResult = {
+  status_code?: string;
+  status_message?: string;
+  transaction_status?: string;
+  order_id?: string;
+  fraud_status?: string;
+};
+
+type SnapPayCallbacks = {
+  onSuccess?: (result: SnapResult) => void;
+  onPending?: (result: SnapResult) => void;
+  onError?: (result: SnapResult) => void;
+  onClose?: () => void;
 };
 
 declare global {
@@ -24,6 +45,9 @@ declare global {
         }
       ) => void;
       redirect: (redirectUrl: string, options?: { callbackUrl?: string }) => void;
+    };
+    snap?: {
+      pay: (token: string, options?: SnapPayCallbacks) => void;
     };
   }
 }
@@ -60,6 +84,43 @@ export async function loadMidtransScript() {
   script.setAttribute('data-client-key', config.clientKey);
   if (!window.MidtransNew3ds) throw new Error('Payment system is not ready');
   return config;
+}
+
+export async function loadSnapScript() {
+  const config = await getMidtransConfig();
+  if (!config?.clientKey) throw new Error('Payment config unavailable');
+  const snapJsUrl =
+    config.snapJsUrl ||
+    (config.sandbox
+      ? 'https://app.sandbox.midtrans.com/snap/snap.js'
+      : 'https://app.midtrans.com/snap/snap.js');
+
+  let script = document.getElementById('midtrans-snap-script') as HTMLScriptElement | null;
+  if (!script) {
+    script = document.querySelector(`script[src="${snapJsUrl}"]`);
+  }
+  if (!script) {
+    script = document.createElement('script');
+    script.id = 'midtrans-snap-script';
+    script.src = snapJsUrl;
+    script.setAttribute('data-client-key', config.clientKey);
+    await new Promise<void>((resolve, reject) => {
+      script!.onload = () => resolve();
+      script!.onerror = () => reject(new Error('Failed to load Snap payment'));
+      document.body.appendChild(script!);
+    });
+  } else {
+    script.id = 'midtrans-snap-script';
+    script.setAttribute('data-client-key', config.clientKey);
+  }
+  if (!window.snap?.pay) throw new Error('Snap payment is not ready');
+  return config;
+}
+
+export async function payWithSnap(token: string, callbacks: SnapPayCallbacks = {}) {
+  await loadSnapScript();
+  if (!window.snap?.pay) throw new Error('Snap payment is not ready');
+  window.snap.pay(token, callbacks);
 }
 
 export async function getCardToken(card: {

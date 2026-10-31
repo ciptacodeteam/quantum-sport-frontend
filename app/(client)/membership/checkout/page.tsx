@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn, resolveMediaUrl } from '@/lib/utils';
 import { membershipCheckoutMutationOptions } from '@/mutations/membership';
 import CreditCardForm, { type CreditCardFormData } from '@/components/forms/payment/CreditCardForm';
-import { getCardToken } from '@/lib/midtrans';
+import { getCardToken, getMidtransConfig, payWithSnap } from '@/lib/midtrans';
 import { membershipQueryOptions } from '@/queries/membership';
 import { paymentMethodsQueryOptions } from '@/queries/paymentMethod';
 import { profileQueryOptions } from '@/queries/profile';
@@ -44,6 +44,18 @@ export default function MembershipCheckoutPage() {
   const [cardDraft, setCardDraft] = useState<CreditCardFormData | null>(null);
   const [showCardForm, setShowCardForm] = useState(false);
   const [isTokenizingCard, setTokenizingCard] = useState(false);
+  const [checkoutMode, setCheckoutMode] = useState<'snap' | 'core'>('snap');
+  const useSnapCheckout = checkoutMode === 'snap';
+
+  useEffect(() => {
+    void getMidtransConfig()
+      .then((config) => {
+        if (config.checkoutMode === 'core' || config.checkoutMode === 'snap') {
+          setCheckoutMode(config.checkoutMode);
+        }
+      })
+      .catch(() => undefined);
+  }, []);
 
   const { data: user, isPending: isUserPending } = useQuery(profileQueryOptions);
   const { data: membership, isPending: isMembershipLoading } = useQuery({
@@ -120,9 +132,38 @@ export default function MembershipCheckoutPage() {
     }
   }, [isUserPending, isAuthenticated, openAuthModal]);
 
+  const goToInvoice = useCallback(
+    (invoiceNumber?: string | null) => {
+      sessionStorage.removeItem('membershipCheckoutId');
+      persistPaymentMethodId(null);
+      if (!invoiceNumber) return;
+      setNavigatingToPayment(true);
+      router.push(`/invoice/${invoiceNumber}`);
+    },
+    [persistPaymentMethodId, router]
+  );
+
   const checkoutMutation = useMutation(
     membershipCheckoutMutationOptions({
       onSuccess: (data) => {
+        const invoiceNumber = data?.data?.invoiceNumber as string | undefined;
+        const snapToken = data?.data?.snapToken as string | undefined;
+
+        if (snapToken) {
+          cardPayTab.current?.close();
+          cardPayTab.current = null;
+          void payWithSnap(snapToken, {
+            onSuccess: () => goToInvoice(invoiceNumber),
+            onPending: () => goToInvoice(invoiceNumber),
+            onError: () => goToInvoice(invoiceNumber),
+            onClose: () => goToInvoice(invoiceNumber)
+          }).catch((err: Error) => {
+            toast.error(err.message || 'Gagal membuka pembayaran Snap');
+            goToInvoice(invoiceNumber);
+          });
+          return;
+        }
+
         sessionStorage.removeItem('membershipCheckoutId');
         persistPaymentMethodId(null);
         const paymentUrl = data?.data?.paymentUrl;
@@ -145,7 +186,6 @@ export default function MembershipCheckoutPage() {
           cardPayTab.current?.close();
           cardPayTab.current = null;
         }
-        const invoiceNumber = data?.data?.invoiceNumber;
         if (invoiceNumber) {
           setNavigatingToPayment(true);
           router.push(`/invoice/${invoiceNumber}`);
@@ -205,7 +245,7 @@ export default function MembershipCheckoutPage() {
       return;
     }
 
-    if (selectedPaymentMethod.channel === 'CARDS') {
+    if (!useSnapCheckout && selectedPaymentMethod.channel === 'CARDS') {
       if (!cardDraft) {
         setShowCardForm(true);
         setPaymentModalOpen(true);
