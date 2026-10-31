@@ -25,11 +25,11 @@ const ManagePromoCodePage = () => {
   }
 
   return (
-    <main>
+    <main className="w-full min-w-0">
       <Section>
         <SectionHeader>
           <SectionTitle title="Kelola Promo Code" />
-          <SectionDescription description="Atur dan pantau kode promo Anda di sini." />
+          <SectionDescription description="Kelola kode promo, diskon, batas penggunaan, dan periode berlaku." />
         </SectionHeader>
         <SectionContent>
           <PromoCodeTable />

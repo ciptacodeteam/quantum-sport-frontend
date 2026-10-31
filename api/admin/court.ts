@@ -55,7 +55,7 @@ export async function deleteCourtApi(id: string) {
 }
 
 export async function createCourtCostApi(payload: CreateMutationPayload) {
-  const { data } = await adminApi.post('/court-costs', payload);
+  const { data } = await adminApi.put('/court-costs/rolling', payload);
   return data;
 }
 
@@ -90,6 +90,7 @@ export async function updateSlotPriceApi(
 }
 
 export type BulkUpdateCourtSlotPricingPayload = {
+  followRollingWindow?: boolean;
   fromDate: string;
   toDate: string;
   days: number[];
@@ -104,5 +105,18 @@ export async function bulkUpdateCourtSlotPricingApi(
   payload: BulkUpdateCourtSlotPricingPayload
 ) {
   const { data } = await adminApi.put(`/courts/${courtId}/slots/bulk-pricing`, payload);
+  return data;
+}
+
+export type BulkDisableCourtSlotsPayload = Omit<
+  BulkUpdateCourtSlotPricingPayload,
+  'price' | 'discountPrice'
+>;
+
+export async function bulkDisableCourtSlotsApi(
+  courtId: string,
+  payload: BulkDisableCourtSlotsPayload
+) {
+  const { data } = await adminApi.put(`/courts/${courtId}/slots/bulk-disable`, payload);
   return data;
 }

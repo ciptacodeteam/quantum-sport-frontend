@@ -48,7 +48,8 @@ api.interceptors.request.use(
     config.headers = config.headers ?? {};
 
     const branch = useBranchStore.getState().branch;
-    if (branch) config.headers['X-Branch-ID'] = branch.id;
+    if (branch && !/^\/memberships(?:\/|$)/.test(config.url ?? ''))
+      config.headers['X-Branch-ID'] = branch.id;
     const token = useAuthStore.getState().token;
 
     if (token) {

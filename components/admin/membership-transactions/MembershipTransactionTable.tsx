@@ -61,15 +61,15 @@ const formatDate = (date: Date | string): string => {
   return dayjs(date).format('DD MMM YYYY');
 };
 
-const MembershipTransactionTable = () => {
+const MembershipTransactionTable = ({ debtsOnly = false }: { debtsOnly?: boolean }) => {
   const [status, setStatus] = useState('all');
   const [sport, setSport] = useState<MembershipSportFilter>('all');
   const queryParams = useMemo(() => {
-    const params: Record<string, string> = {};
+    const params: Record<string, string> = { balance: debtsOnly ? 'negative' : 'nonnegative' };
     if (sport !== 'all') params.sport = sport;
-    if (status !== 'all') params.status = status;
+    if (!debtsOnly && status !== 'all') params.status = status;
     return params;
-  }, [sport, status]);
+  }, [sport, status, debtsOnly]);
   const query = useQuery(adminMembershipTransactionsQueryOptions(queryParams));
 
   const transactions = query.data ?? [];
@@ -153,7 +153,11 @@ const MembershipTransactionTable = () => {
           const row = info.row.original;
           return (
             <span
-              className="text-sm tabular-nums"
+              className={
+                row.remainingSessions < 0
+                  ? 'text-sm font-semibold text-red-600 tabular-nums'
+                  : 'text-sm tabular-nums'
+              }
               title={`Sisa masa berlaku ${row.remainingDuration} hari`}
             >
               {info.getValue()}
@@ -291,15 +295,32 @@ const MembershipTransactionTable = () => {
     );
   return (
     <div className="[&_thead]:bg-muted/50 min-w-0 space-y-4 [&_td]:px-3 [&_td]:py-2.5 [&_th]:px-3 [&_th]:text-xs">
+      {debtsOnly && (
+        <div className="bg-muted/30 rounded-xl border p-4 text-sm">
+          <p className="font-medium">
+            {transactions.length} paket dengan tunggakan ·{' '}
+            {transactions.reduce((sum, pack) => sum + Math.max(0, -pack.remainingSessions), 0)} jam
+            belum tertutup
+          </p>
+          <p className="text-muted-foreground mt-1">
+            Saldo bersama seluruh cabang. Tunggakan diperhitungkan otomatis saat pelanggan membeli
+            Value Pack baru untuk olahraga yang sama.
+          </p>
+        </div>
+      )}
       <DataTable
-        columns={columns}
+        columns={
+          debtsOnly
+            ? columns.filter((column) => column.id !== 'actions' && column.id !== 'amount')
+            : columns
+        }
         data={transactions}
         loading={query.isPending}
         enableRowSelection={false}
         getRowId={(item) => item.id}
         searchPlaceholder="Cari pelanggan, paket, atau invoice..."
         columnVisibilityLabel="Kolom"
-        columnVisibilityStorageKey="quantum:membership-transactions:columns"
+        columnVisibilityStorageKey={`quantum:membership-transactions:${debtsOnly ? 'debts' : 'sales'}:columns`}
         rightActions={
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-2">
@@ -321,29 +342,31 @@ const MembershipTransactionTable = () => {
                 </SelectContent>
               </Select>
             </div>
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger
-                className="h-9 w-48 rounded-lg shadow-none"
-                aria-label="Status Value Pack"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua status</SelectItem>
-                {[
-                  'Aktif',
-                  'Menunggu pembayaran',
-                  'Ditangguhkan',
-                  'Kedaluwarsa',
-                  'Sesi habis',
-                  'Dibatalkan'
-                ].map((value) => (
-                  <SelectItem key={value} value={value}>
-                    {value}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {!debtsOnly && (
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger
+                  className="h-9 w-48 rounded-lg shadow-none"
+                  aria-label="Status Value Pack"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua status</SelectItem>
+                  {[
+                    'Aktif',
+                    'Menunggu pembayaran',
+                    'Ditangguhkan',
+                    'Kedaluwarsa',
+                    'Sesi habis',
+                    'Dibatalkan'
+                  ].map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {value}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <Button
               variant="outline"
               size="sm"

@@ -21,16 +21,17 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Image from 'next/image';
 import { useState } from 'react';
+import { ImageIcon, Save, Upload } from 'lucide-react';
 import { Controller, type SubmitHandler, useForm } from 'react-hook-form';
 import z from 'zod';
 
 const formSchema = z.object({
-  name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
+  name: z.string().min(2, { message: 'Nama alat minimal 2 karakter.' }),
   description: z.string().optional(),
   image: z.file().optional(),
   sport: z.enum(['PADEL', 'TENNIS']),
-  price: z.number().min(0, { message: 'Price must be at least 0.' }),
-  quantity: z.number().min(0, { message: 'Quantity must be at least 0.' })
+  price: z.number().min(0, { message: 'Harga tidak boleh negatif.' }),
+  quantity: z.number().min(0, { message: 'Jumlah unit tidak boleh negatif.' })
 });
 
 type FormSchema = z.infer<typeof formSchema>;
@@ -51,6 +52,7 @@ const CreateInventoryForm = () => {
   const [imagePreview, setImagePreview] = useState<string | ArrayBuffer | null>(null);
 
   const { closeDialog } = useDialog();
+  const dialogId = 'create-inventory';
 
   const queryClient = useQueryClient();
 
@@ -71,33 +73,48 @@ const CreateInventoryForm = () => {
   };
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)}>
-      <FieldSet>
-        <FieldGroup>
+    <form onSubmit={form.handleSubmit(onSubmit)} className="min-w-0 space-y-5">
+      <FieldSet
+        className="grid min-w-0 gap-5 md:grid-cols-[220px_minmax(0,1fr)]"
+        disabled={isPending}
+      >
+        <section className="bg-muted/20 min-w-0 space-y-4 rounded-xl border p-4">
+          <div className="space-y-1">
+            <h3 className="text-sm font-semibold">Foto Alat</h3>
+            <p className="text-muted-foreground text-xs">
+              Foto untuk membantu mengenali inventori.
+            </p>
+          </div>
           <Field>
-            <FieldLabel htmlFor="image">Gambar</FieldLabel>
-            {imagePreview && (
-              <Image
-                src={String(imagePreview)}
-                unoptimized
-                alt="Preview inventory"
-                width={400}
-                height={300}
-                className="border-muted max-h-44 max-w-xs rounded-md border object-cover"
-              />
-            )}
+            <div className="bg-muted/40 flex aspect-[4/3] items-center justify-center overflow-hidden rounded-lg border">
+              {imagePreview ? (
+                <Image
+                  src={String(imagePreview)}
+                  unoptimized
+                  alt="Foto inventori"
+                  width={400}
+                  height={300}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="text-muted-foreground flex flex-col items-center gap-2">
+                  <ImageIcon className="size-8 opacity-50" />
+                  <span className="text-xs">Belum ada foto</span>
+                </div>
+              )}
+            </div>
             <Controller
               control={form.control}
               name="image"
               render={({ field }) => (
                 <Input
-                  id="image"
+                  id={`${dialogId}-image`}
+                  className="peer sr-only"
                   type="file"
                   accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
                     field.onChange(file);
-
                     if (file) {
                       const reader = new FileReader();
                       reader.onloadend = () => setImagePreview(reader.result);
@@ -109,84 +126,111 @@ const CreateInventoryForm = () => {
                 />
               )}
             />
+            <FieldLabel
+              htmlFor={`${dialogId}-image`}
+              className="peer-focus-visible:ring-ring hover:bg-muted/50 flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed p-3 text-sm peer-focus-visible:ring-2"
+            >
+              <Upload className="size-4" />
+              {imagePreview ? 'Ganti Foto' : 'Unggah Foto'}
+            </FieldLabel>
+            <p className="text-muted-foreground truncate text-xs">
+              {form.watch('image')?.name || 'Pilih file gambar dari perangkat.'}
+            </p>
             <FieldError>{form.formState.errors.image?.message}</FieldError>
           </Field>
-          <Field>
-            <FieldLabel htmlFor="name">Nama</FieldLabel>
-            <Input id="name" {...form.register('name')} placeholder="e.g. Raket" />
-            <FieldError>{form.formState.errors.name?.message}</FieldError>
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="sport">Kategori</FieldLabel>
-            <Controller
-              control={form.control}
-              name="sport"
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger id="sport" className="w-full">
-                    <SelectValue placeholder="Pilih kategori" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="PADEL">Padel</SelectItem>
-                    <SelectItem value="TENNIS">Tennis</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            <FieldError>{form.formState.errors.sport?.message}</FieldError>
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="description">Keterangan</FieldLabel>
-            <Textarea
-              id="description"
-              {...form.register('description')}
-              placeholder="e.g. Raket padel merk Yonex"
-            />
-            <FieldError>{form.formState.errors.description?.message}</FieldError>
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="quantity">Qty</FieldLabel>
-            <Input
-              type="number"
-              id="quantity"
-              {...form.register('quantity', { valueAsNumber: true })}
-              placeholder="e.g. 10"
-            />
-            <FieldError>{form.formState.errors.quantity?.message}</FieldError>
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="price">Harga</FieldLabel>
-            <Controller
-              control={form.control}
-              name="price"
-              render={({ field }) => (
-                <NumberInput
-                  id="price"
-                  thousandSeparator="."
-                  decimalSeparator=","
-                  prefix="Rp "
-                  withControl={false}
+        </section>
+        <section className="min-w-0 space-y-5 rounded-xl border p-4">
+          <div className="space-y-1 border-b pb-4">
+            <h3 className="text-sm font-semibold">Informasi Alat</h3>
+            <p className="text-muted-foreground text-xs">Nama, kategori, dan detail inventori.</p>
+          </div>
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="name">Nama Alat</FieldLabel>
+              <Input id="name" {...form.register('name')} placeholder="Contoh: Raket padel" />
+              <FieldError>{form.formState.errors.name?.message}</FieldError>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="sport">Kategori</FieldLabel>
+              <Controller
+                control={form.control}
+                name="sport"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger id="sport" className="w-full">
+                      <SelectValue placeholder="Pilih kategori" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PADEL">Padel</SelectItem>
+                      <SelectItem value="TENNIS">Tennis</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              <FieldError>{form.formState.errors.sport?.message}</FieldError>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="description">Keterangan</FieldLabel>
+              <Textarea
+                id="description"
+                className="min-h-24 resize-y"
+                {...form.register('description')}
+                placeholder="Tambahkan merek, spesifikasi, atau kondisi alat..."
+              />
+              <FieldError>{form.formState.errors.description?.message}</FieldError>
+            </Field>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <Field>
+                <FieldLabel htmlFor="quantity">Jumlah Unit</FieldLabel>
+                <Input
+                  type="number"
                   min={0}
-                  placeholder="e.g. Rp 100.000"
-                  value={field.value as number}
-                  onValueChange={field.onChange}
+                  step={1}
+                  id="quantity"
+                  {...form.register('quantity', { valueAsNumber: true })}
+                  placeholder="Contoh: 10"
                 />
-              )}
-            />
-            <FieldError>{form.formState.errors.price?.message}</FieldError>
-          </Field>
-          <Field className="mt-2 ml-auto w-fit">
-            <div className="flex items-center gap-4">
-              <Button type="button" variant="ghost" onClick={() => closeDialog('create-inventory')}>
-                Batal
-              </Button>
-              <Button type="submit" loading={isPending}>
-                Simpan
-              </Button>
+                <FieldError>{form.formState.errors.quantity?.message}</FieldError>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="price">Harga</FieldLabel>
+                <Controller
+                  control={form.control}
+                  name="price"
+                  render={({ field }) => (
+                    <NumberInput
+                      id="price"
+                      thousandSeparator="."
+                      decimalSeparator=","
+                      prefix="Rp "
+                      withControl={false}
+                      min={0}
+                      placeholder="Contoh: Rp 100.000"
+                      value={field.value as number}
+                      onValueChange={field.onChange}
+                    />
+                  )}
+                />
+                <FieldError>{form.formState.errors.price?.message}</FieldError>
+              </Field>
             </div>
-          </Field>
-        </FieldGroup>
+          </FieldGroup>
+        </section>
       </FieldSet>
+      <div className="flex flex-wrap items-center justify-end gap-3 border-t pt-5">
+        <Button
+          type="button"
+          variant="outline"
+          disabled={isPending}
+          onClick={() => closeDialog(dialogId)}
+        >
+          Batal
+        </Button>
+        <Button type="submit" loading={isPending}>
+          <Save />
+          Simpan Inventori
+        </Button>
+      </div>
     </form>
   );
 };

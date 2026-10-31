@@ -14,8 +14,7 @@ export default function BranchGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const requiresBranch =
-    /^\/(booking|membership|checkout)(\/|$)/.test(pathname) &&
-    pathname !== '/checkout/3ds-challenge';
+    /^\/(booking|checkout)(\/|$)/.test(pathname) && pathname !== '/checkout/3ds-challenge';
   const { branch, selectorOpen, pendingHref, setBranch, closeSelector } = useBranchStore();
   const [ready, setReady] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
@@ -124,7 +123,7 @@ export default function BranchGate({ children }: { children: ReactNode }) {
             <Dialog.Description className="mt-3 text-sm leading-relaxed text-black/55">
               {pendingBranch
                 ? 'Keranjang saat ini akan dikosongkan saat Anda pindah cabang. Booking yang sudah dibuat tetap tersimpan di riwayat.'
-                : 'Pilih lokasi bermain Anda untuk melanjutkan booking atau memilih Value Pack.'}
+                : 'Pilih lokasi bermain Anda untuk melanjutkan booking.'}
             </Dialog.Description>
             {pendingBranch ? (
               <div className="mt-7">

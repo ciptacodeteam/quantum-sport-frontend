@@ -1,5 +1,8 @@
 'use client';
 
+import { MembershipHoursDescription } from '@/components/booking/MembershipHoursDescription';
+
+import { getMembershipRenewalPreviewApi } from '@/api/membership';
 import PaymentLoading, { PaymentProcessingOverlay } from '@/components/invoice/PaymentLoading';
 import MainHeader from '@/components/headers/MainHeader';
 import { Button } from '@/components/ui/button';
@@ -15,7 +18,7 @@ import { profileQueryOptions } from '@/queries/profile';
 import useAuthModalStore from '@/stores/useAuthModalStore';
 import type { PaymentMethod } from '@/types/model';
 import { Check } from 'lucide-react';
-import { membershipTypeDescriptions, membershipTypeLabels } from '@/lib/membership-hours';
+import { membershipTypeLabels } from '@/lib/membership-hours';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -52,6 +55,13 @@ export default function MembershipCheckoutPage() {
   );
 
   const isAuthenticated = !!user?.id;
+  const renewalPreview = useQuery({
+    queryKey: ['memberships', 'renewal-preview', membershipId, user?.id],
+    queryFn: () => getMembershipRenewalPreviewApi(membershipId!),
+    enabled: !!membershipId && isAuthenticated,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true
+  });
   const openAuthModal = useAuthModalStore((state) => state.open);
 
   // Get membership ID from sessionStorage
@@ -257,10 +267,10 @@ export default function MembershipCheckoutPage() {
           : isTokenizingCard
             ? 'Memproses Kartu...'
             : checkoutMutation.isPending
-            ? 'Memproses...'
-            : selectedPaymentMethod
-              ? 'Bayar Sekarang'
-              : 'Pilih Metode'}
+              ? 'Memproses...'
+              : selectedPaymentMethod
+                ? 'Bayar Sekarang'
+                : 'Pilih Metode'}
     </Button>
   );
 
@@ -316,10 +326,54 @@ export default function MembershipCheckoutPage() {
                   </dd>
                 </div>
               </dl>
+              {isAuthenticated && (
+                <div
+                  className="mt-5 space-y-2 border-t border-black/15 pt-4 text-sm"
+                  aria-label="Kuota setelah pembelian"
+                >
+                  <p className="text-xs text-black/55">
+                    Setelah pembayaran berhasil, kuota paket baru melunasi saldo minus pada olahraga
+                    yang sama. Booking rutin admin berlanjut memakai paket baru.
+                  </p>
+                  {renewalPreview.data && (
+                    <dl className="space-y-2">
+                      <div className="flex justify-between gap-3">
+                        <dt>Kuota paket baru</dt>
+                        <dd>{renewalPreview.data.packageSessions} jam</dd>
+                      </div>
+                      <div className="flex justify-between gap-3">
+                        <dt>Pelunasan saldo minus</dt>
+                        <dd>−{renewalPreview.data.debtSessions} jam</dd>
+                      </div>
+                      <div className="flex justify-between gap-3 font-medium">
+                        <dt>Perkiraan sisa kuota</dt>
+                        <dd>{renewalPreview.data.remainingAfterPurchase} jam</dd>
+                      </div>
+                    </dl>
+                  )}
+                  {renewalPreview.isError && (
+                    <button
+                      type="button"
+                      className="text-xs underline"
+                      onClick={() => renewalPreview.refetch()}
+                    >
+                      Rincian kuota belum dimuat. Coba lagi
+                    </button>
+                  )}
+                  <p className="text-xs text-black/45">
+                    Saldo dihitung ulang saat pembayaran berhasil. Jika masih minus, booking mandiri
+                    tetap menggunakan harga reguler.
+                  </p>
+                </div>
+              )}
               {membership.type && (
                 <p className="mt-4 text-xs text-black/50">
                   {membershipTypeLabels[membership.type]} ·{' '}
-                  {membershipTypeDescriptions[membership.type]}
+                  <MembershipHoursDescription
+                    shared
+                    type={membership.type}
+                    sport={membership.sport}
+                  />
                 </p>
               )}
               {!!membership.benefits?.length && (
@@ -439,81 +493,81 @@ export default function MembershipCheckoutPage() {
               }}
             />
           ) : (
-          <div className="space-y-3">
-            {isLoadingPaymentMethods ? (
-              <div className="text-muted-foreground py-6 text-center text-sm">
-                Memuat metode pembayaran...
-              </div>
-            ) : paymentMethods.length === 0 ? (
-              <div className="text-muted-foreground py-6 text-center text-sm">
-                Tidak ada metode pembayaran tersedia
-              </div>
-            ) : (
-              paymentMethods.map((method) => {
-                const percentage = Number(method.percentage ?? 0);
-                const baseFee = Number.isFinite(method.fees) ? method.fees : 0;
-                const feesValue = Math.round(
-                  baseFee + ((membership?.price || 0) * percentage) / 100
-                );
-                const isSelected = selectedPaymentMethod?.id === method.id;
+            <div className="space-y-3">
+              {isLoadingPaymentMethods ? (
+                <div className="text-muted-foreground py-6 text-center text-sm">
+                  Memuat metode pembayaran...
+                </div>
+              ) : paymentMethods.length === 0 ? (
+                <div className="text-muted-foreground py-6 text-center text-sm">
+                  Tidak ada metode pembayaran tersedia
+                </div>
+              ) : (
+                paymentMethods.map((method) => {
+                  const percentage = Number(method.percentage ?? 0);
+                  const baseFee = Number.isFinite(method.fees) ? method.fees : 0;
+                  const feesValue = Math.round(
+                    baseFee + ((membership?.price || 0) * percentage) / 100
+                  );
+                  const isSelected = selectedPaymentMethod?.id === method.id;
 
-                return (
-                  <button
-                    key={method.id}
-                    aria-pressed={isSelected}
-                    onClick={() => handleSelectPaymentMethod(method)}
-                    className={cn(
-                      'flex w-full items-center justify-between gap-3 rounded-none border p-4 text-left transition-colors',
-                      isSelected
-                        ? 'border-[#ad422b] bg-[#ad422b]/5 shadow-none'
-                        : 'border-black/15 bg-white hover:border-black/30 hover:bg-black/5'
-                    )}
-                  >
-                    {/* Kiri: Logo + Nama */}
-                    <div className="flex min-w-0 items-center gap-3">
-                      {resolveMediaUrl(method.logo) ? (
-                        <Image
-                          src={resolveMediaUrl(method.logo)!}
-                          alt={method.name}
-                          width={48}
-                          height={48}
-                          className="h-12 w-12 shrink-0 rounded-none bg-white object-contain p-1"
-                          unoptimized
-                        />
-                      ) : (
-                        <div className="bg-muted text-muted-foreground flex h-12 w-12 shrink-0 items-center justify-center rounded-none text-sm font-semibold">
-                          {method.name.slice(0, 2).toUpperCase()}
-                        </div>
+                  return (
+                    <button
+                      key={method.id}
+                      aria-pressed={isSelected}
+                      onClick={() => handleSelectPaymentMethod(method)}
+                      className={cn(
+                        'flex w-full items-center justify-between gap-3 rounded-none border p-4 text-left transition-colors',
+                        isSelected
+                          ? 'border-[#ad422b] bg-[#ad422b]/5 shadow-none'
+                          : 'border-black/15 bg-white hover:border-black/30 hover:bg-black/5'
                       )}
-
-                      <div className="flex min-w-0 flex-col items-start">
-                        <p className="text-foreground text-sm leading-tight font-semibold">
-                          {method.name}
-                        </p>
-                        <p className="text-muted-foreground text-xs">
-                          Biaya {formatCurrency(feesValue)}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Kanan: Biaya dan Radio */}
-                    <div>
-                      <div
-                        className={cn(
-                          'mt-1 flex h-5 w-5 items-center justify-center rounded-full border transition-all',
-                          isSelected
-                            ? 'border-[#ad422b] bg-[#ad422b]'
-                            : 'bg-background border-black/15'
+                    >
+                      {/* Kiri: Logo + Nama */}
+                      <div className="flex min-w-0 items-center gap-3">
+                        {resolveMediaUrl(method.logo) ? (
+                          <Image
+                            src={resolveMediaUrl(method.logo)!}
+                            alt={method.name}
+                            width={48}
+                            height={48}
+                            className="h-12 w-12 shrink-0 rounded-none bg-white object-contain p-1"
+                            unoptimized
+                          />
+                        ) : (
+                          <div className="bg-muted text-muted-foreground flex h-12 w-12 shrink-0 items-center justify-center rounded-none text-sm font-semibold">
+                            {method.name.slice(0, 2).toUpperCase()}
+                          </div>
                         )}
-                      >
-                        {isSelected && <span className="h-2.5 w-2.5 rounded-full bg-white" />}
+
+                        <div className="flex min-w-0 flex-col items-start">
+                          <p className="text-foreground text-sm leading-tight font-semibold">
+                            {method.name}
+                          </p>
+                          <p className="text-muted-foreground text-xs">
+                            Biaya {formatCurrency(feesValue)}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  </button>
-                );
-              })
-            )}
-          </div>
+
+                      {/* Kanan: Biaya dan Radio */}
+                      <div>
+                        <div
+                          className={cn(
+                            'mt-1 flex h-5 w-5 items-center justify-center rounded-full border transition-all',
+                            isSelected
+                              ? 'border-[#ad422b] bg-[#ad422b]'
+                              : 'bg-background border-black/15'
+                          )}
+                        >
+                          {isSelected && <span className="h-2.5 w-2.5 rounded-full bg-white" />}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
           )}
         </DialogContent>
       </Dialog>

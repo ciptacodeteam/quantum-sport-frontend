@@ -1,5 +1,12 @@
 'use client';
 
+import { Repeat2 } from 'lucide-react';
+import { useTariffPeriods } from '@/hooks/useTariffPeriods';
+import { resolveTariffPeriod, tariffBand } from '@/lib/tariff-period';
+
+import RecurringBookingRules from '@/components/admin/booking/RecurringBookingRules';
+import RecurringBookingDialog from '@/components/admin/booking/RecurringBookingDialog';
+import { mergeBookingItems } from '@/lib/recurring-booking';
 import BookingSummary from '@/components/admin/booking/BookingSummary';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -96,6 +103,10 @@ export default function BookingLapangan() {
   const courtSportLabel = courtSport === 'TENNIS' ? 'Tennis' : 'Padel';
   const queryClient = useQueryClient();
   const {
+    useMembership,
+    setUseMembership,
+    recurringBooking,
+    setRecurringBooking,
     bookingItems,
     selectedDate,
     selectedCustomerId,
@@ -190,7 +201,10 @@ export default function BookingLapangan() {
     bookingItemsForDiscount,
     selectedCustomer ? { activeMembership: selectedCustomer.activeMembership } : null,
     false,
-    courtSport
+    courtSport,
+    recurringBooking ? true : useMembership,
+    undefined,
+    !!recurringBooking
   );
 
   // Update store with membership discount
@@ -331,19 +345,26 @@ export default function BookingLapangan() {
 
   // Generate standard time slots (06:00 to 23:00) to ensure all possible slots are shown
   // even if they're not in the API response (e.g., fully booked)
+  const { rules: tariffRules } = useTariffPeriods(true);
   const standardTimeSlots = useMemo(() => {
     const slots: string[] = [];
-    for (let hour = 6; hour <= 23; hour++) {
+    for (let hour = 0; hour <= 23; hour++) {
       slots.push(`${String(hour).padStart(2, '0')}:00`);
     }
     return slots;
   }, []);
   const allowedStandardTimeSlots = useMemo(
     () =>
-      standardTimeSlots.filter((timeSlot) =>
-        isTimeAllowedForMembershipType(activeMembershipType, timeSlot)
+      standardTimeSlots.filter(
+        (timeSlot) =>
+          tariffBand(timeSlot, resolveTariffPeriod(tariffRules, selectedDateString, courtSport)) &&
+          isTimeAllowedForMembershipType(activeMembershipType, timeSlot, {
+            rules: tariffRules,
+            date: selectedDateString,
+            sport: courtSport
+          })
       ),
-    [activeMembershipType, standardTimeSlots]
+    [activeMembershipType, standardTimeSlots, tariffRules, selectedDateString, courtSport]
   );
 
   // Get time slots filtered by selected court (if a court is selected)
@@ -384,8 +405,19 @@ export default function BookingLapangan() {
 
     // Convert to array and sort
     return Array.from(timeSet).sort((a, b) => a.localeCompare(b));
-  }, [slots, selectedDateString, selectedCourt, allowedStandardTimeSlots]).filter((timeSlot) =>
-    isTimeAllowedForMembershipType(activeMembershipType, timeSlot)
+  }, [
+    slots,
+    selectedDateString,
+    selectedCourt,
+    allowedStandardTimeSlots,
+    tariffRules,
+    courtSport
+  ]).filter((timeSlot) =>
+    isTimeAllowedForMembershipType(activeMembershipType, timeSlot, {
+      rules: tariffRules,
+      date: selectedDateString,
+      sport: courtSport
+    })
   );
 
   // Sync with store when component mounts
@@ -395,21 +427,34 @@ export default function BookingLapangan() {
 
   useEffect(() => {
     setSelectedTimeSlots((prev) =>
-      prev.filter((timeSlot) => isTimeAllowedForMembershipType(activeMembershipType, timeSlot))
+      prev.filter((timeSlot) =>
+        isTimeAllowedForMembershipType(activeMembershipType, timeSlot, {
+          rules: tariffRules,
+          date: selectedDateString,
+          sport: courtSport
+        })
+      )
     );
     setBookings((prev) =>
       prev.filter((booking) =>
-        isTimeAllowedForMembershipType(activeMembershipType, booking.timeSlot)
+        isTimeAllowedForMembershipType(activeMembershipType, booking.timeSlot, {
+          rules: tariffRules,
+          date: booking.date,
+          sport: courtSport
+        })
       )
     );
     setBookingItems(
-      useBookingStore
-        .getState()
-        .bookingItems.filter((item) =>
-          isTimeAllowedForMembershipType(activeMembershipType, item.timeSlot)
-        )
+      useBookingStore.getState().bookingItems.filter((item) =>
+        isTimeAllowedForMembershipType(activeMembershipType, item.timeSlot, {
+          rules: tariffRules,
+          date: item.date,
+          sport: item.sport ?? courtSport,
+          endAt: item.endAt ?? item.endTime
+        })
+      )
     );
-  }, [activeMembershipType, setBookingItems]);
+  }, [activeMembershipType, setBookingItems, tariffRules, courtSport]);
 
   // Get current week for horizontal scroll
   const getWeekDates = () => {
@@ -473,7 +518,7 @@ export default function BookingLapangan() {
 
     // Create new bookings with the current selected date
     const currentDateFormatted = formatDateString(localSelectedDate);
-    const newBookings = selectedSlots.map(({ slot, timeSlot }) => {
+    const newBookings = selectedSlots.map(({ slot }) => {
       // Use simple time format without timezone conversion
       const startTime = formatSlotTime(slot.startAt);
       const endTime = formatSlotTime(slot.endAt);
@@ -840,7 +885,7 @@ export default function BookingLapangan() {
                     </p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,240px),1fr))] gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                     {courts.map((court) => {
                       // Total slots is based on standard time slots (06:00-23:00)
                       const totalSlotsCount = allowedStandardTimeSlots.length;
@@ -1201,6 +1246,92 @@ export default function BookingLapangan() {
 
           {/* Booking Summary - Responsive */}
           <BookingSummary
+            recurringControls={
+              useMembership ? (
+                <section
+                  aria-label="Pengaturan booking rutin"
+                  className="border-primary/20 bg-primary/5 space-y-3 rounded-xl border p-4"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="bg-background text-primary flex size-9 shrink-0 items-center justify-center rounded-lg">
+                      <Repeat2 className="size-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-semibold">Booking rutin</h3>
+                      <p className="text-muted-foreground mt-0.5 text-xs">
+                        Jadwal mingguan dengan Value Pack
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground text-xs leading-relaxed">
+                    {!useMembership
+                      ? 'Pilih Pakai membership untuk mengaktifkan booking rutin.'
+                      : !localCustomerId
+                        ? 'Pilih pelanggan yang memiliki Value Pack, lalu tambahkan lapangan dan jam bermain.'
+                        : !membershipDiscount.activeMembership
+                          ? 'Fitur ini tersedia untuk pelanggan dengan Value Pack yang sesuai.'
+                          : !bookingItems.some(
+                                (item) =>
+                                  item.date === formatDateString(localSelectedDate) &&
+                                  item.sport === courtSport
+                              )
+                            ? 'Tambahkan lapangan dan jam pada tanggal terpilih untuk membuat jadwal rutin.'
+                            : `Ulangi lapangan dan jam dari tanggal ${formatDate(localSelectedDate, 'DD MMM YYYY')}.`}
+                  </p>
+                  <RecurringBookingDialog
+                    templates={bookingItems.filter(
+                      (item) =>
+                        item.date === formatDateString(localSelectedDate) &&
+                        item.sport === courtSport
+                    )}
+                    membershipEligible={
+                      useMembership &&
+                      !!membershipDiscount.activeMembership &&
+                      !membershipDiscount.activeMembership.isSuspended &&
+                      (membershipDiscount.activeMembership.membership.sport ?? 'PADEL') ===
+                        courtSport
+                    }
+                    startDate={formatDateString(localSelectedDate)}
+                    sport={courtSport}
+                    onApply={(items, rule) => {
+                      const merged = mergeBookingItems(bookingItems, items);
+                      setBookings(merged);
+                      setBookingItems(merged);
+                      setRecurringBooking(rule);
+                    }}
+                  />
+                  {recurringBooking && (
+                    <div className="bg-background space-y-2 rounded-lg border p-3 text-xs">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="lightSuccess">Siap diterapkan</Badge>
+                        <span className="font-medium">
+                          {recurringBooking.mode === 'ROLLING'
+                            ? 'Mengikuti rolling window'
+                            : recurringBooking.mode === 'DATES'
+                              ? `Sampai ${formatDate(recurringBooking.endDate!, 'DD MMM YYYY')}`
+                              : `${recurringBooking.months} bulan`}
+                        </span>
+                      </div>
+                      <p className="text-muted-foreground leading-relaxed">
+                        Booking dan invoice terpisah per tanggal dibuat saat checkout. Kuota
+                        dipotong saat slot dimulai (WIB).
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-2 text-xs"
+                        onClick={() => setRecurringBooking(null)}
+                      >
+                        Hapus aturan rutin
+                      </Button>
+                    </div>
+                  )}
+                  <div className="border-primary/10 border-t pt-2">
+                    <RecurringBookingRules />
+                  </div>
+                </section>
+              ) : undefined
+            }
             bookingItems={bookingItemsForDiscount}
             selectedCustomerId={localCustomerId || null}
             selectedCustomerName={storeCustomerName}
@@ -1234,6 +1365,8 @@ export default function BookingLapangan() {
             courtTotal={membershipDiscount.originalTotal}
             totalAmount={totalPrice}
             membershipDiscountDetails={membershipDiscount}
+            useMembership={recurringBooking ? true : useMembership}
+            onUseMembershipChange={recurringBooking ? undefined : setUseMembership}
             onBookingRemove={(courtId, timeSlot, date) => {
               // Find the booking index
               const bookingIndex = bookings.findIndex(

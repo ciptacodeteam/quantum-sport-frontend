@@ -1,11 +1,10 @@
+import { useTariffPeriods } from '@/hooks/useTariffPeriods';
+import { selectMembershipSlots } from '@/lib/membership-slot-selection';
 import { useQuery } from '@tanstack/react-query';
 import { adminCustomerMembershipQueryOptions } from '@/queries/admin/customer';
 import { myMembershipQueryOptions } from '@/queries/membership';
 import type { BookingItem } from '@/stores/useBookingStore';
-import {
-  isTimeAllowedForMembershipType,
-  type MembershipType
-} from '@/lib/membership-hours';
+import { isTimeAllowedForMembershipType, type MembershipType } from '@/lib/membership-hours';
 import { useMemo } from 'react';
 
 function parseTimeOnDate(date: string, time: string): Date | null {
@@ -66,6 +65,7 @@ export interface ActiveMembership {
     id: string;
     name: string;
     price: number;
+    sessions?: number;
     sport?: 'PADEL' | 'TENNIS';
     type?: MembershipType;
   };
@@ -73,12 +73,15 @@ export interface ActiveMembership {
 
 export interface MembershipDiscountResult {
   activeMembership: ActiveMembership | null;
+  deferredUsage?: boolean;
   canUseMembership: boolean;
   remainingSessions: number;
   slotsToDeduct: number;
   discountAmount: number;
   originalTotal: number;
   discountedTotal: number;
+  membershipSlotIds?: string[];
+  membershipSlotReasons?: Record<string, string>;
 }
 
 /**
@@ -95,8 +98,15 @@ export function useMembershipDiscount(
   membershipData?: { activeMembership: ActiveMembership | null } | null,
   isUser: boolean = false,
   courtSport?: 'PADEL' | 'TENNIS',
-  useMembership: boolean = true
+  useMembership: boolean = true,
+  requestedSlotIds?: string[] | null,
+  deferredUsage: boolean = false
 ): MembershipDiscountResult {
+  const {
+    rules: tariffRules,
+    isPending: isTariffLoading,
+    isError: isTariffError
+  } = useTariffPeriods(!isUser);
   // Fetch membership for current user if isUser is true
   const { data: userMembershipData } = useQuery({
     ...myMembershipQueryOptions,
@@ -114,12 +124,31 @@ export function useMembershipDiscount(
 
   return useMemo(() => {
     const activeMembership = activeMembershipData?.activeMembership ?? null;
+    if (requestedSlotIds !== undefined) {
+      return {
+        activeMembership,
+        remainingSessions: activeMembership?.remainingSessions ?? 0,
+        ...selectMembershipSlots(
+          bookingItems,
+          isTariffLoading || isTariffError ? null : activeMembership,
+          useMembership ? requestedSlotIds : [],
+          courtSport,
+          Date.now(),
+          tariffRules
+        )
+      };
+    }
     const membershipSport = activeMembership?.membership.sport ?? 'PADEL';
     const membershipType = activeMembership?.membership.type ?? 'ALL_HOUR';
     const bookingSport = courtSport ?? bookingItems[0]?.sport;
     const isMatchingSport = !bookingSport || membershipSport === bookingSport;
     const eligibleBookingItems = bookingItems.filter((booking) =>
-      isTimeAllowedForMembershipType(membershipType, booking.timeSlot)
+      isTimeAllowedForMembershipType(membershipType, booking.timeSlot, {
+        rules: tariffRules,
+        date: booking.date,
+        sport: booking.sport ?? courtSport,
+        endAt: booking.endAt ?? booking.endTime
+      })
     );
     const allBookingItemsEligible =
       bookingItems.length === 0 || eligibleBookingItems.length === bookingItems.length;
@@ -128,12 +157,14 @@ export function useMembershipDiscount(
     const canUseMembership =
       activeMembership &&
       useMembership &&
+      !isTariffLoading &&
+      !isTariffError &&
       !activeMembership.isExpired &&
       !activeMembership.isSuspended &&
       isMatchingSport &&
       allBookingItemsEligible &&
       sessionsToDeduct > 0 &&
-      remainingSessions >= sessionsToDeduct;
+      (deferredUsage || remainingSessions >= sessionsToDeduct);
 
     // Calculate original total
     const originalTotal = bookingItems.reduce((sum, booking) => {
@@ -158,10 +189,21 @@ export function useMembershipDiscount(
       activeMembership,
       canUseMembership: !!canUseMembership,
       remainingSessions,
+      deferredUsage,
       slotsToDeduct: sessionsToDeduct,
       discountAmount,
       originalTotal,
       discountedTotal
     };
-  }, [activeMembershipData, bookingItems, courtSport, useMembership]);
+  }, [
+    activeMembershipData,
+    bookingItems,
+    courtSport,
+    useMembership,
+    requestedSlotIds,
+    deferredUsage,
+    tariffRules,
+    isTariffLoading,
+    isTariffError
+  ]);
 }

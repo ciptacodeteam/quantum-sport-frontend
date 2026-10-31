@@ -25,11 +25,11 @@ const ManagePaymentMethodPage = () => {
   }
 
   return (
-    <main>
+    <main className="w-full min-w-0">
       <Section>
         <SectionHeader>
           <SectionTitle title="Kelola Metode Pembayaran" />
-          <SectionDescription description="Atur dan pantau metode pembayaran Anda di sini." />
+          <SectionDescription description="Kelola metode pembayaran, biaya layanan, dan status ketersediaannya." />
         </SectionHeader>
         <SectionContent>
           <PaymentMethodTable />

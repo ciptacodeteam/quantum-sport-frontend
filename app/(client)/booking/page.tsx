@@ -1,9 +1,14 @@
 'use client';
 
+import { useTariffPeriods } from '@/hooks/useTariffPeriods';
+import { resolveTariffPeriod, tariffBand } from '@/lib/tariff-period';
+
+import { getCourtBookingWindowApi } from '@/api/court';
 import MainHeader from '@/components/headers/MainHeader';
 import { Button } from '@/components/ui/button';
 import { DatePickerModal, DatePickerModalTrigger } from '@/components/ui/date-picker-modal';
 import { Separator } from '@/components/ui/separator';
+import { isCourtSlotBookable } from '@/lib/booking-time-policy';
 import { getCourtSlotLabel } from '@/lib/court-slot-status';
 import { formatSlotTime } from '@/lib/time-utils';
 import { isTimeAllowedForMembershipType, type MembershipType } from '@/lib/membership-hours';
@@ -24,32 +29,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { ArrowUpRight } from 'lucide-react';
 
-const timeSlots = [
-  // '00:00',
-  // '01:00',
-  // '02:00',
-  // '03:00',
-  // '04:00',
-  // '05:00',
-  '06:00',
-  '07:00',
-  '08:00',
-  '09:00',
-  '10:00',
-  '11:00',
-  '12:00',
-  '13:00',
-  '14:00',
-  '15:00',
-  '16:00',
-  '17:00',
-  '18:00',
-  '19:00',
-  '20:00',
-  '21:00',
-  '22:00',
-  '23:00'
-];
+const timeSlots = Array.from({ length: 24 }, (_, hour) => `${String(hour).padStart(2, '0')}:00`);
 
 type SelectedCell = {
   slotId: string;
@@ -123,6 +103,18 @@ export default function BookingPage() {
   );
   const selectedFullDate = activeDate?.fullDate ?? selectedDate;
 
+  const todayKey = currentTime.format('YYYY-MM-DD');
+  const windowQuery = useQuery({
+    queryKey: ['courts', 'booking-window', courtSport],
+    queryFn: () => getCourtBookingWindowApi(courtSport),
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true
+  });
+  const bookingWindow = windowQuery.data;
+  const windowEndKey = bookingWindow?.endDate ?? todayKey;
+  const withinWindow =
+    !!bookingWindow && selectedFullDate >= todayKey && selectedFullDate <= windowEndKey;
+
   const slotQueryParams = useMemo(
     () => ({
       startAt: dayjs(selectedFullDate).startOf('day').format('YYYY-MM-DD HH:mm:ss'),
@@ -140,6 +132,7 @@ export default function BookingPage() {
     refetch: refetchSlots
   } = useQuery({
     ...courtsSlotsQueryOptions(slotQueryParams),
+    enabled: withinWindow,
     refetchInterval: 60_000,
     refetchOnWindowFocus: true
   });
@@ -148,34 +141,50 @@ export default function BookingPage() {
     enabled: isAuthenticated
   });
 
+  const { rules: tariffRules } = useTariffPeriods(false);
   const slots = useMemo(() => slotsData ?? [], [slotsData]);
   const activeMembershipType = useMemo<MembershipType | null>(() => {
     const activeMembership = userMembershipData?.activeMembership;
-    if (!activeMembership || activeMembership.membership.sport !== courtSport) return null;
+    if (
+      !activeMembership ||
+      activeMembership.remainingSessions <= 0 ||
+      activeMembership.membership.sport !== courtSport
+    )
+      return null;
     return activeMembership.membership.type ?? 'ALL_HOUR';
   }, [courtSport, userMembershipData]);
 
   // Filter time slots to exclude past hours for today (client-only to match SSR)
   const availableTimeSlots = useMemo(() => {
-    if (!hasMounted) return timeSlots;
+    if (!hasMounted)
+      return timeSlots.filter((time) =>
+        tariffBand(time, resolveTariffPeriod(tariffRules, selectedFullDate, courtSport))
+      );
 
     const isToday = dayjs(selectedFullDate).isSame(currentTime, 'day');
     const membershipFilteredSlots = activeMembershipType
-      ? timeSlots.filter((time) => isTimeAllowedForMembershipType(activeMembershipType, time))
-      : timeSlots;
+      ? timeSlots.filter((time) =>
+          isTimeAllowedForMembershipType(activeMembershipType, time, {
+            rules: tariffRules,
+            date: selectedFullDate,
+            sport: courtSport
+          })
+        )
+      : timeSlots.filter((time) =>
+          tariffBand(time, resolveTariffPeriod(tariffRules, selectedFullDate, courtSport))
+        );
 
     if (!isToday) return membershipFilteredSlots;
 
-    const currentHour = currentTime.hour();
     return membershipFilteredSlots.filter((time) => {
-      const slotHour = parseInt(time.split(':')[0], 10);
-      return slotHour > currentHour;
+      const slotStart = dayjs.tz(`${selectedFullDate}T${time}:00`, 'Asia/Jakarta');
+      return isCourtSlotBookable(slotStart.valueOf(), currentTime.valueOf());
     });
-  }, [selectedFullDate, hasMounted, activeMembershipType, currentTime]);
+  }, [selectedFullDate, hasMounted, activeMembershipType, currentTime, tariffRules, courtSport]);
 
   useEffect(() => {
     const updateCurrentTime = () => setCurrentTime(nowJakarta());
-    const intervalId = window.setInterval(updateCurrentTime, 60_000);
+    const intervalId = window.setInterval(updateCurrentTime, 1000);
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') updateCurrentTime();
     };
@@ -201,7 +210,7 @@ export default function BookingPage() {
       Object.entries(previous).forEach(([dateKey, selections]) => {
         const validSelections = selections.filter((selection) => {
           const slotStart = dayjs.tz(`${selection.dateKey}T${selection.time}:00`, 'Asia/Jakarta');
-          const isValid = slotStart.isAfter(currentTime);
+          const isValid = isCourtSlotBookable(slotStart.valueOf(), currentTime.valueOf());
           if (!isValid) changed = true;
           return isValid;
         });
@@ -356,7 +365,11 @@ export default function BookingPage() {
         return (
           !!slot &&
           slot.isAvailable &&
-          isTimeAllowedForMembershipType(activeMembershipType, cell.time)
+          isTimeAllowedForMembershipType(activeMembershipType, cell.time, {
+            rules: tariffRules,
+            date: selectedFullDate,
+            sport: courtSport
+          })
         );
       });
 
@@ -372,7 +385,7 @@ export default function BookingPage() {
       }
       return next;
     });
-  }, [slotMap, selectedDate, activeMembershipType]);
+  }, [slotMap, selectedDate, activeMembershipType, tariffRules, courtSport]);
 
   // Sync deletions from CartSheet back to local selections
   useEffect(() => {
@@ -464,8 +477,9 @@ export default function BookingPage() {
   }, [selectionsByDate, selectedFullDate, setBookingItems, setBookingDate, bookingItems]);
 
   useEffect(() => {
-    const today = nowJakarta();
-    const endDate = today.add(3, 'month');
+    if (!bookingWindow) return;
+    const today = dayjs.tz(todayKey, 'Asia/Jakarta');
+    const endDate = dayjs.tz(windowEndKey, 'Asia/Jakarta');
     const updatedDates: {
       label: string;
       date: string;
@@ -485,11 +499,23 @@ export default function BookingPage() {
     }
 
     setDateList(updatedDates);
-  }, []);
+    setSelectedDate((previous) =>
+      previous < todayKey || previous > endDate.format('YYYY-MM-DD') ? todayKey : previous
+    );
+    setSelectionsByDate((previous) => {
+      const entries = Object.entries(previous).filter(
+        ([date]) => date >= todayKey && date <= windowEndKey
+      );
+      return entries.length === Object.keys(previous).length
+        ? previous
+        : Object.fromEntries(entries);
+    });
+  }, [bookingWindow, windowEndKey, todayKey]);
 
   const handleSelectDate = (date: Date | null) => {
     if (!date) return;
     const formattedDate = dayjs(date).format('YYYY-MM-DD');
+    if (!bookingWindow || formattedDate < todayKey || formattedDate > windowEndKey) return;
     setSelectedDate(formattedDate);
 
     const el = document.getElementById(`date-${formattedDate}`);
@@ -497,6 +523,19 @@ export default function BookingPage() {
   };
 
   const handleBooking = () => {
+    if (!bookingWindow || windowQuery.isError) {
+      toast.error('Batas jadwal belum dapat dimuat. Silakan coba kembali.');
+      return;
+    }
+    if (
+      bookingItems.some((item) => {
+        const date = normalizeDateKey(item.date);
+        return date < todayKey || date > windowEndKey;
+      })
+    ) {
+      toast.error('Ada pilihan di luar batas jadwal. Silakan pilih ulang slot yang tersedia.');
+      return;
+    }
     if (bookingItems.length === 0) {
       toast.error('Pilih minimal satu slot');
       return;
@@ -522,12 +561,15 @@ export default function BookingPage() {
                     value={dayjs(selectedDate).toDate()}
                     onChange={handleSelectDate}
                     label="Pilih tanggal bermain"
+                    minDate={dayjs(todayKey).toDate()}
+                    maxDate={dayjs(windowEndKey).toDate()}
                   >
                     <DatePickerModalTrigger>
                       <Button
                         variant="ghost"
                         size="icon-lg"
                         aria-label="Pilih tanggal pemesanan"
+                        disabled={!bookingWindow || windowQuery.isError}
                         className="rounded-none border border-black/15 bg-white p-2 text-black hover:bg-black/5"
                       >
                         <IconCalendarFilled className="size-5" />
@@ -588,7 +630,7 @@ export default function BookingPage() {
               </span>
             </div>
             <div className="flex min-h-0 flex-1 flex-col lg:block">
-              {isSlotsError && (
+              {(isSlotsError || windowQuery.isError) && (
                 <div
                   role="alert"
                   className="mb-4 border border-[#ad422b]/25 bg-[#ad422b]/5 p-4 text-sm"
@@ -596,14 +638,17 @@ export default function BookingPage() {
                   <p>Jadwal belum dapat dimuat.</p>
                   <button
                     type="button"
-                    onClick={() => refetchSlots()}
+                    onClick={() => {
+                      void windowQuery.refetch();
+                      void refetchSlots();
+                    }}
                     className="mt-2 font-medium underline underline-offset-4"
                   >
                     Coba lagi
                   </button>
                 </div>
               )}
-              {isSlotsLoading && (
+              {(isSlotsLoading || windowQuery.isPending) && (
                 <div className="text-muted-foreground p-4 text-center text-sm">Memuat slot...</div>
               )}
               <div
@@ -807,7 +852,9 @@ export default function BookingPage() {
             <Button
               className="h-12 w-full rounded-full bg-[#111111] text-sm text-white hover:bg-black/80 disabled:bg-black/15 disabled:text-black/40 disabled:opacity-100"
               onClick={handleBooking}
-              disabled={!hasMounted || bookingItems.length === 0}
+              disabled={
+                !hasMounted || !bookingWindow || windowQuery.isError || bookingItems.length === 0
+              }
             >
               Lanjutkan pemesanan{' '}
               <ArrowUpRight className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
@@ -839,7 +886,9 @@ export default function BookingPage() {
           <Button
             className="h-12 shrink-0 rounded-full bg-[#111111] px-6 text-sm text-white hover:bg-black/80 disabled:bg-black/15 disabled:text-black/40 disabled:opacity-100"
             onClick={handleBooking}
-            disabled={!hasMounted || bookingItems.length === 0}
+            disabled={
+              !hasMounted || !bookingWindow || windowQuery.isError || bookingItems.length === 0
+            }
           >
             Lanjutkan <ArrowUpRight className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
           </Button>

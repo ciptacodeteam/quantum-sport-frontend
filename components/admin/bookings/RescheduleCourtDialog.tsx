@@ -8,6 +8,7 @@ import { IconCalendar, IconCheck } from '@tabler/icons-react';
 import { toast } from 'sonner';
 import { rescheduleBookedCourtApi } from '@/api/admin/bookedCourt';
 import { formatBookingDate } from '@/lib/booking-display';
+import { canRescheduleAt, RESCHEDULE_NOTICE } from '@/lib/reschedule-policy';
 import { cn } from '@/lib/utils';
 import { adminCourtQueryOptions, adminCourtsWithSlotsQueryOptions } from '@/queries/admin/court';
 import type { BookingDetail, Court, Slot } from '@/types/model';
@@ -25,7 +26,12 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 export type BookingDetailWithSlot = BookingDetail & { slot?: Slot; court?: Court };
-type Props = { detail: BookingDetailWithSlot; canReschedule: boolean; onSuccess?: () => void };
+type Props = {
+  detail: BookingDetailWithSlot;
+  canReschedule: boolean;
+  membershipCovered?: boolean;
+  onSuccess?: () => void;
+};
 const currency = (value: number) => `Rp ${new Intl.NumberFormat('id-ID').format(value)}`;
 const time = (value: Date | string) => formatBookingDate(value, 'HH:mm');
 const slotMoment = (value: Date | string) =>
@@ -33,9 +39,21 @@ const slotMoment = (value: Date | string) =>
     ? dayjs.tz(value, 'Asia/Jakarta')
     : dayjs(value);
 
-export function RescheduleCourtDialog({ detail, canReschedule, onSuccess }: Props) {
+export function RescheduleCourtDialog({
+  detail,
+  canReschedule,
+  membershipCovered = false,
+  onSuccess
+}: Props) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const withinDeadline = canRescheduleAt(detail.slot?.startAt, now);
+  const allowed = canReschedule && withinDeadline;
   const sourceCourtId =
     detail.court?.id ?? detail.slot?.court?.id ?? detail.slot?.courtId ?? detail.courtId;
   const embeddedSport = detail.court?.sport ?? detail.slot?.court?.sport;
@@ -82,8 +100,20 @@ export function RescheduleCourtDialog({ detail, canReschedule, onSuccess }: Prop
       slots.sort((a, b) => slotMoment(a.startAt).valueOf() - slotMoment(b.startAt).valueOf());
     return map;
   }, [availability.data, courts, selectedDateString]);
+  const sameDuration = (slot: Slot) =>
+    !!detail.slot &&
+    slotMoment(slot.endAt).valueOf() - slotMoment(slot.startAt).valueOf() ===
+      slotMoment(detail.slot.endAt).valueOf() - slotMoment(detail.slot.startAt).valueOf();
+  const samePrice = (slot: Slot) =>
+    membershipCovered ||
+    ((slot.discountPrice ?? 0) > 0 ? slot.discountPrice : slot.price) ===
+      ((detail.discountPrice ?? 0) > 0 ? detail.discountPrice : detail.price);
   const isSelectable = (slot: Slot) =>
-    slot.id !== currentSlotId && slot.isAvailable && slotMoment(slot.startAt).isAfter(dayjs());
+    slot.id !== currentSlotId &&
+    slot.isAvailable &&
+    slotMoment(slot.startAt).isAfter(dayjs()) &&
+    sameDuration(slot) &&
+    samePrice(slot);
   const selectedCourtSlots = selectedCourtId ? slotsByCourt.get(selectedCourtId) || [] : [];
   const selectedSlot = selectedCourtSlots.find((slot) => slot.id === selectedSlotId);
   const selectedCourt = courts.find((court) => court.id === selectedCourtId);
@@ -119,6 +149,8 @@ export function RescheduleCourtDialog({ detail, canReschedule, onSuccess }: Prop
     onError: (error: Error) => toast.error(error.message || 'Gagal menjadwalkan ulang slot')
   });
   const canSave =
+    allowed &&
+    canRescheduleAt(detail.slot?.startAt) &&
     !!courtSport &&
     selectedCourt?.sport === courtSport &&
     !!selectedSlot &&
@@ -128,17 +160,21 @@ export function RescheduleCourtDialog({ detail, canReschedule, onSuccess }: Prop
     <Button
       size="sm"
       variant="outline"
-      disabled={!canReschedule}
+      disabled={!allowed}
       className="rounded-lg text-xs shadow-none"
     >
       Reschedule
     </Button>
   );
-  if (!canReschedule)
+  if (!allowed)
     return (
       <Tooltip>
         <TooltipTrigger asChild>{trigger}</TooltipTrigger>
-        <TooltipContent>Reschedule hanya tersedia maksimal H-3 sebelum jadwal</TooltipContent>
+        <TooltipContent>
+          {canReschedule
+            ? RESCHEDULE_NOTICE
+            : 'Reschedule hanya untuk booking terkonfirmasi dengan pembayaran lunas.'}
+        </TooltipContent>
       </Tooltip>
     );
 
@@ -154,10 +190,12 @@ export function RescheduleCourtDialog({ detail, canReschedule, onSuccess }: Prop
       <DialogContent className="flex max-h-[90dvh] max-w-[calc(100vw-2rem)] flex-col gap-0 overflow-hidden rounded-xl p-0 sm:max-w-2xl">
         <DialogHeader className="shrink-0 gap-2 border-b px-5 py-5 pr-12 sm:px-6">
           <DialogTitle className="text-foreground text-lg">Reschedule lapangan</DialogTitle>
+          <p className="text-muted-foreground text-sm">{RESCHEDULE_NOTICE}</p>
           <DialogDescription>
             {courtSport
               ? `Pilih lapangan ${sportLabel} dan jadwal pengganti.`
-              : 'Memastikan jenis lapangan pemesanan.'}
+              : 'Memastikan jenis lapangan pemesanan.'}{' '}
+            Durasi harus sama; harga reguler harus sama. Slot membership mengikuti jam paket.
           </DialogDescription>
         </DialogHeader>
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5 sm:px-6">
@@ -341,7 +379,11 @@ export function RescheduleCourtDialog({ detail, canReschedule, onSuccess }: Prop
                                         ? 'Sedang ditahan'
                                         : !slot.isAvailable
                                           ? 'Tidak tersedia'
-                                          : 'Sudah lewat'}
+                                          : !sameDuration(slot)
+                                            ? 'Durasi berbeda'
+                                            : !samePrice(slot)
+                                              ? 'Harga berbeda'
+                                              : 'Sudah lewat'}
                                 </span>
                               )}
                             </button>
@@ -386,7 +428,8 @@ export function RescheduleCourtDialog({ detail, canReschedule, onSuccess }: Prop
               disabled={!canSave || mutation.isPending}
               loading={mutation.isPending}
               onClick={() => {
-                if (canSave && selectedSlot) mutation.mutate(selectedSlot.id);
+                if (canSave && selectedSlot && canRescheduleAt(detail.slot?.startAt))
+                  mutation.mutate(selectedSlot.id);
               }}
             >
               Simpan jadwal

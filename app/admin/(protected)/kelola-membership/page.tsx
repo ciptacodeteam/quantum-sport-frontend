@@ -28,7 +28,7 @@ const ManageMembershipPage = () => {
       <Section>
         <SectionHeader>
           <SectionTitle title="Kelola Value Pack" />
-          <SectionDescription description="Atur dan pantau membership Anda di sini." />
+          <SectionDescription description="Kelola paket bermain, harga, kuota jam, dan masa berlaku Value Pack." />
         </SectionHeader>
         <SectionContent>
           <MembershipTable />

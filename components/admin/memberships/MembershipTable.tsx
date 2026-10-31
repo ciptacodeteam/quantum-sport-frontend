@@ -10,16 +10,15 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
-import { STATUS_BADGE_VARIANT, STATUS_MAP } from '@/lib/constants';
+import { formatBookingDate } from '@/lib/booking-display';
 import { membershipTypeLabels } from '@/lib/membership-hours';
-import { hasCreatePermission, hasEditPermission } from '@/lib/utils';
+import { formatNumber, hasCreatePermission, hasEditPermission } from '@/lib/utils';
 import { adminMembershipsQueryOptions } from '@/queries/admin/membership';
 import { adminProfileQueryOptions } from '@/queries/admin/auth';
 import type { Membership } from '@/types/model';
 import { IconPencil, IconPlus, IconEye } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
-import dayjs from 'dayjs';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
@@ -29,9 +28,15 @@ const sportLabels: Record<'PADEL' | 'TENNIS', string> = {
   PADEL: 'Padel',
   TENNIS: 'Tennis'
 };
+const colHelper = createColumnHelper<Membership>();
+const initialColumnVisibility = {
+  description: false,
+  duration: false,
+  sequence: false,
+  createdAt: false
+};
 
 const MembershipTable = () => {
-  const colHelper = createColumnHelper<Membership>();
   const { data: me } = useQuery(adminProfileQueryOptions);
   const [sportFilter, setSportFilter] = useState<MembershipSportFilter>('all');
 
@@ -39,37 +44,59 @@ const MembershipTable = () => {
     () => [
       colHelper.accessor('name', {
         header: 'Nama Value Pack',
-        cell: (info) => info.getValue()
+        cell: ({ row, getValue }) => (
+          <div className="max-w-64 min-w-44 space-y-1">
+            <p className="truncate font-medium" title={getValue()}>
+              {getValue()}
+            </p>
+            <p
+              className="text-muted-foreground line-clamp-2 text-xs whitespace-normal"
+              title={row.original.description || undefined}
+            >
+              {row.original.description || 'Tanpa deskripsi'}
+            </p>
+          </div>
+        )
       }),
       colHelper.accessor('description', {
         header: 'Deskripsi',
-        cell: (info) => <p className="line-clamp-2">{info.getValue() || '-'}</p>,
-        meta: {
-          width: 300
-        }
+        cell: (info) => (
+          <p className="text-muted-foreground line-clamp-2 max-w-64 min-w-40 whitespace-normal">
+            {info.getValue() || '—'}
+          </p>
+        )
       }),
       colHelper.accessor('sport', {
         header: 'Kategori',
         cell: (info) => {
           const sport = (info.getValue() ?? 'PADEL') as 'PADEL' | 'TENNIS';
           return <Badge variant="outline">{sportLabels[sport]}</Badge>;
-        },
-        meta: { width: 120 }
+        }
       }),
       colHelper.accessor('type', {
         header: 'Jenis Jam',
-        cell: (info) => <Badge variant="secondary">{membershipTypeLabels[info.getValue()]}</Badge>,
-        meta: { width: 140 }
+        cell: (info) => (
+          <Badge variant="lightNeutral">{membershipTypeLabels[info.getValue()]}</Badge>
+        )
       }),
       colHelper.accessor('duration', {
         header: 'Durasi (hari)',
-        cell: (info) => info.getValue() + ' hari',
-        meta: { width: 150 }
+        cell: (info) => <span className="tabular-nums">{info.getValue()} hari</span>
       }),
       colHelper.accessor('sessions', {
-        header: 'Jam',
-        cell: (info) => info.getValue() + ' jam',
-        meta: { width: 100 }
+        header: 'Kuota & Durasi',
+        cell: ({ row, getValue }) => (
+          <div className="space-y-1 tabular-nums">
+            <p className="font-medium">{getValue()} jam</p>
+            <p className="text-muted-foreground text-xs">Berlaku {row.original.duration} hari</p>
+          </div>
+        )
+      }),
+      colHelper.accessor('price', {
+        header: 'Harga',
+        cell: ({ getValue }) => (
+          <span className="font-medium tabular-nums">Rp {formatNumber(getValue())}</span>
+        )
       }),
       colHelper.accessor('sequence', {
         header: 'Urutan',
@@ -81,30 +108,37 @@ const MembershipTable = () => {
       colHelper.accessor('isActive', {
         header: 'Status',
         cell: (info) => (
-          <Badge variant={STATUS_BADGE_VARIANT[Number(info.getValue())]}>
-            {STATUS_MAP[Number(info.getValue())]}
+          <Badge variant={info.getValue() ? 'lightSuccess' : 'lightNeutral'}>
+            {info.getValue() ? 'Aktif' : 'Nonaktif'}
           </Badge>
         )
       }),
       colHelper.accessor('createdAt', {
         header: 'Dibuat Pada',
-        cell: (info) => dayjs(info.getValue()).format('DD/MM/YYYY HH:mm')
+        cell: ({ getValue }) => (
+          <span className="text-muted-foreground tabular-nums">
+            {getValue() ? `${formatBookingDate(getValue(), 'DD MMM YYYY, HH:mm')} WIB` : '—'}
+          </span>
+        )
       }),
       colHelper.display({
         id: 'actions',
         header: 'Aksi',
         cell: ({ row }) => (
-          <div className="flex items-center gap-2">
-            <Link href={`/admin/kelola-membership/${row.original.id}`} prefetch>
-              <Button size="icon" variant="lightInfo">
-                {hasEditPermission(me?.role) ? <IconPencil /> : <IconEye />}
-              </Button>
+          <Button asChild size="icon-sm" variant="ghost">
+            <Link
+              href={`/admin/kelola-membership/${row.original.id}`}
+              prefetch
+              aria-label={`${hasEditPermission(me?.role) ? 'Edit' : 'Lihat'} ${row.original.name}`}
+              title={hasEditPermission(me?.role) ? 'Edit Value Pack' : 'Lihat detail'}
+            >
+              {hasEditPermission(me?.role) ? <IconPencil /> : <IconEye />}
             </Link>
-          </div>
+          </Button>
         )
       })
     ],
-    [colHelper, me?.role]
+    [me?.role]
   );
 
   const queryParams = useMemo(
@@ -114,42 +148,49 @@ const MembershipTable = () => {
   const { data, isPending } = useQuery(adminMembershipsQueryOptions(queryParams));
 
   return (
-    <DataTable
-      loading={isPending}
-      data={data || []}
-      columns={columns}
-      enableRowSelection={false}
-      rightActions={
-        <div className="flex items-center gap-2">
-          <label htmlFor="membership-sport-filter" className="text-sm font-medium">
-            Kategori:
-          </label>
-          <Select
-            value={sportFilter}
-            onValueChange={(value) => setSportFilter(value as MembershipSportFilter)}
-          >
-            <SelectTrigger id="membership-sport-filter" className="w-[150px]">
-              <SelectValue placeholder="Semua" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Semua</SelectItem>
-              <SelectItem value="PADEL">Padel</SelectItem>
-              <SelectItem value="TENNIS">Tennis</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      }
-      addButton={
-        hasCreatePermission(me?.role) ? (
-          <Link href="/admin/kelola-membership/tambah" prefetch>
-            <Button>
-              <IconPlus />
-              Tambah
+    <div className="[&_thead]:bg-muted/50 w-full min-w-0">
+      <DataTable
+        loading={isPending}
+        data={data || []}
+        columns={columns}
+        enableRowSelection={false}
+        getRowId={(membership) => membership.id}
+        searchPlaceholder="Cari Value Pack..."
+        columnVisibilityLabel="Kolom"
+        initialColumnVisibility={initialColumnVisibility}
+        columnVisibilityStorageKey="quantum:memberships:columns"
+        rightActions={
+          <div className="flex items-center gap-2">
+            <label htmlFor="membership-sport-filter" className="text-sm font-medium">
+              Kategori:
+            </label>
+            <Select
+              value={sportFilter}
+              onValueChange={(value) => setSportFilter(value as MembershipSportFilter)}
+            >
+              <SelectTrigger id="membership-sport-filter" className="h-9 w-32">
+                <SelectValue placeholder="Semua" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua</SelectItem>
+                <SelectItem value="PADEL">Padel</SelectItem>
+                <SelectItem value="TENNIS">Tennis</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        }
+        addButton={
+          hasCreatePermission(me?.role) ? (
+            <Button asChild className="rounded-lg">
+              <Link href="/admin/kelola-membership/tambah" prefetch>
+                <IconPlus />
+                Tambah Value Pack
+              </Link>
             </Button>
-          </Link>
-        ) : undefined
-      }
-    />
+          ) : undefined
+        }
+      />
+    </div>
   );
 };
 export default MembershipTable;

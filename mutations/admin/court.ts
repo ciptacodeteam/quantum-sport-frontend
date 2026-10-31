@@ -1,4 +1,6 @@
 import {
+  bulkDisableCourtSlotsApi,
+  type BulkDisableCourtSlotsPayload,
   bulkUpdateCourtSlotPricingApi,
   type BulkUpdateCourtSlotPricingPayload,
   createCourtApi,
@@ -130,12 +132,40 @@ export const adminBulkUpdateCourtSlotPricingMutationOptions = ({
       const skipped = result?.skippedBookedCount
         ? ` ${result.skippedBookedCount} slot dibooking dilewati.`
         : '';
-      toast.success(`Bulk harga berhasil diperbarui.${skipped}`);
+      toast.success(
+        result?.rollingRuleSaved
+          ? `Aturan harga rolling disimpan. ${result.updatedCount} slot diperbarui.`
+          : `Bulk harga berhasil diperbarui.${skipped}`
+      );
       onSuccess?.(data);
     },
     onError: (error) =>
       handleMutationError(error, {
         onError,
         fallbackMessage: 'Gagal bulk update harga slot. Silakan coba lagi.'
+      })
+  });
+
+export const adminBulkDisableCourtSlotsMutationOptions = ({
+  onSuccess,
+  onError
+}: MutationFuncProps = {}) =>
+  mutationOptions({
+    mutationFn: ({ courtId, data }: { courtId: string; data: BulkDisableCourtSlotsPayload }) =>
+      bulkDisableCourtSlotsApi(courtId, data),
+    onSuccess: (data) => {
+      const result = data?.data;
+      const skipped = result?.skippedCount
+        ? ` ${result.skippedCount} slot sudah tidak tersedia atau dibooking dilewati.`
+        : '';
+      toast.success(
+        `${result?.rollingRuleSaved ? 'Aturan nonaktifkan slot rolling disimpan. ' : ''}${result?.updatedCount ?? 0} slot berhasil dinonaktifkan.${skipped}`
+      );
+      onSuccess?.(data);
+    },
+    onError: (error) =>
+      handleMutationError(error, {
+        onError,
+        fallbackMessage: 'Gagal menonaktifkan slot. Silakan coba lagi.'
       })
   });

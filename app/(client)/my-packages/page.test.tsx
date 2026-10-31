@@ -188,3 +188,9 @@ it('shows payment continuation for an unpaid package instead of offering its use
   );
   expect(screen.queryByRole('link', { name: 'Gunakan paket' })).toBeNull();
 });
+
+it('shows debt settled by a newly purchased package separately from played hours', () => {
+  mocks.packs = [{ ...pack, remainingHours: 8, usedHours: 0, debtSettledHours: 2, usage: [] }];
+  render(<MyPackagesPage />);
+  expect(screen.getByText('Kuota untuk pelunasan minus')).toBeInTheDocument();
+});

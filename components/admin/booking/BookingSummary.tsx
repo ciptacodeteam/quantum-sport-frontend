@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import dayjs from 'dayjs';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
@@ -32,6 +33,8 @@ import {
   type CustomerSearchResult
 } from '@/queries/admin/customer';
 import { useMembershipDiscount } from '@/hooks/useMembershipDiscount';
+import { useTariffPeriods } from '@/hooks/useTariffPeriods';
+import { resolveTariffPeriod, tariffBand, type TariffRule } from '@/lib/tariff-period';
 import { cn } from '@/lib/utils';
 import type {
   BookingItem,
@@ -99,6 +102,7 @@ export interface BookingSummaryProps {
 
   /** Membership discount details (optional - will be calculated if not provided) */
   membershipDiscountDetails?: {
+    deferredUsage?: boolean;
     canUseMembership: boolean;
     slotsToDeduct: number;
     discountAmount: number;
@@ -121,6 +125,9 @@ export interface BookingSummaryProps {
   } | null;
   useMembership?: boolean;
   onUseMembershipChange?: (value: boolean) => void;
+
+  /** Booking controls rendered alongside customer and membership information. */
+  recurringControls?: React.ReactNode;
 
   /** Primary action button configuration */
   primaryAction?: {
@@ -185,7 +192,11 @@ const formatCurrency = (value: number) => {
 };
 
 // Calculate bundled discount for court + coach at the same time slot
-const calculateBundleDiscount = (courts: BookingItem[], coaches: SelectedCoach[]): number => {
+const calculateBundleDiscount = (
+  courts: BookingItem[],
+  coaches: SelectedCoach[],
+  tariffRules: TariffRule[] = []
+): number => {
   if (courts.length === 0 || coaches.length === 0) return 0;
 
   // Build a set of keys (date|timeSlot) that have at least one coach
@@ -215,9 +226,19 @@ const calculateBundleDiscount = (courts: BookingItem[], coaches: SelectedCoach[]
     let slotDiscount = 0;
     if (booking.sport === 'TENNIS') {
       slotDiscount = 100_000;
-    } else if (hour >= 6 && hour <= 14) {
+    } else if (
+      tariffBand(
+        booking.timeSlot,
+        resolveTariffPeriod(tariffRules, booking.date, booking.sport)
+      ) === 'happyHour'
+    ) {
       slotDiscount = 100_000;
-    } else if (hour >= 15 && hour <= 23) {
+    } else if (
+      tariffBand(
+        booking.timeSlot,
+        resolveTariffPeriod(tariffRules, booking.date, booking.sport)
+      ) === 'peakHour'
+    ) {
       slotDiscount = 70_000;
     }
 
@@ -258,6 +279,7 @@ export default function BookingSummary({
   membershipDiscountDetails,
   useMembership = true,
   onUseMembershipChange,
+  recurringControls,
   primaryAction,
   secondaryActions = [],
   showCustomerSelection = true,
@@ -269,6 +291,7 @@ export default function BookingSummary({
   sticky = true,
   width = 'w-full min-w-0'
 }: BookingSummaryProps) {
+  const membershipChoiceId = useId();
   // Customer selection states
   const [isCustomerOpen, setIsCustomerOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
@@ -362,6 +385,7 @@ export default function BookingSummary({
   );
 
   // Calculate membership discount (always call hook, but use provided data if available)
+  const { rules: tariffRules } = useTariffPeriods(true);
   const calculatedMembershipDiscount = useMembershipDiscount(
     selectedCustomerId || null,
     bookingItems,
@@ -385,7 +409,7 @@ export default function BookingSummary({
   // Bundled discount is only relevant when add-ons (coaches) are shown
   const bundleDiscount =
     showAddOns && selectedCoaches.length > 0
-      ? calculateBundleDiscount(bookingItems, selectedCoaches)
+      ? calculateBundleDiscount(bookingItems, selectedCoaches, tariffRules)
       : 0;
 
   const courtSubtotal = membershipDiscount.originalTotal ?? courtTotal;
@@ -635,25 +659,56 @@ export default function BookingSummary({
                     {membershipDiscount.activeMembership.remainingSessions} sesi
                   </span>
                 </div>
-                {onUseMembershipChange && (
-                  <label className="mt-2 flex items-center justify-between gap-3 rounded-md border bg-white px-3 py-2">
-                    <span className="text-muted-foreground">Gunakan Value Pack</span>
-                    <input
-                      type="checkbox"
-                      checked={useMembership}
-                      onChange={(event) => onUseMembershipChange(event.target.checked)}
-                      className="accent-primary h-4 w-4"
-                    />
-                  </label>
+                {(onUseMembershipChange || membershipDiscount.deferredUsage) && (
+                  <div className="border-primary/10 mt-3 space-y-2 border-t pt-3">
+                    <p className="text-xs font-medium">Pembayaran lapangan</p>
+                    <RadioGroup
+                      aria-label="Pembayaran lapangan"
+                      value={useMembership ? 'membership' : 'regular'}
+                      disabled={!onUseMembershipChange}
+                      onValueChange={(value) => onUseMembershipChange?.(value === 'membership')}
+                      className="grid-cols-1 gap-2 min-[420px]:grid-cols-2"
+                    >
+                      <label
+                        htmlFor={`${membershipChoiceId}-membership`}
+                        className={`flex min-h-10 items-center gap-2.5 rounded-lg border px-3 py-2.5 text-xs ${useMembership ? 'border-primary/40 bg-background text-primary font-medium' : 'bg-background/70 text-muted-foreground'} ${onUseMembershipChange ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                      >
+                        <RadioGroupItem
+                          id={`${membershipChoiceId}-membership`}
+                          value="membership"
+                        />
+                        Pakai membership
+                      </label>
+                      <label
+                        htmlFor={`${membershipChoiceId}-regular`}
+                        className={`flex min-h-10 items-center gap-2.5 rounded-lg border px-3 py-2.5 text-xs ${!useMembership ? 'border-primary/40 bg-background text-primary font-medium' : 'bg-background/70 text-muted-foreground'} ${onUseMembershipChange ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
+                      >
+                        <RadioGroupItem id={`${membershipChoiceId}-regular`} value="regular" />
+                        Bayar reguler
+                      </label>
+                    </RadioGroup>
+                    <p className="text-muted-foreground text-xs leading-relaxed">
+                      {membershipDiscount.deferredUsage
+                        ? 'Booking rutin wajib memakai membership. Hapus aturan rutin jika ingin bayar reguler.'
+                        : !useMembership
+                          ? 'Harga reguler berlaku. Kuota membership tidak digunakan.'
+                          : 'Kuota digunakan jika olahraga, jam, dan saldo memenuhi ketentuan paket.'}
+                    </p>
+                  </div>
                 )}
                 {membershipDiscount.canUseMembership && bookingItems.length > 0 && (
                   <div className="text-primary mt-1 font-medium">
-                    {membershipDiscount.slotsToDeduct} jam akan dipotong dari membership
+                    {membershipDiscount.slotsToDeduct} jam{' '}
+                    {membershipDiscount.deferredUsage
+                      ? 'dipotong saat jam bermain; saldo boleh minus'
+                      : 'akan dipotong dari membership'}
                   </div>
                 )}
               </div>
             </div>
           )}
+
+          {recurringControls}
 
           {/* Court Bookings */}
           {showCourtBookings && (

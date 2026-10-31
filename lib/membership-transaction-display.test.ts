@@ -38,3 +38,9 @@ describe('Value Pack status and actions', () => {
     expect(canManageMembership(transaction({ isSuspended: true }))).toBe(true);
   });
 });
+
+it('shows negative balance even after membership expiry', () => {
+  expect(membershipStatus(transaction({ remainingSessions: -2, isExpired: true }))).toBe(
+    'Saldo minus'
+  );
+});

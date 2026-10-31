@@ -9,7 +9,11 @@ type SectionProps = {
 };
 
 const Section = ({ children, className }: SectionProps) => {
-  return <Card className={cn('gap-4 border-none pt-2 shadow-none', className)}>{children}</Card>;
+  return (
+    <Card className={cn('w-full min-w-0 gap-4 border-none pt-2 shadow-none', className)}>
+      {children}
+    </Card>
+  );
 };
 
 type SectionHeaderProps = {
@@ -45,7 +49,7 @@ type SectionContentProps = {
 };
 
 const SectionContent = ({ children, className }: SectionContentProps) => {
-  return <CardContent className={cn('px-2', className)}>{children}</CardContent>;
+  return <CardContent className={cn('min-w-0 px-2', className)}>{children}</CardContent>;
 };
 
 export { Section, SectionTitle, SectionDescription, SectionHeader, SectionContent };

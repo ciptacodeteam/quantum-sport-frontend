@@ -41,3 +41,17 @@ it('labels membership-covered court time without showing a cash charge', () => {
   expect(screen.getByText('Value Pack')).toBeInTheDocument();
   expect(screen.queryByText('Rp300.000')).toBeNull();
 });
+
+it('keeps adjacent membership and cash slots separate in a mixed invoice', () => {
+  render(
+    <BookingDetailsCard
+      details={[{ ...slot('00:00', '01:00'), discountPrice: 0 }, slot('01:00', '02:00')]}
+      membershipApplied
+    />
+  );
+  expect(screen.getByText('Value Pack')).toBeInTheDocument();
+  expect(screen.getByText('Rp150.000')).toBeInTheDocument();
+  expect(screen.getByText('00.00 - 01.00')).toBeInTheDocument();
+  expect(screen.getByText('01.00 - 02.00')).toBeInTheDocument();
+  expect(screen.queryByText('00.00 - 02.00')).toBeNull();
+});

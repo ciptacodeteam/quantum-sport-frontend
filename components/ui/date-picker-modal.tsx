@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { id } from 'date-fns/locale';
+import { Dropdown, type DropdownProps } from 'react-day-picker';
 import { Calendar } from './calendar';
 import {
   Dialog,
@@ -27,13 +28,21 @@ type DatePickerModalProps = {
   value?: Date | null;
   onChange?: (date: Date | null) => void;
   label?: string;
+  minDate?: Date;
+  maxDate?: Date;
   children?: React.ReactNode;
 };
+
+function BoundedMonthsDropdown(props: DropdownProps) {
+  return <Dropdown {...props} options={props.options?.filter((option) => !option.disabled)} />;
+}
 
 function DatePickerModal({
   value,
   onChange,
   label = 'Pilih tanggal',
+  minDate,
+  maxDate,
   children
 }: DatePickerModalProps) {
   const [open, setOpen] = useState(false);
@@ -41,6 +50,22 @@ function DatePickerModal({
   const selectedDate = value !== undefined ? value : internalValue;
 
   const handleSelect = (date: Date | undefined) => {
+    if (
+      date &&
+      ((minDate && date < new Date(minDate.getFullYear(), minDate.getMonth(), minDate.getDate())) ||
+        (maxDate &&
+          date >
+            new Date(
+              maxDate.getFullYear(),
+              maxDate.getMonth(),
+              maxDate.getDate(),
+              23,
+              59,
+              59,
+              999
+            )))
+    )
+      return;
     setInternalValue(date ?? null);
     if (onChange) onChange(date ?? null);
     setOpen(false);
@@ -63,6 +88,7 @@ function DatePickerModal({
         </DialogHeader>
         <div className="min-w-0">
           <Calendar
+            components={{ MonthsDropdown: BoundedMonthsDropdown }}
             mode="single"
             required
             locale={id}
@@ -70,7 +96,9 @@ function DatePickerModal({
             showOutsideDays={false}
             defaultMonth={selectedDate ?? new Date()}
             className="w-full bg-transparent p-0 [--cell-size:2rem]"
-            disabled={{ before: new Date() }}
+            disabled={[{ before: minDate ?? new Date() }, ...(maxDate ? [{ after: maxDate }] : [])]}
+            startMonth={minDate}
+            endMonth={maxDate}
             classNames={{
               root: 'w-full',
               month: 'flex w-full flex-col gap-5',
@@ -91,8 +119,6 @@ function DatePickerModal({
               disabled: 'text-black/20',
               week: 'mt-1 flex w-full'
             }}
-            fromYear={new Date().getFullYear()}
-            toYear={new Date().getFullYear() + 5}
             captionLayout="dropdown"
             selected={selectedDate ?? undefined}
             onSelect={handleSelect}

@@ -1,10 +1,12 @@
 'use client';
 
+import { MembershipHoursDescription } from '@/components/booking/MembershipHoursDescription';
+
 import MainHeader from '@/components/headers/MainHeader';
 import { Button } from '@/components/ui/button';
 import { SanitizedHtml } from '@/components/ui/sanitized-html';
 import { Skeleton } from '@/components/ui/skeleton';
-import { membershipTypeDescriptions, membershipTypeLabels } from '@/lib/membership-hours';
+import { membershipTypeLabels } from '@/lib/membership-hours';
 import { membershipQueryOptions } from '@/queries/membership';
 import { profileQueryOptions } from '@/queries/profile';
 import useAuthModalStore from '@/stores/useAuthModalStore';
@@ -108,7 +110,13 @@ export default function MembershipDetailPage({ params }: { params: Promise<{ id:
               <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs">
                 <span className="text-[#ad422b]">{membershipTypeLabels[membership.type]}</span>
                 <span className="h-3 border-l border-black/20" aria-hidden="true" />
-                <span className="text-black/50">{membershipTypeDescriptions[membership.type]}</span>
+                <span className="text-black/50">
+                  <MembershipHoursDescription
+                    shared
+                    type={membership.type}
+                    sport={membership.sport}
+                  />
+                </span>
               </div>
               <dl className="mt-6 grid grid-cols-2 border-y border-black/15 py-5">
                 <div className="border-r border-black/15 pr-4">

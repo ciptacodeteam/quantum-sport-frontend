@@ -1,9 +1,11 @@
 'use client';
 
+import { MembershipHoursDescription } from '@/components/booking/MembershipHoursDescription';
+
 import MainHeader from '@/components/headers/MainHeader';
 import MainBottomNavigation from '@/components/footers/MainBottomNavigation';
 import { Button } from '@/components/ui/button';
-import { membershipTypeDescriptions, membershipTypeLabels } from '@/lib/membership-hours';
+import { membershipTypeLabels } from '@/lib/membership-hours';
 import { membershipsQueryOptions } from '@/queries/membership';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowUpRight } from 'lucide-react';
@@ -19,7 +21,9 @@ const sportLabels: Record<MembershipSport, string> = {
 
 export default function MembershipPage() {
   const { data, isLoading, isError, refetch } = useQuery(membershipsQueryOptions());
-  const [selectedSport, setSelectedSport] = useState<MembershipSport>('PADEL');
+  const showSportTabs = true;
+  const [sportChoice, setSelectedSport] = useState<MembershipSport>('PADEL');
+  const selectedSport = sportChoice;
   const memberships = useMemo(
     () => (data ?? []).filter((pack) => pack.isActive && (pack.sport ?? 'PADEL') === selectedSport),
     [data, selectedSport]
@@ -29,23 +33,25 @@ export default function MembershipPage() {
     <>
       <MainHeader backHref="/" title="Value Pack" withLogo={false} withBorder />
       <main className="value-pack-page mx-auto w-full max-w-7xl px-5 pt-24 pb-8 text-[#171717] sm:px-8 lg:pb-16 xl:pt-32">
-        <div
-          className="mb-6 grid grid-cols-2 border-b border-black/15 sm:max-w-lg"
-          role="group"
-          aria-label="Jenis olahraga"
-        >
-          {(['PADEL', 'TENNIS'] as const).map((sport) => (
-            <button
-              key={sport}
-              type="button"
-              aria-pressed={selectedSport === sport}
-              onClick={() => setSelectedSport(sport)}
-              className={`relative min-h-12 px-2 pb-3 text-sm transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#ad422b] ${selectedSport === sport ? 'font-medium text-[#171717] after:absolute after:inset-x-0 after:bottom-[-1px] after:h-0.5 after:bg-[#ad422b]' : 'text-black/40 hover:text-black/75'}`}
-            >
-              {sportLabels[sport]}
-            </button>
-          ))}
-        </div>
+        {showSportTabs && (
+          <div
+            className="mb-6 grid grid-cols-2 border-b border-black/15 sm:max-w-lg"
+            role="group"
+            aria-label="Jenis olahraga"
+          >
+            {(['PADEL', 'TENNIS'] as const).map((sport) => (
+              <button
+                key={sport}
+                type="button"
+                aria-pressed={selectedSport === sport}
+                onClick={() => setSelectedSport(sport)}
+                className={`relative min-h-12 px-2 pb-3 text-sm transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#ad422b] ${selectedSport === sport ? 'font-medium text-[#171717] after:absolute after:inset-x-0 after:bottom-[-1px] after:h-0.5 after:bg-[#ad422b]' : 'text-black/40 hover:text-black/75'}`}
+              >
+                {sportLabels[sport]}
+              </button>
+            ))}
+          </div>
+        )}
 
         {isLoading && (
           <div
@@ -118,7 +124,7 @@ export default function MembershipPage() {
                     Rp{pack.price.toLocaleString('id-ID')}
                   </p>
                   <p className="mt-2 text-xs text-black/50">
-                    {membershipTypeDescriptions[pack.type]}
+                    <MembershipHoursDescription shared type={pack.type} sport={pack.sport} />
                   </p>
                 </div>
                 <dl className="mb-4 grid grid-cols-2 border-y border-black/15 py-4">

@@ -27,9 +27,7 @@ const EditClassPage = async ({ params }) => {
             <SectionDescription description="Tambahkan kelas baru ke dalam sistem Anda di sini." />
           </SectionHeader>
           <SectionContent className="mt-4">
-            <div className="md:max-w-2xl">
-              <EditClassForm classId={param.id} />
-            </div>
+            <EditClassForm classId={param.id} />
           </SectionContent>
         </Section>
       </main>

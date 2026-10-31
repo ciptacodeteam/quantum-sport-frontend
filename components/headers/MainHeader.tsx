@@ -6,7 +6,7 @@ import LogoImage from '@/assets/img/logoblack.webp';
 import { cn } from '@/lib/utils';
 import { profileQueryOptions } from '@/queries/profile';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, UserRound } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -15,6 +15,7 @@ import CartSheet from '../CartSheet';
 import { Button } from '../ui/button';
 
 type Props = {
+  showBack?: boolean;
   onBack?: () => void;
   backHref?: string;
   withLogo?: boolean;
@@ -22,6 +23,7 @@ type Props = {
   withBorder?: boolean;
   withNotificationBadge?: boolean;
   withCartBadge?: boolean;
+  withBranchLabel?: boolean;
 };
 
 const navItems = [
@@ -33,7 +35,7 @@ const navItems = [
   { title: 'Riwayat', path: '/invoice', requiresAuth: true }
 ];
 
-const MainHeader = ({ onBack, backHref }: Props) => {
+const MainHeader = ({ onBack, backHref, showBack = false, withBranchLabel = true }: Props) => {
   const { data: user } = useQuery(profileQueryOptions);
   const pathname = usePathname();
   const router = useRouter();
@@ -62,12 +64,15 @@ const MainHeader = ({ onBack, backHref }: Props) => {
       <header className="fixed inset-x-0 top-0 z-40 border-b border-black/10 bg-[#f8f8f6] text-[#171717]">
         <div className="mx-auto grid w-full max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 px-5 sm:px-8 xl:grid-cols-[auto_minmax(0,1fr)_auto] xl:gap-x-10 2xl:gap-x-14">
           <div className="col-start-1 row-start-1 flex min-h-[76px] min-w-0 items-center gap-2 sm:gap-3">
-            {showMobileBack && (
+            {(showBack || showMobileBack) && (
               <button
                 type="button"
                 onClick={handleBack}
                 aria-label="Kembali"
-                className="mobile-header-back mr-3 flex h-10 w-8 shrink-0 items-center justify-center text-[#171717] transition-colors hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-[#ad422b] lg:hidden"
+                className={cn(
+                  'mr-3 flex h-10 w-8 shrink-0 items-center justify-center text-[#171717] transition-colors hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-[#ad422b]',
+                  !showBack && 'mobile-header-back lg:hidden'
+                )}
               >
                 <ArrowLeft className="size-5" strokeWidth={1.5} aria-hidden="true" />
               </button>
@@ -86,7 +91,10 @@ const MainHeader = ({ onBack, backHref }: Props) => {
                   className="h-auto w-[92px] sm:w-[104px]"
                 />
               </Link>
-              {pathname !== '/' && <BranchLabel />}
+              {withBranchLabel &&
+                pathname !== '/' &&
+                !pathname.startsWith('/membership') &&
+                !pathname.startsWith('/my-packages') && <BranchLabel />}
             </div>
           </div>
           <nav
@@ -124,18 +132,7 @@ const MainHeader = ({ onBack, backHref }: Props) => {
             })}
           </nav>
           <div className="col-start-2 row-start-1 flex shrink-0 items-center gap-1 sm:gap-2 xl:col-start-3">
-            {isAuthenticated ? (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="rounded-none text-black hover:bg-black/5"
-                asChild
-              >
-                <Link href="/profile" aria-label="Buka profil saya">
-                  <UserRound className="size-5" strokeWidth={1.5} aria-hidden="true" />
-                </Link>
-              </Button>
-            ) : (
+            {!isAuthenticated && (
               <div className="flex items-center gap-2 sm:gap-3">
                 <Button
                   variant="ghost"
@@ -152,7 +149,9 @@ const MainHeader = ({ onBack, backHref }: Props) => {
                 </Button>
               </div>
             )}
-            <span aria-hidden="true" className="mx-2 h-5 w-px bg-black/20 sm:mx-3" />
+            {!isAuthenticated && (
+              <span aria-hidden="true" className="mx-2 h-5 w-px bg-black/20 sm:mx-3" />
+            )}
             <CartSheet minimal />
           </div>
         </div>
