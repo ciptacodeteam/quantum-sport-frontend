@@ -1,5 +1,6 @@
 'use client';
 
+import { Repeat2 } from 'lucide-react';
 import { useTariffPeriods } from '@/hooks/useTariffPeriods';
 import { resolveTariffPeriod, tariffBand } from '@/lib/tariff-period';
 
@@ -102,6 +103,8 @@ export default function BookingLapangan() {
   const courtSportLabel = courtSport === 'TENNIS' ? 'Tennis' : 'Padel';
   const queryClient = useQueryClient();
   const {
+    useMembership,
+    setUseMembership,
     recurringBooking,
     setRecurringBooking,
     bookingItems,
@@ -199,7 +202,7 @@ export default function BookingLapangan() {
     selectedCustomer ? { activeMembership: selectedCustomer.activeMembership } : null,
     false,
     courtSport,
-    true,
+    recurringBooking ? true : useMembership,
     undefined,
     !!recurringBooking
   );
@@ -833,49 +836,6 @@ export default function BookingLapangan() {
           </Popover>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <RecurringBookingDialog
-            templates={bookingItems.filter(
-              (item) =>
-                item.date === formatDateString(localSelectedDate) && item.sport === courtSport
-            )}
-            membershipEligible={
-              !!membershipDiscount.activeMembership &&
-              !membershipDiscount.activeMembership.isSuspended &&
-              (membershipDiscount.activeMembership.membership.sport ?? 'PADEL') === courtSport
-            }
-            startDate={formatDateString(localSelectedDate)}
-            sport={courtSport}
-            onApply={(items, rule) => {
-              const merged = mergeBookingItems(bookingItems, items);
-              setBookings(merged);
-              setBookingItems(merged);
-              setRecurringBooking(rule);
-            }}
-          />
-          <p className="text-muted-foreground text-xs">
-            Pilih pelanggan membership dan tambahkan jadwal pada tanggal terpilih, lalu ulangi
-            mingguan.
-          </p>
-        </div>
-
-        {recurringBooking && (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded border p-3 text-sm">
-            <p>
-              Booking rutin membership:{' '}
-              {recurringBooking.mode === 'ROLLING'
-                ? 'mengikuti rolling tanpa tanggal berhenti'
-                : `${recurringBooking.months} bulan`}
-              . Aturan aktif setelah checkout. Kuota dipotong saat bermain.
-            </p>
-            <Button variant="ghost" size="sm" onClick={() => setRecurringBooking(null)}>
-              Hapus aturan rutin
-            </Button>
-          </div>
-        )}
-
-        <RecurringBookingRules />
-
         {/* Date Navigation */}
         <Card className="min-w-0 py-3">
           <CardContent className="min-w-0 px-3">
@@ -1286,6 +1246,92 @@ export default function BookingLapangan() {
 
           {/* Booking Summary - Responsive */}
           <BookingSummary
+            recurringControls={
+              useMembership ? (
+                <section
+                  aria-label="Pengaturan booking rutin"
+                  className="border-primary/20 bg-primary/5 space-y-3 rounded-xl border p-4"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="bg-background text-primary flex size-9 shrink-0 items-center justify-center rounded-lg">
+                      <Repeat2 className="size-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-semibold">Booking rutin</h3>
+                      <p className="text-muted-foreground mt-0.5 text-xs">
+                        Jadwal mingguan dengan Value Pack
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground text-xs leading-relaxed">
+                    {!useMembership
+                      ? 'Pilih Pakai membership untuk mengaktifkan booking rutin.'
+                      : !localCustomerId
+                        ? 'Pilih pelanggan yang memiliki Value Pack, lalu tambahkan lapangan dan jam bermain.'
+                        : !membershipDiscount.activeMembership
+                          ? 'Fitur ini tersedia untuk pelanggan dengan Value Pack yang sesuai.'
+                          : !bookingItems.some(
+                                (item) =>
+                                  item.date === formatDateString(localSelectedDate) &&
+                                  item.sport === courtSport
+                              )
+                            ? 'Tambahkan lapangan dan jam pada tanggal terpilih untuk membuat jadwal rutin.'
+                            : `Ulangi lapangan dan jam dari tanggal ${formatDate(localSelectedDate, 'DD MMM YYYY')}.`}
+                  </p>
+                  <RecurringBookingDialog
+                    templates={bookingItems.filter(
+                      (item) =>
+                        item.date === formatDateString(localSelectedDate) &&
+                        item.sport === courtSport
+                    )}
+                    membershipEligible={
+                      useMembership &&
+                      !!membershipDiscount.activeMembership &&
+                      !membershipDiscount.activeMembership.isSuspended &&
+                      (membershipDiscount.activeMembership.membership.sport ?? 'PADEL') ===
+                        courtSport
+                    }
+                    startDate={formatDateString(localSelectedDate)}
+                    sport={courtSport}
+                    onApply={(items, rule) => {
+                      const merged = mergeBookingItems(bookingItems, items);
+                      setBookings(merged);
+                      setBookingItems(merged);
+                      setRecurringBooking(rule);
+                    }}
+                  />
+                  {recurringBooking && (
+                    <div className="bg-background space-y-2 rounded-lg border p-3 text-xs">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="lightSuccess">Siap diterapkan</Badge>
+                        <span className="font-medium">
+                          {recurringBooking.mode === 'ROLLING'
+                            ? 'Mengikuti rolling window'
+                            : recurringBooking.mode === 'DATES'
+                              ? `Sampai ${formatDate(recurringBooking.endDate!, 'DD MMM YYYY')}`
+                              : `${recurringBooking.months} bulan`}
+                        </span>
+                      </div>
+                      <p className="text-muted-foreground leading-relaxed">
+                        Booking dan invoice terpisah per tanggal dibuat saat checkout. Kuota
+                        dipotong saat slot dimulai (WIB).
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-2 text-xs"
+                        onClick={() => setRecurringBooking(null)}
+                      >
+                        Hapus aturan rutin
+                      </Button>
+                    </div>
+                  )}
+                  <div className="border-primary/10 border-t pt-2">
+                    <RecurringBookingRules />
+                  </div>
+                </section>
+              ) : undefined
+            }
             bookingItems={bookingItemsForDiscount}
             selectedCustomerId={localCustomerId || null}
             selectedCustomerName={storeCustomerName}
@@ -1319,6 +1365,8 @@ export default function BookingLapangan() {
             courtTotal={membershipDiscount.originalTotal}
             totalAmount={totalPrice}
             membershipDiscountDetails={membershipDiscount}
+            useMembership={recurringBooking ? true : useMembership}
+            onUseMembershipChange={recurringBooking ? undefined : setUseMembership}
             onBookingRemove={(courtId, timeSlot, date) => {
               // Find the booking index
               const bookingIndex = bookings.findIndex(

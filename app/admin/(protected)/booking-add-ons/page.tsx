@@ -41,6 +41,8 @@ import { toast } from 'sonner';
 export default function BookingAddOns() {
   const router = useRouter();
   const {
+    useMembership,
+    setUseMembership,
     recurringBooking,
     bookingItems,
     // selectedDate,
@@ -70,7 +72,6 @@ export default function BookingAddOns() {
   // Selected date and time for add-ons when no court bookings exist
   const [selectedAddOnDate, setSelectedAddOnDate] = useState<string>(dayjs().format('YYYY-MM-DD'));
   const [selectedEquipmentSport, setSelectedEquipmentSport] = useState<'PADEL' | 'TENNIS'>('PADEL');
-  const [useMembership, setUseMembership] = useState(true);
   const courtSport = useMemo<'PADEL' | 'TENNIS'>(
     () => bookingItems.find((item) => item.sport)?.sport ?? 'PADEL',
     [bookingItems]
@@ -526,7 +527,12 @@ export default function BookingAddOns() {
         className="mb-0 pb-0"
       />
 
-      {recurringBooking && <div className="rounded border p-4 text-sm">Booking rutin khusus membership. Kuota jadwal ini belum dipotong saat checkout; pemotongan dilakukan pada jam bermain dan saldo boleh minus.</div>}
+      {recurringBooking && (
+        <div className="rounded border p-4 text-sm">
+          Booking rutin khusus membership. Kuota jadwal ini belum dipotong saat checkout; pemotongan
+          dilakukan pada jam bermain dan saldo boleh minus.
+        </div>
+      )}
 
       <div className="grid min-w-0 grid-cols-1 items-start gap-6 2xl:grid-cols-[minmax(0,1fr)_420px]">
         {/* Main Content */}

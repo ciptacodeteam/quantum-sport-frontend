@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import dayjs from 'dayjs';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
@@ -124,6 +125,9 @@ export interface BookingSummaryProps {
   } | null;
   useMembership?: boolean;
   onUseMembershipChange?: (value: boolean) => void;
+
+  /** Booking controls rendered alongside customer and membership information. */
+  recurringControls?: React.ReactNode;
 
   /** Primary action button configuration */
   primaryAction?: {
@@ -275,6 +279,7 @@ export default function BookingSummary({
   membershipDiscountDetails,
   useMembership = true,
   onUseMembershipChange,
+  recurringControls,
   primaryAction,
   secondaryActions = [],
   showCustomerSelection = true,
@@ -286,6 +291,7 @@ export default function BookingSummary({
   sticky = true,
   width = 'w-full min-w-0'
 }: BookingSummaryProps) {
+  const membershipChoiceId = useId();
   // Customer selection states
   const [isCustomerOpen, setIsCustomerOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
@@ -653,16 +659,42 @@ export default function BookingSummary({
                     {membershipDiscount.activeMembership.remainingSessions} sesi
                   </span>
                 </div>
-                {onUseMembershipChange && (
-                  <label className="mt-2 flex items-center justify-between gap-3 rounded-md border bg-white px-3 py-2">
-                    <span className="text-muted-foreground">Gunakan Value Pack</span>
-                    <input
-                      type="checkbox"
-                      checked={useMembership}
-                      onChange={(event) => onUseMembershipChange(event.target.checked)}
-                      className="accent-primary h-4 w-4"
-                    />
-                  </label>
+                {(onUseMembershipChange || membershipDiscount.deferredUsage) && (
+                  <div className="border-primary/10 mt-3 space-y-2 border-t pt-3">
+                    <p className="text-xs font-medium">Pembayaran lapangan</p>
+                    <RadioGroup
+                      aria-label="Pembayaran lapangan"
+                      value={useMembership ? 'membership' : 'regular'}
+                      disabled={!onUseMembershipChange}
+                      onValueChange={(value) => onUseMembershipChange?.(value === 'membership')}
+                      className="grid-cols-1 gap-2 min-[420px]:grid-cols-2"
+                    >
+                      <label
+                        htmlFor={`${membershipChoiceId}-membership`}
+                        className={`flex min-h-10 items-center gap-2.5 rounded-lg border px-3 py-2.5 text-xs ${useMembership ? 'border-primary/40 bg-background text-primary font-medium' : 'bg-background/70 text-muted-foreground'} ${onUseMembershipChange ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                      >
+                        <RadioGroupItem
+                          id={`${membershipChoiceId}-membership`}
+                          value="membership"
+                        />
+                        Pakai membership
+                      </label>
+                      <label
+                        htmlFor={`${membershipChoiceId}-regular`}
+                        className={`flex min-h-10 items-center gap-2.5 rounded-lg border px-3 py-2.5 text-xs ${!useMembership ? 'border-primary/40 bg-background text-primary font-medium' : 'bg-background/70 text-muted-foreground'} ${onUseMembershipChange ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
+                      >
+                        <RadioGroupItem id={`${membershipChoiceId}-regular`} value="regular" />
+                        Bayar reguler
+                      </label>
+                    </RadioGroup>
+                    <p className="text-muted-foreground text-xs leading-relaxed">
+                      {membershipDiscount.deferredUsage
+                        ? 'Booking rutin wajib memakai membership. Hapus aturan rutin jika ingin bayar reguler.'
+                        : !useMembership
+                          ? 'Harga reguler berlaku. Kuota membership tidak digunakan.'
+                          : 'Kuota digunakan jika olahraga, jam, dan saldo memenuhi ketentuan paket.'}
+                    </p>
+                  </div>
                 )}
                 {membershipDiscount.canUseMembership && bookingItems.length > 0 && (
                   <div className="text-primary mt-1 font-medium">
@@ -675,6 +707,8 @@ export default function BookingSummary({
               </div>
             </div>
           )}
+
+          {recurringControls}
 
           {/* Court Bookings */}
           {showCourtBookings && (

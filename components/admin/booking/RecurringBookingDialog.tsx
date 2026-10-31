@@ -1,7 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { getCourtsSlotsApi, getCourtsApi } from '@/api/admin/court';
+import { adminApi } from '@/lib/adminApi';
+import DatePickerInput from '@/components/ui/date-picker-input';
+import { getCourtsApi } from '@/api/admin/court';
+import { Repeat2, CalendarDays } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -14,8 +24,6 @@ import dayjs, { nowJakarta } from '@/lib/dayjs';
 import {
   recurringPreviewEnd,
   type RecurringBookingRule,
-  previewRecurringBooking,
-  recurringDates,
   type RecurringSession
 } from '@/lib/recurring-booking';
 import type { Court } from '@/types/model';
@@ -40,8 +48,9 @@ export default function RecurringBookingDialog({
   membershipEligible = true
 }: Props) {
   const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<'ROLLING' | 'MONTHS'>('ROLLING');
-  const [months, setMonths] = useState(6);
+  const [mode, setMode] = useState<'ROLLING' | 'MONTHS' | 'DATES'>('MONTHS');
+  const [months, setMonths] = useState(1);
+  const [customEnd, setCustomEnd] = useState('');
   const [maxDate, setMaxDate] = useState('');
   const [weekdays, setWeekdays] = useState<number[]>([]);
   const [sessions, setSessions] = useState<RecurringSession[] | null>(null);
@@ -69,8 +78,9 @@ export default function RecurringBookingDialog({
       setMaxDate(maximum);
       setSource(templates);
       setSourceDate(startDate);
-      setMode('ROLLING');
-      setMonths(6);
+      setMode('MONTHS');
+      setMonths(1);
+      setCustomEnd(dayjs(startDate).add(1, 'month').format('YYYY-MM-DD'));
       setWeekdays([dayjs(startDate).day()]);
       setSessions(null);
       setSkipConflicts(false);
@@ -83,27 +93,34 @@ export default function RecurringBookingDialog({
     }
   };
 
-  const endDate = recurringPreviewEnd(sourceDate, maxDate, mode, months);
+  const endDate = recurringPreviewEnd(sourceDate, maxDate, mode, months, customEnd);
 
   const preview = async () => {
     setError('');
     setSessions(null);
     setSkipConflicts(false);
-    if (!endDate || endDate < sourceDate || endDate > maxDate || !weekdays.length) {
-      setError('Pilih minimal satu hari bermain dalam batas rolling window.');
+    if (
+      !endDate ||
+      endDate < sourceDate ||
+      (mode === 'ROLLING' && endDate > maxDate) ||
+      endDate > dayjs(sourceDate).add(12, 'month').format('YYYY-MM-DD') ||
+      !weekdays.length
+    ) {
+      setError('Pilih hari bermain dan rentang yang valid, maksimal 12 bulan.');
       return;
     }
     setLoading(true);
     try {
-      const dates = recurringDates(sourceDate, endDate, weekdays);
-      if (!dates.length) throw new Error('Tidak ada jadwal pada periode ini.');
-      const response = await getCourtsSlotsApi({
-        startAt: `${sourceDate} 00:00:00`,
-        endAt: `${endDate} 23:59:59`,
-        courtSport: sport,
-        includeUnavailable: 'true'
+      const response = await adminApi.post('/bookings/recurring/preview', {
+        mode,
+        ...(mode === 'MONTHS' ? { months } : {}),
+        ...(mode === 'DATES' ? { endDate: customEnd } : {}),
+        weekdays,
+        startDate: sourceDate,
+        previewThrough: endDate,
+        sourceSlotIds: source.map((item) => item.slotId)
       });
-      setSessions(previewRecurringBooking(source, dates, response.data, nowJakarta().valueOf()));
+      setSessions(response.data.data.sessions);
     } catch {
       setError('Jadwal belum dapat diperiksa. Periksa periode lalu coba lagi.');
     } finally {
@@ -121,10 +138,11 @@ export default function RecurringBookingDialog({
       <Button
         type="button"
         variant="outline"
-        size="sm"
+        className="border-primary/25 bg-background text-primary hover:bg-primary/10 h-10 w-full justify-center gap-3 px-4 shadow-xs"
         disabled={!templates.length || loading || !membershipEligible}
         onClick={begin}
       >
+        <Repeat2 className="size-4 shrink-0" />
         {loading && !open ? 'Memuat…' : 'Ulangi mingguan'}
       </Button>
       <Dialog
@@ -133,21 +151,28 @@ export default function RecurringBookingDialog({
           if (!loading) setOpen(value);
         }}
       >
-        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
-          <DialogHeader>
-            <DialogTitle>Booking berulang mingguan</DialogTitle>
+        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader className="gap-2 border-b pb-5">
+            <DialogTitle className="flex items-center gap-3">
+              <Repeat2 className="text-primary size-5" />
+              Booking berulang mingguan
+            </DialogTitle>
             <DialogDescription>
               Ulangi lapangan dan jam yang dipilih pada {dayjs(sourceDate).format('DD MMM YYYY')}.
-              Harga mengikuti setiap tanggal. Add-on dipilih terpisah.
+              Semua jam memakai WIB (Asia/Jakarta). Add-on hanya untuk booking awal.
             </DialogDescription>
           </DialogHeader>
-          <fieldset disabled={loading} className="space-y-4">
+          <fieldset disabled={loading} className="space-y-5">
             <legend className="mb-2 text-sm font-medium">Hari bermain</legend>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
               {days.map((day, index) => (
-                <label key={day} className="flex items-center gap-2 rounded border p-2 text-sm">
+                <label
+                  key={day}
+                  className={`flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border px-2 py-2 text-xs transition-colors ${weekdays.includes(index) ? 'border-primary/40 bg-primary/5 text-primary font-medium' : 'hover:bg-muted/40'}`}
+                >
                   <input
                     type="checkbox"
+                    className="accent-primary size-3.5"
                     checked={weekdays.includes(index)}
                     onChange={() => {
                       setWeekdays((previous) =>
@@ -162,52 +187,105 @@ export default function RecurringBookingDialog({
                 </label>
               ))}
             </div>
-            <label className="block space-y-2 text-sm">
-              Periode booking
-              <select
-                aria-label="Periode booking"
-                className="block w-full rounded border p-2"
-                value={mode}
-                onChange={(event) => {
-                  setMode(event.target.value as 'ROLLING' | 'MONTHS');
-                  setSessions(null);
-                }}
-              >
-                <option value="ROLLING">Ikuti rolling window — tanpa tanggal berhenti</option>
-                <option value="MONTHS">Durasi beberapa bulan</option>
-              </select>
-            </label>
-            {mode === 'MONTHS' && (
-              <label className="block space-y-2 text-sm">
-                Durasi
-                <select
-                  aria-label="Durasi booking"
-                  className="block w-full rounded border p-2"
-                  value={months}
-                  onChange={(event) => {
-                    setMonths(Number(event.target.value));
+            <div
+              className={`grid items-start gap-4 ${mode === 'MONTHS' ? 'sm:grid-cols-[minmax(0,1fr)_9rem]' : ''}`}
+            >
+              <div className="flex min-w-0 flex-col gap-2">
+                <label htmlFor="recurring-period" className="text-sm font-medium">
+                  Periode booking
+                </label>
+                <Select
+                  disabled={loading}
+                  value={mode}
+                  onValueChange={(value) => {
+                    setMode(value as 'ROLLING' | 'MONTHS' | 'DATES');
                     setSessions(null);
                   }}
                 >
-                  {Array.from({ length: 12 }, (_, i) => (
-                    <option key={i + 1} value={i + 1}>
-                      {i + 1} bulan
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  <SelectTrigger
+                    id="recurring-period"
+                    aria-label="Periode booking"
+                    className="w-full min-w-0 gap-4 px-3 data-[size=default]:h-10 [&>span]:min-w-0 [&>span]:truncate"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent align="start">
+                    <SelectItem value="ROLLING">Ikuti rolling window</SelectItem>
+                    <SelectItem value="MONTHS">Durasi beberapa bulan</SelectItem>
+                    <SelectItem value="DATES">Sampai tanggal tertentu</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {mode === 'MONTHS' && (
+                <div className="flex min-w-0 flex-col gap-2">
+                  <label htmlFor="recurring-duration" className="text-sm font-medium">
+                    Durasi
+                  </label>
+                  <Select
+                    disabled={loading}
+                    value={String(months)}
+                    onValueChange={(value) => {
+                      setMonths(Number(value));
+                      setSessions(null);
+                    }}
+                  >
+                    <SelectTrigger
+                      id="recurring-duration"
+                      aria-label="Durasi booking"
+                      className="w-full gap-4 px-3 data-[size=default]:h-10"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent align="start">
+                      {Array.from({ length: 12 }, (_, i) => (
+                        <SelectItem key={i + 1} value={String(i + 1)}>
+                          {i + 1} bulan
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+            {mode === 'DATES' && (
+              <div className="flex flex-col gap-2">
+                <label htmlFor="recurring-end-date" className="text-sm font-medium">
+                  Sampai tanggal
+                </label>
+                <DatePickerInput
+                  id="recurring-end-date"
+                  className="w-full sm:w-full"
+                  value={customEnd ? dayjs(customEnd).toDate() : undefined}
+                  minDate={dayjs(sourceDate).toDate()}
+                  maxDate={dayjs(sourceDate).add(12, 'month').toDate()}
+                  onValueChange={(date) => {
+                    setCustomEnd(date ? dayjs(date).format('YYYY-MM-DD') : '');
+                    setSessions(null);
+                  }}
+                />
+              </div>
             )}
-            <p className="text-muted-foreground text-xs">
+            <p className="text-muted-foreground text-xs leading-relaxed">
               {mode === 'ROLLING'
-                ? 'Jadwal otomatis diperpanjang mengikuti rolling window sampai admin menghentikannya.'
-                : `Booking berjalan selama ${months} bulan dari jadwal awal. Jadwal di luar window akan ditambahkan saat tersedia.`}{' '}
-              Pratinjau saat ini: {sourceDate} sampai {endDate}.
+                ? 'Tanpa tanggal berhenti. Jadwal baru ditambahkan saat rolling window bergerak.'
+                : 'Seluruh rentang ini dibuat saat checkout, termasuk tanggal yang belum diterbitkan. Setiap tanggal bermain memiliki booking dan invoice terpisah.'}{' '}
             </p>
-            <p className="rounded border p-3 text-xs">
-              Khusus pelanggan membership. Kuota dipotong saat jam bermain, boleh minus, dan aturan
-              tetap berjalan meskipun masa membership habis. Add-on tidak diulang otomatis.
+            <p className="bg-muted/40 flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs">
+              <CalendarDays className="text-muted-foreground size-4 shrink-0" />
+              Pratinjau: {dayjs(sourceDate).format('DD MMM YYYY')} —{' '}
+              {dayjs(endDate).format('DD MMM YYYY')}.
             </p>
-            <Button type="button" onClick={preview} disabled={loading}>
+            <p className="text-muted-foreground rounded-lg border p-3 text-xs leading-relaxed">
+              Khusus pelanggan membership. Kuota dipotong ketika masing-masing slot dimulai (WIB),
+              boleh minus, dan aturan tetap berjalan meskipun masa membership habis. Add-on tidak
+              diulang otomatis.
+            </p>
+            <Button
+              type="button"
+              className="h-10 w-full gap-2"
+              onClick={preview}
+              disabled={loading}
+            >
               {loading ? 'Memeriksa…' : 'Periksa semua jadwal'}
             </Button>
           </fieldset>
@@ -257,26 +335,30 @@ export default function RecurringBookingDialog({
                 </label>
               )}
               <p className="font-semibold">
-                Total jadwal tersedia: Rp{total.toLocaleString('id-ID')}
+                Nilai normal jadwal tersedia: Rp{total.toLocaleString('id-ID')}
               </p>
               <p className="text-muted-foreground text-xs">
-                Slot yang sudah dipilih tidak digandakan. Jadwal dikonfirmasi ulang saat checkout
-                dan belum ditahan sebelum checkout.
+                Jadwal awal masuk keranjang. Pengulangan dibuat terpisah saat checkout dan belum
+                ditahan sebelum checkout.
               </p>
               <Button
                 type="button"
                 disabled={loading || !items.length || (!!conflicts.length && !skipConflicts)}
                 onClick={() => {
-                  onApply(items, {
+                  onApply(source, {
                     mode,
                     ...(mode === 'MONTHS' ? { months } : {}),
+                    ...(mode === 'DATES' ? { endDate: customEnd } : {}),
+                    skipConflicts,
                     weekdays,
                     startDate: sourceDate,
                     previewThrough: endDate,
                     sourceSlotIds: source.map((item) => item.slotId)
                   });
                   setOpen(false);
-                  toast.success('Jadwal berulang ditambahkan. Tinjau keranjang sebelum checkout.');
+                  toast.success(
+                    'Rentang mingguan dipilih. Booking dan invoice per tanggal dibuat setelah checkout.'
+                  );
                 }}
               >
                 Gunakan jadwal tersedia

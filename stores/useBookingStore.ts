@@ -112,6 +112,8 @@ export interface SelectedInventory {
 }
 
 interface BookingState {
+  useMembership: boolean;
+  setUseMembership: (enabled: boolean) => void;
   recurringBooking: RecurringBookingRule | null;
   setRecurringBooking: (rule: RecurringBookingRule | null) => void;
   // Court bookings
@@ -169,8 +171,16 @@ interface BookingState {
 export const useBookingStore = create<BookingState>()(
   persist(
     (set, get) => ({
+      useMembership: true,
+      setUseMembership: (enabled) =>
+        set((state) =>
+          state.recurringBooking && !enabled
+            ? {}
+            : { useMembership: enabled, ...(!enabled ? { membershipDiscount: 0 } : {}) }
+        ),
       recurringBooking: null,
-      setRecurringBooking: (recurringBooking) => set({ recurringBooking }),
+      setRecurringBooking: (recurringBooking) =>
+        set({ recurringBooking, ...(recurringBooking ? { useMembership: true } : {}) }),
       bookingItems: [],
       selectedDate: new Date(),
       selectedCustomerId: null,
@@ -237,7 +247,9 @@ export const useBookingStore = create<BookingState>()(
                 selectedCustomerId: customerId,
                 selectedCustomerName: null,
                 selectedCustomerPhone: null,
-                membershipDiscount: 0
+                membershipDiscount: 0,
+                useMembership: true,
+                recurringBooking: null
               }
         ),
 
@@ -374,6 +386,7 @@ export const useBookingStore = create<BookingState>()(
 
       clearAll: () =>
         set({
+          useMembership: true,
           recurringBooking: null,
           bookingItems: [],
           selectedCoaches: [],
@@ -410,6 +423,7 @@ export const useBookingStore = create<BookingState>()(
       name: 'booking-storage',
       storage: typeof window !== 'undefined' ? createJSONStorage(() => sessionStorage) : undefined,
       partialize: (state) => ({
+        useMembership: state.useMembership,
         recurringBooking: state.recurringBooking,
         bookingItems: state.bookingItems,
         selectedDate: state.selectedDate,

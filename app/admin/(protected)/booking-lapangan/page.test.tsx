@@ -1,5 +1,6 @@
+import type * as ReactQuery from '@tanstack/react-query';
 vi.mock('@/components/admin/booking/RecurringBookingRules', () => ({ default: () => null }));
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import BookingLapangan from './page';
 import { useBookingStore } from '@/stores/useBookingStore';
@@ -20,11 +21,15 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams()
 }));
 vi.mock('@tanstack/react-query', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@tanstack/react-query')>()),
+  ...(await importOriginal<typeof ReactQuery>()),
   useQuery: () => ({ data: fixtures.slots, isLoading: false }),
   useQueryClient: () => ({ invalidateQueries: vi.fn() })
 }));
-vi.mock('@/components/admin/booking/BookingSummary', () => ({ default: () => null }));
+vi.mock('@/components/admin/booking/BookingSummary', () => ({
+  default: ({ recurringControls }: { recurringControls: React.ReactNode }) => (
+    <aside aria-label="Booking Summary">{recurringControls}</aside>
+  )
+}));
 vi.mock('@/hooks/useMembershipDiscount', () => ({
   useMembershipDiscount: () => ({ discountAmount: 0, discountedTotal: 0, originalTotal: 0 })
 }));
@@ -63,4 +68,12 @@ it('clears pending times when switching to another court', () => {
   expect(second).toHaveAttribute('aria-pressed', 'true');
   expect(screen.getByRole('button', { name: '12:00' })).toHaveAttribute('aria-pressed', 'false');
   expect(screen.queryByRole('button', { name: /Add to Booking/ })).not.toBeInTheDocument();
+});
+
+it('keeps weekly booking controls inside the booking summary', () => {
+  render(<BookingLapangan />);
+  const summary = screen.getByRole('complementary', { name: 'Booking Summary' });
+  expect(within(summary).getByRole('button', { name: 'Ulangi mingguan' })).toBeDisabled();
+  expect(within(summary).getByText('Booking rutin')).toBeInTheDocument();
+  expect(screen.getAllByRole('button', { name: 'Ulangi mingguan' })).toHaveLength(1);
 });

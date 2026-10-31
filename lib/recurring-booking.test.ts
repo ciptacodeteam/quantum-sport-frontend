@@ -103,8 +103,13 @@ describe('recurring booking', () => {
   });
 });
 
-it('uses the selected court horizon for rolling and caps month previews without changing the requested duration', () => {
+it('uses the selected court horizon for rolling and allows a chosen month period beyond the public window', () => {
   expect(recurringPreviewEnd('2026-11-03', '2027-01-29', 'ROLLING', 6)).toBe('2027-01-29');
-  expect(recurringPreviewEnd('2026-11-03', '2027-01-29', 'MONTHS', 6)).toBe('2027-01-29');
+  expect(recurringPreviewEnd('2026-11-03', '2027-01-29', 'MONTHS', 6)).toBe('2027-05-03');
   expect(recurringPreviewEnd('2026-11-03', '2027-01-29', 'MONTHS', 1)).toBe('2026-12-03');
+});
+it('uses a custom weekly end date independently of the public rolling window', () => {
+  expect(recurringPreviewEnd('2026-10-31', '2026-11-30', 'DATES', 1, '2027-03-31')).toBe(
+    '2027-03-31'
+  );
 });

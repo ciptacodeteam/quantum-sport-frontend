@@ -5,7 +5,9 @@ import type { BookingItem } from '@/stores/useBookingStore';
 import type { Court, Slot } from '@/types/model';
 
 export type RecurringBookingRule = {
-  mode: 'ROLLING' | 'MONTHS';
+  mode: 'ROLLING' | 'MONTHS' | 'DATES';
+  endDate?: string;
+  skipConflicts?: boolean;
   months?: number;
   weekdays: number[];
   startDate: string;
@@ -16,11 +18,12 @@ export type RecurringBookingRule = {
 export function recurringPreviewEnd(
   start: string,
   maximum: string,
-  mode: 'ROLLING' | 'MONTHS',
-  months: number
+  mode: 'ROLLING' | 'MONTHS' | 'DATES',
+  months: number,
+  endDate?: string
 ) {
   const durationEnd = dayjs(start).add(months, 'month').format('YYYY-MM-DD');
-  return mode === 'ROLLING' || maximum < durationEnd ? maximum : durationEnd;
+  return mode === 'ROLLING' ? maximum : mode === 'DATES' ? (endDate ?? start) : durationEnd;
 }
 
 export type RecurringSession = {

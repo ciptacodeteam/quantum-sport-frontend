@@ -1,35 +1,46 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, expect, it, vi } from 'vitest';
+import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 import RecurringBookingDialog from './RecurringBookingDialog';
 import type * as DayjsModule from '@/lib/dayjs';
 import type { BookingItem } from '@/stores/useBookingStore';
 
-vi.mock('@/api/admin/court', () => ({
-  getCourtsApi: vi.fn(async () => ({ data: [{ id: 'a', bookingWindowMonths: 3 }] })),
-  getCourtsSlotsApi: vi.fn(async () => ({
-    data: [
-      {
-        id: 'available',
-        courtId: 'a',
-        startAt: '2026-11-03 19:00:00',
-        endAt: '2026-11-03 20:00:00',
-        price: 200,
-        isAvailable: true
-      },
-      {
-        id: 'booked',
-        courtId: 'a',
-        startAt: '2026-11-10 19:00:00',
-        endAt: '2026-11-10 20:00:00',
-        price: 200,
-        isAvailable: false
+const mocks = vi.hoisted(() => ({
+  preview: vi.fn(async () => ({
+    data: {
+      data: {
+        sessions: [
+          {
+            date: '2026-11-03',
+            conflicts: [],
+            items: [
+              {
+                slotId: 'available',
+                courtId: 'a',
+                courtName: 'Court A',
+                date: '2026-11-03',
+                timeSlot: '19:00',
+                endTime: '20:00',
+                price: 200,
+                sport: 'PADEL'
+              }
+            ]
+          },
+          { date: '2026-11-10', conflicts: ['Court A tidak tersedia'], items: [] }
+        ]
       }
-    ]
+    }
   }))
+}));
+vi.mock('@/lib/adminApi', () => ({ adminApi: { post: mocks.preview } }));
+vi.mock('@/api/admin/court', () => ({
+  getCourtsApi: vi.fn(async () => ({ data: [{ id: 'a', bookingWindowMonths: 1 }] }))
 }));
 vi.mock('@/lib/dayjs', async (importOriginal) => {
   const actual = await importOriginal<typeof DayjsModule>();
   return { ...actual, nowJakarta: () => actual.default.tz('2026-10-29 10:00:00', 'Asia/Jakarta') };
+});
+beforeEach(() => {
+  HTMLElement.prototype.scrollIntoView = vi.fn();
 });
 afterEach(cleanup);
 const templates: BookingItem[] = [
@@ -65,8 +76,10 @@ it('requires consent to skip conflicts and invalidates preview after changing du
     screen.getByLabelText('Lewati seluruh sesi yang tidak tersedia dan lanjutkan jadwal lainnya.')
   );
   expect(apply).toBeEnabled();
-  fireEvent.change(screen.getByLabelText('Periode booking'), { target: { value: 'MONTHS' } });
-  fireEvent.change(screen.getByLabelText('Durasi booking'), { target: { value: '1' } });
+  fireEvent.keyDown(screen.getByLabelText('Periode booking'), { key: 'Enter' });
+  fireEvent.click(await screen.findByRole('option', { name: 'Durasi beberapa bulan' }));
+  fireEvent.keyDown(screen.getByLabelText('Durasi booking'), { key: 'Enter' });
+  fireEvent.click(await screen.findByRole('option', { name: '3 bulan' }));
   expect(screen.queryByRole('button', { name: 'Gunakan jadwal tersedia' })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Periksa semua jadwal' }));
   await screen.findByRole('button', { name: 'Gunakan jadwal tersedia' });
@@ -74,13 +87,17 @@ it('requires consent to skip conflicts and invalidates preview after changing du
     screen.getByLabelText('Lewati seluruh sesi yang tidak tersedia dan lanjutkan jadwal lainnya.')
   );
   fireEvent.click(screen.getByRole('button', { name: 'Gunakan jadwal tersedia' }));
+  expect(mocks.preview).toHaveBeenLastCalledWith(
+    '/bookings/recurring/preview',
+    expect.objectContaining({ months: 3, previewThrough: '2027-02-03' })
+  );
   await waitFor(() =>
     expect(onApply).toHaveBeenCalledWith(
-      [expect.objectContaining({ slotId: 'available', date: '2026-11-03', price: 200 })],
+      templates,
       expect.objectContaining({
         mode: 'MONTHS',
-        months: 1,
-        previewThrough: '2026-12-03',
+        months: 3,
+        previewThrough: '2027-02-03',
         sourceSlotIds: ['available']
       })
     )

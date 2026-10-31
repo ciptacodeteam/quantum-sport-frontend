@@ -3,6 +3,15 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '@/lib/adminApi';
+import { ListRestart, ChevronRight, CalendarClock } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription
+} from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
@@ -39,21 +48,40 @@ export default function RecurringBookingRules() {
     onError: () => toast.error('Aturan belum dapat dihentikan. Silakan coba lagi.')
   });
   return (
-    <div className="space-y-3 rounded border p-4">
+    <>
       <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setOpen((value) => !value)}
-        aria-expanded={open}
+        variant="ghost"
+        className="text-muted-foreground hover:text-primary h-auto min-h-9 w-full min-w-0 justify-between gap-3 px-1 py-2 text-xs whitespace-normal hover:bg-transparent"
+        onClick={() => setOpen(true)}
+        aria-haspopup="dialog"
       >
-        Kelola booking rutin membership
+        <span className="flex items-center gap-2">
+          <ListRestart className="size-4" />
+          Kelola booking rutin
+        </span>
+        <ChevronRight className="size-3.5 shrink-0" />
       </Button>
-      {open && (
-        <>
-          <p className="text-muted-foreground text-xs">
-            Menampilkan 100 aturan terbaru. Menghentikan aturan hanya menghentikan penambahan
-            jadwal; booking yang sudah terbentuk tetap berlaku dan dapat dibatalkan secara terpisah.
-          </p>
+      <Dialog
+        open={open}
+        onOpenChange={(value) => {
+          if (!stop.isPending) {
+            setOpen(value);
+            setStopId(null);
+          }
+        }}
+      >
+        <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader className="gap-2 border-b pb-4">
+            <DialogTitle className="flex items-center gap-3">
+              <ListRestart className="text-primary size-5" />
+              Kelola booking rutin
+            </DialogTitle>
+            <DialogDescription>
+              Menampilkan 100 aturan terbaru. Menghentikan aturan hanya menghentikan penambahan
+              jadwal; booking yang sudah terbentuk tetap berlaku dan dapat dibatalkan secara
+              terpisah.
+            </DialogDescription>
+          </DialogHeader>
           {isPending && <p className="text-sm">Memuat aturan…</p>}
           {isError && (
             <Button variant="outline" size="sm" onClick={() => refetch()}>
@@ -61,19 +89,36 @@ export default function RecurringBookingRules() {
             </Button>
           )}
           {!isPending && !isError && !rules.length && (
-            <p className="text-sm">Belum ada aturan booking rutin.</p>
+            <div className="bg-muted/20 flex flex-col items-center rounded-xl border border-dashed px-5 py-8 text-center">
+              <CalendarClock className="text-muted-foreground/60 mb-3 size-8" />
+              <p className="text-sm font-medium">Belum ada aturan booking rutin.</p>
+              <p className="text-muted-foreground mt-1 max-w-sm text-xs leading-relaxed">
+                Pilih pelanggan dan jadwal awal di Booking Summary, lalu gunakan Ulangi mingguan.
+              </p>
+            </div>
           )}
           {rules.map((rule) => (
-            <div key={rule.id} className="space-y-2 border-t pt-3 text-sm">
-              <p className="font-medium">
-                {rule.user.name} · {rule.user.phone}
-              </p>
+            <div key={rule.id} className="space-y-3 rounded-xl border p-4 text-sm">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="font-medium">{rule.user.name}</p>
+                  <p className="text-muted-foreground mt-1 text-xs">{rule.user.phone}</p>
+                </div>
+                <Badge variant={rule.isActive ? 'lightSuccess' : 'outline'}>
+                  {rule.isActive ? 'Aktif' : rule.stoppedAt ? 'Dihentikan' : 'Jadwal lengkap'}
+                </Badge>
+              </div>
               <p>
                 {rule.weekdays.map((day) => days[day]).join(', ')} ·{' '}
                 {rule.templates.map((item) => `${item.courtName} ${item.time}`).join(', ')}
               </p>
               <p>
-                {rule.isActive ? 'Aktif' : rule.stoppedAt ? 'Dihentikan admin' : 'Selesai'} ·{' '}
+                {rule.isActive
+                  ? 'Aktif'
+                  : rule.stoppedAt
+                    ? 'Dihentikan admin'
+                    : 'Seluruh rentang sudah dibuat'}{' '}
+                ·{' '}
                 {rule.endDate
                   ? `Sampai ${rule.endDate.slice(0, 10)}`
                   : 'Mengikuti rolling tanpa tanggal berhenti'}
@@ -110,8 +155,8 @@ export default function RecurringBookingRules() {
                 ))}
             </div>
           ))}
-        </>
-      )}
-    </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

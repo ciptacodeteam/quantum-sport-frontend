@@ -19,13 +19,35 @@ vi.mock('@/hooks/useMembershipDiscount', () => ({
   })
 }));
 
-function Harness() {
+function Harness({ membershipChoice = false }: { membershipChoice?: boolean }) {
   const state = useBookingStore();
   return (
     <BookingSummary
       bookingItems={[]}
-      courtTotal={0}
-      totalAmount={0}
+      courtTotal={membershipChoice ? 100000 : 0}
+      totalAmount={membershipChoice && !state.useMembership ? 100000 : 0}
+      useMembership={state.useMembership}
+      onUseMembershipChange={membershipChoice ? state.setUseMembership : undefined}
+      membershipDiscountDetails={
+        membershipChoice
+          ? {
+              canUseMembership: state.useMembership,
+              slotsToDeduct: state.useMembership ? 1 : 0,
+              discountAmount: state.useMembership ? 100000 : 0,
+              originalTotal: 100000,
+              activeMembership: {
+                id: 'pack-user',
+                startDate: '2026-01-01',
+                endDate: '2030-01-01',
+                remainingSessions: 50,
+                remainingDuration: 30,
+                isExpired: false,
+                isSuspended: false,
+                membership: { id: 'pack', name: 'Padel 50 Jam', price: 5000000 }
+              }
+            }
+          : undefined
+      }
       showAddOns={false}
       onWalkInSet={vi.fn()}
       onWalkInClear={vi.fn()}
@@ -137,4 +159,21 @@ it('combines equipment entries without exposing slot ids and removes all grouped
     ['balls', 'internal-2'],
     ['balls', 'internal-3']
   ]);
+});
+
+it('lets an active member choose regular payment and switch back without losing the customer', () => {
+  render(<Harness membershipChoice />);
+  expect(screen.getByRole('radio', { name: 'Pakai membership' })).toBeChecked();
+  fireEvent.click(screen.getByRole('radio', { name: 'Bayar reguler' }));
+  expect(screen.getByRole('radio', { name: 'Bayar reguler' })).toBeChecked();
+  expect(
+    screen.getByText('Harga reguler berlaku. Kuota membership tidak digunakan.')
+  ).toBeInTheDocument();
+  expect(useBookingStore.getState()).toMatchObject({
+    useMembership: false,
+    selectedCustomerId: 'old',
+    membershipDiscount: 0
+  });
+  fireEvent.click(screen.getByRole('radio', { name: 'Pakai membership' }));
+  expect(useBookingStore.getState().useMembership).toBe(true);
 });
