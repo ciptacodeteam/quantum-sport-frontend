@@ -7,6 +7,10 @@ type PaymentAction = {
   expiry?: string;
 };
 type PaymentMeta = {
+  gateway?: string;
+  checkout_mode?: string;
+  snap_token?: string;
+  redirect_url?: string;
   channel_code?: string;
   actions?: PaymentAction[];
   channel_properties?: Record<string, string | undefined>;
@@ -36,7 +40,9 @@ export type PaymentInvoice = {
 };
 
 export function getInvoicePayment(invoice: PaymentInvoice) {
-  const meta = invoice.paymentMeta ?? invoice.payment?.meta;
+  const meta = { ...invoice.payment?.meta, ...invoice.paymentMeta };
+  const isSnap = meta.gateway === 'midtrans' && meta.checkout_mode === 'snap';
+  const snapToken = isSnap ? meta.snap_token?.trim() || undefined : undefined;
   const instructions = invoice.paymentInstructions;
   const actions = Array.isArray(meta?.actions) ? meta.actions : [];
   const props = meta?.channel_properties;
@@ -59,11 +65,17 @@ export function getInvoicePayment(invoice: PaymentInvoice) {
       ['DEEPLINK_CHECKOUT', 'WEB_URL', 'MOBILE_URL'].includes(action.descriptor ?? '')
   );
   const redirectCandidate =
-    redirect?.url || redirect?.value || invoice.paymentUrl || instructions?.url;
+    (isSnap ? meta.redirect_url : undefined) ||
+    redirect?.url ||
+    redirect?.value ||
+    invoice.paymentUrl ||
+    instructions?.url;
   const paymentUrl =
     redirectCandidate && /^https?:\/\//i.test(redirectCandidate) ? redirectCandidate : undefined;
   const billerCode = props?.biller_code || instructions?.billerCode;
   return {
+    isSnap,
+    snapToken,
     channel,
     isQRIS: channel === 'QRIS' || channel === 'QR' || instructions?.type === 'QRIS',
     isVA:

@@ -3,10 +3,11 @@
 import { Button } from '@/components/ui/button';
 import { resolveMediaUrl } from '@/lib/utils';
 import { getInvoicePayment, type PaymentInvoice } from '@/lib/invoice-payment';
+import { payWithSnap } from '@/lib/midtrans';
 import { ArrowUpRight, Check, Copy, RefreshCw } from 'lucide-react';
 import Image from 'next/image';
 import { QRCodeSVG } from 'qrcode.react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import PaymentCountdown from './PaymentCountdown';
 
@@ -26,8 +27,42 @@ export default function PaymentActionCard({
   isRefreshing?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
-  if (!canPay) return null;
+  const [openingSnap, setOpeningSnap] = useState(false);
+  const [snapFailed, setSnapFailed] = useState(false);
+  const snapBusy = useRef(false);
   const info = getInvoicePayment(invoice);
+  const pending = ['PENDING', 'HOLD', 'AWAITING_CONFIRMATION'].includes(invoice.status);
+  const expired = () => !!info.expiresAt && Date.now() >= new Date(info.expiresAt).getTime();
+  if (!canPay || !pending || expired()) return null;
+  const resumeSnap = async () => {
+    if (snapBusy.current || !info.snapToken) return;
+    if (expired()) {
+      onExpired?.();
+      onRefresh?.();
+      return;
+    }
+    snapBusy.current = true;
+    setOpeningSnap(true);
+    setSnapFailed(false);
+    const refresh = () => {
+      snapBusy.current = false;
+      setOpeningSnap(false);
+      onRefresh?.();
+    };
+    try {
+      await payWithSnap(info.snapToken, {
+        onSuccess: refresh,
+        onPending: refresh,
+        onError: refresh,
+        onClose: refresh
+      });
+    } catch {
+      snapBusy.current = false;
+      setOpeningSnap(false);
+      setSnapFailed(true);
+      toast.error('Pembayaran belum dapat dibuka. Silakan coba lagi.');
+    }
+  };
   const method = invoice.payment?.method;
   const logo = resolveMediaUrl(method?.logo);
   const copyNumber = async () => {
@@ -72,17 +107,14 @@ export default function PaymentActionCard({
         </p>
       </div>
       {info.isQRIS &&
+        (!info.isSnap || info.qrString) &&
         (info.qrString ? (
           <>
             <div className="mx-auto w-full max-w-[264px] border border-black/15 bg-white p-3 sm:p-4">
               {info.qrIsImage ? (
                 // Midtrans returns a QR image URL, not an EMV payload.
                 // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={info.qrString}
-                  alt="Kode QRIS pembayaran"
-                  className="h-auto w-full"
-                />
+                <img src={info.qrString} alt="Kode QRIS pembayaran" className="h-auto w-full" />
               ) : (
                 <QRCodeSVG
                   value={info.qrString}
@@ -107,19 +139,24 @@ export default function PaymentActionCard({
           </p>
         ))}
       {info.isVA &&
+        (!info.isSnap || info.vaNumber) &&
         (info.vaNumber ? (
           <div className="border border-black/15 bg-white p-4 sm:p-5">
             {info.billerCode && (
               <>
-                <p className="text-[10px] tracking-wider text-black/45 uppercase">Kode perusahaan</p>
+                <p className="text-[10px] tracking-wider text-black/45 uppercase">
+                  Kode perusahaan
+                </p>
                 <p className="mt-2 text-xl font-medium tabular-nums">{info.billerCode}</p>
               </>
             )}
-            <p className={`text-[10px] tracking-wider text-black/45 uppercase ${info.billerCode ? 'mt-4' : ''}`}>
+            <p
+              className={`text-[10px] tracking-wider text-black/45 uppercase ${info.billerCode ? 'mt-4' : ''}`}
+            >
               {info.billerCode ? 'Kode bayar' : 'Nomor Virtual Account'}
             </p>
             <div className="mt-3 flex items-center justify-between gap-3">
-              <div className="min-w-0 flex-1 [container-type:inline-size]">
+              <div className="[container-type:inline-size] min-w-0 flex-1">
                 <p
                   className="font-medium whitespace-nowrap tabular-nums select-all"
                   style={{ fontSize: `min(1.5rem, ${100 / (info.vaNumber.length * 0.65)}cqw)` }}
@@ -172,8 +209,26 @@ export default function PaymentActionCard({
           </ol>
         </div>
       )}
-      {!info.isQRIS &&
-        !info.isVA &&
+      {info.isSnap && info.snapToken && (
+        <Button
+          className="mt-5 h-12 w-full rounded-full bg-[#111111] px-6 text-xs text-white hover:bg-black/80"
+          disabled={openingSnap}
+          onClick={() => void resumeSnap()}
+        >
+          {openingSnap ? 'Pembayaran sedang dibuka...' : 'Lanjutkan pembayaran'}
+        </Button>
+      )}
+      {info.isSnap && info.snapToken && snapFailed && info.paymentUrl && (
+        <a
+          href={info.paymentUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 block text-center text-sm underline"
+        >
+          Buka halaman pembayaran
+        </a>
+      )}
+      {((info.isSnap && !info.snapToken) || (!info.isSnap && !info.isQRIS && !info.isVA)) &&
         (info.paymentUrl ? (
           <Button
             asChild
