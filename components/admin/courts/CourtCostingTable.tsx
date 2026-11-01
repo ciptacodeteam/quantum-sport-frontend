@@ -18,6 +18,7 @@ import { ManagedDialog, useDialog } from '@/components/ui/dialog-context';
 import MultiSelectInput from '@/components/ui/multi-select-input';
 import { daysOfWeek, hoursInDay } from '@/lib/constants';
 import { formatSlotTimeRange } from '@/lib/time-utils';
+import { summarizeCourtCostSchedule } from '@/lib/court-cost-summary';
 import { adminCourtCostingQueryOptionsById, adminCourtQueryOptions } from '@/queries/admin/court';
 import {
   adminBulkDisableCourtSlotsMutationOptions,
@@ -583,13 +584,10 @@ const CourtCostingTable = ({ courtId }: Props) => {
         id: 'hours',
         header: 'Rentang Jam',
         cell: ({ row }) => {
-          const slots = row.original.slots;
-          return slots.length ? (
+          return (
             <span className="text-muted-foreground text-sm">
-              {formatSlotTimeRange(slots[0].startAt, slots.at(-1)!.endAt)}
+              {summarizeCourtCostSchedule(row.original.slots).hours}
             </span>
-          ) : (
-            '-'
           );
         }
       }),
@@ -613,12 +611,8 @@ const CourtCostingTable = ({ courtId }: Props) => {
         id: 'prices',
         header: 'Harga per Jam',
         cell: ({ row }) => {
-          const prices = row.original.slots.map((slot) =>
-            slot.discountPrice && slot.discountPrice < slot.price ? slot.discountPrice : slot.price
-          );
-          if (!prices.length) return '-';
-          const min = Math.min(...prices),
-            max = Math.max(...prices);
+          const { minPrice: min, maxPrice: max } = summarizeCourtCostSchedule(row.original.slots);
+          if (min === null || max === null) return '-';
           const currency = (value: number) => `Rp ${value.toLocaleString('id-ID')}`;
           return (
             <span className="text-sm font-medium">
