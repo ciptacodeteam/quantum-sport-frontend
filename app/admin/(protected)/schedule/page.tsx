@@ -1,6 +1,7 @@
 'use client';
 import { useAdminCourtSports } from '@/hooks/useAdminCourtSports';
 
+import AddBookingService from '@/components/admin/coaching/AddBookingService';
 import { BookingBallboySection } from '@/components/admin/bookings/BookingBallboySection';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -170,7 +171,7 @@ const getCoachesForBookingCell = (bookingCell: BookingCell): BookingCoach[] => {
   if (!detailSlot) return [];
 
   return coaches.filter((coach) => {
-    if (!coach.slot) return false;
+    if (!coach.slot || (coach.courtSlotId && coach.courtSlotId !== detailSlot.id)) return false;
     return timeRangesOverlap(coach.slot, detailSlot);
   });
 };
@@ -371,9 +372,7 @@ export default function SchedulePage() {
         const startTime = formatSlotTime(slot.startAt);
         if (!startTime || startTime === '-') return;
         const hour = Number.parseInt(startTime.slice(0, 2), 10);
-        const courtClosed = slot.courtId
-          ? closedHoursByCourtId.get(slot.courtId)
-          : undefined;
+        const courtClosed = slot.courtId ? closedHoursByCourtId.get(slot.courtId) : undefined;
         if (courtClosed?.has(hour) && !bookedStarts.has(startTime)) return;
         addRange(slot.startAt, slot.endAt);
       });
@@ -385,9 +384,7 @@ export default function SchedulePage() {
       const hour = Number.parseInt(startTime.slice(0, 2), 10);
       const allCourtsCloseThisHour =
         courts.length > 0 &&
-        courts.every((court) =>
-          (court.rollingPricing?.closedHours ?? []).includes(hour)
-        );
+        courts.every((court) => (court.rollingPricing?.closedHours ?? []).includes(hour));
       if (allCourtsCloseThisHour) map.delete(startTime);
     }
 
@@ -495,16 +492,18 @@ export default function SchedulePage() {
         if (!coachSlot?.startAt || !coachSlot.endAt) return;
         if (!coachMatchesCourtSport(coach, courtSport)) return;
 
-        let placements = (booking.details || [])
-          .filter((detail) => {
-            if (!detail.court?.id || !detail.slot) return false;
-            if (detail.court.sport !== courtSport) return false;
-            return timeRangesOverlap(coachSlot, detail.slot);
-          })
-          .map((detail) => ({
-            courtId: detail.court!.id,
-            slot: detail.slot!
-          }));
+        let placements = coach.courtSlot?.court?.id
+          ? [{ courtId: coach.courtSlot.court.id, slot: coach.courtSlot }]
+          : (booking.details || [])
+              .filter((detail) => {
+                if (!detail.court?.id || !detail.slot) return false;
+                if (detail.court.sport !== courtSport) return false;
+                return timeRangesOverlap(coachSlot, detail.slot);
+              })
+              .map((detail) => ({
+                courtId: detail.court!.id,
+                slot: detail.slot!
+              }));
 
         if (placements.length === 0) {
           const inferredPlacements: Array<{
@@ -568,6 +567,11 @@ export default function SchedulePage() {
 
             const existingCell = map.get(courtId)!.get(startTime);
             if (!existingCell) return;
+            if (
+              booking.serviceForBookingId &&
+              existingCell.booking.id !== booking.serviceForBookingId
+            )
+              return;
 
             map.get(courtId)!.set(startTime, {
               ...existingCell,
@@ -667,6 +671,11 @@ export default function SchedulePage() {
 
             const existingCell = map.get(courtId)!.get(startTime);
             if (!existingCell) return;
+            if (
+              booking.serviceForBookingId &&
+              existingCell.booking.id !== booking.serviceForBookingId
+            )
+              return;
 
             map.get(courtId)!.set(startTime, {
               ...existingCell,
@@ -759,6 +768,11 @@ export default function SchedulePage() {
 
             const existingCell = map.get(courtId)!.get(startTime);
             if (!existingCell) return;
+            if (
+              booking.serviceForBookingId &&
+              existingCell.booking.id !== booking.serviceForBookingId
+            )
+              return;
 
             map.get(courtId)!.set(startTime, {
               ...existingCell,
@@ -998,6 +1012,54 @@ export default function SchedulePage() {
                                                   {formatPhone(bookingCell.customerPhone)}
                                                 </span>
                                               )}
+                                            {getCoachesForBookingCell(bookingCell)
+                                              .filter(
+                                                (service) =>
+                                                  service.slot &&
+                                                  timeRangesOverlap(service.slot, {
+                                                    startAt: `${selectedDateString} ${startTime}:00`,
+                                                    endAt: parseDatetime(
+                                                      `${selectedDateString} ${startTime}:00`
+                                                    )
+                                                      .add(1, 'hour')
+                                                      .format('YYYY-MM-DD HH:mm:ss')
+                                                  })
+                                              )
+                                              .map((service) => (
+                                                <span
+                                                  key={service.id}
+                                                  className="max-w-full truncate text-xs text-blue-700"
+                                                >
+                                                  Coach: {service.slot?.staff?.name ?? '-'}
+                                                  {service.status === BookingStatus.HOLD
+                                                    ? ' (menunggu bayar)'
+                                                    : ''}
+                                                </span>
+                                              ))}
+                                            {getBallboysForBookingCell(bookingCell)
+                                              .filter(
+                                                (service) =>
+                                                  service.slot &&
+                                                  timeRangesOverlap(service.slot, {
+                                                    startAt: `${selectedDateString} ${startTime}:00`,
+                                                    endAt: parseDatetime(
+                                                      `${selectedDateString} ${startTime}:00`
+                                                    )
+                                                      .add(1, 'hour')
+                                                      .format('YYYY-MM-DD HH:mm:ss')
+                                                  })
+                                              )
+                                              .map((service) => (
+                                                <span
+                                                  key={service.id}
+                                                  className="max-w-full truncate text-xs text-blue-700"
+                                                >
+                                                  Ballboy: {service.slot?.staff?.name ?? '-'}
+                                                  {service.status === BookingStatus.HOLD
+                                                    ? ' (menunggu bayar)'
+                                                    : ''}
+                                                </span>
+                                              ))}
                                             <Badge
                                               variant={BOOKING_STATUS_BADGE_VARIANT[status]}
                                               className="shrink-0 px-2 py-0 text-xs font-normal"
@@ -1011,6 +1073,17 @@ export default function SchedulePage() {
                                             <DialogTitle>Detail Pemesanan</DialogTitle>
                                           </DialogHeader>
                                           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
+                                            <AddBookingService
+                                              detailId={bookingCell.detail.id}
+                                              startAt={`${selectedDateString} ${startTime}:00`}
+                                              endAt={parseDatetime(
+                                                `${selectedDateString} ${startTime}:00`
+                                              )
+                                                .add(1, 'hour')
+                                                .format('YYYY-MM-DD HH:mm:ss')}
+                                              sport={courtSport}
+                                              confirmed={status === BookingStatus.CONFIRMED}
+                                            />
                                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                               <div>
                                                 <p className="text-muted-foreground text-sm">
@@ -1248,11 +1321,14 @@ export default function SchedulePage() {
                                                                     📞 {formatPhone(coach.phone)}
                                                                   </p>
                                                                 )}
-                                                                {coach?.email && (
-                                                                  <p className="text-muted-foreground text-xs">
-                                                                    ✉️ {coach.email}
-                                                                  </p>
-                                                                )}
+                                                                {coach?.email &&
+                                                                  !coach.email.endsWith(
+                                                                    '@internal.invalid'
+                                                                  ) && (
+                                                                    <p className="text-muted-foreground text-xs">
+                                                                      ✉️ {coach.email}
+                                                                    </p>
+                                                                  )}
                                                                 {coachDescription && (
                                                                   <p className="text-muted-foreground mt-1 text-xs whitespace-pre-line">
                                                                     📝 {coachDescription}

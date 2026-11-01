@@ -417,6 +417,7 @@ export type Cashier = {
 };
 
 export type Booking = {
+  serviceForBookingId?: string | null;
   id: string;
   userId: string;
   status: BookingStatus;
@@ -507,6 +508,8 @@ export type CoachTypeStaffPrice = {
 };
 
 export type BookingCoach = {
+  courtSlotId?: string | null;
+  courtSlot?: Slot | null;
   id: string;
   bookingId: string;
   slotId: string;

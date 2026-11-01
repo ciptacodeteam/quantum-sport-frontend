@@ -104,6 +104,14 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
           url: '/admin/kelola-pemesanan/lapangan?courtSport=TENNIS'
         },
         {
+          title: 'Coach',
+          url: '/admin/kelola-pemesanan/coach'
+        },
+        {
+          title: 'Ballboy',
+          url: '/admin/kelola-pemesanan/ballboy'
+        },
+        {
           title: 'Inventori',
           url: '/admin/kelola-pemesanan/inventori'
         },
@@ -171,6 +179,14 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
         {
           title: 'Kelola Lapangan',
           url: '/admin/kelola-lapangan'
+        },
+        {
+          title: 'Coaching',
+          url: '/admin/coaching?kind=COACH'
+        },
+        {
+          title: 'Ballboy',
+          url: '/admin/coaching?kind=BALLBOY'
         },
         {
           title: 'Pengaturan Jam Tarif',
@@ -261,6 +277,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             {
               title: 'Lapangan Tennis',
               url: '/admin/kelola-pemesanan/lapangan?courtSport=TENNIS'
+            },
+            {
+              title: 'Coach',
+              url: '/admin/kelola-pemesanan/coach'
+            },
+            {
+              title: 'Ballboy',
+              url: '/admin/kelola-pemesanan/ballboy'
             },
             {
               title: 'Inventori',
