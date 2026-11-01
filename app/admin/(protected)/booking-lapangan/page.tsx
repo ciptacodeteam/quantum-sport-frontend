@@ -2,6 +2,8 @@
 
 import { Repeat2 } from 'lucide-react';
 import { useTariffPeriods } from '@/hooks/useTariffPeriods';
+import { useBookingClock } from '@/hooks/useBookingClock';
+import { isCourtWallSlotBookable } from '@/lib/booking-time-policy';
 import { resolveTariffPeriod, tariffBand } from '@/lib/tariff-period';
 
 import RecurringBookingRules from '@/components/admin/booking/RecurringBookingRules';
@@ -93,6 +95,7 @@ type SelectedBooking = {
 };
 
 export default function BookingLapangan() {
+  const currentTime = useBookingClock();
   const router = useRouter();
   const searchParams = useSearchParams();
   const courtSport: 'PADEL' | 'TENNIS' =
@@ -364,10 +367,7 @@ export default function BookingLapangan() {
     [activeMembershipType, standardTimeSlots, tariffRules, selectedDateString, courtSport]
   );
 
-  // Get time slots filtered by selected court (if a court is selected)
-  // IMPORTANT: We include ALL time slots regardless of isAvailable status
-  // Slots with isAvailable: false will be shown but marked as "booked" status
-  // We do NOT filter out any slots - all slots are displayed to the user
+  // Keep booked future slots visible, but hide every hour once its grace period ends.
   const availableTimeSlots = useMemo(() => {
     const timeSet = new Set<string>();
 
@@ -409,13 +409,41 @@ export default function BookingLapangan() {
     allowedStandardTimeSlots,
     tariffRules,
     courtSport
-  ]).filter((timeSlot) =>
-    isTimeAllowedForMembershipType(activeMembershipType, timeSlot, {
-      rules: tariffRules,
-      date: selectedDateString,
-      sport: courtSport
-    })
+  ]).filter(
+    (timeSlot) =>
+      isCourtWallSlotBookable(`${selectedDateString} ${timeSlot}:00`, currentTime) &&
+      isTimeAllowedForMembershipType(activeMembershipType, timeSlot, {
+        rules: tariffRules,
+        date: selectedDateString,
+        sport: courtSport
+      })
   );
+
+  useEffect(() => {
+    setSelectedTimeSlots((previous) => {
+      const next = previous.filter((time) =>
+        isCourtWallSlotBookable(`${selectedDateString} ${time}:00`, currentTime)
+      );
+      return next.length === previous.length ? previous : next;
+    });
+    setBookings((previous) => {
+      const next = previous.filter((item) =>
+        isCourtWallSlotBookable(
+          item.startAt ?? `${item.date} ${item.timeSlot.slice(0, 5)}:00`,
+          currentTime
+        )
+      );
+      return next.length === previous.length ? previous : next;
+    });
+    const items = useBookingStore.getState().bookingItems;
+    const valid = items.filter((item) =>
+      isCourtWallSlotBookable(
+        item.startAt ?? `${item.date} ${item.timeSlot.slice(0, 5)}:00`,
+        currentTime
+      )
+    );
+    if (valid.length !== items.length) setBookingItems(valid);
+  }, [currentTime, selectedDateString, setBookingItems]);
 
   // Revalidate persisted dates on mount and after session storage hydrates.
   useEffect(() => {
@@ -529,6 +557,17 @@ export default function BookingLapangan() {
       toast.error('Selected slots are not available');
       return;
     }
+    if (
+      selectedSlots.some(
+        ({ slot }) =>
+          !slot.isAvailable ||
+          slot.scheduleClosed ||
+          !isCourtWallSlotBookable(slot.startAt, Date.now())
+      )
+    ) {
+      toast.error('Slot sudah tidak tersedia atau melewati batas pemesanan 15 menit.');
+      return;
+    }
 
     // Create new bookings with the current selected date
     const currentDateFormatted = formatDateString(localSelectedDate);
@@ -627,6 +666,18 @@ export default function BookingLapangan() {
 
   // Handle proceed to add-ons
   const handleProceedToAddOns = () => {
+    if (
+      bookings.some(
+        (item) =>
+          !isCourtWallSlotBookable(
+            item.startAt ?? `${item.date} ${item.timeSlot.slice(0, 5)}:00`,
+            Date.now()
+          )
+      )
+    ) {
+      toast.error('Ada slot yang melewati batas pemesanan 15 menit. Silakan pilih ulang.');
+      return;
+    }
     if (!localCustomerId && !(storeWalkInName && storeWalkInPhone)) {
       toast.error('Silakan pilih pelanggan atau isi data walk-in terlebih dahulu');
       return;
@@ -711,7 +762,7 @@ export default function BookingLapangan() {
   // 1. Check if user has already added this slot to bookings
   // 2. Find the slot by court and start time
   // 3. If isAvailable is false, it's booked
-  // 4. If current time > start time, it's booked (past time)
+  // 4. Close the slot exactly fifteen minutes after its start time.
   const isTimeSlotBooked = (timeSlot: string, courtId: string) => {
     // First, check if user has already added this slot to their bookings
     // timeSlot is in format "HH:mm" (just the start time)
@@ -751,57 +802,12 @@ export default function BookingLapangan() {
       return true;
     }
 
-    if (candidateSlots.every((slot) => slot.isAvailable === false)) return true;
-
-    const now = dayjs();
-
-    const evaluatedCandidates = candidateSlots.map((slot) => {
-      const slotStartTime = formatSlotTime(slot.startAt);
-      const slotEndTime = formatSlotTime(slot.endAt);
-
-      const slotStartDateTime = dayjs(
-        `${selectedDateString} ${slotStartTime}`,
-        'YYYY-MM-DD HH:mm',
-        true
-      );
-      let slotEndDateTime = dayjs(`${selectedDateString} ${slotEndTime}`, 'YYYY-MM-DD HH:mm', true);
-
-      if (
-        slotEndDateTime.isSame(slotStartDateTime) ||
-        slotEndDateTime.isBefore(slotStartDateTime)
-      ) {
-        slotEndDateTime = slotEndDateTime.add(1, 'day');
-      }
-
-      const isOngoing =
-        (slotStartDateTime.isBefore(now) || slotStartDateTime.isSame(now)) &&
-        slotEndDateTime.isAfter(now);
-      const isEnded = slotEndDateTime.isBefore(now) || slotEndDateTime.isSame(now);
-
-      return {
-        isAvailable: slot.isAvailable !== false,
-        isOngoing,
-        isEnded
-      };
-    });
-
-    // Ongoing slots should always be selectable for admin.
-    if (evaluatedCandidates.some((candidate) => candidate.isOngoing)) {
-      return false;
-    }
-
-    // If every candidate has ended, mark booked.
-    if (evaluatedCandidates.every((candidate) => candidate.isEnded)) {
-      return true;
-    }
-
-    // For upcoming slots, any available candidate means selectable.
-    if (evaluatedCandidates.some((candidate) => !candidate.isEnded && candidate.isAvailable)) {
-      return false;
-    }
-
-    // Otherwise treat as booked.
-    return true;
+    return !candidateSlots.some(
+      (slot) =>
+        slot.isAvailable !== false &&
+        !slot.scheduleClosed &&
+        isCourtWallSlotBookable(slot.startAt, currentTime)
+    );
   };
 
   // const handleClearBookings = () => {

@@ -7,6 +7,9 @@ import { cn } from '@/lib/utils';
 import type { Court, Slot } from '@/types/model';
 import { IconCalendarFilled, IconInfoCircle } from '@tabler/icons-react';
 import dayjs from 'dayjs';
+import { useBookingClock } from '@/hooks/useBookingClock';
+import { isCourtWallSlotBookable } from '@/lib/booking-time-policy';
+import { formatScheduleSlotTime } from '@/lib/admin-schedule-time';
 import { useEffect, useMemo, useState } from 'react';
 import CourtDetailsDialog from './CourtDetailsDialog';
 
@@ -34,14 +37,20 @@ const BookingCalendar = ({
   selectedDate,
   onDateChange,
   selectedSlots,
-  onSlotSelect,
-  isAdmin = false,
-  userId
+  onSlotSelect
 }: BookingCalendarProps) => {
+  const currentTime = useBookingClock();
   const [selectedCourt, setSelectedCourt] = useState<Court | null>(null);
   const [dateList, setDateList] = useState<
     { label: string; date: string; fullDate: string; active?: boolean }[]
   >([]);
+
+  useEffect(() => {
+    const valid = selectedSlots.filter((slot) =>
+      isCourtWallSlotBookable(`${selectedDate} ${slot.time}:00`, currentTime)
+    );
+    if (valid.length !== selectedSlots.length) onSlotSelect(valid);
+  }, [currentTime, selectedDate, selectedSlots, onSlotSelect]);
 
   // Generate date list (3 months from today)
   useEffect(() => {
@@ -69,8 +78,10 @@ const BookingCalendar = ({
     for (let hour = 6; hour <= 23; hour++) {
       times.push(`${hour.toString().padStart(2, '0')}:00`);
     }
-    return times;
-  }, []);
+    return times.filter((time) =>
+      isCourtWallSlotBookable(`${selectedDate} ${time}:00`, currentTime)
+    );
+  }, [selectedDate, currentTime]);
 
   // Get slots for selected date
   const selectedDateSlots = useMemo(() => {
@@ -94,21 +105,7 @@ const BookingCalendar = ({
     });
 
     selectedDateSlots.forEach((slot) => {
-      // Handle different date formats from API
-      // API returns: "2025-01-20 08:00:00" (space-separated) or ISO format
-      let startAt: Date;
-      const startAtValue = slot.startAt as Date | string;
-      if (startAtValue instanceof Date) {
-        startAt = startAtValue;
-      } else if (typeof startAtValue === 'string') {
-        // Handle space-separated format: "2025-01-20 08:00:00"
-        const dateStr = startAtValue.includes('T') ? startAtValue : startAtValue.replace(' ', 'T');
-        startAt = new Date(dateStr);
-      } else {
-        startAt = new Date(startAtValue);
-      }
-
-      const time = dayjs(startAt).format('HH:mm');
+      const time = formatScheduleSlotTime(slot.startAt);
       const courtId = slot.courtId;
 
       if (courtId && grouped[courtId]) {
@@ -127,7 +124,6 @@ const BookingCalendar = ({
   const handleSelectDate = (date: Date | null) => {
     if (!date) return;
     const formattedDate = dayjs(date).format('YYYY-MM-DD');
-    const displayDate = dayjs(date).format('DD MMM');
     onDateChange(formattedDate);
 
     const el = document.getElementById(`date-${formattedDate}`);
@@ -135,19 +131,13 @@ const BookingCalendar = ({
   };
 
   const toggleSlot = (courtId: string, slot: Slot) => {
-    // Parse slot startAt date
-    let startAt: Date;
-    const startAtValue = slot.startAt as Date | string;
-    if (startAtValue instanceof Date) {
-      startAt = startAtValue;
-    } else if (typeof startAtValue === 'string') {
-      const dateStr = startAtValue.includes('T') ? startAtValue : startAtValue.replace(' ', 'T');
-      startAt = new Date(dateStr);
-    } else {
-      startAt = new Date(startAtValue);
-    }
-
-    const time = dayjs(startAt).format('HH:mm');
+    if (
+      !slot.isAvailable ||
+      slot.scheduleClosed ||
+      !isCourtWallSlotBookable(slot.startAt, Date.now())
+    )
+      return;
+    const time = formatScheduleSlotTime(slot.startAt);
     const existingIndex = selectedSlots.findIndex((s) => s.courtId === courtId && s.time === time);
 
     if (existingIndex >= 0) {
@@ -181,7 +171,12 @@ const BookingCalendar = ({
   const isSlotAvailable = (courtId: string, time: string) => {
     const slot = getSlot(courtId, time);
     // A slot is available if it exists, isAvailable is true, and has a price
-    return slot ? slot.isAvailable === true && slot.price > 0 : false;
+    return slot
+      ? slot.isAvailable === true &&
+          !slot.scheduleClosed &&
+          slot.price > 0 &&
+          isCourtWallSlotBookable(slot.startAt, currentTime)
+      : false;
   };
 
   const isSlotSelected = (courtId: string, time: string) => {

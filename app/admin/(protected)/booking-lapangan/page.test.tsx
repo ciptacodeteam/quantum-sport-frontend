@@ -40,12 +40,48 @@ vi.mock('@/hooks/useMembershipDiscount', () => ({
 
 beforeEach(() => {
   fixtures.queries = [];
+  fixtures.slots.forEach((slot) => {
+    slot.startAt = '2040-01-02T12:00:00Z';
+    slot.endAt = '2040-01-02T13:00:00Z';
+  });
   useBookingStore.getState().clearAll();
   useBookingStore.setState({ selectedDate: new Date(2040, 0, 2) });
 });
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
+});
+
+it('hides the current hour at exactly start +15 minutes while the admin tab stays open', () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2040-01-02T13:14:59+07:00'));
+  fixtures.slots.forEach((slot) => {
+    slot.startAt = '2040-01-02T13:00:00Z';
+    slot.endAt = '2040-01-02T14:00:00Z';
+  });
+  render(<BookingLapangan />);
+  fireEvent.click(screen.getByRole('button', { name: /Court A/ }));
+  expect(screen.getByRole('button', { name: '13:00' })).toBeEnabled();
+  fireEvent.click(screen.getByRole('button', { name: '13:00' }));
+  act(() => {
+    vi.advanceTimersByTime(1000);
+  });
+  expect(screen.queryByRole('button', { name: '13:00' })).toBeNull();
+  expect(screen.queryByRole('button', { name: /Add to Booking/ })).toBeNull();
+});
+
+it('removes an added slot from the admin cart once its grace period expires', () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2040-01-02T12:14:59+07:00'));
+  render(<BookingLapangan />);
+  fireEvent.click(screen.getByRole('button', { name: /Court A/ }));
+  fireEvent.click(screen.getByRole('button', { name: '12:00' }));
+  fireEvent.click(screen.getByRole('button', { name: /Add to Booking/ }));
+  expect(useBookingStore.getState().bookingItems).toHaveLength(1);
+  act(() => {
+    vi.advanceTimersByTime(1000);
+  });
+  expect(useBookingStore.getState().bookingItems).toEqual([]);
 });
 
 it('opens today in WIB instead of a persisted October 31 before the first slots query', () => {
