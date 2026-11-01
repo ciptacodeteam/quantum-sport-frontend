@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { getApiErrorMessage } from '@/lib/api-error';
 import { adminApi } from '@/lib/adminApi';
 import DatePickerInput from '@/components/ui/date-picker-input';
 import { getCourtsApi } from '@/api/admin/court';
@@ -121,8 +122,8 @@ export default function RecurringBookingDialog({
         sourceSlotIds: source.map((item) => item.slotId)
       });
       setSessions(response.data.data.sessions);
-    } catch {
-      setError('Jadwal belum dapat diperiksa. Periksa periode lalu coba lagi.');
+    } catch (error) {
+      setError(getApiErrorMessage(error, 'Jadwal belum dapat diperiksa. Silakan coba lagi.'));
     } finally {
       setLoading(false);
     }

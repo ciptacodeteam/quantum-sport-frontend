@@ -110,3 +110,21 @@ it('requires a source schedule before repeating', () => {
   );
   expect(screen.getByRole('button', { name: 'Ulangi mingguan' })).toBeDisabled();
 });
+
+it('shows the server reason when preview fails instead of blaming the period', async () => {
+  mocks.preview.mockRejectedValueOnce({ message: 'Jadwal awal tidak tersedia di cabang ini.' });
+  render(
+    <RecurringBookingDialog
+      templates={templates}
+      startDate="2026-11-03"
+      sport="PADEL"
+      onApply={vi.fn()}
+    />
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Ulangi mingguan' }));
+  await screen.findByRole('dialog');
+  fireEvent.click(screen.getByRole('button', { name: 'Periksa semua jadwal' }));
+  expect(await screen.findByText('Jadwal awal tidak tersedia di cabang ini.')).toBeInTheDocument();
+  expect(screen.queryByText(/Periksa periode lalu coba lagi/)).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Gunakan jadwal tersedia' })).toBeNull();
+});
