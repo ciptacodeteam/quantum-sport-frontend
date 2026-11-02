@@ -78,10 +78,6 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
           url: '/admin/booking-lapangan?courtSport=TENNIS'
         },
         {
-          title: 'Add-ons & Equipment',
-          url: '/admin/booking-add-ons'
-        },
-        {
           title: 'Book Value Pack',
           url: '/admin/booking-membership'
         },
@@ -110,10 +106,6 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
         {
           title: 'Ballboy',
           url: '/admin/kelola-pemesanan/ballboy'
-        },
-        {
-          title: 'Inventori',
-          url: '/admin/kelola-pemesanan/inventori'
         },
         {
           title: 'Value Pack',
@@ -197,10 +189,6 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
           url: '/admin/kelola-membership'
         },
         {
-          title: 'Kelola Inventori',
-          url: '/admin/kelola-inventori'
-        },
-        {
           title: 'Kelola Promo Code',
           url: '/admin/kelola-promo-code'
         },
@@ -253,10 +241,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               url: '/admin/booking-lapangan?courtSport=TENNIS'
             },
             {
-              title: 'Add-ons & Equipment',
-              url: '/admin/booking-add-ons'
-            },
-            {
               title: 'Book Value Pack',
               url: '/admin/booking-membership'
             },
@@ -285,10 +269,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             {
               title: 'Ballboy',
               url: '/admin/kelola-pemesanan/ballboy'
-            },
-            {
-              title: 'Inventori',
-              url: '/admin/kelola-pemesanan/inventori'
             }
           ]
         },
