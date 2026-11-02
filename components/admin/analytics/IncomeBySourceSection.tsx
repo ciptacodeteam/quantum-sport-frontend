@@ -3,8 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn, formatCurrency } from '@/lib/utils';
-import { format } from 'date-fns';
-import { IconCash, IconDeviceDesktop, IconSchool, IconCreditCard } from '@tabler/icons-react';
+import { IconCash, IconDeviceDesktop, IconCreditCard } from '@tabler/icons-react';
 
 interface IncomeBySourceSectionProps {
   data: any;
@@ -27,8 +26,8 @@ export default function IncomeBySourceSection({ data, isLoading }: IncomeBySourc
         </Card>
         <div className="space-y-4">
           <Skeleton className="h-6 w-32" />
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {Array.from({ length: 4 }, (_, i) => (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 3 }, (_, i) => (
               <Card key={i} className="gap-6 py-5">
                 <CardHeader className="px-5">
                   <Skeleton className="h-10 w-full" />
@@ -85,14 +84,6 @@ export default function IncomeBySourceSection({ data, isLoading }: IncomeBySourc
       barColor: 'bg-green-500'
     },
     {
-      key: 'Class Bookings',
-      title: 'Class Bookings',
-      icon: IconSchool,
-      color: 'text-purple-500',
-      bgColor: 'bg-purple-500/10',
-      barColor: 'bg-purple-500'
-    },
-    {
       key: 'Membership',
       title: 'Membership',
       icon: IconCreditCard,
@@ -102,35 +93,80 @@ export default function IncomeBySourceSection({ data, isLoading }: IncomeBySourc
     }
   ];
 
+  const totalRevenue = Number(summary.totalNetAmount ?? summary.totalIncome ?? 0);
+  const totalFees = Number(summary.totalProcessingFees ?? 0);
+  const totalGross = Number(summary.totalGrossAmount ?? totalRevenue + totalFees);
+  const totalTransactions = Number(summary.totalTransactions ?? 0);
+  const dateLabel = (value: string) =>
+    new Intl.DateTimeFormat('id-ID', {
+      timeZone: 'Asia/Jakarta',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    }).format(new Date(value));
+
+  const detailFor = (key: string, title: string) => {
+    const source = bySource[key];
+    const revenue = Number(source?.total ?? fallbackSourceTotals[key] ?? 0);
+    const processingFee =
+      source?.processingFee != null ? Number(source.processingFee) : revenue === 0 ? 0 : null;
+    return {
+      key,
+      title,
+      revenue,
+      processingFee,
+      gross: processingFee === null ? null : revenue + processingFee,
+      count: Number(source?.count ?? 0)
+    };
+  };
+  const details = sourceConfigs.map(({ key, title }) => detailFor(key, title));
+  const classes = detailFor('Class Bookings', 'Transaksi kelas');
+  if (classes.revenue !== 0 || classes.count > 0 || classes.processingFee) details.push(classes);
+  const remainder = totalRevenue - details.reduce((sum, row) => sum + row.revenue, 0);
+  const remainingCount = Math.max(
+    0,
+    totalTransactions - details.reduce((sum, row) => sum + row.count, 0)
+  );
+  if (remainder !== 0 || remainingCount > 0) {
+    const fee = details.every((row) => row.processingFee !== null)
+      ? totalFees - details.reduce((sum, row) => sum + (row.processingFee ?? 0), 0)
+      : null;
+    details.push({
+      key: 'other',
+      title: remainder < 0 ? 'Selisih rincian' : 'Belum terkelompok',
+      revenue: remainder,
+      processingFee: fee,
+      gross: fee === null ? null : remainder + fee,
+      count: remainingCount
+    });
+  }
+
   const metrics = [
-    { label: 'Gross amount', value: summary.totalGrossAmount || 0 },
-    { label: 'Processing fees', value: summary.totalProcessingFees || 0 },
-    { label: 'Net amount', value: summary.totalNetAmount || 0 }
+    { label: 'Pembayaran pelanggan', value: totalGross, note: 'Termasuk biaya proses' },
+    { label: 'Biaya proses', value: totalFees, note: 'Dikeluarkan dari revenue' },
+    { label: 'Total revenue', value: totalRevenue, note: 'Belum dikurangi biaya operasional' }
   ];
 
   return (
     <div className="space-y-8">
-      <Card className="gap-6 py-6 sm:py-8">
+      <Card role="region" aria-label="Ringkasan revenue" className="gap-6 py-6 sm:py-8">
         <CardHeader className="gap-2 px-6 sm:px-8">
-          <CardTitle className="text-base leading-snug">Total Income Summary</CardTitle>
+          <CardTitle className="text-base leading-snug">Ringkasan revenue</CardTitle>
           {data.dateRange?.startDate && data.dateRange?.endDate && (
             <CardDescription className="text-xs leading-relaxed sm:text-sm">
-              {format(new Date(data.dateRange.startDate), 'dd MMM yyyy')} —{' '}
-              {format(new Date(data.dateRange.endDate), 'dd MMM yyyy')}
+              {dateLabel(data.dateRange.startDate)} — {dateLabel(data.dateRange.endDate)} WIB
             </CardDescription>
           )}
         </CardHeader>
         <CardContent className="grid gap-6 px-6 sm:px-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] xl:items-center xl:gap-8">
           <div className="min-w-0 space-y-3">
-            <p className="text-muted-foreground text-sm font-medium">Total Income</p>
+            <p className="text-muted-foreground text-sm font-medium">Total revenue</p>
             <p className="text-3xl leading-tight font-semibold tracking-tight break-words tabular-nums sm:text-4xl">
-              {formatCurrency(summary.totalIncome || 0)}
+              {formatCurrency(totalRevenue)}
             </p>
             <p className="text-muted-foreground text-sm">
-              <span className="text-foreground font-medium tabular-nums">
-                {summary.totalTransactions || 0}
-              </span>{' '}
-              {summary.totalTransactions === 1 ? 'transaction' : 'transactions'} in this period
+              <span className="text-foreground font-medium tabular-nums">{totalTransactions}</span>{' '}
+              transaksi lunas dalam periode ini
             </p>
           </div>
           <dl className="grid gap-5 border-t pt-6 sm:grid-cols-3 xl:border-t-0 xl:border-l xl:pt-0 xl:pl-8">
@@ -142,34 +178,123 @@ export default function IncomeBySourceSection({ data, isLoading }: IncomeBySourc
                 <dd className="text-base leading-snug font-semibold break-words tabular-nums xl:text-lg">
                   {formatCurrency(metric.value)}
                 </dd>
+                <p className="text-muted-foreground text-xs leading-relaxed">{metric.note}</p>
               </div>
             ))}
           </dl>
+        </CardContent>
+        <div
+          className="bg-muted/50 mx-6 rounded-lg p-4 text-sm sm:mx-8"
+          aria-label="Perhitungan total revenue"
+        >
+          <p className="font-medium tabular-nums">
+            {formatCurrency(totalGross)} − {formatCurrency(totalFees)} ={' '}
+            {formatCurrency(totalRevenue)}
+          </p>
+          <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
+            Pembayaran pelanggan dikurangi biaya proses. Hanya invoice lunas, berdasarkan tanggal
+            pembayaran dalam WIB; jadwal main dapat berada di hari lain. Angka ini belum dikurangi
+            biaya operasional.
+          </p>
+        </div>
+      </Card>
+
+      <Card className="gap-5 py-6">
+        <CardHeader className="px-6 sm:px-8">
+          <CardTitle className="text-base">Rincian total revenue</CardTitle>
+          <CardDescription>Setiap transaksi dihitung pada sumber pembayarannya.</CardDescription>
+        </CardHeader>
+        <CardContent className="px-6 sm:px-8">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[650px] text-sm" aria-label="Rincian revenue per sumber">
+              <thead>
+                <tr className="text-muted-foreground border-b">
+                  {['Sumber', 'Transaksi', 'Pembayaran pelanggan', 'Biaya proses', 'Revenue'].map(
+                    (label, index) => (
+                      <th
+                        key={label}
+                        scope="col"
+                        className={`px-3 py-3 font-medium ${index === 0 ? 'text-left' : 'text-right'}`}
+                      >
+                        {label}
+                      </th>
+                    )
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {details.map((row) => (
+                  <tr key={row.key} className="border-b last:border-b-0">
+                    <th scope="row" className="px-3 py-3 text-left font-medium">
+                      {row.title}
+                    </th>
+                    <td className="px-3 py-3 text-right tabular-nums">{row.count}</td>
+                    <td className="px-3 py-3 text-right tabular-nums">
+                      {row.gross === null ? '—' : formatCurrency(row.gross)}
+                    </td>
+                    <td className="px-3 py-3 text-right tabular-nums">
+                      {row.processingFee === null ? '—' : formatCurrency(row.processingFee)}
+                    </td>
+                    <td className="px-3 py-3 text-right font-medium tabular-nums">
+                      {formatCurrency(row.revenue)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-muted/40 border-t font-semibold">
+                  <th scope="row" className="px-3 py-3 text-left">
+                    Total
+                  </th>
+                  <td className="px-3 py-3 text-right tabular-nums">{totalTransactions}</td>
+                  <td className="px-3 py-3 text-right tabular-nums">
+                    {formatCurrency(totalGross)}
+                  </td>
+                  <td className="px-3 py-3 text-right tabular-nums">{formatCurrency(totalFees)}</td>
+                  <td className="px-3 py-3 text-right tabular-nums">
+                    {formatCurrency(totalRevenue)}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <p className="text-muted-foreground mt-4 text-xs leading-relaxed">
+            Online dan kasir mencakup nilai invoice booking setelah diskon/promo, termasuk layanan
+            tambahan yang ada di invoice. Membership menghitung pembelian paket; pemakaian kuota
+            Value Pack tidak dihitung sebagai pembayaran baru. Tanda — berarti biaya per sumber
+            belum tersedia.
+          </p>
         </CardContent>
       </Card>
 
       <section aria-labelledby="income-sources-title" className="space-y-4">
         <div className="space-y-1.5">
           <h3 id="income-sources-title" className="text-base font-semibold">
-            Income sources
+            Sumber revenue
           </h3>
           <p className="text-muted-foreground text-sm">
-            Contribution from each booking channel and membership.
+            Kontribusi revenue setelah biaya proses, berdasarkan kanal booking dan pembelian
+            membership.
           </p>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {sourceConfigs.map((config) => {
             const sourceData = bySource[config.key] || {
               count: 0,
               total: fallbackSourceTotals[config.key] || 0
             };
             const Icon = config.icon;
-            const percentage = summary.totalIncome
-              ? ((sourceData.total / summary.totalIncome) * 100).toFixed(1)
+            const percentage = totalRevenue
+              ? ((sourceData.total / totalRevenue) * 100).toFixed(1)
               : '0.0';
 
             return (
-              <Card key={config.key} className="gap-6 py-5">
+              <Card
+                key={config.key}
+                role="article"
+                aria-label={config.title}
+                className="gap-6 py-5"
+              >
                 <CardHeader className="flex flex-row items-center justify-between gap-3 px-5">
                   <CardTitle className="text-sm leading-snug font-medium">{config.title}</CardTitle>
                   <div className={cn('shrink-0 rounded-xl p-2.5', config.bgColor)}>
@@ -182,12 +307,11 @@ export default function IncomeBySourceSection({ data, isLoading }: IncomeBySourc
                       {formatCurrency(sourceData.total)}
                     </p>
                     <p className="text-muted-foreground text-xs leading-relaxed">
-                      {sourceData.count || 0}{' '}
-                      {sourceData.count === 1 ? 'transaction' : 'transactions'}
+                      {sourceData.count || 0} transaksi
                       <span className="mx-2" aria-hidden="true">
                         ·
                       </span>
-                      {percentage}% of total
+                      {percentage}% dari total
                     </p>
                   </div>
                   <div className="bg-muted h-1.5 overflow-hidden rounded-full" aria-hidden="true">
