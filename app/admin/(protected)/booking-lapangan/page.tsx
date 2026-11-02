@@ -1,6 +1,8 @@
 'use client';
 
 import { Repeat2 } from 'lucide-react';
+import type { AdminCheckoutPayload } from '@/api/admin/checkout';
+import { adminCheckoutMutationOptions } from '@/mutations/admin/checkout';
 import { useTariffPeriods } from '@/hooks/useTariffPeriods';
 import { useBookingClock } from '@/hooks/useBookingClock';
 import { isCourtWallSlotBookable } from '@/lib/booking-time-policy';
@@ -25,7 +27,7 @@ import type { CustomerSearchResult } from '@/queries/admin/customer';
 import { useBookingStore } from '@/stores/useBookingStore';
 import type { Court, Slot } from '@/types/model';
 import { IconCalendar, IconCheck, IconClock, IconMapPin } from '@tabler/icons-react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import timezone from 'dayjs/plugin/timezone';
@@ -664,8 +666,24 @@ export default function BookingLapangan() {
   // Use membership discount calculation
   const totalPrice = membershipDiscount.discountedTotal;
 
-  // Handle proceed to add-ons
-  const handleProceedToAddOns = () => {
+  const { mutate: confirmCheckout, isPending: isConfirming } = useMutation(
+    adminCheckoutMutationOptions({
+      onSuccess: () => {
+        for (const queryKey of [
+          ['courts', 'slots'],
+          ['admin', 'courts'],
+          ['admin', 'schedule'],
+          ['admin', 'bookings']
+        ])
+          void queryClient.invalidateQueries({ queryKey });
+        useBookingStore.getState().clearAll();
+        router.push(`/admin/kelola-pemesanan/lapangan?courtSport=${courtSport}`);
+      }
+    })
+  );
+
+  const handleConfirmBooking = () => {
+    if (isConfirming) return;
     if (
       bookings.some(
         (item) =>
@@ -688,42 +706,34 @@ export default function BookingLapangan() {
       return;
     }
 
-    // Save customer ID to store
-    setSelectedCustomerId(localCustomerId);
-
-    // Save current bookings to store with their individual dates
-    const bookingItemsForStore: any = bookings.map((booking) => ({
-      courtId: booking.courtId,
-      courtName: booking.courtName,
-      timeSlot: booking.timeSlot,
-      price:
-        booking.discountPrice && booking.discountPrice > 0
-          ? booking.discountPrice
-          : booking.normalPrice || booking.price,
-      normalPrice: booking.normalPrice,
-      discountPrice: booking.discountPrice,
-      sport: courtSport,
-      date: booking.date,
-      slotId: booking.slotId,
-      endTime: booking.endTime || booking.timeSlot.split(' - ')[1] || '',
-      startAt: booking.startAt,
-      endAt: booking.endAt
-    }));
-    setBookingItems(bookingItemsForStore);
-
-    // Set the selected date to the most recent booking date
-    const latestDate = bookings.reduce((latest, booking) => {
-      const bookingDate = new Date(booking.date);
-      const latestDateObj = new Date(latest);
-      return bookingDate.getTime() > latestDateObj.getTime() ? booking.date : latest;
-    }, bookings[0].date);
-    setStoreDate(new Date(latestDate));
-
-    // Invalidate slots query to refresh available slots
-    queryClient.invalidateQueries({ queryKey: ['admin', 'court-costing'] });
-
-    toast.success('Proceeding to add-ons...');
-    router.push('/admin/booking-add-ons');
+    const courtSlots = bookings.map((booking) => booking.slotId);
+    if (courtSlots.some((id) => !id)) {
+      toast.error('Slot lapangan tidak valid. Silakan pilih ulang.');
+      return;
+    }
+    const totalHours = bookings.reduce((sum, booking) => {
+      const start = dayjs(booking.startAt ?? `${booking.date} ${booking.timeSlot.slice(0, 5)}`);
+      const endTime = booking.endTime || booking.timeSlot.split(' - ')[1];
+      let end = booking.endAt
+        ? dayjs(booking.endAt)
+        : endTime
+          ? dayjs(`${booking.date} ${endTime}`)
+          : start.add(1, 'hour');
+      if (!booking.endAt && end.isValid() && !end.isAfter(start)) end = end.add(1, 'day');
+      const hours = end.diff(start, 'hour', true);
+      return sum + (Number.isFinite(hours) && hours > 0 ? hours : 1);
+    }, 0);
+    const payload: AdminCheckoutPayload = {
+      courtSlots,
+      totalHours: Math.round(totalHours * 100) / 100,
+      adminNote: bookingAdminNote || undefined,
+      useMembership: recurringBooking ? true : useMembership,
+      ...(recurringBooking ? { recurringBooking } : {}),
+      ...(localCustomerId
+        ? { userId: localCustomerId }
+        : { name: storeWalkInName!, phone: storeWalkInPhone! })
+    };
+    confirmCheckout(payload);
   };
 
   // Check if time slot is already booked (system bookings + user selections)
@@ -1401,8 +1411,9 @@ export default function BookingLapangan() {
               }
             }}
             primaryAction={{
-              label: 'Proceed to Add-Ons',
-              onClick: handleProceedToAddOns,
+              label: 'Konfirmasi Booking',
+              onClick: handleConfirmBooking,
+              loading: isConfirming,
               disabled:
                 (!localCustomerId && !(storeWalkInName && storeWalkInPhone)) ||
                 bookings.length === 0

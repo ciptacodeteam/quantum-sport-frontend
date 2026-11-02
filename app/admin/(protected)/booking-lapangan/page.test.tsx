@@ -7,6 +7,10 @@ import { useBookingStore } from '@/stores/useBookingStore';
 
 const fixtures = vi.hoisted(() => ({
   queries: [] as any[],
+  mutate: vi.fn(),
+  push: vi.fn(),
+  mutationOptions: {} as any,
+  pending: false,
   slots: ['court-a', 'court-b'].map((id) => ({
     id: `slot-${id}`,
     courtId: id,
@@ -18,7 +22,7 @@ const fixtures = vi.hoisted(() => ({
   }))
 }));
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: fixtures.push }),
   useSearchParams: () => new URLSearchParams()
 }));
 vi.mock('@tanstack/react-query', async (importOriginal) => ({
@@ -27,11 +31,23 @@ vi.mock('@tanstack/react-query', async (importOriginal) => ({
     fixtures.queries.push(options);
     return { data: fixtures.slots, isLoading: false };
   },
-  useQueryClient: () => ({ invalidateQueries: vi.fn() })
+  useQueryClient: () => ({ invalidateQueries: vi.fn() }),
+  useMutation: (options: any) => {
+    fixtures.mutationOptions = options;
+    return { mutate: fixtures.mutate, isPending: fixtures.pending };
+  }
 }));
 vi.mock('@/components/admin/booking/BookingSummary', () => ({
-  default: ({ recurringControls }: { recurringControls: React.ReactNode }) => (
-    <aside aria-label="Booking Summary">{recurringControls}</aside>
+  default: ({ recurringControls, primaryAction }: any) => (
+    <aside aria-label="Booking Summary">
+      {recurringControls}
+      <button
+        disabled={primaryAction.disabled || primaryAction.loading}
+        onClick={primaryAction.onClick}
+      >
+        {primaryAction.label}
+      </button>
+    </aside>
   )
 }));
 vi.mock('@/hooks/useMembershipDiscount', () => ({
@@ -39,6 +55,8 @@ vi.mock('@/hooks/useMembershipDiscount', () => ({
 }));
 
 beforeEach(() => {
+  vi.clearAllMocks();
+  fixtures.pending = false;
   fixtures.queries = [];
   fixtures.slots.forEach((slot) => {
     slot.startAt = '2040-01-02T12:00:00Z';
@@ -165,4 +183,82 @@ it('keeps weekly booking controls inside the booking summary', () => {
   expect(within(summary).getByRole('button', { name: 'Ulangi mingguan' })).toBeDisabled();
   expect(within(summary).getByText('Booking rutin')).toBeInTheDocument();
   expect(screen.getAllByRole('button', { name: 'Ulangi mingguan' })).toHaveLength(1);
+});
+
+function prepareCourtBooking(customer = true) {
+  useBookingStore.setState({
+    selectedDate: new Date(2040, 0, 2),
+    selectedCustomerId: customer ? 'customer' : null,
+    walkInName: customer ? null : 'Budi',
+    walkInPhone: customer ? null : '08123456789',
+    bookingAdminNote: 'Booking langsung',
+    useMembership: false,
+    bookingItems: [
+      {
+        courtId: 'court-a',
+        courtName: 'Court A',
+        slotId: 'slot-court-a',
+        sport: 'PADEL',
+        date: '2040-01-02',
+        timeSlot: '12:00 - 13:00',
+        endTime: '13:00',
+        startAt: '2040-01-02T12:00:00Z',
+        endAt: '2040-01-02T13:00:00Z',
+        price: 150000
+      }
+    ],
+    selectedInventories: [{ inventoryId: 'stale-inventory', quantity: 1 }] as any,
+    selectedCoaches: [{ slotId: 'stale-coach' }] as any,
+    selectedBallboys: [{ slotId: 'stale-ballboy' }] as any
+  });
+}
+it('checks out courts directly and only clears the cart after success', () => {
+  prepareCourtBooking();
+  render(<BookingLapangan />);
+  fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }));
+  expect(fixtures.mutate).toHaveBeenCalledWith({
+    courtSlots: ['slot-court-a'],
+    totalHours: 1,
+    userId: 'customer',
+    adminNote: 'Booking langsung',
+    useMembership: false
+  });
+  expect(fixtures.push).not.toHaveBeenCalled();
+  expect(useBookingStore.getState().bookingItems).toHaveLength(1);
+  act(() => fixtures.mutationOptions.onSuccess({}));
+  expect(useBookingStore.getState().bookingItems).toEqual([]);
+  expect(useBookingStore.getState().selectedInventories).toEqual([]);
+  expect(fixtures.push).toHaveBeenCalledWith('/admin/kelola-pemesanan/lapangan?courtSport=PADEL');
+  expect(fixtures.push).not.toHaveBeenCalledWith('/admin/booking-add-ons');
+});
+it('submits walk-in customer details without requiring an add-ons step', () => {
+  prepareCourtBooking(false);
+  render(<BookingLapangan />);
+  fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }));
+  expect(fixtures.mutate).toHaveBeenCalledWith(
+    expect.objectContaining({ name: 'Budi', phone: '08123456789', courtSlots: ['slot-court-a'] })
+  );
+  expect(fixtures.mutate.mock.calls[0][0]).not.toHaveProperty('userId');
+});
+it('disables direct checkout while a booking request is pending', () => {
+  prepareCourtBooking();
+  fixtures.pending = true;
+  render(<BookingLapangan />);
+  expect(screen.getByRole('button', { name: 'Konfirmasi Booking' })).toBeDisabled();
+});
+it('retains weekly booking rules and membership usage in direct checkout', () => {
+  prepareCourtBooking();
+  const recurringBooking = {
+    mode: 'ROLLING' as const,
+    startDate: '2040-01-02',
+    previewThrough: '2040-02-02',
+    weekdays: [1],
+    sourceSlotIds: ['slot-court-a']
+  };
+  useBookingStore.setState({ recurringBooking });
+  render(<BookingLapangan />);
+  fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }));
+  expect(fixtures.mutate).toHaveBeenCalledWith(
+    expect.objectContaining({ recurringBooking, useMembership: true })
+  );
 });
