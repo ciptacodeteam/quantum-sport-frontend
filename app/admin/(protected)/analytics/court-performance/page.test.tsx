@@ -75,6 +75,7 @@ beforeEach(() => {
     courts: [{ id: 'court1', name: 'Padel Court 1', sport: 'PADEL' }],
     summary: {
       ...totals,
+      createdBookingHours: 7,
       capacityHours: 4,
       occupiedHours: 2,
       occupancy: 50,
@@ -135,6 +136,23 @@ it('shows capacity, occupancy and separate payment/package valuation without a n
   expect(document.querySelector('input[type="date"]')).toBeNull();
   expect(mocks.query.mock.calls[0][0].queryKey).toContain('cemara');
 });
+it('separates playing-date hours from hours ordered during the selected period', () => {
+  render(<CourtPerformancePage />);
+  const usageCard = screen.getByText('Total jam dipakai').closest('div')!.parentElement!;
+  const orderedCard = screen.getByText('Total jam dipesan').closest('div')!.parentElement!;
+  expect(within(usageCard).getByText('2 jam')).toBeInTheDocument();
+  expect(within(orderedCard).getByText('7 jam')).toBeInTheDocument();
+  expect(
+    within(orderedCard).getByText(/Pemesanan dibuat pada periode pilihan \(WIB\)/)
+  ).toBeInTheDocument();
+});
+
+it('describes creation-date totals for a single selected day', () => {
+  mocks.data.endDate = mocks.data.startDate;
+  render(<CourtPerformancePage />);
+  expect(screen.getByText(/Pemesanan dibuat pada tanggal pilihan \(WIB\)/)).toBeInTheDocument();
+});
+
 it('filters booking details by search, category and tariff independently', () => {
   render(<CourtPerformancePage />);
   const details = document.getElementById('booking-details')!;

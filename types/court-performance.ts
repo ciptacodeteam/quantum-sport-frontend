@@ -42,6 +42,7 @@ export type CourtPerformance = {
   generatedAt: string;
   courts: { id: string; name: string; sport: string; branchId: string; branch: string }[];
   summary: PerformanceTotals & {
+    createdBookingHours: number;
     capacityHours: number;
     occupiedHours: number;
     occupancy: number;

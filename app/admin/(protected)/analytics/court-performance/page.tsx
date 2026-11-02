@@ -223,11 +223,20 @@ function CourtPerformanceContent({ branch }: { branch: string | null | undefined
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {[
               {
-                label: 'Total jam dipesan',
+                label: 'Total jam dipakai',
                 value: `${n(data.summary.hours)} jam`,
                 note: `${n(data.summary.pastHours)} berlalu · ${n(data.summary.upcomingHours)} mendatang`,
                 icon: Clock3,
                 primary: true
+              },
+              {
+                label: 'Total jam dipesan',
+                value:
+                  typeof data.summary.createdBookingHours === 'number'
+                    ? `${n(data.summary.createdBookingHours)} jam`
+                    : '—',
+                note: `Pemesanan dibuat pada ${data.startDate === data.endDate ? 'tanggal' : 'periode'} pilihan (WIB), termasuk jadwal main di hari lain`,
+                icon: CalendarDays
               },
               {
                 label: 'Okupansi periode',
