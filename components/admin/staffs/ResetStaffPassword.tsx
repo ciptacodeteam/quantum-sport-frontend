@@ -60,7 +60,13 @@ const ResetStaffPassword = ({ staffId }: Props) => {
 
   return (
     <>
-      <Dialog open={openViewPasswordDialog} onOpenChange={setOpenViewPasswordDialog}>
+      <Dialog
+        open={openViewPasswordDialog}
+        onOpenChange={(open) => {
+          setOpenViewPasswordDialog(open);
+          if (!open) setGeneratedPassword('');
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Password Baru Karyawan</DialogTitle>
@@ -72,7 +78,8 @@ const ResetStaffPassword = ({ staffId }: Props) => {
                 <IconInfoCircle />
                 <AlertDescription>
                   Salin password baru ini dan berikan kepada karyawan. Pastikan untuk menyimpannya
-                  dengan aman karena password ini tidak dapat diakses kembali.
+                  dengan aman karena password ini tidak dapat diakses kembali. Karyawan wajib
+                  menggantinya saat login berikutnya.
                 </AlertDescription>
               </Alert>
               <InputGroup>
@@ -82,7 +89,13 @@ const ResetStaffPassword = ({ staffId }: Props) => {
             </SectionContent>
           </Section>
           <DialogFooter>
-            <Button variant={'outline'} onClick={() => setOpenViewPasswordDialog(false)}>
+            <Button
+              variant={'outline'}
+              onClick={() => {
+                setOpenViewPasswordDialog(false);
+                setGeneratedPassword('');
+              }}
+            >
               Tutup
             </Button>
           </DialogFooter>

@@ -59,9 +59,10 @@ const ResetPasswordForm = ({ onSuccess, onLoginClick }: Props) => {
 
   const requestId = usePhoneStore((state) => state.requestId);
   const phone = usePhoneStore((state) => state.phone);
+  const resetToken = usePhoneStore((state) => state.resetToken);
 
   const onSubmit: SubmitHandler<FormSchema> = (formData) => {
-    if (!phone || !requestId) {
+    if (!phone || !requestId || !resetToken) {
       toast.error('Session expired. Please try again.');
       return;
     }
@@ -69,6 +70,7 @@ const ResetPasswordForm = ({ onSuccess, onLoginClick }: Props) => {
     mutate({
       phone,
       requestId,
+      resetToken,
       newPassword: formData.password
     });
   };

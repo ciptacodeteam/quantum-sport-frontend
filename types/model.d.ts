@@ -8,6 +8,7 @@ enum Role {
 }
 
 export type AdminProfile = {
+  mustChangePassword?: boolean;
   branchId: string;
   branch: import('./branch').Branch;
   id: string;

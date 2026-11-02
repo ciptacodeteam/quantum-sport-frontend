@@ -24,7 +24,7 @@ const AuthModal = () => {
   const [otpOpen, setOtpOpen] = useState(false);
   const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
 
-  const [verifyType, setVerifyType] = useState<'global' | 'register'>('global');
+  const [verifyType, setVerifyType] = useState<'reset' | 'register'>('reset');
 
   const setPhone = usePhoneStore((state) => state.setPhone);
   const setRequestId = usePhoneStore((state) => state.setRequestId);
@@ -88,6 +88,7 @@ const AuthModal = () => {
   };
 
   const handleLoginToVerifyPhone = () => {
+    setVerifyType('reset');
     handleOpenChange(false);
     setOtpOpen(true);
   };

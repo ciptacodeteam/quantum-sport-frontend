@@ -50,6 +50,11 @@ export async function resetPasswordApi(payload) {
   return data;
 }
 
+export async function verifyResetPasswordOtpApi(payload) {
+  const { data } = await api.post('/auth/verify-reset-otp', payload);
+  return data;
+}
+
 export async function passwordResetWithTokenApi(payload) {
   const { data } = await api.post('/password-reset', payload);
   return data;

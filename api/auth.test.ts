@@ -20,7 +20,7 @@ vi.mock('@/lib/adminApi', () => ({
   adminApi: { post: mocks.adminPost, get: mocks.adminGet }
 }));
 
-import { getProfileApiSmart, logoutApi } from './auth';
+import { getProfileApiSmart, logoutApi, verifyResetPasswordOtpApi, resetPasswordApi } from './auth';
 
 describe('shared profile session', () => {
   beforeEach(() => {
@@ -74,4 +74,28 @@ describe('shared profile session', () => {
       expect(get).toHaveBeenCalledWith('/auth/profile', { signal });
     }
   );
+});
+
+describe('WhatsApp password reset API', () => {
+  beforeEach(() => vi.resetAllMocks());
+
+  it('uses the reset-specific OTP endpoint and returns its reset capability', async () => {
+    const payload = { phone: '+6281234567890', requestId: 'request', code: '1234' };
+    mocks.customerPost.mockResolvedValue({ data: { data: { resetToken: 'a'.repeat(64) } } });
+    const response = await verifyResetPasswordOtpApi(payload);
+    expect(mocks.customerPost).toHaveBeenCalledWith('/auth/verify-reset-otp', payload);
+    expect(response.data.resetToken).toBe('a'.repeat(64));
+  });
+
+  it('sends the verified capability when resetting the password', async () => {
+    const payload = {
+      phone: '+6281234567890',
+      requestId: 'request',
+      resetToken: 'a'.repeat(64),
+      newPassword: 'Password123!'
+    };
+    mocks.customerPost.mockResolvedValue({ data: { success: true } });
+    await resetPasswordApi(payload);
+    expect(mocks.customerPost).toHaveBeenCalledWith('/auth/reset-password', payload);
+  });
 });

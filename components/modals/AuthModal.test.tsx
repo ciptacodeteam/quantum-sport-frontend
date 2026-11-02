@@ -17,9 +17,16 @@ vi.mock('@/components/ui/dialog', () => ({
   DialogContent: ({ children }: { children: ReactNode }) => <div>{children}</div>
 }));
 vi.mock('@/components/forms/auth/LoginForm', () => ({
-  default: ({ onRegisterClick }: { onRegisterClick: () => void }) => (
+  default: ({
+    onRegisterClick,
+    openVerifyPhoneOtpModal
+  }: {
+    onRegisterClick: () => void;
+    openVerifyPhoneOtpModal: () => void;
+  }) => (
     <div>
       Login form<button onClick={onRegisterClick}>Daftar dari login</button>
+      <button onClick={openVerifyPhoneOtpModal}>Lupa password</button>
     </div>
   )
 }));
@@ -83,5 +90,14 @@ describe('header auth entry points', () => {
       useAuthModalStore.getState().open();
     });
     expect(screen.getByText('Login form')).toBeInTheDocument();
+  });
+
+  it('uses reset-specific OTP verification even after a registration attempt', () => {
+    useAuthModalStore.getState().openRegister();
+    render(<AuthModal />);
+    fireEvent.click(screen.getByText('Kembali login'));
+    fireEvent.click(screen.getByText('Lupa password'));
+    expect(screen.getByText('OTP reset')).toBeInTheDocument();
+    expect(screen.queryByText('OTP register')).not.toBeInTheDocument();
   });
 });

@@ -2,6 +2,7 @@
 
 import AppDashboardHeader from '@/components/ui/app-dashboard-header';
 import { AppSidebar } from '@/components/ui/app-sidebar';
+import RequiredPasswordChange from '@/components/admin/forms/RequiredPasswordChange';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { clearAdminSessionCookie, hasAdminSessionCookie } from '@/lib/admin-session';
 import { adminProfileQueryOptions } from '@/queries/admin/auth';
@@ -83,6 +84,8 @@ const AdminDashboardLayout = ({ children }: PropsWithChildren) => {
   if (isError && !currentUser) {
     return null;
   }
+
+  if (user?.mustChangePassword) return <RequiredPasswordChange />;
 
   return (
     <SidebarProvider className="admin-panel">

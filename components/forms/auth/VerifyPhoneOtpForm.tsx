@@ -8,6 +8,8 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp
 import { DialogTitle } from '@/components/ui/dialog';
 import { formatPhone } from '@/lib/utils';
 import { registerMutationOptions, verifyPhoneOtpMutationOptions } from '@/mutations/auth';
+import { forgotPasswordApi, verifyResetPasswordOtpApi } from '@/api/auth';
+import { sendPhoneOtpApi, verifyPhoneOtpApi } from '@/api/phone';
 import { sendPhoneOtpMutationOptions } from '@/mutations/phone';
 import { profileQueryOptions } from '@/queries/profile';
 import useAuthRedirectStore from '@/stores/useAuthRedirectStore';
@@ -33,13 +35,14 @@ type FormSchema = z.infer<typeof formSchema>;
 
 type Props = {
   onVerifySuccess?: () => void;
-  type?: 'global' | 'register';
+  type?: 'global' | 'register' | 'reset';
 };
 
 const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
   const requestId = usePhoneStore((state) => state.requestId);
   const setRequestId = usePhoneStore((state) => state.setRequestId);
   const phone = usePhoneStore((state) => state.phone);
+  const setResetToken = usePhoneStore((state) => state.setResetToken);
 
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -81,31 +84,42 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
     })
   );
 
-  const { mutate: resendOtp, isPending: isResendOtpPending } = useMutation(
-    sendPhoneOtpMutationOptions({
+  const { mutate: resendOtp, isPending: isResendOtpPending } = useMutation({
+    ...sendPhoneOtpMutationOptions({
       onSuccess: (res) => {
         const requestId = res?.data?.requestId;
         if (requestId) {
           form.setValue('requestId', requestId);
+          form.setValue('otp', '');
           setRequestId(requestId);
         } else {
           toast.error('Failed to get Request ID. Please try again.');
         }
       }
-    })
-  );
+    }),
+    mutationFn: type === 'reset' ? forgotPasswordApi : sendPhoneOtpApi
+  });
 
-  const { mutate, isPending } = useMutation(
-    verifyPhoneOtpMutationOptions({
-      onSuccess: () => {
+  const { mutate, isPending } = useMutation({
+    ...verifyPhoneOtpMutationOptions({
+      onSuccess: (res) => {
+        if (type === 'reset') {
+          const resetToken = res?.data?.resetToken;
+          if (!resetToken) {
+            toast.error('Verifikasi gagal. Silakan minta OTP baru.');
+            return;
+          }
+          setResetToken(resetToken);
+        }
         form.reset();
         onVerifySuccess?.();
       },
       onError: (err) => {
         mapApiErrorsToForm(form, err);
       }
-    })
-  );
+    }),
+    mutationFn: type === 'reset' ? verifyResetPasswordOtpApi : verifyPhoneOtpApi
+  });
 
   const registerData = useRegisterStore((state) => state.registerData);
 
