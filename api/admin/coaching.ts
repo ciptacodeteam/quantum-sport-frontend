@@ -75,16 +75,24 @@ export const coachingApi = {
     },
   toggle: async (id: string, isAvailable: boolean) =>
     adminApi.patch(`/coaching/slots/${id}`, { isAvailable }),
+  updatePrice: async (id: string, price: number) =>
+    adminApi.patch(`/coaching/slots/${id}`, { price }),
   available: async (detailId: string, startAt: string, endAt: string) =>
     (
       await adminApi.get(`/coaching/booking-details/${detailId}/availability`, {
         params: { startAt, endAt }
       })
     ).data.data as CoachingOption[],
-  attach: async (detailId: string, slotId: string, paymentMethodId?: string) =>
+  attach: async (
+    detailId: string,
+    slotIds: string[],
+    paymentMethodId?: string,
+    manualPayment?: { method: 'EDC' | 'QRIS_STATIC'; received: boolean }
+  ) =>
     (
       await adminApi.post(`/coaching/booking-details/${detailId}/services`, {
-        slotId,
+        slotIds,
+        manualPayment,
         paymentMethodId
       })
     ).data.data as {

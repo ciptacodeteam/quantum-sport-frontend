@@ -35,7 +35,8 @@ import {
 } from '@/lib/admin-schedule-time';
 import { formatPhone } from '@/lib/utils';
 import { adminScheduleQueryOptions } from '@/queries/admin/booking';
-import { adminCourtsQueryOptions, adminCourtsWithSlotsQueryOptions } from '@/queries/admin/court';
+import { adminCourtsQueryOptions } from '@/queries/admin/court';
+import { getCourtsSlotsApi } from '@/api/admin/court';
 import type {
   Booking,
   BookingDetail,
@@ -43,7 +44,8 @@ import type {
   BookingBallboy,
   BookingInventory,
   Staff,
-  Inventory
+  Inventory,
+  Slot
 } from '@/types/model';
 import {
   IconCalendar,
@@ -276,9 +278,12 @@ export default function SchedulePage() {
   }, []);
 
   // Fetch courts
-  const { data: courtsData, isLoading: isCourtsLoading } = useQuery(
-    adminCourtsQueryOptions({ courtSport })
-  );
+  const {
+    data: courtsData,
+    isLoading: isCourtsLoading,
+    isError: isCourtsError,
+    refetch: refetchCourts
+  } = useQuery(adminCourtsQueryOptions({ courtSport }));
   const courts = useMemo(
     () =>
       (courtsData || [])
@@ -288,11 +293,13 @@ export default function SchedulePage() {
     [courtsData, courtSport]
   );
 
-  // Fetch all bookings - we'll filter by slot date on client side
-  // Fetch without date filters to ensure we get all bookings, then filter by slot date
-  const { data: bookingsData, isLoading: isBookingsLoading } = useQuery(
-    adminScheduleQueryOptions({ courtSport })
-  );
+  // Fetch only the selected schedule day, including independent service bookings.
+  const {
+    data: bookingsData,
+    isLoading: isBookingsLoading,
+    isError: isBookingsError,
+    refetch: refetchBookings
+  } = useQuery(adminScheduleQueryOptions({ courtSport, date: selectedDateString }));
   const allBookings = bookingsData || [];
 
   // Filter bookings that have slots on the selected date
@@ -324,10 +331,22 @@ export default function SchedulePage() {
   }, [allBookings, selectedDateString]);
 
   // Fetch slots for the selected date to get all time slots (optional - for dynamic slots)
-  const { data: slotsData, isLoading: isSlotsLoading } = useQuery(
-    adminCourtsWithSlotsQueryOptions(selectedDateString, undefined, courtSport)
-  );
-  const slots = slotsData?.slots || [];
+  const {
+    data: slotsData,
+    isLoading: isSlotsLoading,
+    isError: isSlotsError,
+    refetch: refetchSlots
+  } = useQuery({
+    queryKey: ['admin', 'courts', 'schedule-slots', activeBranchId, selectedDateString, courtSport],
+    queryFn: () =>
+      getCourtsSlotsApi({
+        startAt: `${selectedDateString}T00:00:00.000Z`,
+        endAt: `${selectedDateString}T23:59:59.999Z`,
+        courtSport
+      }),
+    select: (res) => res.data as Slot[]
+  });
+  const slots = slotsData || [];
 
   // Court closedHours from rolling schedule (e.g. 00:00–05:00) must not create empty grid rows
   const closedHoursByCourtId = useMemo(() => {
@@ -792,7 +811,7 @@ export default function SchedulePage() {
     return map;
   }, [bookings, courtSport, selectedDateString, timeSlotRanges]);
 
-  const isLoading = isCourtsLoading || isBookingsLoading || isSlotsLoading;
+  const isLoading = isCourtsLoading || isBookingsLoading;
 
   return (
     <div className="w-full min-w-0">
@@ -923,9 +942,33 @@ export default function SchedulePage() {
                 </div>
               </CardHeader>
               <CardContent className="min-h-0 min-w-0 flex-1 px-0">
+                {!isLoading && isSlotsLoading && (
+                  <p className="text-muted-foreground px-4 pb-3 text-xs">Memuat slot lapangan...</p>
+                )}
+                {isSlotsError && (
+                  <div role="alert" className="flex items-center gap-3 px-4 pb-3 text-xs">
+                    <p>Slot lapangan belum dapat dimuat. Jadwal booking tetap ditampilkan.</p>
+                    <Button size="sm" variant="outline" onClick={() => void refetchSlots()}>
+                      Muat ulang slot
+                    </Button>
+                  </div>
+                )}
                 {isLoading ? (
                   <div className="py-8 text-center">
                     <p className="text-muted-foreground text-sm">Memuat jadwal...</p>
+                  </div>
+                ) : isCourtsError || isBookingsError ? (
+                  <div role="alert" className="space-y-3 py-8 text-center">
+                    <p className="text-muted-foreground text-sm">Jadwal belum dapat dimuat.</p>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        if (isCourtsError) void refetchCourts();
+                        if (isBookingsError) void refetchBookings();
+                      }}
+                    >
+                      Coba lagi
+                    </Button>
                   </div>
                 ) : (
                   <div
