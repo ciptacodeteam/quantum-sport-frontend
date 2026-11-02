@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn, formatCurrency } from '@/lib/utils';
 import { IconCash, IconDeviceDesktop, IconCreditCard } from '@tabler/icons-react';
+import IncomeTransactionTable from './IncomeTransactionTable';
 
 interface IncomeBySourceSectionProps {
   data: any;
@@ -326,6 +327,10 @@ export default function IncomeBySourceSection({ data, isLoading }: IncomeBySourc
           })}
         </div>
       </section>
+      <IncomeTransactionTable
+        key={`${data.dateRange?.startDate ?? ''}:${data.dateRange?.endDate ?? ''}`}
+        transactions={data.transactions}
+      />
     </div>
   );
 }
