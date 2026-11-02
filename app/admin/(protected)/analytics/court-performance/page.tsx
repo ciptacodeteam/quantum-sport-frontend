@@ -230,15 +230,6 @@ function CourtPerformanceContent({ branch }: { branch: string | null | undefined
                 primary: true
               },
               {
-                label: 'Total jam dipesan',
-                value:
-                  typeof data.summary.createdBookingHours === 'number'
-                    ? `${n(data.summary.createdBookingHours)} jam`
-                    : '—',
-                note: `Pemesanan dibuat pada ${data.startDate === data.endDate ? 'tanggal' : 'periode'} pilihan (WIB), termasuk jadwal main di hari lain`,
-                icon: CalendarDays
-              },
-              {
                 label: 'Okupansi periode',
                 value: `${n(data.summary.occupancy)}%`,
                 note: `${n(data.summary.occupiedHours)} dari ${n(data.summary.capacityHours)} jam kapasitas terbit`,
