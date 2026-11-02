@@ -87,39 +87,45 @@ export default function CoachingSchedule({ staffId }: { staffId: string }) {
   });
   const col = createColumnHelper<CoachingSlot>();
   const columns = [
-    col.display({
+    col.accessor((slot) => formatScheduleSlotTime(slot.startAt, 'DD/MM/YYYY'), {
       id: 'date',
+      sortingFn: (a, b) => a.original.startAt.localeCompare(b.original.startAt),
       header: 'Tanggal',
       cell: ({ row }) => formatScheduleSlotTime(row.original.startAt, 'DD/MM/YYYY')
     }),
-    col.display({
-      id: 'time',
-      header: 'Waktu (WIB)',
-      cell: ({ row }) =>
-        `${formatScheduleSlotTime(row.original.startAt)} - ${formatScheduleSlotTime(row.original.endAt)}`
-    }),
-    col.display({
-      id: 'price',
+    col.accessor(
+      (slot) => `${formatScheduleSlotTime(slot.startAt)} - ${formatScheduleSlotTime(slot.endAt)}`,
+      {
+        id: 'time',
+        header: 'Waktu (WIB)',
+        cell: ({ row }) =>
+          `${formatScheduleSlotTime(row.original.startAt)} - ${formatScheduleSlotTime(row.original.endAt)}`
+      }
+    ),
+    col.accessor('price', {
       header: 'Harga per Jam',
       cell: ({ row }) => `Rp ${row.original.price.toLocaleString('id-ID')}`
     }),
-    col.display({
-      id: 'status',
-      header: 'Status',
-      cell: ({ row }) => (
-        <Badge
-          variant={
-            row.original.booked
-              ? 'lightWarning'
-              : row.original.isAvailable
-                ? 'lightSuccess'
-                : 'secondary'
-          }
-        >
-          {row.original.booked ? 'Dibooking' : row.original.isAvailable ? 'Tersedia' : 'Ditutup'}
-        </Badge>
-      )
-    }),
+    col.accessor(
+      (slot) => (slot.booked ? 'Dibooking' : slot.isAvailable ? 'Tersedia' : 'Ditutup'),
+      {
+        id: 'status',
+        header: 'Status',
+        cell: ({ row }) => (
+          <Badge
+            variant={
+              row.original.booked
+                ? 'lightWarning'
+                : row.original.isAvailable
+                  ? 'lightSuccess'
+                  : 'secondary'
+            }
+          >
+            {row.original.booked ? 'Dibooking' : row.original.isAvailable ? 'Tersedia' : 'Ditutup'}
+          </Badge>
+        )
+      }
+    ),
     col.display({
       id: 'action',
       header: 'Aksi',
@@ -152,7 +158,7 @@ export default function CoachingSchedule({ staffId }: { staffId: string }) {
   if (person.isError || !person.data)
     return <p role="alert">Profil tidak tersedia di cabang ini.</p>;
   return (
-    <main className="mx-auto w-full max-w-7xl space-y-6">
+    <main className="w-full min-w-0 space-y-6">
       <Button asChild variant="ghost">
         <Link href={`/admin/coaching?kind=${person.data.role}`}>
           ← Kembali ke {person.data.role === 'COACH' ? 'Coaching' : 'Ballboy'}
@@ -385,23 +391,19 @@ export default function CoachingSchedule({ staffId }: { staffId: string }) {
             Coba lagi
           </Button>
         </div>
-      ) : !schedule.isPending && !schedule.data?.length ? (
-        <div className="rounded-xl border border-dashed p-10 text-center">
-          <h3 className="font-medium">Belum ada slot pada periode ini</h3>
-          <p className="text-muted-foreground mx-auto mt-2 max-w-md text-sm">
-            Atur tanggal, hari aktif, jam layanan, dan harga di atas, lalu simpan untuk membuat
-            jadwal.
-          </p>
-        </div>
       ) : (
-        <DataTable
-          data={schedule.data ?? []}
-          columns={columns}
-          loading={schedule.isPending}
-          enableGlobalSearch={false}
-          enableRowSelection={false}
-          enableColumnVisibility={false}
-        />
+        <div className="[&_thead]:bg-muted/50 min-w-0">
+          <DataTable
+            data={schedule.data ?? []}
+            columns={columns}
+            loading={schedule.isPending}
+            searchPlaceholder="Cari jadwal..."
+            enableRowSelection={false}
+            getRowId={(slot) => slot.id}
+            columnVisibilityLabel="Kolom"
+            columnVisibilityStorageKey="quantum:coaching-schedule:columns"
+          />
+        </div>
       )}
     </main>
   );
