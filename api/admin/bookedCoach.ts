@@ -14,7 +14,7 @@ export async function getBookedCoachApi(id: string) {
   return data;
 }
 
-export async function cancelBookedCoachApi(id: string, reason?: string) {
-  const { data } = await adminApi.put(`/booked-coaches/${id}/cancel`, { reason });
+export async function cancelBookedCoachApi(id: string, reason: string, expectedSlotId: string) {
+  const { data } = await adminApi.put(`/booked-coaches/${id}/cancel`, { reason, expectedSlotId });
   return data;
 }

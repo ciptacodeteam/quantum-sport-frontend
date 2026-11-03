@@ -60,6 +60,18 @@ export type CoachReplacementAvailability = {
   };
   options: Array<{ slotId: string; staffId: string; name: string; price: number }>;
 };
+export type CoachCancellationPreview = {
+  current: {
+    id: string;
+    slotId: string;
+    name: string;
+    price: number;
+    startAt: string;
+    endAt: string;
+  };
+  invoiceNumber: string | null;
+  refundRequired: boolean;
+};
 export const coachingApi = {
   list: async () => (await adminApi.get('/coaching')).data.data as CoachingPerson[],
   person: async (id: string) => (await adminApi.get(`/coaching/${id}`)).data.data as CoachingPerson,
@@ -113,6 +125,18 @@ export const coachingApi = {
       total: number;
       status: string;
       dueDate: string;
+    },
+  cancellation: async (id: string) =>
+    (await adminApi.get(`/coaching/bookings/${id}/cancellation`)).data
+      .data as CoachCancellationPreview,
+  cancelCoach: async (id: string, input: { expectedSlotId: string; reason: string }) =>
+    (await adminApi.post(`/coaching/bookings/${id}/cancel-coach`, input)).data.data as {
+      id: string;
+      bookingId: string;
+      name: string;
+      price: number;
+      refundRequired: boolean;
+      slotReleased: boolean;
     },
   replacements: async (id: string) =>
     (await adminApi.get(`/coaching/bookings/${id}/replacements`)).data

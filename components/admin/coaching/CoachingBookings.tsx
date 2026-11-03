@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import CancelCoachDialog from './CancelCoachDialog';
 import ReplaceCoachDialog from './ReplaceCoachDialog';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
@@ -13,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 
 export default function CoachingBookings({ kind }: { kind: 'COACH' | 'BALLBOY' }) {
   const { branchId } = useAdminCourtSports();
-  const canReplaceCoach = useHasRole(['SUPER_ADMIN']);
+  const canManageCoaches = useHasRole(['SUPER_ADMIN']);
   const query = useQuery({
     queryKey: ['admin', 'coaching', branchId, 'bookings', kind],
     queryFn: () => coachingApi.bookings(kind),
@@ -89,18 +90,26 @@ export default function CoachingBookings({ kind }: { kind: 'COACH' | 'BALLBOY' }
         )
     })
   ];
-  if (kind === 'COACH' && canReplaceCoach)
+  if (kind === 'COACH' && canManageCoaches)
     columns.push(
       col.display({
         id: 'action',
         header: 'Aksi',
         cell: ({ row }) => (
-          <ReplaceCoachDialog
-            bookingCoachId={row.original.id}
-            currentName={row.original.name}
-            startAt={row.original.startAt}
-            status={row.original.status}
-          />
+          <div className="flex flex-wrap gap-2">
+            <ReplaceCoachDialog
+              bookingCoachId={row.original.id}
+              currentName={row.original.name}
+              startAt={row.original.startAt}
+              status={row.original.status}
+            />
+            <CancelCoachDialog
+              bookingCoachId={row.original.id}
+              currentName={row.original.name}
+              startAt={row.original.startAt}
+              status={row.original.status}
+            />
+          </div>
         )
       })
     );

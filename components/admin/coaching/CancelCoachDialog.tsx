@@ -1,0 +1,178 @@
+'use client';
+import { useId, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { coachingApi } from '@/api/admin/coaching';
+import { useHasRole } from '@/hooks/useRoleAccess';
+import { useAdminCourtSports } from '@/hooks/useAdminCourtSports';
+import { useBookingClock } from '@/hooks/useBookingClock';
+import { isCourtWallSlotBookable } from '@/lib/booking-time-policy';
+import { getApiErrorMessage } from '@/lib/api-error';
+import { formatScheduleSlotTime } from '@/lib/admin-schedule-time';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from '@/components/ui/dialog';
+import { toast } from 'sonner';
+
+export default function CancelCoachDialog({
+  bookingCoachId,
+  currentName,
+  startAt,
+  status
+}: {
+  bookingCoachId: string;
+  currentName: string;
+  startAt: string;
+  status?: string;
+}) {
+  const isSuperAdmin = useHasRole(['SUPER_ADMIN']);
+  const { branchId } = useAdminCourtSports();
+  const now = useBookingClock();
+  const canCancel = isSuperAdmin && status === 'CONFIRMED' && isCourtWallSlotBookable(startAt, now);
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState('');
+  const id = useId();
+  const client = useQueryClient();
+  const preview = useQuery({
+    queryKey: ['admin', 'coaching', branchId, 'cancellation', bookingCoachId],
+    queryFn: () => coachingApi.cancellation(bookingCoachId),
+    enabled: open && canCancel,
+    staleTime: 0
+  });
+  const cancel = useMutation({
+    mutationFn: () =>
+      coachingApi.cancelCoach(bookingCoachId, {
+        expectedSlotId: preview.data!.current.slotId,
+        reason: reason.trim()
+      }),
+    onSuccess: (result) => {
+      setOpen(false);
+      setReason('');
+      for (const queryKey of [
+        ['admin', 'coaching'],
+        ['admin', 'schedule'],
+        ['admin', 'bookings'],
+        ['admin', 'booked-coaches'],
+        ['admin', 'courts'],
+        ['admin', 'invoices'],
+        ['invoice']
+      ])
+        void client.invalidateQueries({ queryKey });
+      toast.success(
+        result.refundRequired
+          ? `Coach dibatalkan. Tinjau refund Rp ${result.price.toLocaleString('id-ID')} secara manual.`
+          : 'Coach berhasil dibatalkan.'
+      );
+    },
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, 'Coach belum dapat dibatalkan.'));
+      void preview.refetch();
+    }
+  });
+  if (!canCancel) return null;
+  return (
+    <>
+      <Button
+        variant="destructive"
+        size="sm"
+        aria-label={`Batalkan Coach ${currentName}`}
+        onClick={() => {
+          setReason('');
+          setOpen(true);
+        }}
+      >
+        Batalkan Coach
+      </Button>
+      <Dialog
+        open={open}
+        onOpenChange={(value) => {
+          if (!cancel.isPending) setOpen(value);
+        }}
+      >
+        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Batalkan Coach</DialogTitle>
+            <DialogDescription>
+              Coach akan dibatalkan dan slotnya dilepas. Booking lapangan dan layanan lain tetap
+              aktif.
+            </DialogDescription>
+          </DialogHeader>
+          {preview.isPending ? (
+            <p className="text-muted-foreground py-3 text-sm">Memuat detail coach...</p>
+          ) : preview.isError ? (
+            <div role="alert" className="space-y-3">
+              <p>{getApiErrorMessage(preview.error, 'Detail pembatalan belum dapat dimuat.')}</p>
+              <Button variant="outline" onClick={() => void preview.refetch()}>
+                Coba lagi
+              </Button>
+            </div>
+          ) : (
+            preview.data && (
+              <div className="space-y-4">
+                <div className="bg-muted/40 space-y-1 rounded-lg border p-4 text-sm">
+                  <p className="font-semibold">{preview.data.current.name}</p>
+                  <p>
+                    {formatScheduleSlotTime(preview.data.current.startAt, 'DD MMM YYYY')} ·{' '}
+                    {formatScheduleSlotTime(preview.data.current.startAt)}–
+                    {formatScheduleSlotTime(preview.data.current.endAt)} WIB
+                  </p>
+                  <p className="tabular-nums">
+                    Rp {preview.data.current.price.toLocaleString('id-ID')}
+                  </p>
+                  {preview.data.invoiceNumber && (
+                    <p className="text-muted-foreground text-xs">
+                      Invoice {preview.data.invoiceNumber}
+                    </p>
+                  )}
+                </div>
+                <p className="rounded-lg border p-3 text-sm">
+                  {preview.data.refundRequired
+                    ? `Pembayaran sudah lunas. Tinjau refund biaya coach Rp ${preview.data.current.price.toLocaleString('id-ID')} secara manual. Pembatalan ini tidak mengembalikan dana otomatis dan tidak mengubah nominal invoice.`
+                    : 'Riwayat invoice tetap disimpan. Pembatalan ini tidak mengirim pengembalian dana otomatis.'}
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor={`${id}-reason`}>Alasan pembatalan</Label>
+                  <Textarea
+                    id={`${id}-reason`}
+                    required
+                    maxLength={500}
+                    value={reason}
+                    disabled={cancel.isPending}
+                    onChange={(e) => setReason(e.target.value)}
+                    placeholder="Contoh: pelanggan membatalkan sesi coach"
+                  />
+                </div>
+              </div>
+            )
+          )}
+          <DialogFooter>
+            <Button variant="outline" disabled={cancel.isPending} onClick={() => setOpen(false)}>
+              Kembali
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={
+                !preview.data ||
+                preview.isError ||
+                preview.isFetching ||
+                cancel.isPending ||
+                !reason.trim() ||
+                !canCancel
+              }
+              onClick={() => cancel.mutate()}
+            >
+              {cancel.isPending ? 'Membatalkan...' : 'Konfirmasi Batalkan Coach'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}

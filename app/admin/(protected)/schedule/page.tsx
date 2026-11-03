@@ -1,6 +1,7 @@
 'use client';
 import { useAdminCourtSports } from '@/hooks/useAdminCourtSports';
 
+import CancelCoachDialog from '@/components/admin/coaching/CancelCoachDialog';
 import ReplaceCoachDialog from '@/components/admin/coaching/ReplaceCoachDialog';
 import AddBookingService from '@/components/admin/coaching/AddBookingService';
 import { BookingBallboySection } from '@/components/admin/bookings/BookingBallboySection';
@@ -1390,17 +1391,34 @@ export default function SchedulePage() {
                                                               </div>
                                                             </div>
                                                             {bookingCoach.slot?.startAt && (
-                                                              <ReplaceCoachDialog
-                                                                bookingCoachId={bookingCoach.id}
-                                                                currentName={coach?.name || 'Coach'}
-                                                                startAt={String(
-                                                                  bookingCoach.slot.startAt
-                                                                )}
-                                                                status={
-                                                                  bookingCoach.status ??
-                                                                  bookingCell.booking.status
-                                                                }
-                                                              />
+                                                              <div className="flex flex-wrap gap-2">
+                                                                <ReplaceCoachDialog
+                                                                  bookingCoachId={bookingCoach.id}
+                                                                  currentName={
+                                                                    coach?.name || 'Coach'
+                                                                  }
+                                                                  startAt={String(
+                                                                    bookingCoach.slot.startAt
+                                                                  )}
+                                                                  status={
+                                                                    bookingCoach.status ??
+                                                                    bookingCell.booking.status
+                                                                  }
+                                                                />
+                                                                <CancelCoachDialog
+                                                                  bookingCoachId={bookingCoach.id}
+                                                                  currentName={
+                                                                    coach?.name || 'Coach'
+                                                                  }
+                                                                  startAt={String(
+                                                                    bookingCoach.slot.startAt
+                                                                  )}
+                                                                  status={
+                                                                    bookingCoach.status ??
+                                                                    bookingCell.booking.status
+                                                                  }
+                                                                />
+                                                              </div>
                                                             )}
                                                           </div>
                                                         </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { cancelBookedCoachApi } from '@/api/admin/bookedCoach';
+import CancelCoachDialog from '@/components/admin/coaching/CancelCoachDialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
@@ -19,7 +19,6 @@ import {
   ManagedDialog
 } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useConfirmMutation } from '@/hooks/useConfirmDialog';
 import { BOOKING_STATUS_BADGE_VARIANT, BOOKING_STATUS_MAP } from '@/lib/constants';
 import { formatPhone } from '@/lib/utils';
 import {
@@ -28,7 +27,7 @@ import {
   type AdminBookedCoachDetail,
   type AdminBookedCoachListItem
 } from '@/queries/admin/bookedCoach';
-import { IconEye, IconX } from '@tabler/icons-react';
+import { IconEye } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import dayjs from 'dayjs';
@@ -36,25 +35,6 @@ import { useMemo, useState } from 'react';
 
 const BookedCoachTable = () => {
   const [source, setSource] = useState<string>('');
-  const { confirmAndMutate: cancelBookedCoach } = useConfirmMutation(
-    {
-      mutationFn: (id: string) => cancelBookedCoachApi(id, 'Cancelled by admin')
-    },
-    {
-      title: 'Batalkan Coach',
-      description: 'Apakah Anda yakin ingin membatalkan coach ini dari pemesanan?',
-      confirmText: 'Batalkan',
-      cancelText: 'Tutup',
-      destructive: true,
-      toastMessages: {
-        loading: 'Membatalkan coach...',
-        success: () => 'Coach berhasil dibatalkan.',
-        error: 'Gagal membatalkan coach.'
-      },
-      invalidate: ['admin', 'booked-coaches']
-    }
-  );
-
   const colHelper = createColumnHelper<AdminBookedCoachListItem>();
 
   const columns = useMemo(
@@ -222,7 +202,6 @@ const BookedCoachTable = () => {
         header: 'Aksi',
         cell: ({ row }) => {
           const item = row.original;
-          const isCancelled = item.status === 'CANCELLED' || item.booking?.status === 'CANCELLED';
           return (
             <div className="flex items-center gap-2">
               <ManagedDialog id={`view-booked-coach-${item.id}`}>
@@ -238,21 +217,20 @@ const BookedCoachTable = () => {
                   <CoachDetail id={item.id} />
                 </DialogContent>
               </ManagedDialog>
-              <Button
-                size="icon"
-                variant="destructive"
-                onClick={() => cancelBookedCoach(item.id)}
-                title="Batalkan Coach"
-                disabled={isCancelled}
-              >
-                <IconX />
-              </Button>
+              {item.slot?.startAt && (
+                <CancelCoachDialog
+                  bookingCoachId={item.id}
+                  currentName={item.coach?.staff?.name || 'Coach'}
+                  startAt={item.slot.startAt}
+                  status={item.status ?? item.booking.status}
+                />
+              )}
             </div>
           );
         }
       })
     ],
-    [colHelper, cancelBookedCoach]
+    [colHelper]
   );
 
   const { data, isPending } = useQuery(
