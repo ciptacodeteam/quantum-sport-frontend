@@ -1131,11 +1131,9 @@ export default function SchedulePage() {
                                             />
                                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                               <div>
-                                                <p className="text-muted-foreground text-sm">
-                                                  ID Pemesanan
-                                                </p>
-                                                <p className="font-mono text-sm">
-                                                  {bookingCell.booking.id}
+                                                <p className="text-muted-foreground text-sm">INV</p>
+                                                <p className="text-sm font-medium break-all">
+                                                  {bookingCell.booking.invoice?.number || '—'}
                                                 </p>
                                               </div>
                                               <div>
