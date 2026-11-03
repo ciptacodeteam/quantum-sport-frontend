@@ -5,6 +5,10 @@ import { queryOptions } from '@tanstack/react-query';
 export const bannersQueryOptions = () =>
   queryOptions({
     queryKey: ['banners'],
-    queryFn: getBannersApi,
+    queryFn: ({ signal }) => getBannersApi({}, signal),
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchInterval: 30000,
     select: (res) => res.data as Banner[]
   });

@@ -57,7 +57,7 @@ export default function BannerTable() {
         success: 'Banner berhasil dihapus.',
         error: 'Gagal menghapus banner.'
       },
-      invalidate: adminBannersQueryOptions.queryKey
+      invalidate: [adminBannersQueryOptions.queryKey, ['banners']]
     }
   );
   const columns = useMemo(

@@ -1,5 +1,6 @@
 import {
   getBookingApi,
+  getCourtBookingTableApi,
   getBookingsApi,
   getOngoingBookingsApi,
   getScheduleApi
@@ -18,7 +19,7 @@ export const adminBookingsQueryOptions = (queryParams?: SearchParamsData) =>
 export const adminBookingQueryOptions = (id: string) =>
   queryOptions({
     queryKey: ['admin', 'bookings', id],
-    queryFn: () => getBookingApi(id),
+    queryFn: ({ signal }) => getBookingApi(id, signal),
     select: (res) => res.data as Booking
   });
 
@@ -36,4 +37,12 @@ export const adminScheduleQueryOptions = (queryParams?: SearchParamsData) =>
     queryKey: ['admin', 'schedule', queryParams],
     queryFn: () => getScheduleApi(queryParams),
     select: (res) => res.data as Booking[]
+  });
+
+export type CourtBookingPage = { items: Booking[]; total: number; page: number; limit: number };
+export const adminBookingTableQueryOptions = (params: SearchParamsData) =>
+  queryOptions({
+    queryKey: ['admin', 'bookings', 'table', params],
+    queryFn: ({ signal }) => getCourtBookingTableApi(params, signal),
+    select: (res) => res.data as CourtBookingPage
   });

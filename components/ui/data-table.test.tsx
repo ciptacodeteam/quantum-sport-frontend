@@ -74,3 +74,35 @@ it('remains usable when browser storage is blocked', () => {
   expect(() => render(table())).not.toThrow();
   expect(screen.getByRole('columnheader', { name: 'Kedaluwarsa' })).toBeInTheDocument();
 });
+
+it('uses server totals and forwards pagination, search and sorting without filtering the current page locally', () => {
+  const onPaginationChange = vi.fn();
+  const onSearchChange = vi.fn();
+  const onSortChange = vi.fn();
+  render(
+    <DataTable
+      columns={columns}
+      data={data}
+      serverSide
+      totalCount={43}
+      paginationState={{ pageIndex: 1, pageSize: 10 }}
+      sortingState={[]}
+      searchValue="someone on another page"
+      searchPlaceholder="Search bookings"
+      onPaginationChange={onPaginationChange}
+      onSearchChange={onSearchChange}
+      onSortChange={onSortChange}
+      enableRowSelection={false}
+      enablePageSize={false}
+    />
+  );
+  expect(screen.getByText('INV-001')).toBeInTheDocument();
+  expect(onPaginationChange).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByLabelText('Go to next page'));
+  expect(onPaginationChange).toHaveBeenCalledExactlyOnceWith(3, 10);
+  fireEvent.change(screen.getByPlaceholderText('Search bookings'), { target: { value: 'Budi' } });
+  expect(onSearchChange).toHaveBeenCalledWith('Budi');
+  fireEvent.click(screen.getByRole('columnheader', { name: 'Invoice' }));
+  expect(onSortChange).toHaveBeenCalledWith([{ id: 'invoice', desc: false }]);
+  expect(screen.getByText('INV-001')).toBeInTheDocument();
+});

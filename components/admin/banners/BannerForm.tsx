@@ -50,6 +50,7 @@ export default function BannerForm({
         : createBannerApi({ ...values, link: values.link || undefined }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: adminBannersQueryOptions.queryKey });
+      void queryClient.invalidateQueries({ queryKey: ['banners'] });
       toast.success(data ? 'Banner berhasil diperbarui.' : 'Banner berhasil ditambahkan.');
       close();
     },

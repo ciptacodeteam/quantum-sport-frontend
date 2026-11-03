@@ -8,14 +8,14 @@ import {
   exportBookingsApi,
   updateBookingStatusApi
 } from '@/api/admin/booking';
-import BookingDetailsDialog from '@/components/admin/bookings/BookingDetailsDialog';
-import BookingStatusDialog from '@/components/admin/bookings/BookingStatusDialog';
+import BookingRowActions from '@/components/admin/bookings/BookingRowActions';
+import type { PaginationState, SortingState } from '@tanstack/react-table';
+import { useSearchParams } from 'next/navigation';
 import { isMembershipBooking } from '@/lib/booking-membership';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/clipboard-copy';
 import { DataTable } from '@/components/ui/data-table';
-import { DialogTrigger, ManagedDialog } from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
@@ -28,13 +28,13 @@ import { useConfirmMutation } from '@/hooks/useConfirmDialog';
 import { BOOKING_STATUS_BADGE_VARIANT, BookingStatus } from '@/lib/constants';
 import { bookingScheduleInJakarta, formatBookingDate } from '@/lib/booking-display';
 import { formatPhone, getTwoWordName } from '@/lib/utils';
-import { adminBookingsQueryOptions } from '@/queries/admin/booking';
+import { adminBookingTableQueryOptions } from '@/queries/admin/booking';
 import type { Booking } from '@/types/model';
-import { IconEye, IconFileExcel, IconPencil, IconPlus } from '@tabler/icons-react';
+import { IconFileExcel, IconPlus } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { toast } from 'sonner';
 
 const formatDate = formatBookingDate;
@@ -65,6 +65,23 @@ type BookingTableProps = {
 
 const BookingTable = ({ courtSport }: BookingTableProps) => {
   const queryClient = useQueryClient();
+  const params = useSearchParams();
+  const [pagination, setPagination] = useState<PaginationState>(() => {
+    const page = Number(params.get('page') || 1),
+      limit = Number(params.get('limit') || 10);
+    return {
+      pageIndex: Number.isInteger(page) && page >= 1 && page <= 100000 ? page - 1 : 0,
+      pageSize: Number.isInteger(limit) && limit >= 1 && limit <= 100 ? limit : 10
+    };
+  });
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'createdAt', desc: true }]);
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+  const resetPage = () => setPagination((previous) => ({ ...previous, pageIndex: 0 }));
   const { dateRange, setDateRange, dateParams } = useBookingDateFilter();
   const [checkoutType, setCheckoutType] = useState('all');
 
@@ -158,6 +175,7 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
       }),
       colHelper.accessor('details', {
         header: 'Lapangan & Waktu',
+        enableSorting: false,
         cell: (info) => {
           const schedules = bookingScheduleInJakarta(info.getValue() || []).flatMap((date) =>
             date.courts.flatMap((court) =>
@@ -187,6 +205,7 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
       }),
       colHelper.accessor((booking) => (isMembershipBooking(booking) ? 'Membership' : 'Reguler'), {
         id: 'checkoutType',
+        enableSorting: false,
         header: 'Jenis pemesanan',
         cell: (info) => (
           <Badge variant={info.getValue() === 'Membership' ? 'lightInfo' : 'outline'}>
@@ -218,6 +237,7 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
       }),
       colHelper.accessor('totalPrice', {
         header: 'Total',
+        enableSorting: false,
         cell: (info) => {
           const total = info.getValue();
           const processingFee = info.row.original.processingFee || 0;
@@ -282,50 +302,17 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
           const status = getBookingStatus(booking.status as number | BookingStatus);
 
           return (
-            <div className="flex items-center gap-2">
-              <ManagedDialog id={`view-booking-${booking.id}`}>
-                <DialogTrigger asChild>
-                  <Button
-                    size="icon-sm"
-                    variant="ghost"
-                    aria-label={`Lihat detail ${booking.invoice?.number || booking.id}`}
-                    title="Lihat detail"
-                  >
-                    <IconEye />
-                  </Button>
-                </DialogTrigger>
-                <BookingDetailsDialog
-                  booking={booking}
-                  status={status}
-                  onRescheduleSuccess={() => {
-                    void queryClient.invalidateQueries({ queryKey: ['admin', 'bookings'] });
-                    void queryClient.invalidateQueries({ queryKey: ['admin', 'schedule'] });
-                  }}
-                />
-              </ManagedDialog>
-
-              {status !== BookingStatus.CANCELLED && (
-                <ManagedDialog id={`edit-booking-${booking.id}`}>
-                  <DialogTrigger asChild>
-                    <Button
-                      size="icon-sm"
-                      variant="ghost"
-                      aria-label={`Kelola ${booking.invoice?.number || booking.id}`}
-                      title="Kelola pemesanan"
-                    >
-                      <IconPencil />
-                    </Button>
-                  </DialogTrigger>
-                  <BookingStatusDialog
-                    booking={booking}
-                    status={status}
-                    approving={isApproving && approvingBookingId === booking.id}
-                    onApprove={() => approveBooking(booking.id)}
-                    onCancel={() => void cancelBooking(booking.id)}
-                  />
-                </ManagedDialog>
-              )}
-            </div>
+            <BookingRowActions
+              booking={booking}
+              status={status}
+              approving={isApproving && approvingBookingId === booking.id}
+              onApprove={() => approveBooking(booking.id)}
+              onCancel={() => void cancelBooking(booking.id)}
+              onRescheduleSuccess={() => {
+                void queryClient.invalidateQueries({ queryKey: ['admin', 'bookings'] });
+                void queryClient.invalidateQueries({ queryKey: ['admin', 'schedule'] });
+              }}
+            />
           );
         }
       })
@@ -345,16 +332,61 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
     const params: Record<string, string> = {};
     if (checkoutType !== 'all') params.checkoutType = checkoutType;
     if (courtSport) params.courtSport = courtSport;
-    return { ...params, ...dateParams };
-  }, [checkoutType, courtSport, dateParams]);
+    return { ...params, ...dateParams, ...(debouncedSearch ? { search: debouncedSearch } : {}) };
+  }, [checkoutType, courtSport, dateParams, debouncedSearch]);
 
-  const { data, isPending } = useQuery(adminBookingsQueryOptions(queryParams));
+  const sortFields: Record<string, string> = {
+    invoice_number: 'invoice',
+    user_name: 'customer',
+    status: 'status',
+    createdAt: 'createdAt',
+    holdExpiresAt: 'holdExpiresAt'
+  };
+  const exportParams = {
+    ...queryParams,
+    sortBy: sortFields[sorting[0]?.id] ?? 'createdAt',
+    order: sorting[0] ? (sorting[0].desc ? 'desc' : 'asc') : 'desc'
+  };
+  const requestParams = {
+    ...exportParams,
+    page: String(pagination.pageIndex + 1),
+    limit: String(pagination.pageSize)
+  };
+  const { data, isPending, isError, refetch } = useQuery({
+    ...adminBookingTableQueryOptions(requestParams),
+    enabled: search.trim() === debouncedSearch
+  });
 
   return (
     <div className="[&_thead]:bg-muted/50 min-w-0 space-y-4 [&_td]:align-middle [&_th]:text-xs">
+      {isError && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center gap-3 rounded-lg border p-4 text-sm"
+        >
+          <p>Data pemesanan belum dapat dimuat. Silakan coba lagi.</p>
+          <Button variant="outline" size="sm" onClick={() => void refetch()}>
+            Coba lagi
+          </Button>
+        </div>
+      )}
       <DataTable
-        loading={isPending}
-        data={data || []}
+        loading={isPending || search.trim() !== debouncedSearch}
+        data={data?.items || []}
+        serverSide
+        totalCount={data?.total ?? 0}
+        paginationState={pagination}
+        onPaginationChange={(page, pageSize) => setPagination({ pageIndex: page - 1, pageSize })}
+        sortingState={sorting}
+        onSortChange={(next) => {
+          setSorting(next);
+          resetPage();
+        }}
+        searchValue={search}
+        onSearchChange={(value) => {
+          setSearch(value.slice(0, 200));
+          resetPage();
+        }}
         columns={columns}
         enableRowSelection={false}
         getRowId={(row) => row.id}
@@ -363,12 +395,24 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
         columnVisibilityStorageKey={`quantum:booking-columns:${courtSport || 'all'}`}
         rightActions={
           <div className="flex flex-wrap items-center gap-2">
-            <BookingDateFilter value={dateRange} onChange={setDateRange} />
+            <BookingDateFilter
+              value={dateRange}
+              onChange={(range) => {
+                setDateRange(range);
+                resetPage();
+              }}
+            />
             <div className="flex items-center gap-2">
               <label htmlFor="checkout-filter" className="sr-only">
                 Jenis pemesanan
               </label>
-              <Select value={checkoutType} onValueChange={setCheckoutType}>
+              <Select
+                value={checkoutType}
+                onValueChange={(value) => {
+                  setCheckoutType(value);
+                  resetPage();
+                }}
+              >
                 <SelectTrigger id="checkout-filter" className="h-9 w-48 rounded-lg shadow-none">
                   <SelectValue placeholder="Semua pemesanan" />
                 </SelectTrigger>
@@ -383,9 +427,10 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
             <Button
               variant="outline"
               size="sm"
+              disabled={search.trim() !== debouncedSearch}
               onClick={async () => {
                 try {
-                  const blob = await exportBookingsApi(queryParams);
+                  const blob = await exportBookingsApi(exportParams);
                   const url = window.URL.createObjectURL(new Blob([blob]));
                   const link = document.createElement('a');
                   link.href = url;

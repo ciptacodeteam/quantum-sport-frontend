@@ -28,7 +28,7 @@ const ManageBookingPage = async ({ searchParams }: ManageBookingPageProps) => {
           />
         </SectionHeader>
         <SectionContent className="min-w-0 px-0">
-          <BookingTable courtSport={courtSport} />
+          <BookingTable key={courtSport} courtSport={courtSport} />
         </SectionContent>
       </Section>
     </main>

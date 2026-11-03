@@ -3,7 +3,6 @@
 import { Carousel, CarouselContent, CarouselDots, CarouselItem } from '@/components/ui/carousel';
 import { bannersQueryOptions } from '@/queries/banner';
 import type { Banner } from '@/types/model';
-import { useBranchStore } from '@/stores/useBranchStore';
 import { useQuery } from '@tanstack/react-query';
 import Autoplay from 'embla-carousel-autoplay';
 import { ArrowUpRight } from 'lucide-react';
@@ -35,12 +34,7 @@ export default function BannerSection() {
   const plugin = useRef(
     Autoplay({ delay: 5000, stopOnInteraction: false, stopOnMouseEnter: true, stopOnFocusIn: true })
   );
-  const branchId = useBranchStore((state) => state.branch?.id);
-  const { data } = useQuery({
-    ...bannersQueryOptions(),
-    queryKey: ['banners', branchId || 'unselected'],
-    enabled: !!branchId
-  });
+  const { data } = useQuery(bannersQueryOptions());
   const banners = getBanners(data);
   const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
 
@@ -59,7 +53,9 @@ export default function BannerSection() {
                 const content = (
                   <div className="relative aspect-video w-full overflow-hidden bg-neutral-200 md:aspect-[2.6/1] md:min-h-[240px]">
                     <Image
-                      src={failedImages[banner.id] ? DEFAULT_IMAGE : banner.image || DEFAULT_IMAGE}
+                      src={
+                        failedImages[banner.image] ? DEFAULT_IMAGE : banner.image || DEFAULT_IMAGE
+                      }
                       alt={`Lapangan padel Black Padel${banners.length > 1 ? ` — ${index + 1}` : ''}`}
                       fill
                       priority={index === 0}
@@ -67,7 +63,7 @@ export default function BannerSection() {
                       unoptimized
                       className="object-cover"
                       onError={() =>
-                        setFailedImages((previous) => ({ ...previous, [banner.id]: true }))
+                        setFailedImages((previous) => ({ ...previous, [banner.image]: true }))
                       }
                     />
                   </div>

@@ -9,8 +9,8 @@ export async function getBookingsApi(queryParams: SearchParamsData = {}) {
   return res.data;
 }
 
-export async function getBookingApi(id: string) {
-  const { data } = await adminApi.get(`/bookings/${id}`);
+export async function getBookingApi(id: string, signal?: AbortSignal) {
+  const { data } = await adminApi.get(`/bookings/${id}`, { signal, timeout: 30000 });
   return data;
 }
 
@@ -51,4 +51,9 @@ export async function exportBookingsApi(queryParams: SearchParamsData = {}) {
   const mergedUrl = mergedQueryParamUrl(url, queryParams);
   const res = await adminApi.get(mergedUrl, { responseType: 'blob' });
   return res.data;
+}
+
+export async function getCourtBookingTableApi(params: SearchParamsData, signal?: AbortSignal) {
+  const { data } = await adminApi.get('/bookings/table', { params, signal, timeout: 30000 });
+  return data;
 }

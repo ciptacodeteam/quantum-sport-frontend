@@ -9,6 +9,7 @@ import {
   type RowData,
   type RowSelectionState,
   type SortingState,
+  type PaginationState,
   type VisibilityState,
   flexRender,
   getCoreRowModel,
@@ -134,6 +135,11 @@ interface DataTableProps<TData extends RowData> {
   /** Callback when pagination changes (page or pageSize) */
   onPaginationChange?: (page: number, pageSize: number) => void;
   rightActions?: React.ReactNode;
+  paginationState?: PaginationState;
+  sortingState?: SortingState;
+  searchValue?: string;
+  onSearchChange?: (value: string) => void;
+  onSortChange?: (value: SortingState) => void;
 }
 
 export function DataTable<TData extends RowData>({
@@ -163,6 +169,11 @@ export function DataTable<TData extends RowData>({
   serverSide = false,
   totalCount,
   onPaginationChange,
+  paginationState,
+  sortingState,
+  searchValue,
+  onSearchChange,
+  onSortChange,
 
   /**
    * Optional: Provide a function to return sub rows for a given row.
@@ -194,7 +205,7 @@ export function DataTable<TData extends RowData>({
     return { pageIndex: 0, pageSize: 10 };
   }, [serverSide, searchParams]);
 
-  const [sorting, setSorting] = useState<SortingState>([]);
+  const [localSorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [columnVisibility, setColumnVisibility] =
@@ -231,7 +242,16 @@ export function DataTable<TData extends RowData>({
     }
   }, [columnVisibility, columnVisibilityStorageKey, loadedVisibilityKey]);
 
-  const [pagination, setPagination] = useState(getInitialPagination());
+  const [localPagination, setPagination] = useState(getInitialPagination());
+  const pagination = paginationState ?? localPagination;
+  const sorting = sortingState ?? localSorting;
+  const changePagination = (
+    update: PaginationState | ((previous: PaginationState) => PaginationState)
+  ) => {
+    const next = typeof update === 'function' ? update(pagination) : update;
+    if (paginationState) onPaginationChange?.(next.pageIndex + 1, next.pageSize);
+    else setPagination(next);
+  };
   const [expanded, setExpanded] = useState({});
   const isInitialMount = useRef(true);
 
@@ -310,7 +330,7 @@ export function DataTable<TData extends RowData>({
       }
 
       // Notify parent component (skip on initial mount)
-      if (!isInitialMount.current) {
+      if (!isInitialMount.current && !paginationState) {
         onPaginationChange?.(page, limit);
       } else {
         isInitialMount.current = false;
@@ -324,8 +344,12 @@ export function DataTable<TData extends RowData>({
     pageCount,
     getRowId,
     getSubRows,
-    onSortingChange: setSorting,
-    onPaginationChange: setPagination,
+    onSortingChange: (update) => {
+      const next = typeof update === 'function' ? update(sorting) : update;
+      if (onSortChange) onSortChange(next);
+      else setSorting(next);
+    },
+    onPaginationChange: changePagination,
     onColumnFiltersChange: setColumnFilters,
     onRowSelectionChange: setRowSelection,
     onColumnVisibilityChange: setColumnVisibility,
@@ -339,6 +363,8 @@ export function DataTable<TData extends RowData>({
     enableMultiSort: false,
     enableRowSelection,
     manualPagination: serverSide,
+    manualSorting: !!onSortChange,
+    manualFiltering: !!onSearchChange,
     state: {
       sorting,
       pagination,
@@ -369,9 +395,10 @@ export function DataTable<TData extends RowData>({
 
   const handleSearchChange = useCallback(
     (value: string) => {
-      table.setGlobalFilter(value || undefined);
+      if (onSearchChange) onSearchChange(value);
+      else table.setGlobalFilter(value || undefined);
     },
-    [table]
+    [table, onSearchChange]
   );
 
   const handleExpandAll = () => {
@@ -390,10 +417,10 @@ export function DataTable<TData extends RowData>({
         {enableGlobalSearch && (
           <Input
             placeholder={searchPlaceholder}
-            value={table.getState().globalFilter || ''}
+            value={searchValue ?? table.getState().globalFilter ?? ''}
             onChange={(e) => handleSearchChange(e.target.value)}
             className="max-w-60 text-sm"
-            disabled={loading}
+            disabled={loading && !onSearchChange}
           />
         )}
 
