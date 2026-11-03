@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import ReplaceCoachDialog from './ReplaceCoachDialog';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import { coachingApi, type CoachingBooking } from '@/api/admin/coaching';
@@ -86,6 +87,21 @@ export default function CoachingBookings({ kind }: { kind: 'COACH' | 'BALLBOY' }
         )
     })
   ];
+  if (kind === 'COACH')
+    columns.push(
+      col.display({
+        id: 'action',
+        header: 'Aksi',
+        cell: ({ row }) => (
+          <ReplaceCoachDialog
+            bookingCoachId={row.original.id}
+            currentName={row.original.name}
+            startAt={row.original.startAt}
+            status={row.original.status}
+          />
+        )
+      })
+    );
   return (
     <main className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
