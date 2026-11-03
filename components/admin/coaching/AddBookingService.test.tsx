@@ -125,7 +125,8 @@ it('books a paid ballboy for tennis using the same invoice flow as a coach', asy
 
 it.each([
   ['EDC', 'EDC'],
-  ['QRIS Statis', 'QRIS_STATIC']
+  ['QRIS Statis', 'QRIS_STATIC'],
+  ['Transfer', 'BANK_TRANSFER_MANUAL']
 ])(
   'records coach and ballboy together through %s only after payment is confirmed',
   async (label, method) => {

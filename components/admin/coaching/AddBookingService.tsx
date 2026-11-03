@@ -68,7 +68,12 @@ export default function AddBookingService({
         ['QRIS', 'QR'].includes(m.channel) ||
         (m.channel === 'CARDS' && config.data?.checkoutMode === 'snap'))
   );
-  const manualMethod = methodId === 'EDC' || methodId === 'QRIS_STATIC' ? methodId : undefined;
+  const manualMethod =
+    methodId === 'EDC' || methodId === 'QRIS_STATIC' || methodId === 'BANK_TRANSFER_MANUAL'
+      ? methodId
+      : undefined;
+  const manualLabel =
+    manualMethod === 'EDC' ? 'EDC' : manualMethod === 'QRIS_STATIC' ? 'QRIS Statis' : 'Transfer';
   const selectedMethod = manualMethod
     ? undefined
     : (paymentMethods.find((m) => m.id === methodId) ?? paymentMethods[0]);
@@ -215,6 +220,7 @@ export default function AddBookingService({
                 <SelectContent>
                   <SelectItem value="EDC">EDC</SelectItem>
                   <SelectItem value="QRIS_STATIC">QRIS Statis</SelectItem>
+                  <SelectItem value="BANK_TRANSFER_MANUAL">Transfer</SelectItem>
                   {paymentMethods.map((method) => (
                     <SelectItem key={method.id} value={method.id}>
                       {method.name}
@@ -231,10 +237,7 @@ export default function AddBookingService({
                     disabled={attach.isPending}
                     onChange={(e) => setReceived(e.target.checked)}
                   />
-                  <span>
-                    Pembayaran {manualMethod === 'EDC' ? 'EDC' : 'QRIS Statis'} sudah diterima.
-                    Invoice akan dicatat lunas.
-                  </span>
+                  <span>Pembayaran {manualLabel} sudah diterima. Invoice akan dicatat lunas.</span>
                 </label>
               )}
             </div>
@@ -258,7 +261,7 @@ export default function AddBookingService({
           </Button>
           <p className="text-muted-foreground text-xs">
             {manualMethod
-              ? 'EDC dan QRIS Statis dicatat sebagai pembayaran di lokasi tanpa biaya gateway.'
+              ? 'EDC, QRIS Statis, dan Transfer dicatat sebagai pembayaran manual tanpa biaya gateway.'
               : 'Pembayaran online: slot ditahan 10 menit dan dikonfirmasi setelah pembayaran berhasil. Slot dilepas jika pembayaran kedaluwarsa.'}
           </p>
         </>

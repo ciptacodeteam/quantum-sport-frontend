@@ -98,7 +98,7 @@ export const coachingApi = {
     detailId: string,
     slotIds: string[],
     paymentMethodId?: string,
-    manualPayment?: { method: 'EDC' | 'QRIS_STATIC'; received: boolean }
+    manualPayment?: { method: 'EDC' | 'QRIS_STATIC' | 'BANK_TRANSFER_MANUAL'; received: boolean }
   ) =>
     (
       await adminApi.post(`/coaching/booking-details/${detailId}/services`, {
