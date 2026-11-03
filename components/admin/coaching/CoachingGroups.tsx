@@ -1,5 +1,6 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import Image from 'next/image';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import { IconPlus, IconPencil } from '@tabler/icons-react';
@@ -28,7 +29,6 @@ import {
 } from '@/components/ui/dialog';
 const empty = (): CoachingGroupInput => ({
   name: '',
-  logo: '',
   description: '',
   sports: ['PADEL'],
   branchIds: [],
@@ -52,13 +52,32 @@ export default function CoachingGroups() {
   const [open, setOpen] = useState(false);
   const [id, setId] = useState<string>();
   const [draft, setDraft] = useState(empty);
+  const [existingLogo, setExistingLogo] = useState<string | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoError, setLogoError] = useState('');
+  const logoInput = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!draft.logo) {
+      setLogoPreview(draft.removeLogo ? null : existingLogo);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setLogoPreview(String(reader.result));
+    reader.onerror = () => setLogoError('Gambar belum dapat dibaca. Pilih ulang file.');
+    reader.readAsDataURL(draft.logo);
+    return () => {
+      if (reader.readyState === FileReader.LOADING) reader.abort();
+    };
+  }, [draft.logo, draft.removeLogo, existingLogo]);
   const begin = (group?: CoachingGroup) => {
     setId(group?.id);
+    setExistingLogo(group?.logo || null);
+    setLogoPreview(group?.logo || null);
+    setLogoError('');
     setDraft(
       group
         ? {
             name: group.name,
-            logo: group.logo || '',
             description: group.description || '',
             sports: group.sports,
             branchIds: group.branches.map((b) => b.branchId),
@@ -199,7 +218,7 @@ export default function CoachingGroups() {
             className="space-y-4"
             onSubmit={(event) => {
               event.preventDefault();
-              save.mutate();
+              if (!logoError) save.mutate();
             }}
           >
             <div className="space-y-2">
@@ -212,15 +231,71 @@ export default function CoachingGroups() {
                 onChange={(e) => setDraft({ ...draft, name: e.target.value })}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="group-logo">URL logo (opsional)</Label>
+            <div className="space-y-3">
+              <Label htmlFor="group-logo">Logo grup (opsional)</Label>
+              <div className="bg-muted/20 flex min-h-32 items-center justify-center rounded-lg border p-4">
+                {logoPreview ? (
+                  <Image
+                    src={logoPreview}
+                    alt="Pratinjau logo grup"
+                    width={120}
+                    height={120}
+                    unoptimized
+                    className="size-28 object-contain"
+                  />
+                ) : (
+                  <span className="text-muted-foreground text-sm">Belum ada logo</span>
+                )}
+              </div>
               <Input
+                ref={logoInput}
                 id="group-logo"
-                type="url"
-                value={draft.logo}
-                onChange={(e) => setDraft({ ...draft, logo: e.target.value })}
-                placeholder="https://..."
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                disabled={save.isPending}
+                aria-invalid={!!logoError}
+                aria-describedby="group-logo-help"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  setLogoError('');
+                  if (
+                    file &&
+                    (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) ||
+                      file.size === 0 ||
+                      file.size > 5 * 1024 * 1024)
+                  ) {
+                    setLogoError('Gunakan gambar JPG, PNG, atau WebP, maksimal 5 MB.');
+                    setDraft({ ...draft, logo: undefined });
+                    event.target.value = '';
+                    return;
+                  }
+                  setDraft({ ...draft, logo: file, ...(file ? { removeLogo: false } : {}) });
+                }}
               />
+              <p id="group-logo-help" className="text-muted-foreground text-xs">
+                JPG, PNG, atau WebP, maksimal 5 MB.
+                {id ? ' Logo lama tetap dipakai jika tidak memilih file baru.' : ''}
+              </p>
+              {logoError && (
+                <p role="alert" className="text-destructive text-xs">
+                  {logoError}
+                </p>
+              )}
+              {(logoPreview || draft.logo) && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={save.isPending}
+                  onClick={() => {
+                    setDraft({ ...draft, logo: undefined, removeLogo: true });
+                    setLogoError('');
+                    if (logoInput.current) logoInput.current.value = '';
+                  }}
+                >
+                  Hapus logo
+                </Button>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="group-description">Deskripsi (opsional)</Label>
@@ -301,6 +376,7 @@ export default function CoachingGroups() {
               className="w-full"
               disabled={
                 save.isPending ||
+                !!logoError ||
                 !draft.name.trim() ||
                 !draft.sports.length ||
                 !draft.branchIds.length ||

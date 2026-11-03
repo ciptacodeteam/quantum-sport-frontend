@@ -60,7 +60,6 @@ it('creates a group with the selected sports and branches', async () => {
   await waitFor(() =>
     expect(mocks.save).toHaveBeenCalledWith(undefined, {
       name: 'New Academy',
-      logo: '',
       description: '',
       sports: ['PADEL', 'TENNIS'],
       branchIds: ['cemara'],
@@ -87,4 +86,51 @@ it('lets regular admins read groups without editing the shared catalog', async (
   expect(screen.queryByRole('button', { name: 'Tambah grup' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Edit grup Northwest' })).not.toBeInTheDocument();
   expect(mocks.branches).not.toHaveBeenCalled();
+});
+
+it('previews a local file and submits it as the group logo', async () => {
+  mount();
+  fireEvent.click(await screen.findByRole('button', { name: 'Edit grup Northwest' }));
+  const file = new File(['image'], 'northwest.png', { type: 'image/png' });
+  fireEvent.change(screen.getByLabelText('Logo grup (opsional)'), { target: { files: [file] } });
+  expect(await screen.findByAltText('Pratinjau logo grup')).toHaveAttribute(
+    'src',
+    expect.stringContaining('data:image/png;base64,')
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Simpan grup' }));
+  await waitFor(() =>
+    expect(mocks.save).toHaveBeenCalledWith(
+      'northwest',
+      expect.objectContaining({ logo: file, removeLogo: false })
+    )
+  );
+});
+it('keeps the existing logo when no new file is selected and permits explicit removal', async () => {
+  mocks.list.mockResolvedValue([{ ...group, logo: 'https://images.example.com/existing.webp' }]);
+  mount();
+  fireEvent.click(await screen.findByRole('button', { name: 'Edit grup Northwest' }));
+  expect(await screen.findByAltText('Pratinjau logo grup')).toHaveAttribute(
+    'src',
+    'https://images.example.com/existing.webp'
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Hapus logo' }));
+  expect(screen.queryByAltText('Pratinjau logo grup')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Simpan grup' }));
+  await waitFor(() =>
+    expect(mocks.save).toHaveBeenCalledWith(
+      'northwest',
+      expect.objectContaining({ removeLogo: true, logo: undefined })
+    )
+  );
+});
+it.each([
+  new File(['svg'], 'logo.svg', { type: 'image/svg+xml' }),
+  new File([new Uint8Array(5 * 1024 * 1024 + 1)], 'large.png', { type: 'image/png' })
+])('rejects unsupported or oversized images before saving', async (file) => {
+  mount();
+  fireEvent.click(await screen.findByRole('button', { name: 'Edit grup Northwest' }));
+  fireEvent.change(screen.getByLabelText('Logo grup (opsional)'), { target: { files: [file] } });
+  expect(screen.getByRole('alert')).toHaveTextContent('maksimal 5 MB');
+  expect(screen.getByRole('button', { name: 'Simpan grup' })).toBeDisabled();
+  expect(mocks.save).not.toHaveBeenCalled();
 });
