@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { startOfDay, subDays } from 'date-fns';
+import { startOfMonth, endOfMonth } from 'date-fns';
 import { getAnalyticsDateRange } from '@/lib/analytics-date-range';
 import type { DateRange } from 'react-day-picker';
 
@@ -13,8 +13,8 @@ import IncomeBySourceSection from '@/components/admin/analytics/IncomeBySourceSe
 
 export default function IncomeBySourcePage() {
   const [date, setDate] = useState<DateRange | undefined>(() => ({
-    from: subDays(startOfDay(new Date()), 29),
-    to: startOfDay(new Date())
+    from: startOfMonth(new Date()),
+    to: endOfMonth(new Date())
   }));
 
   const { startDate, endDate } = getAnalyticsDateRange(date);

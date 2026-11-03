@@ -57,7 +57,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
+import { SearchInput } from '@/components/ui/search-input';
 import { cn } from '@/lib/utils';
 import { rankItem } from '@tanstack/match-sorter-utils';
 import { Loader2, Settings2 } from 'lucide-react';
@@ -415,11 +415,12 @@ export function DataTable<TData extends RowData>({
     <div>
       <div className="flex flex-wrap items-center gap-3 py-4">
         {enableGlobalSearch && (
-          <Input
+          <SearchInput
             placeholder={searchPlaceholder}
             value={searchValue ?? table.getState().globalFilter ?? ''}
             onChange={(e) => handleSearchChange(e.target.value)}
-            className="max-w-60 text-sm"
+            containerClassName="sm:max-w-lg sm:grow sm:basis-[32rem]"
+            className="text-sm"
             disabled={loading && !onSearchChange}
           />
         )}

@@ -11,6 +11,7 @@ const fixtures = vi.hoisted(() => ({
   push: vi.fn(),
   mutationOptions: {} as any,
   pending: false,
+  membership: null as any,
   slots: ['court-a', 'court-b'].map((id) => ({
     id: `slot-${id}`,
     courtId: id,
@@ -51,12 +52,18 @@ vi.mock('@/components/admin/booking/BookingSummary', () => ({
   )
 }));
 vi.mock('@/hooks/useMembershipDiscount', () => ({
-  useMembershipDiscount: () => ({ discountAmount: 0, discountedTotal: 0, originalTotal: 0 })
+  useMembershipDiscount: () => ({
+    discountAmount: 0,
+    discountedTotal: 0,
+    originalTotal: 0,
+    activeMembership: fixtures.membership
+  })
 }));
 
 beforeEach(() => {
   vi.clearAllMocks();
   fixtures.pending = false;
+  fixtures.membership = null;
   fixtures.queries = [];
   fixtures.slots.forEach((slot) => {
     slot.startAt = '2040-01-02T12:00:00Z';
@@ -178,6 +185,12 @@ it('clears pending times when switching to another court', () => {
 });
 
 it('keeps weekly booking controls inside the booking summary', () => {
+  useBookingStore.setState({ selectedCustomerId: 'customer', useMembership: true });
+  fixtures.membership = {
+    id: 'membership-user',
+    isSuspended: false,
+    membership: { id: 'pack', name: 'Value Pack', sport: 'PADEL' }
+  };
   render(<BookingLapangan />);
   const summary = screen.getByRole('complementary', { name: 'Booking Summary' });
   expect(within(summary).getByRole('button', { name: 'Ulangi mingguan' })).toBeDisabled();
@@ -261,4 +274,36 @@ it('retains weekly booking rules and membership usage in direct checkout', () =>
   expect(fixtures.mutate).toHaveBeenCalledWith(
     expect.objectContaining({ recurringBooking, useMembership: true })
   );
+});
+
+it('hides recurring booking controls for customers without a membership and for walk-ins', () => {
+  prepareCourtBooking();
+  useBookingStore.setState({ useMembership: true });
+  const view = render(<BookingLapangan />);
+  expect(
+    screen.queryByRole('region', { name: 'Pengaturan booking rutin' })
+  ).not.toBeInTheDocument();
+  view.unmount();
+  prepareCourtBooking(false);
+  useBookingStore.setState({ useMembership: true });
+  render(<BookingLapangan />);
+  expect(
+    screen.queryByRole('region', { name: 'Pengaturan booking rutin' })
+  ).not.toBeInTheDocument();
+});
+
+it('shows recurring controls only after selecting a customer with a membership and hides them for regular payment', () => {
+  prepareCourtBooking();
+  useBookingStore.setState({ useMembership: true });
+  fixtures.membership = {
+    id: 'membership-user',
+    isSuspended: false,
+    membership: { id: 'pack', name: 'Value Pack', sport: 'PADEL' }
+  };
+  render(<BookingLapangan />);
+  expect(screen.getByRole('region', { name: 'Pengaturan booking rutin' })).toBeInTheDocument();
+  act(() => useBookingStore.setState({ useMembership: false }));
+  expect(
+    screen.queryByRole('region', { name: 'Pengaturan booking rutin' })
+  ).not.toBeInTheDocument();
 });

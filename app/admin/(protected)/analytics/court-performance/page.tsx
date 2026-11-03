@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import type { DateRange } from 'react-day-picker';
-import { Download, Clock3, Users, CalendarDays, Banknote, ArrowDown, Search } from 'lucide-react';
+import { Download, Clock3, Users, CalendarDays, Banknote, ArrowDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { adminApi } from '@/lib/adminApi';
 import { formatScheduleSlotTime } from '@/lib/admin-schedule-time';
@@ -14,7 +14,7 @@ import useAuthStore from '@/stores/useAuthStore';
 import DateRangeInput from '@/components/ui/date-range-input';
 import AppSectionHeader from '@/components/ui/app-section-header';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { SearchInput } from '@/components/ui/search-input';
 import {
   Select,
   SelectContent,
@@ -526,12 +526,11 @@ function CourtPerformanceContent({ branch }: { branch: string | null | undefined
                   rincian waktu
                 </p>
               </div>
-              <div className="grid items-center gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,17rem)_minmax(0,12rem)]">
-                <div className="relative min-w-0 sm:col-span-2 lg:col-span-1">
-                  <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-                  <Input
+              <div className="grid items-center gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,17rem)_minmax(0,12rem)]">
+                <div className="min-w-0 sm:col-span-2 xl:col-span-1">
+                  <SearchInput
                     aria-label="Cari booking"
-                    className="h-10 pl-9"
+                    className="h-10"
                     placeholder="Cari customer, invoice, atau lapangan…"
                     value={search}
                     onChange={(e) => {

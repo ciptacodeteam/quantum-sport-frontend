@@ -66,6 +66,7 @@ it.each(['COACH', 'BALLBOY'])(
     mount();
     const name = kind === 'COACH' ? 'Coach A' : 'Ballboy Ibnu';
     expect(await screen.findByText(name)).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Jenis layanan' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Kolom' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: `Edit profil ${name}` })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: `Jadwal & Harga ${name}` })).toHaveAttribute(

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { SearchInput } from '@/components/ui/search-input';
 import {
   Select,
   SelectContent,
@@ -86,7 +86,7 @@ export default function IncomeTransactionTable({
         </CardDescription>
         {transactions && (
           <div className="mt-2 grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px]">
-            <Input
+            <SearchInput
               aria-label="Cari transaksi customer"
               placeholder="Cari customer, invoice, cabang, atau metode bayar…"
               value={search}

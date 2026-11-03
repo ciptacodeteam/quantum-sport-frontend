@@ -1281,7 +1281,7 @@ export default function BookingLapangan() {
           {/* Booking Summary - Responsive */}
           <BookingSummary
             recurringControls={
-              useMembership ? (
+              useMembership && localCustomerId && membershipDiscount.activeMembership ? (
                 <section
                   aria-label="Pengaturan booking rutin"
                   className="border-primary/20 bg-primary/5 space-y-3 rounded-xl border p-4"

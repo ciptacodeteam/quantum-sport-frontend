@@ -74,14 +74,6 @@ const PaymentMethodTable = () => {
               <p className="truncate font-medium" title={getValue()}>
                 {getValue()}
               </p>
-              {row.original.channel && (
-                <p
-                  className="text-muted-foreground truncate font-mono text-xs"
-                  title={row.original.channel}
-                >
-                  {row.original.channel}
-                </p>
-              )}
             </div>
           </div>
         )

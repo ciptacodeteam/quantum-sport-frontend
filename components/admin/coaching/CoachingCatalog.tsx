@@ -157,14 +157,6 @@ export default function CoachingCatalog() {
           </p>
         </div>
       </div>
-      <nav className="flex gap-2" aria-label="Jenis layanan">
-        <Button variant={kind === 'COACH' ? 'default' : 'outline'} asChild>
-          <Link href="/admin/coaching?kind=COACH">Coach</Link>
-        </Button>
-        <Button variant={kind === 'BALLBOY' ? 'default' : 'outline'} asChild>
-          <Link href="/admin/coaching?kind=BALLBOY">Ballboy</Link>
-        </Button>
-      </nav>
       {(!branchId || branchId === 'all') && (
         <p className="text-muted-foreground text-sm">
           Pilih satu cabang di header untuk menambahkan profil.
