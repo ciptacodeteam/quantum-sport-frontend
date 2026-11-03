@@ -1,5 +1,8 @@
 'use client';
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { createColumnHelper } from '@tanstack/react-table';
+import { IconPencil, IconCalendar, IconPlus } from '@tabler/icons-react';
+import { DataTable } from '@/components/ui/data-table';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -11,7 +14,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription
+} from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
@@ -24,6 +33,8 @@ import { toast } from 'sonner';
 export const coachingSportLabel = (sport: string | null) =>
   sport === 'PADEL_TENNIS' ? 'Padel & Tennis' : sport === 'TENNIS' ? 'Tennis' : 'Padel';
 
+const col = createColumnHelper<CoachingPerson>();
+
 export default function CoachingCatalog() {
   const params = useSearchParams();
   const kind = params.get('kind') === 'BALLBOY' ? 'BALLBOY' : 'COACH';
@@ -35,7 +46,6 @@ export default function CoachingCatalog() {
     queryFn: coachingApi.list,
     enabled: hasAccess
   });
-  const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<CoachingPerson | null>(null);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<CoachingProfile>({
@@ -53,29 +63,92 @@ export default function CoachingCatalog() {
     },
     onError: (error) => toast.error(getApiErrorMessage(error, 'Profil belum dapat disimpan.'))
   });
-  const beginEdit = (person?: CoachingPerson) => {
-    setEditing(person ?? null);
-    setDraft(
-      person
-        ? {
-            name: person.name,
-            kind: person.role,
-            coachType: person.coachType ?? undefined,
-            phone: person.phone ?? undefined,
-            coachProfile: person.coachProfile ?? undefined,
-            isActive: person.isActive
-          }
-        : { name: '', kind, coachType: 'PADEL', isActive: true }
-    );
-    setOpen(true);
-  };
-  if (isLoading || !hasAccess) return <p className="p-6">Memuat...</p>;
-  const people = (query.data ?? []).filter(
-    (p) =>
-      p.role === kind && `${p.name} ${p.phone ?? ''}`.toLowerCase().includes(search.toLowerCase())
+  const beginEdit = useCallback(
+    (person?: CoachingPerson) => {
+      setEditing(person ?? null);
+      setDraft(
+        person
+          ? {
+              name: person.name,
+              kind: person.role,
+              coachType: person.coachType ?? undefined,
+              phone: person.phone ?? undefined,
+              coachProfile: person.coachProfile ?? undefined,
+              isActive: person.isActive
+            }
+          : { name: '', kind, coachType: 'PADEL', isActive: true }
+      );
+      setOpen(true);
+    },
+    [kind]
   );
+  const people = useMemo(
+    () => (query.data ?? []).filter((person) => person.role === kind),
+    [query.data, kind]
+  );
+  const columns = useMemo(
+    () => [
+      col.accessor('name', {
+        header: 'Nama',
+        cell: ({ getValue }) => <span className="block min-w-40 font-medium">{getValue()}</span>
+      }),
+      col.accessor(
+        (person) => (person.role === 'BALLBOY' ? 'Tennis' : coachingSportLabel(person.coachType)),
+        {
+          id: 'sport',
+          header: 'Olahraga',
+          cell: ({ getValue }) => <Badge variant="outline">{getValue()}</Badge>
+        }
+      ),
+      col.accessor('phone', {
+        header: 'Telepon',
+        cell: ({ getValue }) => (
+          <span className="text-muted-foreground text-sm tabular-nums">{getValue() || '—'}</span>
+        )
+      }),
+      col.accessor((person) => (person.isActive ? 'Aktif' : 'Nonaktif'), {
+        id: 'status',
+        header: 'Status',
+        cell: ({ row, getValue }) => (
+          <Badge variant={row.original.isActive ? 'lightSuccess' : 'lightNeutral'}>
+            {getValue()}
+          </Badge>
+        )
+      }),
+      col.display({
+        id: 'actions',
+        header: 'Aksi',
+        enableHiding: false,
+        cell: ({ row }) => (
+          <div className="flex items-center gap-1">
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              disabled={!branchId || branchId === 'all'}
+              onClick={() => beginEdit(row.original)}
+              aria-label={`Edit profil ${row.original.name}`}
+              title="Edit profil"
+            >
+              <IconPencil />
+            </Button>
+            <Button size="icon-sm" variant="ghost" asChild>
+              <Link
+                href={`/admin/coaching/${row.original.id}`}
+                aria-label={`Jadwal & Harga ${row.original.name}`}
+                title="Jadwal & Harga"
+              >
+                <IconCalendar />
+              </Link>
+            </Button>
+          </div>
+        )
+      })
+    ],
+    [beginEdit, branchId]
+  );
+  if (isLoading || !hasAccess) return <p className="p-6">Memuat...</p>;
   return (
-    <main className="space-y-6">
+    <main className="w-full min-w-0 space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">{kind === 'COACH' ? 'Coaching' : 'Ballboy'}</h1>
@@ -83,12 +156,6 @@ export default function CoachingCatalog() {
             Kelola profil, olahraga, jadwal, dan harga layanan per jam.
           </p>
         </div>
-        <Button
-          onClick={() => beginEdit()}
-          disabled={!branchId || branchId === 'all' || (kind === 'BALLBOY' && !canCreateTennis)}
-        >
-          Tambah {kind === 'COACH' ? 'Coach' : 'Ballboy'}
-        </Button>
       </div>
       <nav className="flex gap-2" aria-label="Jenis layanan">
         <Button variant={kind === 'COACH' ? 'default' : 'outline'} asChild>
@@ -108,13 +175,6 @@ export default function CoachingCatalog() {
           Ballboy tersedia untuk cabang dengan lapangan tennis.
         </p>
       )}
-      <Input
-        aria-label="Cari coach atau ballboy"
-        placeholder="Cari nama atau telepon..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="max-w-sm"
-      />
       {query.isError ? (
         <div role="alert">
           <p>Profil belum dapat dimuat.</p>
@@ -122,59 +182,31 @@ export default function CoachingCatalog() {
             Coba lagi
           </Button>
         </div>
-      ) : query.isPending ? (
-        <p>Memuat profil...</p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/40 text-left">
-              <tr>
-                {['Nama', 'Olahraga', 'Telepon', 'Status', 'Aksi'].map((t) => (
-                  <th key={t} className="px-4 py-3">
-                    {t}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {people.map((p) => (
-                <tr key={p.id}>
-                  <td className="px-4 py-4 font-medium">{p.name}</td>
-                  <td className="px-4 py-4">
-                    {p.role === 'BALLBOY' ? 'Tennis' : coachingSportLabel(p.coachType)}
-                  </td>
-                  <td className="px-4 py-4">{p.phone || '-'}</td>
-                  <td className="px-4 py-4">
-                    <Badge variant={p.isActive ? 'lightSuccess' : 'secondary'}>
-                      {p.isActive ? 'Aktif' : 'Nonaktif'}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-4">
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={!branchId || branchId === 'all'}
-                        onClick={() => beginEdit(p)}
-                      >
-                        Edit profil
-                      </Button>
-                      <Button size="sm" asChild>
-                        <Link href={`/admin/coaching/${p.id}`}>Jadwal & Harga</Link>
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {!people.length && (
-                <tr>
-                  <td colSpan={5} className="text-muted-foreground p-8 text-center">
-                    Belum ada profil yang sesuai.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+        <div className="[&_thead]:bg-muted/50 min-w-0 [&_td]:align-middle [&_th]:text-xs">
+          <DataTable
+            key={kind}
+            data={people}
+            columns={columns}
+            loading={query.isPending}
+            enableRowSelection={false}
+            getRowId={(person) => person.id}
+            searchPlaceholder={`Cari ${kind === 'COACH' ? 'coach' : 'ballboy'}, olahraga, atau telepon...`}
+            columnVisibilityLabel="Kolom"
+            columnVisibilityStorageKey={`quantum:coaching-catalog:columns:${kind}`}
+            addButton={
+              <Button
+                className="h-9 rounded-lg"
+                onClick={() => beginEdit()}
+                disabled={
+                  !branchId || branchId === 'all' || (kind === 'BALLBOY' && !canCreateTennis)
+                }
+              >
+                <IconPlus />
+                Tambah {kind === 'COACH' ? 'Coach' : 'Ballboy'}
+              </Button>
+            }
+          />
         </div>
       )}
       <Dialog
@@ -188,6 +220,7 @@ export default function CoachingCatalog() {
             <DialogTitle>
               {editing ? 'Edit' : 'Tambah'} {draft.kind === 'COACH' ? 'Coach' : 'Ballboy'}
             </DialogTitle>
+            <DialogDescription>Kelola nama, kontak, dan status profil layanan.</DialogDescription>
           </DialogHeader>
           <form
             className="space-y-4"
