@@ -1,4 +1,7 @@
 'use client';
+import BookingDateFilter from '@/components/admin/bookings/BookingDateFilter';
+import { useBookingDateFilter } from '@/hooks/useBookingDateFilter';
+
 import Link from 'next/link';
 import CancelCoachDialog from './CancelCoachDialog';
 import ReplaceCoachDialog from './ReplaceCoachDialog';
@@ -14,10 +17,11 @@ import { Badge } from '@/components/ui/badge';
 
 export default function CoachingBookings({ kind }: { kind: 'COACH' | 'BALLBOY' }) {
   const { branchId } = useAdminCourtSports();
+  const { dateRange, setDateRange, dateParams } = useBookingDateFilter();
   const canManageCoaches = useHasRole(['SUPER_ADMIN']);
   const query = useQuery({
-    queryKey: ['admin', 'coaching', branchId, 'bookings', kind],
-    queryFn: () => coachingApi.bookings(kind),
+    queryKey: ['admin', 'coaching', branchId, 'bookings', kind, dateParams],
+    queryFn: () => coachingApi.bookings(kind, dateParams),
     refetchInterval: 15000
   });
   const col = createColumnHelper<CoachingBooking>();
@@ -141,6 +145,7 @@ export default function CoachingBookings({ kind }: { kind: 'COACH' | 'BALLBOY' }
           loading={query.isPending}
           enableRowSelection={false}
           enableColumnVisibility={false}
+          rightActions={<BookingDateFilter value={dateRange} onChange={setDateRange} />}
         />
       )}
     </main>

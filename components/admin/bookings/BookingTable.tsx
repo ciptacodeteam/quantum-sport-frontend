@@ -1,4 +1,6 @@
 'use client';
+import BookingDateFilter from '@/components/admin/bookings/BookingDateFilter';
+import { useBookingDateFilter } from '@/hooks/useBookingDateFilter';
 
 import {
   approveBookingApi,
@@ -63,6 +65,7 @@ type BookingTableProps = {
 
 const BookingTable = ({ courtSport }: BookingTableProps) => {
   const queryClient = useQueryClient();
+  const { dateRange, setDateRange, dateParams } = useBookingDateFilter();
   const [checkoutType, setCheckoutType] = useState('all');
 
   const { mutate: updateStatus } = useMutation({
@@ -342,8 +345,8 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
     const params: Record<string, string> = {};
     if (checkoutType !== 'all') params.checkoutType = checkoutType;
     if (courtSport) params.courtSport = courtSport;
-    return params;
-  }, [checkoutType, courtSport]);
+    return { ...params, ...dateParams };
+  }, [checkoutType, courtSport, dateParams]);
 
   const { data, isPending } = useQuery(adminBookingsQueryOptions(queryParams));
 
@@ -360,6 +363,7 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
         columnVisibilityStorageKey={`quantum:booking-columns:${courtSport || 'all'}`}
         rightActions={
           <div className="flex flex-wrap items-center gap-2">
+            <BookingDateFilter value={dateRange} onChange={setDateRange} />
             <div className="flex items-center gap-2">
               <label htmlFor="checkout-filter" className="sr-only">
                 Jenis pemesanan
@@ -381,11 +385,7 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
               size="sm"
               onClick={async () => {
                 try {
-                  const params: Record<string, string> = {};
-                  if (checkoutType !== 'all') params.checkoutType = checkoutType;
-                  if (courtSport) params.courtSport = courtSport;
-
-                  const blob = await exportBookingsApi(params);
+                  const blob = await exportBookingsApi(queryParams);
                   const url = window.URL.createObjectURL(new Blob([blob]));
                   const link = document.createElement('a');
                   link.href = url;

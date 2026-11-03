@@ -152,6 +152,7 @@ export const coachingApi = {
       slotId: string;
       price: number;
     },
-  bookings: async (kind: 'COACH' | 'BALLBOY') =>
-    (await adminApi.get('/coaching/bookings', { params: { kind } })).data.data as CoachingBooking[]
+  bookings: async (kind: 'COACH' | 'BALLBOY', dates: { dateFrom?: string; dateTo?: string } = {}) =>
+    (await adminApi.get('/coaching/bookings', { params: { kind, ...dates } })).data
+      .data as CoachingBooking[]
 };

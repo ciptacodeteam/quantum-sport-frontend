@@ -1,3 +1,4 @@
+vi.mock('@/hooks/use-mobile', () => ({ useIsMobile: () => false }));
 import type * as ReactQuery from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
@@ -55,6 +56,7 @@ afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 async function choose(label: string) {
   fireEvent.keyDown(screen.getByRole('combobox', { name: 'Jenis pemesanan' }), { key: 'Enter' });
@@ -82,3 +84,29 @@ it('removes the checkout filter when all checkouts are selected', async () => {
   await choose('Semua pemesanan');
   expect(mocks.queries.mock.lastCall?.[0].at(-1)).toEqual({ courtSport: 'TENNIS' });
 });
+
+it.each(['PADEL', 'TENNIS'] as const)(
+  'filters playing dates for %s, exports the same range, and resets without clearing checkout type',
+  async (courtSport) => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 10, 3, 12));
+    render(<BookingTable courtSport={courtSport} />);
+    await choose('Membership');
+    fireEvent.click(screen.getByRole('button', { name: /^Date range:/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Last 7 days' }));
+    const expected = {
+      courtSport,
+      checkoutType: 'membership',
+      dateFrom: '2026-10-28',
+      dateTo: '2026-11-03'
+    };
+    expect(mocks.queries.mock.lastCall?.[0].at(-1)).toEqual(expected);
+    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+    await waitFor(() => expect(mocks.exportBookings).toHaveBeenCalledWith(expected));
+    fireEvent.click(screen.getByRole('button', { name: 'Reset filter tanggal' }));
+    expect(mocks.queries.mock.lastCall?.[0].at(-1)).toEqual({
+      courtSport,
+      checkoutType: 'membership'
+    });
+  }
+);

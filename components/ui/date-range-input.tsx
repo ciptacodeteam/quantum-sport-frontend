@@ -27,6 +27,7 @@ interface DateRangeInputProps {
   numberOfMonths?: number;
   className?: string;
   placeholder?: string;
+  referenceDate?: Date;
 }
 
 function rangeLabel(range: DateRange | undefined | null, placeholder: string) {
@@ -47,16 +48,17 @@ const DateRangeInput = ({
   maxDate,
   numberOfMonths = 1,
   className,
-  placeholder = 'Select date range'
+  placeholder = 'Select date range',
+  referenceDate
 }: DateRangeInputProps) => {
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<DateRange | undefined>();
-  const [month, setMonth] = useState<Date>(value?.from ?? new Date());
+  const [month, setMonth] = useState<Date>(value?.from ?? referenceDate ?? new Date());
   const [choosingEnd, setChoosingEnd] = useState(false);
   const min = minDate ? startOfDay(minDate) : undefined;
   const max = maxDate ? startOfDay(maxDate) : undefined;
-  const today = startOfDay(new Date());
+  const today = startOfDay(referenceDate ?? new Date());
   const presets = [
     { label: 'Today', from: today, to: today },
     { label: 'Last 7 days', from: subDays(today, 6), to: today },

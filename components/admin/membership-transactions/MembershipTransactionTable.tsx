@@ -1,4 +1,6 @@
 'use client';
+import BookingDateFilter from '@/components/admin/bookings/BookingDateFilter';
+import { useBookingDateFilter } from '@/hooks/useBookingDateFilter';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -63,13 +65,14 @@ const formatDate = (date: Date | string): string => {
 
 const MembershipTransactionTable = ({ debtsOnly = false }: { debtsOnly?: boolean }) => {
   const [status, setStatus] = useState('all');
+  const { dateRange, setDateRange, dateParams } = useBookingDateFilter();
   const [sport, setSport] = useState<MembershipSportFilter>('all');
   const queryParams = useMemo(() => {
     const params: Record<string, string> = { balance: debtsOnly ? 'negative' : 'nonnegative' };
     if (sport !== 'all') params.sport = sport;
     if (!debtsOnly && status !== 'all') params.status = status;
-    return params;
-  }, [sport, status, debtsOnly]);
+    return { ...params, ...dateParams };
+  }, [sport, status, debtsOnly, dateParams]);
   const query = useQuery(adminMembershipTransactionsQueryOptions(queryParams));
 
   const transactions = query.data ?? [];
@@ -323,6 +326,11 @@ const MembershipTransactionTable = ({ debtsOnly = false }: { debtsOnly?: boolean
         columnVisibilityStorageKey={`quantum:membership-transactions:${debtsOnly ? 'debts' : 'sales'}:columns`}
         rightActions={
           <div className="flex flex-wrap items-center gap-2">
+            <BookingDateFilter
+              value={dateRange}
+              onChange={setDateRange}
+              label="Tanggal pembelian paket"
+            />
             <div className="flex items-center gap-2">
               <Select
                 value={sport}

@@ -1,3 +1,4 @@
+vi.mock('@/hooks/use-mobile', () => ({ useIsMobile: () => false }));
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
