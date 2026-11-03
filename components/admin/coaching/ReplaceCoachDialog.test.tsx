@@ -7,11 +7,13 @@ const mocks = vi.hoisted(() => ({
   replacements: vi.fn(),
   replaceCoach: vi.fn(),
   bookings: vi.fn(),
-  canWrite: true,
+  role: 'SUPER_ADMIN',
   now: Date.parse('2026-11-01T12:00:00+07:00')
 }));
 vi.mock('@/api/admin/coaching', () => ({ coachingApi: mocks }));
-vi.mock('@/hooks/useRoleAccess', () => ({ useHasRole: () => mocks.canWrite }));
+vi.mock('@/hooks/useRoleAccess', () => ({
+  useHasRole: (roles: string[]) => mocks.role === 'SUPER_ADMIN' || roles.includes(mocks.role)
+}));
 vi.mock('@/hooks/useAdminCourtSports', () => ({
   useAdminCourtSports: () => ({ branchId: 'cemara' })
 }));
@@ -51,7 +53,7 @@ function mount(changes = {}, list = false) {
 }
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.canWrite = true;
+  mocks.role = 'SUPER_ADMIN';
   mocks.now = Date.parse('2026-11-01T12:00:00+07:00');
   mocks.replacements.mockResolvedValue(availability);
   mocks.replaceCoach.mockResolvedValue({ name: 'Coach B' });
@@ -120,12 +122,12 @@ it('refreshes choices and retains the dialog when another admin wins the replace
   expect(screen.getByRole('button', { name: 'Konfirmasi Ganti Coach' })).toBeDisabled();
 });
 it('does not offer replacements for viewers, unconfirmed bookings or elapsed times', () => {
-  mocks.canWrite = false;
+  mocks.role = 'ADMIN_VIEWER';
   const client = mount();
   expect(screen.queryByRole('button')).toBeNull();
   cleanup();
   client.clear();
-  mocks.canWrite = true;
+  mocks.role = 'SUPER_ADMIN';
   mount({ status: 'HOLD' });
   expect(screen.queryByRole('button')).toBeNull();
   cleanup();
@@ -134,3 +136,19 @@ it('does not offer replacements for viewers, unconfirmed bookings or elapsed tim
   expect(screen.queryByRole('button')).toBeNull();
   expect(mocks.replacements).not.toHaveBeenCalled();
 });
+
+it.each(['ADMIN', 'CASHIER', 'ADMIN_VIEWER', 'COACH', 'BALLBOY', ''])(
+  'hides coach replacement for role %s and never loads choices',
+  async (role) => {
+    mocks.role = role;
+    const client = mount();
+    expect(screen.queryByRole('button', { name: /Ganti Coach/ })).toBeNull();
+    expect(mocks.replacements).not.toHaveBeenCalled();
+    cleanup();
+    client.clear();
+    mount({}, true);
+    await screen.findByText('Coach A');
+    expect(screen.queryByRole('button', { name: /Ganti Coach/ })).toBeNull();
+    expect(screen.queryByRole('columnheader', { name: 'Aksi' })).toBeNull();
+  }
+);

@@ -32,7 +32,7 @@ export default function ReplaceCoachDialog({
   startAt: string;
   status?: string;
 }) {
-  const canWrite = useHasRole(['ADMIN', 'CASHIER']);
+  const canWrite = useHasRole(['SUPER_ADMIN']);
   const { branchId } = useAdminCourtSports();
   const now = useBookingClock();
   const canReplace = canWrite && status === 'CONFIRMED' && isCourtWallSlotBookable(startAt, now);

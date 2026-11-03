@@ -4,6 +4,7 @@ import ReplaceCoachDialog from './ReplaceCoachDialog';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import { coachingApi, type CoachingBooking } from '@/api/admin/coaching';
+import { useHasRole } from '@/hooks/useRoleAccess';
 import { useAdminCourtSports } from '@/hooks/useAdminCourtSports';
 import { formatScheduleSlotTime } from '@/lib/admin-schedule-time';
 import { DataTable } from '@/components/ui/data-table';
@@ -12,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 
 export default function CoachingBookings({ kind }: { kind: 'COACH' | 'BALLBOY' }) {
   const { branchId } = useAdminCourtSports();
+  const canReplaceCoach = useHasRole(['SUPER_ADMIN']);
   const query = useQuery({
     queryKey: ['admin', 'coaching', branchId, 'bookings', kind],
     queryFn: () => coachingApi.bookings(kind),
@@ -87,7 +89,7 @@ export default function CoachingBookings({ kind }: { kind: 'COACH' | 'BALLBOY' }
         )
     })
   ];
-  if (kind === 'COACH')
+  if (kind === 'COACH' && canReplaceCoach)
     columns.push(
       col.display({
         id: 'action',
