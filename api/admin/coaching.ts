@@ -1,3 +1,4 @@
+import type { CoachingGroupSummary } from './coachingGroup';
 import { adminApi } from '@/lib/adminApi';
 
 export type CoachingPerson = {
@@ -8,6 +9,7 @@ export type CoachingPerson = {
   role: 'COACH' | 'BALLBOY';
   coachType: 'PADEL' | 'TENNIS' | 'PADEL_TENNIS' | null;
   coachProfile: string | null;
+  coachingGroups?: { group: CoachingGroupSummary }[];
   isActive: boolean;
 };
 export type CoachingProfile = {
@@ -16,6 +18,7 @@ export type CoachingProfile = {
   coachType?: 'PADEL' | 'TENNIS' | 'PADEL_TENNIS';
   phone?: string;
   coachProfile?: string;
+  groupIds?: string[];
   isActive: boolean;
 };
 export type CoachingSlot = {
@@ -32,6 +35,7 @@ export type CoachingOption = {
   name: string;
   kind: 'COACH' | 'BALLBOY';
   coachType: string | null;
+  groups?: CoachingGroupSummary[];
   price: number;
   startAt: string;
   endAt: string;
@@ -40,6 +44,7 @@ export type CoachingBooking = {
   id: string;
   bookingId: string;
   name: string;
+  coachingGroupName?: string | null;
   customer: string;
   phone: string | null;
   court: string;
@@ -51,6 +56,8 @@ export type CoachingBooking = {
 };
 export type CoachReplacementAvailability = {
   current: {
+    coachingGroupId?: string | null;
+    coachingGroupName?: string | null;
     id: string;
     slotId: string;
     name: string;
@@ -58,7 +65,14 @@ export type CoachReplacementAvailability = {
     startAt: string;
     endAt: string;
   };
-  options: Array<{ slotId: string; staffId: string; name: string; price: number }>;
+  options: Array<{
+    slotId: string;
+    staffId: string;
+    name: string;
+    price: number;
+    coachingGroupId?: string | null;
+    coachingGroupName?: string | null;
+  }>;
 };
 export type CoachCancellationPreview = {
   current: {
@@ -110,11 +124,13 @@ export const coachingApi = {
     detailId: string,
     slotIds: string[],
     paymentMethodId?: string,
-    manualPayment?: { method: 'EDC' | 'QRIS_STATIC' | 'BANK_TRANSFER_MANUAL'; received: boolean }
+    manualPayment?: { method: 'EDC' | 'QRIS_STATIC' | 'BANK_TRANSFER_MANUAL'; received: boolean },
+    coachingGroupId?: string
   ) =>
     (
       await adminApi.post(`/coaching/booking-details/${detailId}/services`, {
         slotIds,
+        coachingGroupId,
         manualPayment,
         paymentMethodId
       })
@@ -143,7 +159,7 @@ export const coachingApi = {
       .data as CoachReplacementAvailability,
   replaceCoach: async (
     id: string,
-    input: { slotId: string; expectedSlotId: string; reason?: string }
+    input: { slotId: string; expectedSlotId: string; reason?: string; coachingGroupId?: string }
   ) =>
     (await adminApi.post(`/coaching/bookings/${id}/replace-coach`, input)).data.data as {
       id: string;

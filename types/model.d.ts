@@ -509,6 +509,8 @@ export type CoachTypeStaffPrice = {
 };
 
 export type BookingCoach = {
+  coachingGroupId?: string | null;
+  coachingGroupName?: string | null;
   courtSlotId?: string | null;
   courtSlot?: Slot | null;
   id: string;

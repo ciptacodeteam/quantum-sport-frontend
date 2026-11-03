@@ -1326,6 +1326,13 @@ export default function SchedulePage() {
                                                                 <p className="w-full text-sm font-semibold break-words">
                                                                   {coach?.name || 'Unknown Coach'}
                                                                 </p>
+                                                                <Badge
+                                                                  variant="outline"
+                                                                  className="text-[10px]"
+                                                                >
+                                                                  {bookingCoach.coachingGroupName ||
+                                                                    'Coach Independen'}
+                                                                </Badge>
                                                                 {coach?.role && (
                                                                   <Badge
                                                                     variant="outline"

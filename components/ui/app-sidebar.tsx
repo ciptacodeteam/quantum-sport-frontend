@@ -173,6 +173,10 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
           url: '/admin/kelola-lapangan'
         },
         {
+          title: 'Grup Coaching',
+          url: '/admin/coaching-groups'
+        },
+        {
           title: 'Coaching',
           url: '/admin/coaching?kind=COACH'
         },

@@ -6,6 +6,7 @@ import { DataTable } from '@/components/ui/data-table';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { coachingGroupApi } from '@/api/admin/coachingGroup';
 import { coachingApi, type CoachingPerson, type CoachingProfile } from '@/api/admin/coaching';
 import { useAdminCourtSports } from '@/hooks/useAdminCourtSports';
 import { useRoleAccess } from '@/hooks/useRoleAccess';
@@ -46,19 +47,26 @@ export default function CoachingCatalog() {
     queryFn: coachingApi.list,
     enabled: hasAccess
   });
+  const groups = useQuery({
+    queryKey: ['admin', 'coaching-groups', branchId],
+    queryFn: () => coachingGroupApi.list(branchId),
+    enabled: hasAccess && kind === 'COACH' && !!branchId && branchId !== 'all'
+  });
   const [editing, setEditing] = useState<CoachingPerson | null>(null);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<CoachingProfile>({
     name: '',
     kind,
     coachType: 'PADEL',
-    isActive: true
+    isActive: true,
+    groupIds: []
   });
   const save = useMutation({
     mutationFn: () => coachingApi.save(editing?.id, draft),
     onSuccess: () => {
       setOpen(false);
       void client.invalidateQueries({ queryKey: ['admin', 'coaching'] });
+      void client.invalidateQueries({ queryKey: ['admin', 'coaching-groups'] });
       toast.success('Profil layanan disimpan.');
     },
     onError: (error) => toast.error(getApiErrorMessage(error, 'Profil belum dapat disimpan.'))
@@ -71,12 +79,13 @@ export default function CoachingCatalog() {
           ? {
               name: person.name,
               kind: person.role,
+              groupIds: (person.coachingGroups ?? []).map((m) => m.group.id),
               coachType: person.coachType ?? undefined,
               phone: person.phone ?? undefined,
               coachProfile: person.coachProfile ?? undefined,
               isActive: person.isActive
             }
-          : { name: '', kind, coachType: 'PADEL', isActive: true }
+          : { name: '', kind, coachType: 'PADEL', isActive: true, groupIds: [] }
       );
       setOpen(true);
     },
@@ -90,7 +99,17 @@ export default function CoachingCatalog() {
     () => [
       col.accessor('name', {
         header: 'Nama',
-        cell: ({ getValue }) => <span className="block min-w-40 font-medium">{getValue()}</span>
+        cell: ({ row, getValue }) => (
+          <div className="min-w-40">
+            <p className="font-medium">{getValue()}</p>
+            {kind === 'COACH' && (
+              <p className="text-muted-foreground mt-1 text-xs">
+                {row.original.coachingGroups?.map((m) => m.group.name).join(', ') ||
+                  'Coach Independen'}
+              </p>
+            )}
+          </div>
+        )
       }),
       col.accessor(
         (person) => (person.role === 'BALLBOY' ? 'Tennis' : coachingSportLabel(person.coachType)),
@@ -144,7 +163,7 @@ export default function CoachingCatalog() {
         )
       })
     ],
-    [beginEdit, branchId]
+    [beginEdit, branchId, kind]
   );
   if (isLoading || !hasAccess) return <p className="p-6">Memuat...</p>;
   return (
@@ -255,6 +274,50 @@ export default function CoachingCatalog() {
                 </Select>
               </div>
             )}
+            {draft.kind === 'COACH' && (
+              <fieldset className="space-y-2">
+                <legend className="mb-2 text-sm font-medium">Grup coaching</legend>
+                <p className="text-muted-foreground text-xs">
+                  Pilih satu atau beberapa grup. Kosongkan untuk Coach Independen.
+                </p>
+                {groups.isError ? (
+                  <div role="alert">
+                    <p>Grup belum dapat dimuat.</p>
+                    <Button type="button" variant="outline" onClick={() => void groups.refetch()}>
+                      Coba lagi
+                    </Button>
+                  </div>
+                ) : groups.isPending ? (
+                  <p className="text-sm">Memuat grup...</p>
+                ) : (
+                  (groups.data ?? []).map((group) => (
+                    <label
+                      key={group.id}
+                      className="flex items-center gap-2 rounded-lg border p-3 text-sm"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={draft.groupIds?.includes(group.id) ?? false}
+                        disabled={!group.isActive && !draft.groupIds?.includes(group.id)}
+                        onChange={(e) =>
+                          setDraft({
+                            ...draft,
+                            groupIds: e.target.checked
+                              ? [...(draft.groupIds ?? []), group.id]
+                              : (draft.groupIds ?? []).filter((id) => id !== group.id)
+                          })
+                        }
+                      />
+                      {group.name}
+                      {!group.isActive && ' (Nonaktif)'}
+                    </label>
+                  ))
+                )}
+                <Link className="text-primary text-xs underline" href="/admin/coaching-groups">
+                  Kelola grup coaching
+                </Link>
+              </fieldset>
+            )}
             {draft.kind === 'BALLBOY' && <p className="text-sm">Olahraga: Tennis</p>}
             <div className="space-y-2">
               <Label htmlFor="coaching-phone">Telepon (opsional)</Label>
@@ -281,7 +344,12 @@ export default function CoachingCatalog() {
               />
               Profil aktif untuk pemesanan
             </label>
-            <Button className="w-full" disabled={save.isPending}>
+            <Button
+              className="w-full"
+              disabled={
+                save.isPending || (draft.kind === 'COACH' && (groups.isPending || groups.isError))
+              }
+            >
               {save.isPending ? 'Menyimpan...' : 'Simpan profil'}
             </Button>
           </form>

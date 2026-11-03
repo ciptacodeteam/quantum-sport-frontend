@@ -176,3 +176,51 @@ it('replaces a selected coach without clearing the ballboy', async () => {
   expect(screen.getByRole('checkbox', { name: /Coach B/ })).toBeChecked();
   expect(screen.getByRole('checkbox', { name: /Ballboy Budi/ })).toBeChecked();
 });
+
+it('filters coaches by group, keeps the selected ballboy and submits the group with the coach', async () => {
+  mocks.available.mockResolvedValue([
+    {
+      slotId: 'independent',
+      staffId: 'independent',
+      name: 'Coach Solo',
+      kind: 'COACH',
+      price: 0,
+      groups: []
+    },
+    {
+      slotId: 'grouped',
+      staffId: 'member',
+      name: 'Coach Northwest',
+      kind: 'COACH',
+      price: 0,
+      groups: [{ id: 'northwest', name: 'Northwest' }]
+    },
+    {
+      slotId: 'ballboy-slot',
+      staffId: 'ballboy',
+      name: 'Budi',
+      kind: 'BALLBOY',
+      price: 0,
+      groups: []
+    }
+  ]);
+  mount({ sport: 'TENNIS' });
+  fireEvent.click(await screen.findByRole('checkbox', { name: /Coach Solo/ }));
+  fireEvent.click(screen.getByRole('checkbox', { name: /Ballboy Budi/ }));
+  expect(screen.queryByRole('checkbox', { name: /Coach Northwest/ })).not.toBeInTheDocument();
+  fireEvent.keyDown(screen.getByRole('combobox', { name: 'Grup coaching' }), { key: 'Enter' });
+  fireEvent.click(await screen.findByRole('option', { name: 'Northwest' }));
+  expect(screen.queryByRole('checkbox', { name: /Coach Solo/ })).not.toBeInTheDocument();
+  expect(screen.getByRole('checkbox', { name: /Ballboy Budi/ })).toBeChecked();
+  fireEvent.click(screen.getByRole('checkbox', { name: /Coach Northwest/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Tambah layanan & buat invoice' }));
+  await waitFor(() =>
+    expect(mocks.attach).toHaveBeenCalledWith(
+      'court-detail',
+      ['ballboy-slot', 'grouped'],
+      undefined,
+      undefined,
+      'northwest'
+    )
+  );
+});

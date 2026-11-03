@@ -27,6 +27,14 @@ export default function CoachingBookings({ kind }: { kind: 'COACH' | 'BALLBOY' }
   const col = createColumnHelper<CoachingBooking>();
   const columns = [
     col.accessor('name', { header: kind === 'COACH' ? 'Coach' : 'Ballboy' }),
+    ...(kind === 'COACH'
+      ? [
+          col.accessor('coachingGroupName', {
+            header: 'Grup coaching',
+            cell: ({ getValue }) => getValue() || 'Coach Independen'
+          })
+        ]
+      : []),
     col.display({
       id: 'customer',
       header: 'Pelanggan',

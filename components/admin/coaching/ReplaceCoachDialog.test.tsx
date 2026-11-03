@@ -153,3 +153,24 @@ it.each(['ADMIN', 'CASHIER', 'ADMIN_VIEWER', 'COACH', 'BALLBOY', ''])(
     expect(screen.queryByRole('columnheader', { name: 'Aksi' })).toBeNull();
   }
 );
+
+it('keeps the selected group when one replacement coach belongs to multiple groups', async () => {
+  mocks.replacements.mockResolvedValue({
+    ...availability,
+    options: [
+      { ...availability.options[0], coachingGroupId: 'northwest', coachingGroupName: 'Northwest' },
+      { ...availability.options[0], coachingGroupId: 'another', coachingGroupName: 'Other Academy' }
+    ]
+  });
+  mount();
+  fireEvent.click(screen.getByRole('button', { name: 'Ganti Coach Coach A' }));
+  fireEvent.click(await screen.findByRole('radio', { name: /Other Academy/ }));
+  expect(screen.getByRole('radio', { name: /Northwest/ })).not.toBeChecked();
+  fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Ganti Coach' }));
+  await waitFor(() =>
+    expect(mocks.replaceCoach).toHaveBeenCalledWith(
+      'item',
+      expect.objectContaining({ slotId: 'new-slot', coachingGroupId: 'another' })
+    )
+  );
+});

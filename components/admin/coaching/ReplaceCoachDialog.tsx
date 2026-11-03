@@ -38,6 +38,7 @@ export default function ReplaceCoachDialog({
   const canReplace = canWrite && status === 'CONFIRMED' && isCourtWallSlotBookable(startAt, now);
   const [open, setOpen] = useState(false);
   const [slotId, setSlotId] = useState('');
+  const [groupId, setGroupId] = useState<string>();
   const [reason, setReason] = useState('');
   const id = useId();
   const client = useQueryClient();
@@ -47,11 +48,14 @@ export default function ReplaceCoachDialog({
     enabled: open && canReplace,
     refetchInterval: open ? 10000 : false
   });
-  const selected = availability.data?.options.find((option) => option.slotId === slotId);
+  const selected = availability.data?.options.find(
+    (option) => option.slotId === slotId && (option.coachingGroupId ?? undefined) === groupId
+  );
   const replace = useMutation({
     mutationFn: () =>
       coachingApi.replaceCoach(bookingCoachId, {
         slotId,
+        ...(groupId ? { coachingGroupId: groupId } : {}),
         expectedSlotId: availability.data!.current.slotId,
         reason: reason.trim() || undefined
       }),
@@ -85,6 +89,7 @@ export default function ReplaceCoachDialog({
         aria-label={`Ganti Coach ${currentName}`}
         onClick={() => {
           setSlotId('');
+          setGroupId(undefined);
           setReason('');
           setOpen(true);
         }}
@@ -120,6 +125,9 @@ export default function ReplaceCoachDialog({
                 <div className="bg-muted/40 space-y-1 rounded-lg border p-4 text-sm">
                   <p className="text-muted-foreground text-xs">Coach saat ini</p>
                   <p className="font-semibold">{availability.data.current.name}</p>
+                  <p className="text-muted-foreground text-xs">
+                    {availability.data.current.coachingGroupName || 'Coach Independen'}
+                  </p>
                   <p>
                     {formatScheduleSlotTime(availability.data.current.startAt, 'DD MMM YYYY')} ·{' '}
                     {formatScheduleSlotTime(availability.data.current.startAt)}–
@@ -140,19 +148,30 @@ export default function ReplaceCoachDialog({
                       <legend className="mb-2 text-sm font-medium">Pilih coach pengganti</legend>
                       {availability.data.options.map((option) => (
                         <label
-                          key={option.slotId}
-                          className={`flex cursor-pointer items-center justify-between gap-3 rounded-lg border p-3 ${slotId === option.slotId ? 'border-primary bg-primary/5' : ''}`}
+                          key={`${option.slotId}:${option.coachingGroupId || 'independent'}`}
+                          className={`flex cursor-pointer items-center justify-between gap-3 rounded-lg border p-3 ${slotId === option.slotId && (option.coachingGroupId ?? undefined) === groupId ? 'border-primary bg-primary/5' : ''}`}
                         >
                           <span className="flex items-center gap-3">
                             <input
                               type="radio"
                               name={id}
                               className="accent-primary size-4"
-                              checked={slotId === option.slotId}
+                              checked={
+                                slotId === option.slotId &&
+                                (option.coachingGroupId ?? undefined) === groupId
+                              }
                               disabled={replace.isPending}
-                              onChange={() => setSlotId(option.slotId)}
+                              onChange={() => {
+                                setSlotId(option.slotId);
+                                setGroupId(option.coachingGroupId ?? undefined);
+                              }}
                             />
-                            <span className="text-sm font-medium">{option.name}</span>
+                            <span>
+                              <span className="block text-sm font-medium">{option.name}</span>
+                              <span className="text-muted-foreground block text-xs">
+                                {option.coachingGroupName || 'Coach Independen'}
+                              </span>
+                            </span>
                           </span>
                           <span className="text-sm tabular-nums">
                             Rp {option.price.toLocaleString('id-ID')}
@@ -174,6 +193,9 @@ export default function ReplaceCoachDialog({
                     {selected && (
                       <p role="status" className="rounded-lg border p-3 text-sm">
                         {availability.data.current.name} → <strong>{selected.name}</strong>
+                        <span className="text-muted-foreground block text-xs">
+                          {selected.coachingGroupName || 'Coach Independen'}
+                        </span>
                         <span className="text-muted-foreground mt-1 block text-xs">
                           Selisih harga Rp 0. Jadwal dan invoice tetap.
                         </span>

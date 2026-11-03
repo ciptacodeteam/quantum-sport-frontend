@@ -2,7 +2,8 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import CoachingCatalog from './CoachingCatalog';
-const mocks = vi.hoisted(() => ({ list: vi.fn(), save: vi.fn(), kind: 'COACH' }));
+const mocks = vi.hoisted(() => ({ list: vi.fn(), save: vi.fn(), groups: vi.fn(), kind: 'COACH' }));
+vi.mock('@/api/admin/coachingGroup', () => ({ coachingGroupApi: { list: mocks.groups } }));
 vi.mock('@/api/admin/coaching', () => ({ coachingApi: mocks }));
 vi.mock('@/hooks/useRoleAccess', () => ({
   useRoleAccess: () => ({ hasAccess: true, isLoading: false })
@@ -56,6 +57,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.kind = 'COACH';
   mocks.list.mockResolvedValue(people);
+  mocks.groups.mockResolvedValue([]);
   mocks.save.mockResolvedValue({});
 });
 afterEach(cleanup);
@@ -113,4 +115,18 @@ it('paginates larger catalogs instead of showing every row at once', async () =>
   fireEvent.click(screen.getByLabelText('Go to next page'));
   expect(await screen.findByText('Pelatih 11')).toBeInTheDocument();
   expect(screen.queryByText('Pelatih 1')).toBeNull();
+});
+
+it('assigns a coach to a group without changing the coach schedule or price', async () => {
+  mocks.groups.mockResolvedValue([{ id: 'northwest', name: 'Northwest', isActive: true }]);
+  mount();
+  fireEvent.click(await screen.findByRole('button', { name: 'Edit profil Coach A' }));
+  fireEvent.click(await screen.findByRole('checkbox', { name: 'Northwest' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Simpan profil' }));
+  await waitFor(() =>
+    expect(mocks.save).toHaveBeenCalledWith(
+      'coach-a',
+      expect.objectContaining({ groupIds: ['northwest'] })
+    )
+  );
 });

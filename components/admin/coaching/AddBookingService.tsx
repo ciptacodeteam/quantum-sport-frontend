@@ -39,6 +39,7 @@ export default function AddBookingService({
   const now = useBookingClock();
   const canAdd = !!detailId && confirmed && isCourtWallSlotBookable(startAt, now);
   const client = useQueryClient();
+  const [groupId, setGroupId] = useState('independent');
   const [slotIds, setSlotIds] = useState<string[]>([]);
   const [methodId, setMethodId] = useState('');
   const [received, setReceived] = useState(false);
@@ -78,8 +79,24 @@ export default function AddBookingService({
     ? undefined
     : (paymentMethods.find((m) => m.id === methodId) ?? paymentMethods[0]);
   const selected = (available.data ?? []).filter((option) => slotIds.includes(option.slotId));
+  const groups = Array.from(
+    new Map(
+      (available.data ?? []).flatMap((o) =>
+        o.kind === 'COACH' ? (o.groups ?? []).map((g) => [g.id, g] as const) : []
+      )
+    ).values()
+  ).sort((a, b) => a.name.localeCompare(b.name));
+  const visibleOptions = (available.data ?? []).filter(
+    (o) =>
+      o.kind !== 'COACH' ||
+      (groupId === 'independent' ? !o.groups?.length : o.groups?.some((g) => g.id === groupId))
+  );
+  const selectedCoach = selected.find((o) => o.kind === 'COACH');
   const price = selected.reduce((sum, option) => sum + option.price, 0);
-  const selectionValid = selected.length > 0 && selected.length === slotIds.length;
+  const selectionValid =
+    selected.length > 0 &&
+    selected.length === slotIds.length &&
+    selected.every((o) => visibleOptions.some((v) => v.slotId === o.slotId));
   const baseFee =
     selectedMethod && price > 0
       ? selectedMethod.fees + Math.round((price * Number(selectedMethod.percentage)) / 100)
@@ -91,10 +108,12 @@ export default function AddBookingService({
         detailId!,
         slotIds,
         price > 0 ? selectedMethod?.id : undefined,
-        price > 0 && manualMethod ? { method: manualMethod, received } : undefined
+        price > 0 && manualMethod ? { method: manualMethod, received } : undefined,
+        ...(selectedCoach && groupId !== 'independent' ? [groupId] : [])
       ),
     onSuccess: (result) => {
       setCreated(result);
+      setGroupId('independent');
       setSlotIds([]);
       setReceived(false);
       for (const key of [
@@ -158,13 +177,50 @@ export default function AddBookingService({
       ) : (
         <>
           <div className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="schedule-coaching-group">Grup coaching</Label>
+              <Select
+                value={groupId}
+                onValueChange={(value) => {
+                  setGroupId(value);
+                  setReceived(false);
+                  setSlotIds(
+                    slotIds.filter(
+                      (id) => available.data?.find((o) => o.slotId === id)?.kind === 'BALLBOY'
+                    )
+                  );
+                }}
+                disabled={attach.isPending}
+              >
+                <SelectTrigger id="schedule-coaching-group">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="independent">Coach Independen</SelectItem>
+                  {groups.map((g) => (
+                    <SelectItem key={g.id} value={g.id}>
+                      {g.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-muted-foreground text-xs">
+                Coach mengikuti grup, cabang, olahraga, dan jam booking. Ballboy dapat dipilih
+                bersamaan.
+              </p>
+            </div>
             <p className="text-sm font-medium">Pilih layanan</p>
             <p className="text-muted-foreground text-xs">
               Pilih satu coach{sport === 'TENNIS' ? ' dan satu ballboy sekaligus' : ''}. Layanan
               terpilih digabung dalam satu invoice.
             </p>
+            {!visibleOptions.some((o) => o.kind === 'COACH') && (
+              <p className="text-muted-foreground text-xs">
+                Tidak ada coach tersedia pada pilihan grup ini.
+              </p>
+            )}
             <div className="grid gap-2 sm:grid-cols-2">
-              {available.data.map((option) => (
+              {visibleOptions.map((option) => (
                 <label
                   key={option.slotId}
                   className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${slotIds.includes(option.slotId) ? 'border-primary bg-primary/5' : 'bg-background hover:bg-muted/40'}`}
