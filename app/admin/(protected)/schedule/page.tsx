@@ -1322,10 +1322,10 @@ export default function SchedulePage() {
                                                           key={bookingCoach.id}
                                                           className="rounded-lg border border-blue-200 bg-blue-50 p-3"
                                                         >
-                                                          <div className="flex items-start justify-between gap-3">
-                                                            <div className="flex-1">
-                                                              <div className="mb-1 flex items-center gap-2">
-                                                                <p className="text-sm font-semibold">
+                                                          <div className="space-y-3">
+                                                            <div className="min-w-0">
+                                                              <div className="mb-2 flex flex-wrap items-center gap-2">
+                                                                <p className="w-full text-sm font-semibold break-words">
                                                                   {coach?.name || 'Unknown Coach'}
                                                                 </p>
                                                                 {coach?.role && (
@@ -1362,7 +1362,7 @@ export default function SchedulePage() {
                                                                   </p>
                                                                 )}
                                                                 {coach?.phone && (
-                                                                  <p className="text-muted-foreground text-xs">
+                                                                  <p className="text-muted-foreground text-xs break-words">
                                                                     📞 {formatPhone(coach.phone)}
                                                                   </p>
                                                                 )}
@@ -1370,7 +1370,7 @@ export default function SchedulePage() {
                                                                   !coach.email.endsWith(
                                                                     '@internal.invalid'
                                                                   ) && (
-                                                                    <p className="text-muted-foreground text-xs">
+                                                                    <p className="text-muted-foreground text-xs break-words">
                                                                       ✉️ {coach.email}
                                                                     </p>
                                                                   )}
@@ -1391,7 +1391,7 @@ export default function SchedulePage() {
                                                               </div>
                                                             </div>
                                                             {bookingCoach.slot?.startAt && (
-                                                              <div className="flex flex-wrap gap-2">
+                                                              <div className="grid grid-cols-1 gap-2 border-t border-blue-200/70 pt-3 empty:hidden sm:flex sm:justify-end [&>button]:w-full sm:[&>button]:w-40">
                                                                 <ReplaceCoachDialog
                                                                   bookingCoachId={bookingCoach.id}
                                                                   currentName={
