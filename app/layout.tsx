@@ -4,6 +4,7 @@ import { Plus_Jakarta_Sans } from 'next/font/google';
 import '@/styles/globals.css';
 import { cn } from '@/lib/utils';
 import seoShareImage from '@/assets/img/image1.png';
+import { siteUrl } from '@/lib/site';
 
 const jakarta = Plus_Jakarta_Sans({
   variable: '--font-jakarta',
@@ -15,8 +16,6 @@ const jakarta = Plus_Jakarta_Sans({
 const seoTitle = 'Black Padel | Booking Online Jadi Lebih Gampang Melalui Website';
 const seoDescription =
   'Temukan pengalaman bermain padel yang menyenangkan bersama Black Padel. Hadir di 2 cabang di Medan, dengan kemudahan memilih jadwal dan booking lapangan secara online.';
-// Domain mengikuti canonical website yang sudah digunakan sebelumnya.
-const siteUrl = 'https://quantumsocialclub.id';
 const shareImage = new URL(seoShareImage.src, siteUrl).toString();
 
 export const metadata: Metadata = {

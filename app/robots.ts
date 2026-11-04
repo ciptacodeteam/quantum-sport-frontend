@@ -1,13 +1,28 @@
-/* eslint-disable @typescript-eslint/consistent-type-imports */
-import { MetadataRoute } from 'next';
+import type { MetadataRoute } from 'next';
+import { siteUrl } from '@/lib/site';
 
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/api/', '/admin/']
+      disallow: [
+        '/api/',
+        '/api-proxy/',
+        '/admin',
+        '/profile',
+        '/notifications',
+        '/invoice',
+        '/my-packages',
+        '/sports',
+        '/checkout',
+        '/membership/checkout',
+        '/add-ons',
+        '/payment/',
+        '/preview/',
+        '/reset-password'
+      ]
     },
-    sitemap: 'https://quantumsocialclub.id/sitemap.xml'
+    sitemap: `${siteUrl}/sitemap.xml`
   };
 }

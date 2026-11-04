@@ -1,33 +1,37 @@
-/* eslint-disable @typescript-eslint/consistent-type-imports */
-import { MetadataRoute } from 'next';
+import type { MetadataRoute } from 'next';
+import { siteUrl } from '@/lib/site';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://quantumsocialclub.id';
-
   return [
     {
-      url: baseUrl,
-      lastModified: new Date(),
+      url: `${siteUrl}/`,
       changeFrequency: 'daily',
       priority: 1.0
     },
     {
-      url: `${baseUrl}/booking`,
-      lastModified: new Date(),
+      url: `${siteUrl}/booking`,
       changeFrequency: 'daily',
       priority: 0.9
     },
     {
-      url: `${baseUrl}/membership`,
-      lastModified: new Date(),
+      url: `${siteUrl}/membership`,
       changeFrequency: 'weekly',
       priority: 0.8
     },
     {
-      url: `${baseUrl}/informations`,
-      lastModified: new Date(),
+      url: `${siteUrl}/coaches`,
+      changeFrequency: 'weekly',
+      priority: 0.6
+    },
+    {
+      url: `${siteUrl}/informations`,
       changeFrequency: 'monthly',
       priority: 0.5
+    },
+    {
+      url: `${siteUrl}/terms-and-conditions`,
+      changeFrequency: 'monthly',
+      priority: 0.3
     }
   ];
 }
