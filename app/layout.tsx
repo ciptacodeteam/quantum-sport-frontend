@@ -24,6 +24,9 @@ export const metadata: Metadata = {
   applicationName: 'Black Padel',
   title: seoTitle,
   description: seoDescription,
+  verification: {
+    google: 'R0Ntwi9oA9xiOiJANNfpKbA8jpD0lAYcKZNmBxiC5P8'
+  },
   keywords: [
     'black padel',
     'blackpadel',
