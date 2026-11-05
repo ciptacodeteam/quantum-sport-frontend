@@ -2,6 +2,12 @@
 
 import type { AdminCheckoutPayload } from '@/api/admin/checkout';
 import { countConcurrentSessions, getEquipmentDayRange } from '@/lib/addon-equipment';
+import BookingCoachSelection, {
+  coachSessionKey
+} from '@/components/admin/booking/BookingCoachSelection';
+import { adminApi } from '@/lib/adminApi';
+import { isCourtWallSlotBookable } from '@/lib/booking-time-policy';
+import type { CoachAvailability } from '@/types/model';
 import BookingSummary from '@/components/admin/booking/BookingSummary';
 import AppSectionHeader from '@/components/ui/app-section-header';
 import { Badge } from '@/components/ui/badge';
@@ -56,6 +62,9 @@ export default function BookingAddOns() {
     bookingAdminNote,
     setBookingAdminNote,
     setWalkInCustomer,
+    selectedCoaches: storedCoaches,
+    addCoach,
+    removeCoach,
     selectedInventories,
     addInventory,
     removeInventory,
@@ -67,6 +76,19 @@ export default function BookingAddOns() {
   } = useBookingStore();
 
   const queryClient = useQueryClient();
+  const [isCheckingCoaches, setIsCheckingCoaches] = useState(false);
+  const selectedCoaches = storedCoaches.filter(
+    (coach) =>
+      coach.slotId &&
+      coach.startAt &&
+      coach.endAt &&
+      bookingItems.some(
+        (booking) =>
+          coachSessionKey(booking) === coachSessionKey(coach) &&
+          (booking.sport ?? 'PADEL') === coach.courtSport
+      )
+  );
+  const coachTotal = selectedCoaches.reduce((sum, coach) => sum + coach.price, 0);
 
   // const [inventoryQuantities, setInventoryQuantities] = useState<Record<string, number>>({});
   // Selected date and time for add-ons when no court bookings exist
@@ -104,7 +126,7 @@ export default function BookingAddOns() {
     setMembershipDiscount(membershipDiscount.discountAmount);
   }, [membershipDiscount.discountAmount, setMembershipDiscount]);
 
-  const totalAmount = membershipDiscount.discountedTotal + inventoryTotal;
+  const totalAmount = membershipDiscount.discountedTotal + inventoryTotal + coachTotal;
 
   const dateRange = useMemo(() => {
     if (bookingItems.length > 0) {
@@ -385,33 +407,73 @@ export default function BookingAddOns() {
     }
   };
 
-  // Retired add-ons must not remain hidden in a persisted cart.
+  // Keep matching coach choices when going back to court selection; discard orphaned services.
   useEffect(() => {
     const state = useBookingStore.getState();
-    if (state.selectedCoaches.length || state.selectedBallboys.length || state.coachDescription) {
+    const coaches = state.selectedCoaches.filter(
+      (coach) =>
+        coach.slotId &&
+        coach.startAt &&
+        coach.endAt &&
+        bookingItems.some(
+          (booking) =>
+            coachSessionKey(booking) === coachSessionKey(coach) &&
+            (booking.sport ?? 'PADEL') === coach.courtSport
+        )
+    );
+    if (
+      coaches.length !== state.selectedCoaches.length ||
+      state.selectedBallboys.length ||
+      state.coachDescription
+    ) {
       useBookingStore.setState({
-        selectedCoaches: [],
+        selectedCoaches: coaches,
+        coachTotal: coaches.reduce((sum, coach) => sum + coach.price, 0),
         selectedBallboys: [],
-        coachTotal: 0,
         ballboyTotal: 0,
         coachDescription: null
       });
     }
-  }, []);
+  }, [bookingItems]);
 
   const { mutate: confirmCheckout, isPending: isConfirming } = useMutation(
     adminCheckoutMutationOptions({
       onSuccess: () => {
         // Invalidate slots query to refresh availability
-        queryClient.invalidateQueries({ queryKey: ['admin', 'court-costing'] });
+        for (const queryKey of [
+          ['courts', 'slots'],
+          ['admin', 'court-costing'],
+          ['admin', 'courts'],
+          ['admin', 'schedule'],
+          ['admin', 'bookings'],
+          ['admin', 'booking-coaches'],
+          ['admin', 'coaching']
+        ])
+          void queryClient.invalidateQueries({ queryKey });
         // Reset booking store after successful admin checkout
         useBookingStore.getState().clearAll();
-        router.push('/admin/kelola-pemesanan/lapangan');
+        router.push(`/admin/kelola-pemesanan/lapangan?courtSport=${courtSport}`);
       }
     })
   );
 
-  const handleConfirmBooking = () => {
+  const handleConfirmBooking = async () => {
+    if (isConfirming || isCheckingCoaches) return;
+    if (
+      bookingItems.some(
+        (item) =>
+          !item.slotId ||
+          !isCourtWallSlotBookable(
+            item.startAt ?? `${item.date} ${item.timeSlot.slice(0, 5)}:00`,
+            Date.now()
+          )
+      )
+    ) {
+      toast.error(
+        'Ada slot yang tidak valid atau melewati batas pemesanan 15 menit. Silakan pilih ulang.'
+      );
+      return;
+    }
     // Allow checkout with only add-ons (no court bookings required)
     if (bookingItems.length === 0 && selectedInventories.length === 0) {
       toast.error('Minimal satu item harus dipilih.');
@@ -440,60 +502,18 @@ export default function BookingAddOns() {
       return;
     }
 
-    // Calculate totalHours from booking items (or default to 1 if no bookings)
-    const totalHours =
-      bookingItems.length > 0
-        ? bookingItems.reduce((total, item) => {
-            try {
-              // Parse timeSlot and endTime to calculate hours
-              const startTimeStr = item.timeSlot.includes(':')
-                ? item.timeSlot
-                : `${item.timeSlot}:00`;
-              const endTimeStr =
-                item.endTime && item.endTime.includes(':')
-                  ? item.endTime
-                  : item.endTime
-                    ? `${item.endTime}:00`
-                    : null;
-
-              const startTime = dayjs(
-                `${item.date} ${startTimeStr}`,
-                ['YYYY-MM-DD HH:mm', 'YYYY-MM-DD H:mm'],
-                true
-              );
-
-              if (!startTime.isValid()) {
-                // Fallback: assume 1 hour per booking if parsing fails
-                return total + 1;
-              }
-
-              let endTime;
-              if (endTimeStr) {
-                endTime = dayjs(
-                  `${item.date} ${endTimeStr}`,
-                  ['YYYY-MM-DD HH:mm', 'YYYY-MM-DD H:mm'],
-                  true
-                );
-              } else {
-                // If no endTime, assume 1 hour duration
-                endTime = startTime.add(1, 'hour');
-              }
-
-              if (endTime.isValid()) {
-                const hours = endTime.diff(startTime, 'hour', true);
-                // Ensure at least 1 hour per booking
-                return total + Math.max(1, hours);
-              }
-
-              // Fallback: assume 1 hour per booking
-              return total + 1;
-            } catch (error) {
-              console.warn('Error calculating hours for booking item:', item, error);
-              // Fallback: assume 1 hour per booking
-              return total + 1;
-            }
-          }, 0)
-        : 1; // Default to 1 hour if no court bookings
+    const totalHours = bookingItems.reduce((sum, item) => {
+      const start = dayjs(item.startAt ?? `${item.date} ${item.timeSlot.slice(0, 5)}`);
+      const endTime = item.endTime || item.timeSlot.split(' - ')[1];
+      let end = item.endAt
+        ? dayjs(item.endAt)
+        : endTime
+          ? dayjs(`${item.date} ${endTime}`)
+          : start.add(1, 'hour');
+      if (!item.endAt && end.isValid() && !end.isAfter(start)) end = end.add(1, 'day');
+      const hours = end.diff(start, 'hour', true);
+      return sum + (Number.isFinite(hours) && hours > 0 ? hours : 1);
+    }, 0);
 
     const payload: AdminCheckoutPayload = {
       totalHours: Math.max(1, Math.round(totalHours * 100) / 100), // Round to 2 decimal places, minimum 1,
@@ -514,7 +534,34 @@ export default function BookingAddOns() {
       return;
     }
 
-    confirmCheckout(payload);
+    if (selectedCoaches.length > 0) {
+      setIsCheckingCoaches(true);
+      try {
+        const availability = await Promise.all(
+          selectedCoaches.map(async (coach) => {
+            const response = await adminApi.get('/coach/availability', {
+              params: { startAt: coach.startAt, endAt: coach.endAt, courtSport }
+            });
+            return (response.data.data as CoachAvailability[]).some(
+              (option) => option.slotId === coach.slotId && option.price === coach.price
+            );
+          })
+        );
+        if (availability.some((available) => !available)) {
+          toast.error(
+            'Jadwal atau harga coach berubah. Silakan pilih ulang coach atau lanjutkan tanpa coach.'
+          );
+          void queryClient.invalidateQueries({ queryKey: ['admin', 'booking-coaches'] });
+          return;
+        }
+        payload.coachSlots = selectedCoaches.map((coach) => coach.slotId!);
+        confirmCheckout(payload);
+      } catch {
+        toast.error('Gagal memeriksa ketersediaan coach. Coba lagi atau pilih tanpa coach.');
+      } finally {
+        setIsCheckingCoaches(false);
+      }
+    } else confirmCheckout(payload);
   };
 
   // No longer returning null - allow add-ons without court bookings
@@ -522,8 +569,8 @@ export default function BookingAddOns() {
   return (
     <div className="flex w-full min-w-0 flex-col gap-6">
       <AppSectionHeader
-        title="Booking Add-Ons"
-        description="Choose equipment and quantities for your booking"
+        title="Tambah Layanan"
+        description="Pilih coach atau equipment, lalu konfirmasi booking. Layanan bersifat opsional."
         className="mb-0 pb-0"
       />
 
@@ -647,6 +694,21 @@ export default function BookingAddOns() {
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {bookingItems.length > 0 && (
+            <BookingCoachSelection
+              sessions={bookingItems}
+              sport={courtSport}
+              selected={selectedCoaches}
+              disabled={isConfirming || isCheckingCoaches}
+              onSelect={(session, coach) => {
+                storedCoaches
+                  .filter((item) => coachSessionKey(item) === coachSessionKey(session))
+                  .forEach((item) => removeCoach(item.coachId, item.timeSlot, item.slotId));
+                if (coach) addCoach(coach);
+              }}
+            />
           )}
 
           {/* Inventory Tab */}
@@ -821,6 +883,9 @@ export default function BookingAddOns() {
             setWalkInCustomer(null, null);
             setBookingAdminNote(null);
           }}
+          selectedCoaches={selectedCoaches}
+          onCoachRemove={removeCoach}
+          coachTotal={coachTotal}
           selectedInventories={selectedInventories}
           onInventoryRemove={removeInventory}
           onBookingRemove={removeBookingItem}
@@ -832,15 +897,17 @@ export default function BookingAddOns() {
           useMembership={recurringBooking ? true : useMembership}
           onUseMembershipChange={recurringBooking ? undefined : setUseMembership}
           primaryAction={{
-            label: isConfirming ? 'Processing...' : 'Confirm Booking',
-            onClick: handleConfirmBooking,
-            disabled: isConfirming,
-            loading: isConfirming
+            label: 'Konfirmasi Booking',
+            onClick: () => {
+              void handleConfirmBooking();
+            },
+            disabled: isConfirming || isCheckingCoaches,
+            loading: isConfirming || isCheckingCoaches
           }}
           secondaryActions={[
             {
-              label: 'Back to Court Selection',
-              onClick: () => router.push('/admin/booking-lapangan'),
+              label: 'Kembali ke Pilihan Lapangan',
+              onClick: () => router.push(`/admin/booking-lapangan?courtSport=${courtSport}`),
               variant: 'outline',
               icon: <IconChevronLeft className="mr-2 h-4 w-4" />
             }

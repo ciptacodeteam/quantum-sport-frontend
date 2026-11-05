@@ -2,6 +2,7 @@
 
 import { mapApiErrorsToForm } from '@/lib/api-error';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useDialog } from '@/components/ui/dialog';
 import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from '@/components/ui/field';
@@ -34,7 +35,8 @@ export const formSchema = z.object({
     },
     { message: 'Percentage must be a non-negative number' }
   ),
-  channel: z.string().min(2).max(50).optional(),
+  channel: z.union([z.string().min(2).max(50), z.literal('')]).optional(),
+  isOffline: z.boolean(),
   sequence: z.coerce.number().min(0),
   isActive: z.boolean().optional().default(true)
 });
@@ -50,6 +52,7 @@ const EditPaymentMethodForm = ({ data, readOnly = false }: Props) => {
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      isOffline: data.isOffline ?? false,
       name: data?.name || '',
       logo: undefined,
       isActive: data?.isActive,
@@ -72,6 +75,7 @@ const EditPaymentMethodForm = ({ data, readOnly = false }: Props) => {
         queryClient.invalidateQueries({
           queryKey: adminPaymentMethodQueryOptions(data.id).queryKey
         });
+        void queryClient.invalidateQueries({ queryKey: ['payment-methods'] });
         closeDialog(dialogId);
       },
       onError: (err) => {
@@ -186,6 +190,9 @@ const EditPaymentMethodForm = ({ data, readOnly = false }: Props) => {
                 {...form.register('channel')}
                 placeholder="BCA_VIRTUAL_ACCOUNT, QRIS, CARDS"
               />
+              <p className="text-muted-foreground text-xs">
+                Untuk pembayaran offline, channel boleh dikosongkan.
+              </p>
               <FieldError>{form.formState.errors.channel?.message}</FieldError>
             </Field>
             <div className="grid gap-5 sm:grid-cols-2">
@@ -248,6 +255,34 @@ const EditPaymentMethodForm = ({ data, readOnly = false }: Props) => {
             <Field className="bg-muted/30 rounded-lg border p-4">
               <Controller
                 control={form.control}
+                name="isOffline"
+                render={({ field }) => (
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-2">
+                      <FieldLabel htmlFor="isOffline">Pembayaran Offline — Khusus Admin</FieldLabel>
+                      <p className="text-muted-foreground text-xs leading-relaxed">
+                        Aktifkan untuk metode pembayaran di lokasi, seperti tunai, EDC, atau
+                        transfer manual. Metode ini tidak ditampilkan dan tidak dapat dipilih oleh
+                        customer di website publik.
+                      </p>
+                      <Badge variant={field.value ? 'lightWarning' : 'lightSuccess'}>
+                        {field.value ? 'Offline · Khusus Admin' : 'Online'}
+                      </Badge>
+                    </div>
+                    <Switch
+                      id="isOffline"
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      aria-label="Pembayaran offline khusus admin"
+                    />
+                  </div>
+                )}
+              />
+              <FieldError>{form.formState.errors.isOffline?.message}</FieldError>
+            </Field>
+            <Field className="bg-muted/30 rounded-lg border p-4">
+              <Controller
+                control={form.control}
                 name="isActive"
                 render={({ field: { value, onChange } }) => (
                   <div className="flex items-center justify-between gap-4">
@@ -262,7 +297,7 @@ const EditPaymentMethodForm = ({ data, readOnly = false }: Props) => {
                         {value ? 'Metode Aktif' : 'Metode Nonaktif'}
                       </label>
                       <p className="text-muted-foreground text-xs">
-                        Atur ketersediaan metode untuk pelanggan.
+                        Atur apakah metode dapat digunakan untuk pembayaran.
                       </p>
                     </div>
                     <Switch

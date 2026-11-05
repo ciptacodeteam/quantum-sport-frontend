@@ -64,20 +64,28 @@ export default function AddBookingService({
   const paymentMethods = (methods.data ?? []).filter(
     (m) =>
       m.isActive &&
-      m.channel &&
-      (m.channel.includes('VIRTUAL_ACCOUNT') ||
-        ['QRIS', 'QR'].includes(m.channel) ||
-        (m.channel === 'CARDS' && config.data?.checkoutMode === 'snap'))
+      (m.isOffline
+        ? !['EDC', 'QRIS_STATIC', 'BANK_TRANSFER_MANUAL'].includes(m.channel ?? '')
+        : m.channel &&
+          (m.channel.includes('VIRTUAL_ACCOUNT') ||
+            ['QRIS', 'QR'].includes(m.channel) ||
+            (m.channel === 'CARDS' && config.data?.checkoutMode === 'snap')))
   );
   const manualMethod =
     methodId === 'EDC' || methodId === 'QRIS_STATIC' || methodId === 'BANK_TRANSFER_MANUAL'
       ? methodId
       : undefined;
-  const manualLabel =
-    manualMethod === 'EDC' ? 'EDC' : manualMethod === 'QRIS_STATIC' ? 'QRIS Statis' : 'Transfer';
   const selectedMethod = manualMethod
     ? undefined
-    : (paymentMethods.find((m) => m.id === methodId) ?? paymentMethods[0]);
+    : (paymentMethods.find((m) => m.id === methodId) ?? paymentMethods.find((m) => !m.isOffline));
+  const isManual = !!manualMethod || !!selectedMethod?.isOffline;
+  const manualLabel = selectedMethod?.isOffline
+    ? selectedMethod.name
+    : manualMethod === 'EDC'
+      ? 'EDC'
+      : manualMethod === 'QRIS_STATIC'
+        ? 'QRIS Statis'
+        : 'Transfer';
   const selected = (available.data ?? []).filter((option) => slotIds.includes(option.slotId));
   const groups = Array.from(
     new Map(
@@ -98,7 +106,7 @@ export default function AddBookingService({
     selected.length === slotIds.length &&
     selected.every((o) => visibleOptions.some((v) => v.slotId === o.slotId));
   const baseFee =
-    selectedMethod && price > 0
+    selectedMethod && !isManual && price > 0
       ? selectedMethod.fees + Math.round((price * Number(selectedMethod.percentage)) / 100)
       : 0;
   const total = price + baseFee + Math.round(baseFee * 0.11);
@@ -108,7 +116,9 @@ export default function AddBookingService({
         detailId!,
         slotIds,
         price > 0 ? selectedMethod?.id : undefined,
-        price > 0 && manualMethod ? { method: manualMethod, received } : undefined,
+        price > 0 && isManual
+          ? { ...(manualMethod ? { method: manualMethod } : {}), received }
+          : undefined,
         ...(selectedCoach && groupId !== 'independent' ? [groupId] : [])
       ),
     onSuccess: (result) => {
@@ -280,11 +290,12 @@ export default function AddBookingService({
                   {paymentMethods.map((method) => (
                     <SelectItem key={method.id} value={method.id}>
                       {method.name}
+                      {method.isOffline ? ' (Offline)' : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {manualMethod && (
+              {isManual && (
                 <label className="bg-background flex items-start gap-3 rounded-lg border p-3 text-sm">
                   <input
                     type="checkbox"
@@ -300,7 +311,7 @@ export default function AddBookingService({
           )}
           {selected.length > 0 && (
             <p className="text-sm">
-              Total invoice{price > 0 && !manualMethod ? ' termasuk biaya pembayaran' : ''}:{' '}
+              Total invoice{price > 0 && !isManual ? ' termasuk biaya pembayaran' : ''}:{' '}
               <strong>Rp {total.toLocaleString('id-ID')}</strong>
             </p>
           )}
@@ -310,14 +321,14 @@ export default function AddBookingService({
               !selectionValid ||
               attach.isPending ||
               !canAdd ||
-              (price > 0 && (manualMethod ? !received : !selectedMethod))
+              (price > 0 && (isManual ? !received : !selectedMethod))
             }
           >
             {attach.isPending ? 'Membuat invoice...' : 'Tambah layanan & buat invoice'}
           </Button>
           <p className="text-muted-foreground text-xs">
-            {manualMethod
-              ? 'EDC, QRIS Statis, dan Transfer dicatat sebagai pembayaran manual tanpa biaya gateway.'
+            {isManual
+              ? 'Pembayaran offline dicatat lunas setelah penerimaan dikonfirmasi.'
               : 'Pembayaran online: slot ditahan 10 menit dan dikonfirmasi setelah pembayaran berhasil. Slot dilepas jika pembayaran kedaluwarsa.'}
           </p>
         </>

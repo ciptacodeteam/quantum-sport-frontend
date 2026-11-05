@@ -253,55 +253,46 @@ function prepareCourtBooking(customer = true) {
     selectedBallboys: [{ slotId: 'stale-ballboy' }] as any
   });
 }
-it('checks out courts directly and only clears the cart after success', () => {
+it('continues to services without creating a booking or clearing court selections', () => {
   prepareCourtBooking();
   render(<BookingLapangan />);
-  fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }));
-  expect(fixtures.mutate).toHaveBeenCalledWith({
-    courtSlots: ['slot-court-a'],
-    totalHours: 1,
-    userId: 'customer',
-    adminNote: 'Booking langsung',
-    useMembership: false
-  });
-  expect(fixtures.push).not.toHaveBeenCalled();
+  expect(screen.queryByRole('region', { name: 'Pilihan coach' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Konfirmasi Booking' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Tambah Layanan' }));
+  expect(fixtures.push).toHaveBeenCalledWith('/admin/booking-add-ons?courtSport=PADEL');
+  expect(fixtures.mutate).not.toHaveBeenCalled();
   expect(useBookingStore.getState().bookingItems).toHaveLength(1);
-  act(() => fixtures.mutationOptions.onSuccess({}));
-  expect(useBookingStore.getState().bookingItems).toEqual([]);
-  expect(useBookingStore.getState().selectedInventories).toEqual([]);
-  expect(fixtures.push).toHaveBeenCalledWith('/admin/kelola-pemesanan/lapangan?courtSport=PADEL');
-  expect(fixtures.push).not.toHaveBeenCalledWith('/admin/booking-add-ons');
+  expect(useBookingStore.getState().selectedCustomerId).toBe('customer');
 });
-it('submits walk-in customer details without requiring an add-ons step', () => {
+it('preserves walk-in details and notes when continuing to services', () => {
   prepareCourtBooking(false);
   render(<BookingLapangan />);
-  fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }));
-  expect(fixtures.mutate).toHaveBeenCalledWith(
-    expect.objectContaining({ name: 'Budi', phone: '08123456789', courtSlots: ['slot-court-a'] })
-  );
-  expect(fixtures.mutate.mock.calls[0][0]).not.toHaveProperty('userId');
+  fireEvent.click(screen.getByRole('button', { name: 'Tambah Layanan' }));
+  expect(fixtures.push).toHaveBeenCalledWith('/admin/booking-add-ons?courtSport=PADEL');
+  expect(useBookingStore.getState()).toMatchObject({
+    walkInName: 'Budi',
+    walkInPhone: '08123456789',
+    bookingAdminNote: 'Booking langsung'
+  });
 });
-it('disables direct checkout while a booking request is pending', () => {
-  prepareCourtBooking();
-  fixtures.pending = true;
+it('keeps the services action disabled until a customer and court booking are selected', () => {
   render(<BookingLapangan />);
-  expect(screen.getByRole('button', { name: 'Konfirmasi Booking' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Tambah Layanan' })).toBeDisabled();
 });
-it('retains weekly booking rules and membership usage in direct checkout', () => {
+it('preserves weekly booking rules when continuing to services', () => {
   prepareCourtBooking();
-  const recurringBooking = {
+  const rule = {
     mode: 'ROLLING' as const,
     startDate: '2040-01-02',
     previewThrough: '2040-02-02',
     weekdays: [1],
     sourceSlotIds: ['slot-court-a']
   };
-  useBookingStore.setState({ recurringBooking });
+  useBookingStore.setState({ recurringBooking: rule });
   render(<BookingLapangan />);
-  fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }));
-  expect(fixtures.mutate).toHaveBeenCalledWith(
-    expect.objectContaining({ recurringBooking, useMembership: true })
-  );
+  fireEvent.click(screen.getByRole('button', { name: 'Tambah Layanan' }));
+  expect(useBookingStore.getState().recurringBooking).toEqual(rule);
+  expect(fixtures.mutate).not.toHaveBeenCalled();
 });
 
 it('hides recurring booking controls for customers without a membership and for walk-ins', () => {
@@ -334,54 +325,4 @@ it('shows recurring controls only after selecting a customer with a membership a
   expect(
     screen.queryByRole('region', { name: 'Pengaturan booking rutin' })
   ).not.toBeInTheDocument();
-});
-
-it('checks coach availability and submits court and coach in one checkout', async () => {
-  prepareCourtBooking();
-  fixtures.coachAvailability.mockResolvedValue({
-    data: { data: [{ slotId: 'coach-slot', price: 200000 }] }
-  });
-  render(<BookingLapangan />);
-  fireEvent.click(screen.getByRole('button', { name: 'Pilih Coach A' }));
-  await act(async () =>
-    fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }))
-  );
-  expect(fixtures.coachAvailability).toHaveBeenCalledWith('/coach/availability', {
-    params: { startAt: '2040-01-02 12:00:00', endAt: '2040-01-02 13:00:00', courtSport: 'PADEL' }
-  });
-  expect(fixtures.mutate).toHaveBeenCalledWith(
-    expect.objectContaining({
-      courtSlots: ['slot-court-a'],
-      coachSlots: ['coach-slot']
-    })
-  );
-});
-
-it('blocks a coach conflict and allows confirmation after choosing no coach', async () => {
-  prepareCourtBooking(false);
-  fixtures.coachAvailability.mockResolvedValue({ data: { data: [] } });
-  render(<BookingLapangan />);
-  fireEvent.click(screen.getByRole('button', { name: 'Pilih Coach A' }));
-  await act(async () =>
-    fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }))
-  );
-  expect(fixtures.mutate).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole('button', { name: 'Tanpa coach' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }));
-  expect(fixtures.mutate).toHaveBeenCalledWith(
-    expect.objectContaining({ name: 'Budi', courtSlots: ['slot-court-a'] })
-  );
-  expect(fixtures.mutate.mock.calls[0][0]).not.toHaveProperty('coachSlots');
-});
-
-it('retains the cart when coach availability cannot be checked', async () => {
-  prepareCourtBooking();
-  fixtures.coachAvailability.mockRejectedValue(new Error('offline'));
-  render(<BookingLapangan />);
-  fireEvent.click(screen.getByRole('button', { name: 'Pilih Coach A' }));
-  await act(async () =>
-    fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }))
-  );
-  expect(fixtures.mutate).not.toHaveBeenCalled();
-  expect(useBookingStore.getState().bookingItems).toHaveLength(1);
 });

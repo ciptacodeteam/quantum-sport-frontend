@@ -107,6 +107,7 @@ export type Coach = {
 };
 
 export type PaymentMethod = {
+  isOffline?: boolean;
   id: string;
   name: string;
   isActive: boolean;

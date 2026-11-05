@@ -1,8 +1,6 @@
 'use client';
 
 import { Repeat2 } from 'lucide-react';
-import type { AdminCheckoutPayload } from '@/api/admin/checkout';
-import { adminCheckoutMutationOptions } from '@/mutations/admin/checkout';
 import { useTariffPeriods } from '@/hooks/useTariffPeriods';
 import { useBookingClock } from '@/hooks/useBookingClock';
 import { isCourtWallSlotBookable } from '@/lib/booking-time-policy';
@@ -11,12 +9,6 @@ import { resolveTariffPeriod, tariffBand } from '@/lib/tariff-period';
 import RecurringBookingRules from '@/components/admin/booking/RecurringBookingRules';
 import RecurringBookingDialog from '@/components/admin/booking/RecurringBookingDialog';
 import { mergeBookingItems } from '@/lib/recurring-booking';
-import BookingCoachSelection, {
-  coachSessionKey
-} from '@/components/admin/booking/BookingCoachSelection';
-import { adminApi } from '@/lib/adminApi';
-import type { CoachAvailability } from '@/types/model';
-import type { SelectedCoach } from '@/stores/useBookingStore';
 import BookingSummary from '@/components/admin/booking/BookingSummary';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -33,7 +25,7 @@ import type { CustomerSearchResult } from '@/queries/admin/customer';
 import { useBookingStore } from '@/stores/useBookingStore';
 import type { Court, Slot } from '@/types/model';
 import { IconCalendar, IconCheck, IconClock, IconMapPin } from '@tabler/icons-react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import timezone from 'dayjs/plugin/timezone';
@@ -109,7 +101,6 @@ export default function BookingLapangan() {
   const courtSport: 'PADEL' | 'TENNIS' =
     searchParams.get('courtSport') === 'TENNIS' ? 'TENNIS' : 'PADEL';
   const courtSportLabel = courtSport === 'TENNIS' ? 'Tennis' : 'Padel';
-  const queryClient = useQueryClient();
   const {
     useMembership,
     setUseMembership,
@@ -160,14 +151,6 @@ export default function BookingLapangan() {
       };
     })
   );
-  const [coachSelections, setCoachSelections] = useState<SelectedCoach[]>([]);
-  const [isCheckingCoaches, setIsCheckingCoaches] = useState(false);
-  const selectedCoaches = coachSelections.filter(
-    (coach) =>
-      coach.courtSport === courtSport &&
-      bookings.some((booking) => coachSessionKey(booking) === coachSessionKey(coach))
-  );
-  const coachTotal = selectedCoaches.reduce((total, coach) => total + coach.price, 0);
   const [calendarOpen, setCalendarOpen] = useState(false);
   // Customer selection is now handled by BookingSummary component
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerSearchResult | null>(null);
@@ -680,26 +663,7 @@ export default function BookingLapangan() {
   // Use membership discount calculation
   const totalPrice = membershipDiscount.discountedTotal;
 
-  const { mutate: confirmCheckout, isPending: isConfirming } = useMutation(
-    adminCheckoutMutationOptions({
-      onSuccess: () => {
-        for (const queryKey of [
-          ['courts', 'slots'],
-          ['admin', 'courts'],
-          ['admin', 'schedule'],
-          ['admin', 'bookings'],
-          ['admin', 'booking-coaches'],
-          ['admin', 'coaching']
-        ])
-          void queryClient.invalidateQueries({ queryKey });
-        useBookingStore.getState().clearAll();
-        router.push(`/admin/kelola-pemesanan/lapangan?courtSport=${courtSport}`);
-      }
-    })
-  );
-
-  const handleConfirmBooking = async () => {
-    if (isConfirming || isCheckingCoaches) return;
+  const handleAddServices = () => {
     if (
       bookings.some(
         (item) =>
@@ -727,58 +691,7 @@ export default function BookingLapangan() {
       toast.error('Slot lapangan tidak valid. Silakan pilih ulang.');
       return;
     }
-    const totalHours = bookings.reduce((sum, booking) => {
-      const start = dayjs(booking.startAt ?? `${booking.date} ${booking.timeSlot.slice(0, 5)}`);
-      const endTime = booking.endTime || booking.timeSlot.split(' - ')[1];
-      let end = booking.endAt
-        ? dayjs(booking.endAt)
-        : endTime
-          ? dayjs(`${booking.date} ${endTime}`)
-          : start.add(1, 'hour');
-      if (!booking.endAt && end.isValid() && !end.isAfter(start)) end = end.add(1, 'day');
-      const hours = end.diff(start, 'hour', true);
-      return sum + (Number.isFinite(hours) && hours > 0 ? hours : 1);
-    }, 0);
-    const payload: AdminCheckoutPayload = {
-      courtSlots,
-      totalHours: Math.round(totalHours * 100) / 100,
-      adminNote: bookingAdminNote || undefined,
-      useMembership: recurringBooking ? true : useMembership,
-      ...(recurringBooking ? { recurringBooking } : {}),
-      ...(localCustomerId
-        ? { userId: localCustomerId }
-        : { name: storeWalkInName!, phone: storeWalkInPhone! })
-    };
-    if (selectedCoaches.length > 0) {
-      setIsCheckingCoaches(true);
-      try {
-        const availability = await Promise.all(
-          selectedCoaches.map(async (coach) => {
-            const response = await adminApi.get('/coach/availability', {
-              params: { startAt: coach.startAt, endAt: coach.endAt, courtSport }
-            });
-            return (response.data.data as CoachAvailability[]).some(
-              (option) => option.slotId === coach.slotId && option.price === coach.price
-            );
-          })
-        );
-        if (availability.some((available) => !available)) {
-          toast.error(
-            'Jadwal atau harga coach berubah. Silakan pilih ulang coach atau lanjutkan tanpa coach.'
-          );
-          void queryClient.invalidateQueries({ queryKey: ['admin', 'booking-coaches'] });
-          return;
-        }
-        payload.coachSlots = selectedCoaches.map((coach) => coach.slotId!);
-        confirmCheckout(payload);
-      } catch {
-        toast.error('Gagal memeriksa ketersediaan coach. Coba lagi atau pilih tanpa coach.');
-      } finally {
-        setIsCheckingCoaches(false);
-      }
-    } else {
-      confirmCheckout(payload);
-    }
+    router.push(`/admin/booking-add-ons?courtSport=${courtSport}`);
   };
 
   // Check if time slot is already booked (system bookings + user selections)
@@ -1442,23 +1355,7 @@ export default function BookingLapangan() {
               setBookingAdminNote(null);
             }}
             courtTotal={membershipDiscount.originalTotal}
-            coachControls={
-              <BookingCoachSelection
-                sessions={bookings}
-                sport={courtSport}
-                selected={selectedCoaches}
-                disabled={isConfirming || isCheckingCoaches}
-                onSelect={(session, coach) =>
-                  setCoachSelections((current) => [
-                    ...current.filter((item) => coachSessionKey(item) !== coachSessionKey(session)),
-                    ...(coach ? [coach] : [])
-                  ])
-                }
-              />
-            }
-            selectedCoaches={selectedCoaches}
-            coachTotal={coachTotal}
-            totalAmount={totalPrice + coachTotal}
+            totalAmount={totalPrice}
             membershipDiscountDetails={membershipDiscount}
             useMembership={recurringBooking ? true : useMembership}
             onUseMembershipChange={recurringBooking ? undefined : setUseMembership}
@@ -1472,11 +1369,8 @@ export default function BookingLapangan() {
               }
             }}
             primaryAction={{
-              label: 'Konfirmasi Booking',
-              onClick: () => {
-                void handleConfirmBooking();
-              },
-              loading: isConfirming || isCheckingCoaches,
+              label: 'Tambah Layanan',
+              onClick: handleAddServices,
               disabled:
                 (!localCustomerId && !(storeWalkInName && storeWalkInPhone)) ||
                 bookings.length === 0
@@ -1485,7 +1379,6 @@ export default function BookingLapangan() {
               {
                 label: 'Clear All',
                 onClick: () => {
-                  setCoachSelections([]);
                   setBookings([]);
                   setBookingItems([]);
                   setLocalCustomerId('');
@@ -1496,7 +1389,7 @@ export default function BookingLapangan() {
                 variant: 'outline'
               }
             ]}
-            showAddOns={true}
+            showAddOns={false}
             width="w-full min-w-0"
           />
         </div>

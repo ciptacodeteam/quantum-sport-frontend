@@ -22,6 +22,15 @@ vi.mock('@/queries/admin/paymentMethod', () => ({
         fees: 4000,
         percentage: 1,
         isActive: true
+      },
+      {
+        id: 'cash',
+        name: 'Tunai Kasir',
+        isActive: true,
+        isOffline: true,
+        channel: null,
+        fees: 0,
+        percentage: 0
       }
     ]
   }
@@ -222,5 +231,22 @@ it('filters coaches by group, keeps the selected ballboy and submits the group w
       undefined,
       'northwest'
     )
+  );
+});
+
+it('accepts a custom offline method from the catalog only after confirming receipt', async () => {
+  mount();
+  fireEvent.click(await screen.findByRole('checkbox', { name: /Coach A/ }));
+  fireEvent.click(screen.getByRole('combobox', { name: 'Metode pembayaran invoice' }));
+  fireEvent.click(await screen.findByRole('option', { name: 'Tunai Kasir (Offline)' }));
+  const button = screen.getByRole('button', { name: 'Tambah layanan & buat invoice' });
+  expect(button).toBeDisabled();
+  expect(screen.getByText('Rp 150.000', { selector: 'strong' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('checkbox', { name: /Pembayaran Tunai Kasir sudah diterima/ }));
+  fireEvent.click(button);
+  await waitFor(() =>
+    expect(mocks.attach).toHaveBeenCalledWith('court-detail', ['coach-slot'], 'cash', {
+      received: true
+    })
   );
 });

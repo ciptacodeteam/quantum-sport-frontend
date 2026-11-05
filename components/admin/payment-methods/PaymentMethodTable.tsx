@@ -78,6 +78,15 @@ const PaymentMethodTable = () => {
           </div>
         )
       }),
+      colHelper.accessor((method) => (method.isOffline ? 'Offline' : 'Online'), {
+        id: 'paymentType',
+        header: 'Jenis Pembayaran',
+        cell: ({ row }) => (
+          <Badge variant={row.original.isOffline ? 'lightWarning' : 'lightSuccess'}>
+            {row.original.isOffline ? 'Offline · Khusus Admin' : 'Online'}
+          </Badge>
+        )
+      }),
       colHelper.accessor('channel', {
         header: 'Channel',
         cell: ({ getValue }) => (
