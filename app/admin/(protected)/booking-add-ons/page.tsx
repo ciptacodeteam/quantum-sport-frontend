@@ -1,5 +1,10 @@
 'use client';
 
+import OfflinePaymentSelection from '@/components/admin/booking/OfflinePaymentSelection';
+import { adminPaymentMethodsQueryOptions } from '@/queries/admin/paymentMethod';
+import { isOfflinePaymentMethod } from '@/lib/offline-payment';
+import { calculateAdminCoachingDiscount } from '@/lib/admin-coaching-discount';
+import { useTariffPeriods } from '@/hooks/useTariffPeriods';
 import type { AdminCheckoutPayload } from '@/api/admin/checkout';
 import BookingBallboySelection from '@/components/admin/booking/BookingBallboySelection';
 import type { BallboyAvailability } from '@/types/model';
@@ -17,7 +22,7 @@ import { adminCheckoutMutationOptions } from '@/mutations/admin/checkout';
 import { type CustomerSearchResult } from '@/queries/admin/customer';
 import { useBookingStore } from '@/stores/useBookingStore';
 import { IconCalendar, IconChevronLeft, IconMapPin } from '@tabler/icons-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
@@ -52,6 +57,7 @@ export default function BookingAddOns() {
   } = useBookingStore();
 
   const queryClient = useQueryClient();
+  const [paymentMethodId, setPaymentMethodId] = useState('');
   const [isCheckingCoaches, setIsCheckingCoaches] = useState(false);
   const selectedCoaches = storedCoaches.filter(
     (coach) =>
@@ -104,6 +110,21 @@ export default function BookingAddOns() {
   }, [membershipDiscount.discountAmount, setMembershipDiscount]);
 
   const totalAmount = membershipDiscount.discountedTotal + coachTotal + ballboyTotal;
+
+  const { rules: tariffRules } = useTariffPeriods(true);
+  const amountDue = Math.max(
+    0,
+    totalAmount -
+      (membershipDiscount.canUseMembership
+        ? 0
+        : calculateAdminCoachingDiscount(bookingItems, selectedCoaches, tariffRules))
+  );
+  const paymentMethods = useQuery({ ...adminPaymentMethodsQueryOptions, enabled: amountDue > 0 });
+  const offlineMethods = (paymentMethods.data ?? []).filter(isOfflinePaymentMethod);
+  const selectedPaymentMethod = offlineMethods.find((method) => method.id === paymentMethodId);
+  const paymentReady =
+    amountDue <= 0 ||
+    (!!selectedPaymentMethod && !paymentMethods.isPending && !paymentMethods.isError);
 
   // Group bookings by date and get unique dates with their time slots
   const bookingsByDate = bookingItems.reduce(
@@ -225,6 +246,10 @@ export default function BookingAddOns() {
       return;
     }
 
+    if (!paymentReady) {
+      toast.error('Pilih metode pembayaran offline terlebih dahulu.');
+      return;
+    }
     const courtSlots = bookingItems.map((b) => b.slotId).filter(Boolean);
     const totalHours = bookingItems.reduce((sum, item) => {
       const start = dayjs(item.startAt ?? `${item.date} ${item.timeSlot.slice(0, 5)}`);
@@ -243,6 +268,7 @@ export default function BookingAddOns() {
       totalHours: Math.max(1, Math.round(totalHours * 100) / 100), // Round to 2 decimal places, minimum 1,
       courtSlots: courtSlots.length > 0 ? courtSlots : undefined,
       adminNote: bookingAdminNote || undefined,
+      ...(amountDue > 0 ? { paymentMethodId: selectedPaymentMethod!.id } : {}),
       useMembership: recurringBooking ? true : useMembership,
       ...(recurringBooking ? { recurringBooking } : {})
     };
@@ -466,12 +492,27 @@ export default function BookingAddOns() {
           membershipDiscountDetails={membershipDiscount}
           useMembership={recurringBooking ? true : useMembership}
           onUseMembershipChange={recurringBooking ? undefined : setUseMembership}
+          paymentControls={
+            <OfflinePaymentSelection
+              amountDue={amountDue}
+              methods={offlineMethods}
+              selectedId={selectedPaymentMethod?.id ?? ''}
+              onSelect={setPaymentMethodId}
+              loading={paymentMethods.isPending}
+              error={paymentMethods.isError}
+              onRetry={() => {
+                void paymentMethods.refetch();
+              }}
+              disabled={isConfirming || isCheckingCoaches}
+            />
+          }
           primaryAction={{
             label: 'Konfirmasi Booking',
             onClick: () => {
               void handleConfirmBooking();
             },
-            disabled: isConfirming || isCheckingCoaches || bookingItems.length === 0,
+            disabled:
+              isConfirming || isCheckingCoaches || bookingItems.length === 0 || !paymentReady,
             loading: isConfirming || isCheckingCoaches
           }}
           secondaryActions={[

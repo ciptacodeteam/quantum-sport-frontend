@@ -129,6 +129,7 @@ export interface BookingSummaryProps {
   /** Booking controls rendered alongside customer and membership information. */
   recurringControls?: React.ReactNode;
   coachControls?: React.ReactNode;
+  paymentControls?: React.ReactNode;
 
   /** Primary action button configuration */
   primaryAction?: {
@@ -222,6 +223,7 @@ export default function BookingSummary({
   onUseMembershipChange,
   recurringControls,
   coachControls,
+  paymentControls,
   primaryAction,
   secondaryActions = [],
   showCustomerSelection = true,
@@ -912,6 +914,8 @@ export default function BookingSummary({
               <span className="text-primary">{formatCurrency(finalTotal)}</span>
             </div>
           </div>
+
+          {paymentControls}
 
           {/* Action Buttons */}
           {(primaryAction || secondaryActions.length > 0) && (

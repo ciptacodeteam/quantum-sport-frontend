@@ -5,12 +5,18 @@ import { useBookingStore } from '@/stores/useBookingStore';
 import BookingAddOns from './page';
 
 const mocks = vi.hoisted(() => ({
+  payable: 300000,
   mutate: vi.fn(),
   push: vi.fn(),
   availability: vi.fn(),
   options: {} as any,
   summary: {} as any,
   queries: vi.fn(),
+  methods: [
+    { id: 'cash', name: 'Tunai Kasir', isActive: true, isOffline: true, channel: null },
+    { id: 'online', name: 'Online QRIS', isActive: true, isOffline: false, channel: 'QRIS' },
+    { id: 'inactive', name: 'Offline Nonaktif', isActive: false, isOffline: true, channel: null }
+  ],
   inventory: [
     { id: 'racket', name: 'Racket', price: 50000, availableQuantity: 10, totalQuantity: 10 }
   ]
@@ -75,7 +81,11 @@ vi.mock('@tanstack/react-query', async (importOriginal) => ({
   ...(await importOriginal<typeof ReactQuery>()),
   useQuery: (options: any) => {
     mocks.queries(options.queryKey);
-    return { data: mocks.inventory };
+    return {
+      data: options.queryKey.includes('payment-methods') ? mocks.methods : mocks.inventory,
+      isPending: false,
+      isError: false
+    };
   },
   useQueries: ({ queries }: any) =>
     queries.map(() => ({ data: mocks.inventory, isPending: false, isError: false })),
@@ -85,11 +95,12 @@ vi.mock('@tanstack/react-query', async (importOriginal) => ({
     return { mutate: mocks.mutate, isPending: false };
   }
 }));
+vi.mock('@/hooks/useTariffPeriods', () => ({ useTariffPeriods: () => ({ rules: [] }) }));
 vi.mock('@/hooks/useMembershipDiscount', () => ({
   useMembershipDiscount: () => ({
     canUseMembership: false,
     originalTotal: 300000,
-    discountedTotal: 300000,
+    discountedTotal: mocks.payable,
     discountAmount: 0
   })
 }));
@@ -98,6 +109,7 @@ vi.mock('@/components/admin/booking/BookingSummary', () => ({
     mocks.summary = props;
     return (
       <aside>
+        {props.paymentControls}
         <button
           disabled={props.primaryAction.disabled || props.primaryAction.loading}
           onClick={props.primaryAction.onClick}
@@ -114,8 +126,23 @@ vi.mock('@/components/admin/booking/BookingSummary', () => ({
   }
 }));
 
+function choosePayment() {
+  const selector = screen.queryByRole('combobox', { name: 'Metode pembayaran offline' });
+  if (!selector) return;
+  if (!selector.textContent?.includes('Tunai Kasir')) {
+    fireEvent.click(selector);
+    fireEvent.click(screen.getByRole('option', { name: 'Tunai Kasir' }));
+  }
+}
+function confirmBooking() {
+  choosePayment();
+  fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }));
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.payable = 300000;
+  HTMLElement.prototype.scrollIntoView = vi.fn();
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date('2026-10-20T00:00:00+07:00'));
   mocks.availability.mockResolvedValue({
@@ -149,8 +176,8 @@ it('shows coach and ballboy choices without equipment or inventory availability 
   expect(screen.getByRole('region', { name: 'Pilihan ballboy' })).toBeInTheDocument();
   expect(screen.queryByRole('region', { name: 'Equipment' })).not.toBeInTheDocument();
   expect(screen.queryByText('Racket')).not.toBeInTheDocument();
-  expect(mocks.queries).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }));
+  expect(mocks.queries.mock.calls.every(([key]) => !key.includes('inventory'))).toBe(true);
+  confirmBooking();
   expect(mocks.mutate.mock.calls[0][0]).not.toHaveProperty('inventories');
 });
 
@@ -196,6 +223,7 @@ it('checks coach availability then confirms courts and coach together with custo
   expect(useBookingStore.getState().selectedCoaches).toHaveLength(1);
   expect(mocks.summary.totalAmount).toBe(500000);
   expect(mocks.summary.coachTotal).toBe(200000);
+  choosePayment();
   await act(async () =>
     fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }))
   );
@@ -220,12 +248,13 @@ it('blocks an unavailable coach and allows confirmation without a coach', async 
   mocks.availability.mockResolvedValue({ data: { data: [] } });
   render(<BookingAddOns />);
   fireEvent.click(screen.getByRole('button', { name: 'Pilih Coach A' }));
+  choosePayment();
   await act(async () =>
     fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }))
   );
   expect(mocks.mutate).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: 'Tanpa coach' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }));
+  confirmBooking();
   expect(mocks.mutate).toHaveBeenCalledOnce();
   expect(mocks.mutate.mock.calls[0][0]).not.toHaveProperty('coachSlots');
 });
@@ -244,6 +273,7 @@ it('retains the cart when checking coach availability fails', async () => {
   mocks.availability.mockRejectedValue(new Error('offline'));
   render(<BookingAddOns />);
   fireEvent.click(screen.getByRole('button', { name: 'Pilih Coach A' }));
+  choosePayment();
   await act(async () =>
     fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }))
   );
@@ -259,7 +289,7 @@ it('confirms walk-in court bookings without requiring a service', () => {
     bookingAdminNote: 'Walk-in sore'
   });
   render(<BookingAddOns />);
-  fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }));
+  confirmBooking();
   expect(mocks.mutate).toHaveBeenCalledWith(
     expect.objectContaining({
       name: 'Budi',
@@ -273,7 +303,7 @@ it('confirms walk-in court bookings without requiring a service', () => {
 it('checks the court booking cutoff again on the services page before confirmation', () => {
   vi.setSystemTime(new Date('2026-10-28T00:00:00+07:00'));
   render(<BookingAddOns />);
-  fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }));
+  confirmBooking();
   expect(mocks.mutate).not.toHaveBeenCalled();
   expect(useBookingStore.getState().bookingItems).toHaveLength(3);
 });
@@ -303,6 +333,7 @@ it.each(['PADEL', 'TENNIS'] as const)(
     fireEvent.click(screen.getByRole('button', { name: 'Pilih Ballboy' }));
     expect(mocks.summary.ballboyTotal).toBe(45000);
     expect(mocks.summary.totalAmount).toBe(345000);
+    choosePayment();
     await act(async () =>
       fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }))
     );
@@ -318,3 +349,48 @@ it.each(['PADEL', 'TENNIS'] as const)(
     expect(mocks.mutate.mock.calls[0][0]).not.toHaveProperty('coachSlots');
   }
 );
+
+it('offers only active offline methods and confirms walk-in checkout without a checkbox', () => {
+  useBookingStore.setState({
+    selectedCustomerId: null,
+    walkInName: 'Budi',
+    walkInPhone: '08123456789'
+  });
+  render(<BookingAddOns />);
+  const confirm = screen.getByRole('button', { name: 'Konfirmasi Booking' });
+  expect(confirm).toBeDisabled();
+  fireEvent.click(screen.getByRole('combobox', { name: 'Metode pembayaran offline' }));
+  expect(screen.queryByRole('option', { name: 'Online QRIS' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('option', { name: 'Offline Nonaktif' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('option', { name: 'Tunai Kasir' }));
+  expect(confirm).toBeEnabled();
+  expect(
+    screen.queryByRole('checkbox', { name: /Pembayaran sudah diterima/ })
+  ).not.toBeInTheDocument();
+  fireEvent.click(confirm);
+  expect(mocks.mutate).toHaveBeenCalledWith(
+    expect.objectContaining({ paymentMethodId: 'cash', name: 'Budi' })
+  );
+});
+it('retains the chosen offline method when a service changes the payable total', () => {
+  render(<BookingAddOns />);
+  choosePayment();
+  expect(screen.getByRole('button', { name: 'Konfirmasi Booking' })).toBeEnabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Pilih Coach A' }));
+  expect(
+    screen.queryByRole('checkbox', { name: /Pembayaran sudah diterima/ })
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Konfirmasi Booking' })).toBeEnabled();
+});
+
+it('allows fully covered or free bookings without selecting a payment method', () => {
+  mocks.payable = 0;
+  render(<BookingAddOns />);
+  expect(screen.getByText('Tidak ada pembayaran tambahan untuk booking ini.')).toBeInTheDocument();
+  expect(
+    screen.queryByRole('combobox', { name: 'Metode pembayaran offline' })
+  ).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }));
+  expect(mocks.mutate).toHaveBeenCalledOnce();
+  expect(mocks.mutate.mock.calls[0][0]).not.toHaveProperty('paymentMethodId');
+});
