@@ -34,7 +34,7 @@ import {
 } from '@/queries/admin/customer';
 import { useMembershipDiscount } from '@/hooks/useMembershipDiscount';
 import { useTariffPeriods } from '@/hooks/useTariffPeriods';
-import { resolveTariffPeriod, tariffBand, type TariffRule } from '@/lib/tariff-period';
+import { calculateAdminCoachingDiscount } from '@/lib/admin-coaching-discount';
 import { cn } from '@/lib/utils';
 import type {
   BookingItem,
@@ -128,6 +128,7 @@ export interface BookingSummaryProps {
 
   /** Booking controls rendered alongside customer and membership information. */
   recurringControls?: React.ReactNode;
+  coachControls?: React.ReactNode;
 
   /** Primary action button configuration */
   primaryAction?: {
@@ -191,66 +192,6 @@ const formatCurrency = (value: number) => {
   return `Rp ${value.toLocaleString('id-ID')}`;
 };
 
-// Calculate bundled discount for court + coach at the same time slot
-const calculateBundleDiscount = (
-  courts: BookingItem[],
-  coaches: SelectedCoach[],
-  tariffRules: TariffRule[] = []
-): number => {
-  if (courts.length === 0 || coaches.length === 0) return 0;
-
-  // Build a set of keys (date|timeSlot) that have at least one coach
-  const coachKeys = new Set<string>();
-  coaches.forEach((coach) => {
-    if (!coach.date || !coach.timeSlot) return;
-    coachKeys.add(`${coach.date}|${coach.timeSlot}`);
-  });
-
-  let totalDiscount = 0;
-
-  courts.forEach((booking) => {
-    const key = `${booking.date}|${booking.timeSlot}`;
-
-    // Only apply discount when there is at least one coach on the same date & timeslot
-    if (!coachKeys.has(key)) return;
-
-    // Extract hour from "HH:mm - HH:mm" format
-    const startPart = booking.timeSlot.split('-')[0]?.trim() ?? '';
-    const hourStr = startPart.split(':')[0] ?? '';
-    const hour = Number.parseInt(hourStr, 10);
-
-    if (Number.isNaN(hour)) return;
-
-    // Tennis bundled court + coach always gets Rp100.000 off per matching slot.
-    // Padel keeps the existing happy/peak hour bundled discount.
-    let slotDiscount = 0;
-    if (booking.sport === 'TENNIS') {
-      slotDiscount = 100_000;
-    } else if (
-      tariffBand(
-        booking.timeSlot,
-        resolveTariffPeriod(tariffRules, booking.date, booking.sport)
-      ) === 'happyHour'
-    ) {
-      slotDiscount = 100_000;
-    } else if (
-      tariffBand(
-        booking.timeSlot,
-        resolveTariffPeriod(tariffRules, booking.date, booking.sport)
-      ) === 'peakHour'
-    ) {
-      slotDiscount = 70_000;
-    }
-
-    if (slotDiscount <= 0) return;
-
-    // Never discount more than the court price itself
-    totalDiscount += Math.min(slotDiscount, booking.price);
-  });
-
-  return totalDiscount;
-};
-
 export default function BookingSummary({
   bookingItems,
   selectedCustomerId,
@@ -280,6 +221,7 @@ export default function BookingSummary({
   useMembership = true,
   onUseMembershipChange,
   recurringControls,
+  coachControls,
   primaryAction,
   secondaryActions = [],
   showCustomerSelection = true,
@@ -408,8 +350,8 @@ export default function BookingSummary({
 
   // Bundled discount is only relevant when add-ons (coaches) are shown
   const bundleDiscount =
-    showAddOns && selectedCoaches.length > 0
-      ? calculateBundleDiscount(bookingItems, selectedCoaches, tariffRules)
+    showAddOns && !membershipDiscount.canUseMembership && selectedCoaches.length > 0
+      ? calculateAdminCoachingDiscount(bookingItems, selectedCoaches, tariffRules)
       : 0;
 
   const courtSubtotal = membershipDiscount.originalTotal ?? courtTotal;
@@ -789,6 +731,8 @@ export default function BookingSummary({
             </div>
           )}
 
+          {coachControls}
+
           {/* Selected Coaches */}
           {showAddOns && onCoachRemove && selectedCoaches.length > 0 && (
             <div className="space-y-2">
@@ -955,7 +899,7 @@ export default function BookingSummary({
             )}
             {bundleDiscount > 0 && (
               <div className="flex items-center justify-between text-xs text-blue-600">
-                <span>Bundled Court + Coach Discount</span>
+                <span>Potongan Coaching (Admin)</span>
                 <span className="font-medium">- {formatCurrency(bundleDiscount)}</span>
               </div>
             )}

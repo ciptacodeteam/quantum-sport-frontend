@@ -11,6 +11,7 @@ const fixtures = vi.hoisted(() => ({
   push: vi.fn(),
   mutationOptions: {} as any,
   pending: false,
+  coachAvailability: vi.fn(),
   membership: null as any,
   slots: ['court-a', 'court-b'].map((id) => ({
     id: `slot-${id}`,
@@ -21,6 +22,32 @@ const fixtures = vi.hoisted(() => ({
     price: 150000,
     isAvailable: true
   }))
+}));
+vi.mock('@/lib/adminApi', () => ({ adminApi: { get: fixtures.coachAvailability } }));
+vi.mock('@/components/admin/booking/BookingCoachSelection', async (importOriginal) => ({
+  ...(await importOriginal<any>()),
+  default: ({ sessions, onSelect }: any) => (
+    <section aria-label="Pilihan coach">
+      <button
+        onClick={() =>
+          onSelect(sessions[0], {
+            coachId: 'coach-a',
+            coachName: 'Coach A',
+            slotId: 'coach-slot',
+            price: 200000,
+            date: sessions[0].date,
+            timeSlot: sessions[0].timeSlot,
+            courtSport: 'PADEL',
+            startAt: '2040-01-02 12:00:00',
+            endAt: '2040-01-02 13:00:00'
+          })
+        }
+      >
+        Pilih Coach A
+      </button>
+      <button onClick={() => onSelect(sessions[0], null)}>Tanpa coach</button>
+    </section>
+  )
 }));
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: fixtures.push }),
@@ -39,9 +66,10 @@ vi.mock('@tanstack/react-query', async (importOriginal) => ({
   }
 }));
 vi.mock('@/components/admin/booking/BookingSummary', () => ({
-  default: ({ recurringControls, primaryAction }: any) => (
+  default: ({ recurringControls, primaryAction, coachControls }: any) => (
     <aside aria-label="Booking Summary">
       {recurringControls}
+      {coachControls}
       <button
         disabled={primaryAction.disabled || primaryAction.loading}
         onClick={primaryAction.onClick}
@@ -306,4 +334,54 @@ it('shows recurring controls only after selecting a customer with a membership a
   expect(
     screen.queryByRole('region', { name: 'Pengaturan booking rutin' })
   ).not.toBeInTheDocument();
+});
+
+it('checks coach availability and submits court and coach in one checkout', async () => {
+  prepareCourtBooking();
+  fixtures.coachAvailability.mockResolvedValue({
+    data: { data: [{ slotId: 'coach-slot', price: 200000 }] }
+  });
+  render(<BookingLapangan />);
+  fireEvent.click(screen.getByRole('button', { name: 'Pilih Coach A' }));
+  await act(async () =>
+    fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }))
+  );
+  expect(fixtures.coachAvailability).toHaveBeenCalledWith('/coach/availability', {
+    params: { startAt: '2040-01-02 12:00:00', endAt: '2040-01-02 13:00:00', courtSport: 'PADEL' }
+  });
+  expect(fixtures.mutate).toHaveBeenCalledWith(
+    expect.objectContaining({
+      courtSlots: ['slot-court-a'],
+      coachSlots: ['coach-slot']
+    })
+  );
+});
+
+it('blocks a coach conflict and allows confirmation after choosing no coach', async () => {
+  prepareCourtBooking(false);
+  fixtures.coachAvailability.mockResolvedValue({ data: { data: [] } });
+  render(<BookingLapangan />);
+  fireEvent.click(screen.getByRole('button', { name: 'Pilih Coach A' }));
+  await act(async () =>
+    fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }))
+  );
+  expect(fixtures.mutate).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Tanpa coach' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }));
+  expect(fixtures.mutate).toHaveBeenCalledWith(
+    expect.objectContaining({ name: 'Budi', courtSlots: ['slot-court-a'] })
+  );
+  expect(fixtures.mutate.mock.calls[0][0]).not.toHaveProperty('coachSlots');
+});
+
+it('retains the cart when coach availability cannot be checked', async () => {
+  prepareCourtBooking();
+  fixtures.coachAvailability.mockRejectedValue(new Error('offline'));
+  render(<BookingLapangan />);
+  fireEvent.click(screen.getByRole('button', { name: 'Pilih Coach A' }));
+  await act(async () =>
+    fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }))
+  );
+  expect(fixtures.mutate).not.toHaveBeenCalled();
+  expect(useBookingStore.getState().bookingItems).toHaveLength(1);
 });

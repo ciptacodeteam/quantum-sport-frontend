@@ -62,10 +62,13 @@ it('saves the selected hourly tariff and day rules together', async () => {
   fireEvent.click(screen.getByRole('checkbox', { name: 'Minggu' }));
   fireEvent.click(screen.getByRole('button', { name: 'Simpan jadwal & harga' }));
   await waitFor(() =>
-    expect(mocks.saveSchedule).toHaveBeenCalledWith(
-      'ballboy',
-      expect.objectContaining({ price: 50000, days: [1, 2, 3, 4, 5, 6], startHour: 6, endHour: 24 })
-    )
+    expect(mocks.saveSchedule).toHaveBeenCalledWith('ballboy', {
+      followCourtWindow: true,
+      price: 50000,
+      days: [1, 2, 3, 4, 5, 6],
+      startHour: 6,
+      endHour: 24
+    })
   );
 });
 it('edits the price of one available slot while keeping booked slots protected', async () => {
@@ -76,4 +79,39 @@ it('edits the price of one available slot while keeping booked slots protected',
   fireEvent.change(screen.getByLabelText('Harga per jam (Rp)'), { target: { value: '60000' } });
   fireEvent.click(screen.getByRole('button', { name: 'Simpan harga' }));
   await waitFor(() => expect(mocks.updatePrice).toHaveBeenCalledWith('open', 60000));
+});
+
+it('uses the court rolling window without date fields or a manual period in the request', async () => {
+  mount();
+  expect(await screen.findByText('Periode layanan otomatis')).toBeInTheDocument();
+  expect(screen.queryByLabelText('Dari tanggal')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Sampai tanggal')).not.toBeInTheDocument();
+  expect(mocks.schedule).toHaveBeenCalledWith('ballboy');
+});
+it('loads the saved repeating day, hour and price settings', async () => {
+  mocks.person.mockResolvedValue({
+    name: 'Budi',
+    role: 'BALLBOY',
+    rollingServiceSchedule: {
+      followCourtWindow: true,
+      days: [1, 3],
+      startHour: 9,
+      endHour: 17,
+      price: 75000
+    }
+  });
+  mount();
+  await waitFor(() => expect(screen.getByLabelText('Harga per jam')).toHaveValue(75000));
+  expect(screen.getByRole('checkbox', { name: 'Senin' })).toBeChecked();
+  expect(screen.getByRole('checkbox', { name: 'Selasa' })).not.toBeChecked();
+  fireEvent.click(screen.getByRole('button', { name: 'Simpan jadwal & harga' }));
+  await waitFor(() =>
+    expect(mocks.saveSchedule).toHaveBeenCalledWith('ballboy', {
+      followCourtWindow: true,
+      days: [1, 3],
+      startHour: 9,
+      endHour: 17,
+      price: 75000
+    })
+  );
 });

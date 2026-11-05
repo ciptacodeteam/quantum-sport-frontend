@@ -8,6 +8,7 @@ import {
 import nextConfig from './next.config';
 
 it.each([
+  ['/informations', '/'],
   ['/clubs', '/'],
   ['/clubs/old-club', '/'],
   ['/clubs/create', '/'],

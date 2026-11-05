@@ -11,6 +11,12 @@ import { resolveTariffPeriod, tariffBand } from '@/lib/tariff-period';
 import RecurringBookingRules from '@/components/admin/booking/RecurringBookingRules';
 import RecurringBookingDialog from '@/components/admin/booking/RecurringBookingDialog';
 import { mergeBookingItems } from '@/lib/recurring-booking';
+import BookingCoachSelection, {
+  coachSessionKey
+} from '@/components/admin/booking/BookingCoachSelection';
+import { adminApi } from '@/lib/adminApi';
+import type { CoachAvailability } from '@/types/model';
+import type { SelectedCoach } from '@/stores/useBookingStore';
 import BookingSummary from '@/components/admin/booking/BookingSummary';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -154,6 +160,14 @@ export default function BookingLapangan() {
       };
     })
   );
+  const [coachSelections, setCoachSelections] = useState<SelectedCoach[]>([]);
+  const [isCheckingCoaches, setIsCheckingCoaches] = useState(false);
+  const selectedCoaches = coachSelections.filter(
+    (coach) =>
+      coach.courtSport === courtSport &&
+      bookings.some((booking) => coachSessionKey(booking) === coachSessionKey(coach))
+  );
+  const coachTotal = selectedCoaches.reduce((total, coach) => total + coach.price, 0);
   const [calendarOpen, setCalendarOpen] = useState(false);
   // Customer selection is now handled by BookingSummary component
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerSearchResult | null>(null);
@@ -673,7 +687,9 @@ export default function BookingLapangan() {
           ['courts', 'slots'],
           ['admin', 'courts'],
           ['admin', 'schedule'],
-          ['admin', 'bookings']
+          ['admin', 'bookings'],
+          ['admin', 'booking-coaches'],
+          ['admin', 'coaching']
         ])
           void queryClient.invalidateQueries({ queryKey });
         useBookingStore.getState().clearAll();
@@ -682,8 +698,8 @@ export default function BookingLapangan() {
     })
   );
 
-  const handleConfirmBooking = () => {
-    if (isConfirming) return;
+  const handleConfirmBooking = async () => {
+    if (isConfirming || isCheckingCoaches) return;
     if (
       bookings.some(
         (item) =>
@@ -733,7 +749,36 @@ export default function BookingLapangan() {
         ? { userId: localCustomerId }
         : { name: storeWalkInName!, phone: storeWalkInPhone! })
     };
-    confirmCheckout(payload);
+    if (selectedCoaches.length > 0) {
+      setIsCheckingCoaches(true);
+      try {
+        const availability = await Promise.all(
+          selectedCoaches.map(async (coach) => {
+            const response = await adminApi.get('/coach/availability', {
+              params: { startAt: coach.startAt, endAt: coach.endAt, courtSport }
+            });
+            return (response.data.data as CoachAvailability[]).some(
+              (option) => option.slotId === coach.slotId && option.price === coach.price
+            );
+          })
+        );
+        if (availability.some((available) => !available)) {
+          toast.error(
+            'Jadwal atau harga coach berubah. Silakan pilih ulang coach atau lanjutkan tanpa coach.'
+          );
+          void queryClient.invalidateQueries({ queryKey: ['admin', 'booking-coaches'] });
+          return;
+        }
+        payload.coachSlots = selectedCoaches.map((coach) => coach.slotId!);
+        confirmCheckout(payload);
+      } catch {
+        toast.error('Gagal memeriksa ketersediaan coach. Coba lagi atau pilih tanpa coach.');
+      } finally {
+        setIsCheckingCoaches(false);
+      }
+    } else {
+      confirmCheckout(payload);
+    }
   };
 
   // Check if time slot is already booked (system bookings + user selections)
@@ -1397,7 +1442,23 @@ export default function BookingLapangan() {
               setBookingAdminNote(null);
             }}
             courtTotal={membershipDiscount.originalTotal}
-            totalAmount={totalPrice}
+            coachControls={
+              <BookingCoachSelection
+                sessions={bookings}
+                sport={courtSport}
+                selected={selectedCoaches}
+                disabled={isConfirming || isCheckingCoaches}
+                onSelect={(session, coach) =>
+                  setCoachSelections((current) => [
+                    ...current.filter((item) => coachSessionKey(item) !== coachSessionKey(session)),
+                    ...(coach ? [coach] : [])
+                  ])
+                }
+              />
+            }
+            selectedCoaches={selectedCoaches}
+            coachTotal={coachTotal}
+            totalAmount={totalPrice + coachTotal}
             membershipDiscountDetails={membershipDiscount}
             useMembership={recurringBooking ? true : useMembership}
             onUseMembershipChange={recurringBooking ? undefined : setUseMembership}
@@ -1412,8 +1473,10 @@ export default function BookingLapangan() {
             }}
             primaryAction={{
               label: 'Konfirmasi Booking',
-              onClick: handleConfirmBooking,
-              loading: isConfirming,
+              onClick: () => {
+                void handleConfirmBooking();
+              },
+              loading: isConfirming || isCheckingCoaches,
               disabled:
                 (!localCustomerId && !(storeWalkInName && storeWalkInPhone)) ||
                 bookings.length === 0
@@ -1422,6 +1485,7 @@ export default function BookingLapangan() {
               {
                 label: 'Clear All',
                 onClick: () => {
+                  setCoachSelections([]);
                   setBookings([]);
                   setBookingItems([]);
                   setLocalCustomerId('');
@@ -1432,7 +1496,7 @@ export default function BookingLapangan() {
                 variant: 'outline'
               }
             ]}
-            showAddOns={false}
+            showAddOns={true}
             width="w-full min-w-0"
           />
         </div>

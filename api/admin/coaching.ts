@@ -1,6 +1,13 @@
 import type { CoachingGroupSummary } from './coachingGroup';
 import { adminApi } from '@/lib/adminApi';
 
+export type RollingServiceSchedule = {
+  followCourtWindow: true;
+  days: number[];
+  startHour: number;
+  endHour: number;
+  price: number;
+};
 export type CoachingPerson = {
   id: string;
   branchId: string;
@@ -11,6 +18,7 @@ export type CoachingPerson = {
   coachProfile: string | null;
   coachingGroups?: { group: CoachingGroupSummary }[];
   isActive: boolean;
+  rollingServiceSchedule?: RollingServiceSchedule | null;
 };
 export type CoachingProfile = {
   name: string;
@@ -91,20 +99,10 @@ export const coachingApi = {
   person: async (id: string) => (await adminApi.get(`/coaching/${id}`)).data.data as CoachingPerson,
   save: async (id: string | undefined, input: CoachingProfile) =>
     id ? adminApi.put(`/coaching/${id}`, input) : adminApi.post('/coaching', input),
-  schedule: async (id: string, fromDate: string, toDate: string) =>
+  schedule: async (id: string, fromDate?: string, toDate?: string) =>
     (await adminApi.get(`/coaching/${id}/schedule`, { params: { fromDate, toDate } })).data
       .data as CoachingSlot[],
-  saveSchedule: async (
-    id: string,
-    data: {
-      fromDate: string;
-      toDate: string;
-      days: number[];
-      startHour: number;
-      endHour: number;
-      price: number;
-    }
-  ) =>
+  saveSchedule: async (id: string, data: RollingServiceSchedule) =>
     (await adminApi.post(`/coaching/${id}/schedule`, data)).data.data as {
       created: number;
       updated: number;

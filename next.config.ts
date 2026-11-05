@@ -19,11 +19,13 @@ const nextConfig: NextConfig = {
   /* config options here */
   redirects: async () => {
     return [
-      ...['/clubs/:path*', '/my-club/:path*', '/tournaments/:path*'].map((source) => ({
-        source,
-        destination: '/',
-        permanent: true
-      })),
+      ...['/clubs/:path*', '/my-club/:path*', '/tournaments/:path*', '/informations/:path*'].map(
+        (source) => ({
+          source,
+          destination: '/',
+          permanent: true
+        })
+      ),
       ...[
         '/admin/kelola-club/:path*',
         '/admin/kelola-turnamen/:path*',

@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
@@ -7,14 +7,12 @@ import { coachingApi, type CoachingSlot } from '@/api/admin/coaching';
 import { useRoleAccess } from '@/hooks/useRoleAccess';
 import { useAdminCourtSports } from '@/hooks/useAdminCourtSports';
 import { getApiErrorMessage } from '@/lib/api-error';
-import dayjs, { nowJakarta } from '@/lib/dayjs';
 import { formatScheduleSlotTime } from '@/lib/admin-schedule-time';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { DataTable } from '@/components/ui/data-table';
-import DatePickerInput from '@/components/ui/date-picker-input';
 import {
   Select,
   SelectContent,
@@ -45,8 +43,6 @@ export default function CoachingSchedule({
   const { hasAccess, isLoading } = useRoleAccess({ allowedRoles: ['ADMIN'] });
   const { branchId } = useAdminCourtSports();
   const client = useQueryClient();
-  const [fromDate, setFromDate] = useState(() => nowJakarta().format('YYYY-MM-DD'));
-  const [toDate, setToDate] = useState(() => nowJakarta().add(1, 'month').format('YYYY-MM-DD'));
   const [days, setDays] = useState([1, 2, 3, 4, 5, 6, 7]);
   const [startHour, setStartHour] = useState(6),
     [endHour, setEndHour] = useState(24),
@@ -58,9 +54,16 @@ export default function CoachingSchedule({
     queryFn: () => coachingApi.person(staffId),
     enabled: hasAccess
   });
+  useEffect(() => {
+    const rule = person.data?.rollingServiceSchedule;
+    setDays(rule?.days ?? [1, 2, 3, 4, 5, 6, 7]);
+    setStartHour(rule?.startHour ?? 6);
+    setEndHour(rule?.endHour ?? 24);
+    setPrice(rule?.price ?? 0);
+  }, [staffId, branchId, person.data?.rollingServiceSchedule]);
   const schedule = useQuery({
-    queryKey: ['admin', 'coaching', branchId, staffId, 'schedule', fromDate, toDate],
-    queryFn: () => coachingApi.schedule(staffId, fromDate, toDate),
+    queryKey: ['admin', 'coaching', branchId, staffId, 'schedule', 'rolling'],
+    queryFn: () => coachingApi.schedule(staffId),
     enabled: hasAccess
   });
   const invalidate = () => {
@@ -68,7 +71,13 @@ export default function CoachingSchedule({
   };
   const save = useMutation({
     mutationFn: () =>
-      coachingApi.saveSchedule(staffId, { fromDate, toDate, days, startHour, endHour, price }),
+      coachingApi.saveSchedule(staffId, {
+        followCourtWindow: true,
+        days,
+        startHour,
+        endHour,
+        price
+      }),
     onSuccess: (result) => {
       invalidate();
       toast.success(
@@ -197,36 +206,24 @@ export default function CoachingSchedule({
         <div className="border-b px-5 py-4 sm:px-6">
           <h2 className="font-semibold">Atur jadwal & harga</h2>
           <p className="text-muted-foreground mt-1 text-sm">
-            Pilih periode, jam layanan, dan tarif untuk membuat atau memperbarui slot.
+            Atur hari, jam layanan, dan tarif. Periode otomatis mengikuti rolling window lapangan.
           </p>
         </div>
         <div className="grid lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="space-y-6 p-5 sm:p-6">
-            <fieldset className="space-y-3">
-              <legend className="text-sm font-semibold">Periode layanan</legend>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="coaching-from">Dari tanggal</Label>
-                  <DatePickerInput
-                    id="coaching-from"
-                    value={dayjs(fromDate).toDate()}
-                    onValueChange={(d) => {
-                      if (d) setFromDate(dayjs(d).format('YYYY-MM-DD'));
-                    }}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="coaching-to">Sampai tanggal</Label>
-                  <DatePickerInput
-                    id="coaching-to"
-                    value={dayjs(toDate).toDate()}
-                    onValueChange={(d) => {
-                      if (d) setToDate(dayjs(d).format('YYYY-MM-DD'));
-                    }}
-                  />
-                </div>
-              </div>
-            </fieldset>
+            <section
+              aria-label="Periode layanan"
+              className="bg-primary/5 border-primary/20 space-y-2 rounded-xl border p-4"
+            >
+              <h3 className="text-sm font-semibold">Periode layanan otomatis</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                Mengikuti jadwal rolling window lapangan di cabang ini sesuai olahraga layanan. Slot
+                layanan bertambah otomatis saat jadwal lapangan diperpanjang.
+              </p>
+              <p className="text-muted-foreground text-xs">
+                Tidak perlu mengatur tanggal ketersediaan.
+              </p>
+            </section>
             <fieldset className="space-y-3">
               <legend className="text-sm font-semibold">Jam layanan · WIB</legend>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -238,7 +235,12 @@ export default function CoachingSchedule({
                 ).map(([label, value, change, from, to]) => (
                   <div key={label} className="space-y-2">
                     <Label>{label}</Label>
-                    <Select value={String(value)} onValueChange={(v) => change(Number(v))}>
+                    <Select
+                      value={String(value)}
+                      onValueChange={(v) => {
+                        if (v) change(Number(v));
+                      }}
+                    >
                       <SelectTrigger className="w-full" aria-label={label}>
                         <SelectValue />
                       </SelectTrigger>
@@ -280,9 +282,9 @@ export default function CoachingSchedule({
                 <p className="text-destructive text-xs">Pilih minimal satu hari aktif.</p>
               )}
             </fieldset>
-            {(endHour <= startHour || toDate < fromDate) && (
+            {endHour <= startHour && (
               <p role="alert" className="text-destructive text-sm">
-                Tanggal dan jam selesai harus sesuai dengan waktu mulai.
+                Jam selesai harus setelah jam mulai.
               </p>
             )}
           </div>
@@ -324,8 +326,8 @@ export default function CoachingSchedule({
               </div>
             </dl>
             <p className="text-muted-foreground text-xs leading-relaxed">
-              Harga slot tersedia dalam periode ini akan diperbarui. Slot yang sudah dibooking atau
-              ditutup tetap dipertahankan.
+              Harga slot tersedia dalam rolling window akan diperbarui. Slot yang sudah dibooking
+              atau ditutup tetap dipertahankan.
             </p>
             {(!branchId || branchId === 'all') && (
               <p className="text-sm">Pilih satu cabang di header untuk menyimpan perubahan.</p>
@@ -336,7 +338,6 @@ export default function CoachingSchedule({
                 save.isPending ||
                 !days.length ||
                 endHour <= startHour ||
-                toDate < fromDate ||
                 !branchId ||
                 branchId === 'all'
               }
@@ -350,8 +351,7 @@ export default function CoachingSchedule({
         <div>
           <h2 className="font-semibold">Daftar slot layanan</h2>
           <p className="text-muted-foreground mt-1 text-sm">
-            {dayjs(fromDate).format('DD MMM YYYY')} – {dayjs(toDate).format('DD MMM YYYY')} · Edit
-            tarif atau buka/tutup slot per jam.
+            Mengikuti rolling window lapangan · Edit tarif atau buka/tutup slot per jam.
           </p>
         </div>
         <Badge variant="secondary">{schedule.data?.length ?? 0} slot</Badge>

@@ -24,6 +24,7 @@ import {
   SectionHeader,
   SectionTitle
 } from '@/components/ui/section';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import DatePickerInput from '@/components/ui/date-picker-input';
 import dayjs from 'dayjs';
@@ -42,6 +43,8 @@ function TariffEditor({ rules, sport }: { rules: TariffRule[]; sport: 'PADEL' | 
   const today = jakartaToday();
   const active = resolveTariffPeriod(rules, today, sport);
   const [bands, setBands] = useState<TariffBands>(active);
+  const [happyCoachDiscount, setHappyCoachDiscount] = useState(active.happyCoachDiscount ?? 0);
+  const [peakCoachDiscount, setPeakCoachDiscount] = useState(active.peakCoachDiscount ?? 0);
   const [effectiveFrom, setEffectiveFrom] = useState(today);
   const client = useQueryClient();
   const mutation = useMutation({
@@ -50,6 +53,7 @@ function TariffEditor({ rules, sport }: { rules: TariffRule[]; sport: 'PADEL' | 
       client.invalidateQueries({ queryKey: ['tariff-periods'] });
       client.invalidateQueries({ queryKey: ['admin', 'courts'] });
       client.invalidateQueries({ queryKey: ['courts'] });
+      client.invalidateQueries({ queryKey: ['admin', 'booking-coaches'] });
       toast.success('Pengaturan jam tarif berhasil disimpan.');
     },
     onError: (error) =>
@@ -58,6 +62,9 @@ function TariffEditor({ rules, sport }: { rules: TariffRule[]; sport: 'PADEL' | 
       })
   });
   const valid =
+    [happyCoachDiscount, peakCoachDiscount].every(
+      (value) => Number.isInteger(value) && value >= 0 && value <= 2147483647
+    ) &&
     bands.happyEnd > bands.happyStart &&
     bands.peakEnd > bands.peakStart &&
     (bands.happyEnd === bands.peakStart || bands.peakEnd === bands.happyStart);
@@ -96,6 +103,8 @@ function TariffEditor({ rules, sport }: { rules: TariffRule[]; sport: 'PADEL' | 
               happyEnd: bands.happyEnd,
               peakStart: bands.peakStart,
               peakEnd: bands.peakEnd,
+              happyCoachDiscount,
+              peakCoachDiscount,
               effectiveFrom,
               sport
             });
@@ -152,6 +161,58 @@ function TariffEditor({ rules, sport }: { rules: TariffRule[]; sport: 'PADEL' | 
               tanpa tumpang tindih atau jeda.
             </p>
           )}
+          <section
+            aria-label="Potongan coaching admin"
+            className="space-y-4 rounded-xl border p-5 sm:p-6"
+          >
+            <div className="space-y-1">
+              <h2 className="font-semibold">Potongan Lapangan untuk Coaching</h2>
+              <p className="text-muted-foreground text-sm">
+                Berlaku hanya untuk booking melalui admin ketika coach dipilih pada tanggal dan jam
+                lapangan yang sama. Nominal dipotong dari harga lapangan per slot satu jam. Isi 0
+                untuk menonaktifkan.
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {(
+                [
+                  [
+                    'happyCoachDiscount',
+                    'Potongan Coaching Happy Hour (Rp)',
+                    happyCoachDiscount,
+                    setHappyCoachDiscount
+                  ],
+                  [
+                    'peakCoachDiscount',
+                    'Potongan Coaching Peak Hour (Rp)',
+                    peakCoachDiscount,
+                    setPeakCoachDiscount
+                  ]
+                ] as const
+              ).map(([id, label, value, setValue]) => (
+                <Field key={id}>
+                  <FieldLabel htmlFor={id}>{label}</FieldLabel>
+                  <Input
+                    id={id}
+                    type="number"
+                    min={0}
+                    max={2147483647}
+                    step={1}
+                    required
+                    value={value}
+                    onChange={(event) =>
+                      setValue(event.target.value === '' ? 0 : Number(event.target.value))
+                    }
+                  />
+                </Field>
+              ))}
+            </div>
+            <p className="text-muted-foreground text-xs">
+              Mengikuti cabang, olahraga, dan tanggal mulai berlaku aturan ini. Maksimal sebesar
+              harga lapangan; tidak dipakai untuk slot yang sudah ditanggung membership. Booking
+              dari halaman customer tidak mendapat potongan coaching.
+            </p>
+          </section>
           <section className="space-y-4 rounded-xl border p-5 sm:p-6">
             <Field className="sm:max-w-xs">
               <FieldLabel htmlFor="effectiveFrom">Mulai Berlaku</FieldLabel>
@@ -223,6 +284,10 @@ function TariffEditor({ rules, sport }: { rules: TariffRule[]; sport: 'PADEL' | 
                   <p className="text-muted-foreground text-sm">
                     Happy Hour {formatTariffHour(rule.happyStart)}–{formatTariffHour(rule.happyEnd)}{' '}
                     · Peak Hour {formatTariffHour(rule.peakStart)}–{formatTariffHour(rule.peakEnd)}
+                    {' · Potongan coaching: Happy Hour Rp '}
+                    {(rule.happyCoachDiscount ?? 0).toLocaleString('id-ID')}
+                    {' / Peak Hour Rp '}
+                    {(rule.peakCoachDiscount ?? 0).toLocaleString('id-ID')}
                   </p>
                 </div>
                 <Button
@@ -231,6 +296,8 @@ function TariffEditor({ rules, sport }: { rules: TariffRule[]; sport: 'PADEL' | 
                   size="sm"
                   onClick={() => {
                     setBands(rule);
+                    setHappyCoachDiscount(rule.happyCoachDiscount ?? 0);
+                    setPeakCoachDiscount(rule.peakCoachDiscount ?? 0);
                     setEffectiveFrom(
                       rule.effectiveFrom.slice(0, 10) < today
                         ? today

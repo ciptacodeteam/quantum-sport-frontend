@@ -6,13 +6,16 @@ dayjs.extend(timezone);
 
 export const defaultTariffPeriod = { happyStart: 6, happyEnd: 15, peakStart: 15, peakEnd: 24 };
 export type TariffBands = typeof defaultTariffPeriod;
-export type TariffRule = TariffBands & {
-  id: string;
-  branchId: string;
-  sport: 'PADEL' | 'TENNIS';
-  effectiveFrom: string;
-};
-export type TariffPeriodInput = TariffBands & { sport: 'PADEL' | 'TENNIS'; effectiveFrom: string };
+export type CoachingDiscounts = { happyCoachDiscount?: number; peakCoachDiscount?: number };
+export type TariffRule = TariffBands &
+  CoachingDiscounts & {
+    id: string;
+    branchId: string;
+    sport: 'PADEL' | 'TENNIS';
+    effectiveFrom: string;
+  };
+export type TariffPeriodInput = TariffBands &
+  CoachingDiscounts & { sport: 'PADEL' | 'TENNIS'; effectiveFrom: string };
 export type TariffPeriodResponse = { rules: TariffRule[]; defaults: TariffBands };
 export const jakartaToday = () => dayjs().tz('Asia/Jakarta').format('YYYY-MM-DD');
 export const formatTariffHour = (hour: number) => `${String(hour).padStart(2, '0')}:00`;
@@ -20,7 +23,7 @@ export function resolveTariffPeriod(
   rules: TariffRule[],
   date = jakartaToday(),
   sport: 'PADEL' | 'TENNIS' = 'PADEL'
-): TariffBands {
+): TariffBands & CoachingDiscounts {
   return (
     rules
       .filter(
