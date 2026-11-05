@@ -8,6 +8,20 @@ export async function getTariffPeriods(admin = false): Promise<TariffPeriodRespo
   return data.data;
 }
 export async function saveTariffPeriod(input: TariffPeriodInput) {
-  const { data } = await adminApi.put('/tariff-periods', input);
-  return data.data;
+  try {
+    const { data } = await adminApi.put('/tariff-periods', input, { timeout: 75000 });
+    return data.data;
+  } catch (error) {
+    if (
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT')
+    ) {
+      throw new Error(
+        'Penyimpanan melewati batas waktu. Muat ulang aturan untuk memeriksa hasilnya sebelum mencoba lagi.'
+      );
+    }
+    throw error;
+  }
 }
