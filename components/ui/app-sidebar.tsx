@@ -177,10 +177,6 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
           url: '/admin/coaching-groups'
         },
         {
-          title: 'Coaching',
-          url: '/admin/coaching?kind=COACH'
-        },
-        {
           title: 'Ballboy',
           url: '/admin/coaching?kind=BALLBOY'
         },

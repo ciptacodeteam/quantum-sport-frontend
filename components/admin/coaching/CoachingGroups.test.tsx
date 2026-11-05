@@ -86,6 +86,14 @@ it('lets regular admins read groups without editing the shared catalog', async (
   expect(screen.queryByRole('button', { name: 'Tambah grup' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Edit grup Northwest' })).not.toBeInTheDocument();
   expect(mocks.branches).not.toHaveBeenCalled();
+  expect(screen.getByRole('link', { name: 'Detail grup Northwest' })).toHaveAttribute(
+    'href',
+    '/admin/coaching-groups/northwest'
+  );
+  expect(screen.getByRole('link', { name: 'Detail Coach Independen' })).toHaveAttribute(
+    'href',
+    '/admin/coaching-groups/independent'
+  );
 });
 
 it('previews a local file and submits it as the group logo', async () => {

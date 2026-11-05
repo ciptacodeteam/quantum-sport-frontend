@@ -1,7 +1,8 @@
 'use client';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import CoachingSchedule from '@/components/admin/coaching/CoachingSchedule';
 export default function CoachingDetailPage() {
   const { id } = useParams<{ id: string }>();
-  return <CoachingSchedule staffId={id} key={id} />;
+  const groupId = useSearchParams().get('groupId') || undefined;
+  return <CoachingSchedule staffId={id} groupId={groupId} key={id} />;
 }

@@ -35,7 +35,13 @@ import {
 const priceInputClass =
   '[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none';
 
-export default function CoachingSchedule({ staffId }: { staffId: string }) {
+export default function CoachingSchedule({
+  staffId,
+  groupId
+}: {
+  staffId: string;
+  groupId?: string;
+}) {
   const { hasAccess, isLoading } = useRoleAccess({ allowedRoles: ['ADMIN'] });
   const { branchId } = useAdminCourtSports();
   const client = useQueryClient();
@@ -160,8 +166,16 @@ export default function CoachingSchedule({ staffId }: { staffId: string }) {
   return (
     <main className="w-full min-w-0 space-y-6">
       <Button asChild variant="ghost">
-        <Link href={`/admin/coaching?kind=${person.data.role}`}>
-          ← Kembali ke {person.data.role === 'COACH' ? 'Coaching' : 'Ballboy'}
+        <Link
+          href={
+            person.data.role === 'COACH'
+              ? groupId
+                ? `/admin/coaching-groups/${encodeURIComponent(groupId)}`
+                : '/admin/coaching-groups'
+              : '/admin/coaching?kind=BALLBOY'
+          }
+        >
+          ← Kembali ke {person.data.role === 'COACH' ? 'Grup Coaching' : 'Ballboy'}
         </Link>
       </Button>
       <div>

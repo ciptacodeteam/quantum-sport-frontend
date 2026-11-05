@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import { IconPlus, IconPencil } from '@tabler/icons-react';
@@ -145,19 +146,29 @@ export default function CoachingGroups() {
       col.display({
         id: 'actions',
         header: 'Aksi',
-        cell: ({ row }) =>
-          canEdit ? (
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={`Edit grup ${row.original.name}`}
-              onClick={() => begin(row.original)}
-            >
-              <IconPencil />
+        enableHiding: false,
+        cell: ({ row }) => (
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="sm" asChild>
+              <Link
+                href={`/admin/coaching-groups/${row.original.id}`}
+                aria-label={`Detail grup ${row.original.name}`}
+              >
+                Detail
+              </Link>
             </Button>
-          ) : (
-            '—'
-          )
+            {canEdit && (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={`Edit grup ${row.original.name}`}
+                onClick={() => begin(row.original)}
+              >
+                <IconPencil />
+              </Button>
+            )}
+          </div>
+        )
       })
     ],
     [canEdit]
@@ -168,13 +179,17 @@ export default function CoachingGroups() {
       <div>
         <h1 className="text-2xl font-semibold">Grup Coaching</h1>
         <p className="text-muted-foreground mt-2 text-sm">
-          Kelola brand coaching dan cabang layanan. Anggota coach diatur melalui profil Coach.
+          Kelola grup coaching dan cabang layanan. Klik Detail untuk melihat dan mengelola member
+          coach.
         </p>
       </div>
+      <Button variant="outline" asChild>
+        <Link href="/admin/coaching-groups/independent">Detail Coach Independen</Link>
+      </Button>
       {!canEdit && (
         <p className="text-muted-foreground text-sm">
           Pengaturan grup lintas cabang dikelola oleh Super Admin. Admin dapat mengatur keanggotaan
-          melalui profil coach di cabangnya.
+          melalui Detail grup di cabangnya.
         </p>
       )}
       {query.isError ? (

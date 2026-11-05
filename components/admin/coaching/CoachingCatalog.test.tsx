@@ -42,13 +42,13 @@ const people = [
     isActive: true
   }
 ];
-function mount() {
+function mount(groupId?: string) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } }
   });
   render(
     <QueryClientProvider client={client}>
-      <CoachingCatalog />
+      <CoachingCatalog groupId={groupId} />
     </QueryClientProvider>
   );
   return client;
@@ -129,4 +129,55 @@ it('assigns a coach to a group without changing the coach schedule or price', as
       expect.objectContaining({ groupIds: ['northwest'] })
     )
   );
+});
+
+it('only shows members of the opened group and retains schedule navigation', async () => {
+  mocks.list.mockResolvedValue([
+    { ...people[0], coachingGroups: [{ group: { id: 'northwest', name: 'Northwest' } }] },
+    { ...people[1], coachingGroups: [{ group: { id: 'other', name: 'Other Academy' } }] },
+    people[2]
+  ]);
+  mount('northwest');
+  expect(await screen.findByText('Coach A')).toBeInTheDocument();
+  expect(screen.queryByText('Coach B')).not.toBeInTheDocument();
+  expect(screen.queryByText('Ballboy Ibnu')).not.toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Jadwal & Harga Coach A' })).toHaveAttribute(
+    'href',
+    '/admin/coaching/coach-a?groupId=northwest'
+  );
+});
+
+it('preselects the opened group when creating a member', async () => {
+  mocks.groups.mockResolvedValue([{ id: 'northwest', name: 'Northwest', isActive: true }]);
+  mount('northwest');
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Tambah Coach' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: 'Tambah Coach' }));
+  expect(await screen.findByRole('checkbox', { name: 'Northwest' })).toBeChecked();
+  fireEvent.change(screen.getByLabelText('Nama'), { target: { value: 'Member Baru' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Simpan profil' }));
+  await waitFor(() =>
+    expect(mocks.save).toHaveBeenCalledWith(
+      undefined,
+      expect.objectContaining({ name: 'Member Baru', groupIds: ['northwest'] })
+    )
+  );
+});
+
+it('keeps ungrouped coaches accessible in the independent detail', async () => {
+  mocks.list.mockResolvedValue([
+    people[0],
+    { ...people[1], coachingGroups: [{ group: { id: 'northwest', name: 'Northwest' } }] },
+    people[2]
+  ]);
+  mount('independent');
+  expect(await screen.findByText('Coach A')).toBeInTheDocument();
+  expect(screen.queryByText('Coach B')).not.toBeInTheDocument();
+  expect(screen.queryByText('Ballboy Ibnu')).not.toBeInTheDocument();
+});
+
+it('prevents adding a member when the group is inactive or unavailable in the branch', async () => {
+  mocks.groups.mockResolvedValue([{ id: 'northwest', name: 'Northwest', isActive: false }]);
+  mount('northwest');
+  await waitFor(() => expect(mocks.groups).toHaveBeenCalled());
+  expect(screen.getByRole('button', { name: 'Tambah Coach' })).toBeDisabled();
 });

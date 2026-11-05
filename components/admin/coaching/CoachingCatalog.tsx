@@ -36,9 +36,13 @@ export const coachingSportLabel = (sport: string | null) =>
 
 const col = createColumnHelper<CoachingPerson>();
 
-export default function CoachingCatalog() {
+type CoachingCatalogProps = {
+  groupId?: string;
+};
+
+export default function CoachingCatalog({ groupId }: CoachingCatalogProps = {}) {
   const params = useSearchParams();
-  const kind = params.get('kind') === 'BALLBOY' ? 'BALLBOY' : 'COACH';
+  const kind = !groupId && params.get('kind') === 'BALLBOY' ? 'BALLBOY' : 'COACH';
   const { hasAccess, isLoading } = useRoleAccess({ allowedRoles: ['ADMIN'] });
   const { branchId, canCreateTennis } = useAdminCourtSports();
   const client = useQueryClient();
@@ -85,15 +89,29 @@ export default function CoachingCatalog() {
               coachProfile: person.coachProfile ?? undefined,
               isActive: person.isActive
             }
-          : { name: '', kind, coachType: 'PADEL', isActive: true, groupIds: [] }
+          : {
+              name: '',
+              kind,
+              coachType: 'PADEL',
+              isActive: true,
+              groupIds: groupId && groupId !== 'independent' ? [groupId] : []
+            }
       );
       setOpen(true);
     },
-    [kind]
+    [kind, groupId]
   );
   const people = useMemo(
-    () => (query.data ?? []).filter((person) => person.role === kind),
-    [query.data, kind]
+    () =>
+      (query.data ?? []).filter(
+        (person) =>
+          person.role === kind &&
+          (!groupId ||
+            (groupId === 'independent'
+              ? !person.coachingGroups?.length
+              : person.coachingGroups?.some((membership) => membership.group.id === groupId)))
+      ),
+    [query.data, kind, groupId]
   );
   const columns = useMemo(
     () => [
@@ -152,7 +170,7 @@ export default function CoachingCatalog() {
             </Button>
             <Button size="icon-sm" variant="ghost" asChild>
               <Link
-                href={`/admin/coaching/${row.original.id}`}
+                href={`/admin/coaching/${row.original.id}${groupId ? `?groupId=${encodeURIComponent(groupId)}` : ''}`}
                 aria-label={`Jadwal & Harga ${row.original.name}`}
                 title="Jadwal & Harga"
               >
@@ -163,14 +181,16 @@ export default function CoachingCatalog() {
         )
       })
     ],
-    [beginEdit, branchId, kind]
+    [beginEdit, branchId, kind, groupId]
   );
   if (isLoading || !hasAccess) return <p className="p-6">Memuat...</p>;
   return (
     <main className="w-full min-w-0 space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">{kind === 'COACH' ? 'Coaching' : 'Ballboy'}</h1>
+          <h1 className="text-2xl font-semibold">
+            {groupId ? 'Member Coach' : kind === 'COACH' ? 'Coaching' : 'Ballboy'}
+          </h1>
           <p className="text-muted-foreground mt-2 text-sm">
             Kelola profil, olahraga, jadwal, dan harga layanan per jam.
           </p>
@@ -196,7 +216,7 @@ export default function CoachingCatalog() {
       ) : (
         <div className="[&_thead]:bg-muted/50 min-w-0 [&_td]:align-middle [&_th]:text-xs">
           <DataTable
-            key={kind}
+            key={`${kind}:${groupId ?? 'all'}`}
             data={people}
             columns={columns}
             loading={query.isPending}
@@ -210,7 +230,12 @@ export default function CoachingCatalog() {
                 className="h-9 rounded-lg"
                 onClick={() => beginEdit()}
                 disabled={
-                  !branchId || branchId === 'all' || (kind === 'BALLBOY' && !canCreateTennis)
+                  !branchId ||
+                  branchId === 'all' ||
+                  (kind === 'BALLBOY' && !canCreateTennis) ||
+                  (!!groupId &&
+                    groupId !== 'independent' &&
+                    !groups.data?.some((group) => group.id === groupId && group.isActive))
                 }
               >
                 <IconPlus />
