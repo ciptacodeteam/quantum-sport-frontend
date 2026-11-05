@@ -148,12 +148,13 @@ export default function AddBookingService({
       className="bg-muted/20 mb-5 space-y-5 rounded-xl border p-4 sm:p-5"
     >
       <div>
-        <h3 className="font-semibold">Tambah Coach{sport === 'TENNIS' ? ' / Ballboy' : ''}</h3>
+        <h3 className="font-semibold">Tambah Coach / Ballboy</h3>
         <p className="text-muted-foreground mt-1 text-xs">
           {formatScheduleSlotTime(startAt, 'DD MMM YYYY')} · {formatScheduleSlotTime(startAt)}–
-          {formatScheduleSlotTime(endAt)} WIB. Invoice layanan dibuat terpisah dari lapangan.
+          {formatScheduleSlotTime(endAt)} WIB · {sport === 'PADEL' ? 'Padel' : 'Tennis'}. Invoice
+          layanan dibuat terpisah dari lapangan.
         </p>
-        {sport === 'TENNIS' && (
+        {
           <p className="text-muted-foreground mt-2 text-xs">
             Ballboy muncul jika profil aktif dan jadwal tersedia pada cabang serta jam booking ini.
             {canManageProfiles && (
@@ -165,7 +166,7 @@ export default function AddBookingService({
               </>
             )}
           </p>
-        )}
+        }
       </div>
       {!canAdd ? (
         <p className="text-muted-foreground text-sm">
@@ -182,7 +183,7 @@ export default function AddBookingService({
         <p className="text-sm">Mencari jadwal tersedia...</p>
       ) : !available.data?.length ? (
         <p className="text-muted-foreground text-sm">
-          Tidak ada coach{sport === 'TENNIS' ? ' atau ballboy' : ''} tersedia pada jam ini.
+          Tidak ada coach atau ballboy tersedia pada jam ini.
         </p>
       ) : (
         <>
@@ -221,8 +222,8 @@ export default function AddBookingService({
             </div>
             <p className="text-sm font-medium">Pilih layanan</p>
             <p className="text-muted-foreground text-xs">
-              Pilih satu coach{sport === 'TENNIS' ? ' dan satu ballboy sekaligus' : ''}. Layanan
-              terpilih digabung dalam satu invoice.
+              Pilih satu coach dan satu ballboy sekaligus. Layanan terpilih digabung dalam satu
+              invoice.
             </p>
             {!visibleOptions.some((o) => o.kind === 'COACH') && (
               <p className="text-muted-foreground text-xs">

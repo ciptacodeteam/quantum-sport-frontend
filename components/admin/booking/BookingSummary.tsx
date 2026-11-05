@@ -749,6 +749,9 @@ export default function BookingSummary({
                   >
                     <div className="min-w-0">
                       <p className="truncate font-medium">{coach.coachName}</p>
+                      {coach.coachingGroupName && (
+                        <p className="text-muted-foreground text-xs">{coach.coachingGroupName}</p>
+                      )}
                       <p className="text-muted-foreground">
                         {dayjs(coach.date).format('DD MMM')} • {coach.timeSlot}
                       </p>

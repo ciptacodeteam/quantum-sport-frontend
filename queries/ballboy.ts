@@ -9,9 +9,9 @@ export const ballboyAvailabilityQueryOptions = (
 ) =>
   queryOptions({
     queryKey: ['ballboy', 'availability', startAt, endAt, courtSport],
-    enabled: Boolean(startAt && endAt && courtSport === 'TENNIS'),
+    enabled: Boolean(startAt && endAt && courtSport),
     queryFn: () => {
-      if (!startAt || !endAt || courtSport !== 'TENNIS') {
+      if (!startAt || !endAt || !courtSport) {
         return Promise.resolve({ data: [] });
       }
 

@@ -70,6 +70,8 @@ export interface InventoryItem {
 }
 
 export interface SelectedCoach {
+  coachingGroupId?: string;
+  coachingGroupName?: string;
   coachId: string;
   coachName: string;
   timeSlot: string;
@@ -83,6 +85,7 @@ export interface SelectedCoach {
 }
 
 export interface SelectedBallboy {
+  courtSport?: 'PADEL' | 'TENNIS';
   ballboyId: string;
   ballboyName: string;
   timeSlot: string;

@@ -9,6 +9,7 @@ export type AdminCheckoutPayload = {
   totalHours: number;
   courtSlots?: string[];
   coachSlots?: string[];
+  coachGroups?: { slotId: string; coachingGroupId: string }[];
   ballboySlots?: Array<string | { slotId: string; courtSlotId: string }>;
   inventories?: {
     inventoryId: string;

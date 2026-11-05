@@ -146,3 +146,18 @@ it('loads scheduled discount amounts for editing', () => {
   expect(screen.getByLabelText('Potongan Coaching Happy Hour (Rp)')).toHaveValue(35000);
   expect(screen.getByLabelText('Potongan Coaching Peak Hour (Rp)')).toHaveValue(20000);
 });
+
+it('shows a rupiah prefix and clears zero on focus while restoring zero when left empty', () => {
+  render(<TariffPeriodPage />);
+  const input = screen.getByLabelText('Potongan Coaching Happy Hour (Rp)');
+  expect(screen.getAllByText('Rp')).toHaveLength(2);
+  expect(input).toHaveValue(0);
+  fireEvent.focus(input);
+  expect(input).toHaveValue(null);
+  fireEvent.blur(input);
+  expect(input).toHaveValue(0);
+  fireEvent.focus(input);
+  fireEvent.change(input, { target: { value: '25000' } });
+  fireEvent.blur(input);
+  expect(input).toHaveValue(25000);
+});

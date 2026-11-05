@@ -84,7 +84,7 @@ export default function CoachingCatalog({ groupId }: CoachingCatalogProps = {}) 
               name: person.name,
               kind: person.role,
               groupIds: (person.coachingGroups ?? []).map((m) => m.group.id),
-              coachType: person.coachType ?? undefined,
+              coachType: person.coachType ?? (person.role === 'BALLBOY' ? 'TENNIS' : undefined),
               phone: person.phone ?? undefined,
               coachProfile: person.coachProfile ?? undefined,
               isActive: person.isActive
@@ -130,7 +130,8 @@ export default function CoachingCatalog({ groupId }: CoachingCatalogProps = {}) 
         )
       }),
       col.accessor(
-        (person) => (person.role === 'BALLBOY' ? 'Tennis' : coachingSportLabel(person.coachType)),
+        (person) =>
+          coachingSportLabel(person.coachType ?? (person.role === 'BALLBOY' ? 'TENNIS' : 'PADEL')),
         {
           id: 'sport',
           header: 'Olahraga',
@@ -201,11 +202,6 @@ export default function CoachingCatalog({ groupId }: CoachingCatalogProps = {}) 
           Pilih satu cabang di header untuk menambahkan profil.
         </p>
       )}
-      {kind === 'BALLBOY' && !canCreateTennis && (
-        <p className="text-muted-foreground text-sm">
-          Ballboy tersedia untuk cabang dengan lapangan tennis.
-        </p>
-      )}
       {query.isError ? (
         <div role="alert">
           <p>Profil belum dapat dimuat.</p>
@@ -232,7 +228,6 @@ export default function CoachingCatalog({ groupId }: CoachingCatalogProps = {}) 
                 disabled={
                   !branchId ||
                   branchId === 'all' ||
-                  (kind === 'BALLBOY' && !canCreateTennis) ||
                   (!!groupId &&
                     groupId !== 'independent' &&
                     !groups.data?.some((group) => group.id === groupId && group.isActive))
@@ -275,7 +270,7 @@ export default function CoachingCatalog({ groupId }: CoachingCatalogProps = {}) 
                 onChange={(e) => setDraft({ ...draft, name: e.target.value })}
               />
             </div>
-            {draft.kind === 'COACH' && (
+            {
               <div className="space-y-2">
                 <Label htmlFor="coaching-sport">Olahraga</Label>
                 <Select
@@ -298,7 +293,7 @@ export default function CoachingCatalog({ groupId }: CoachingCatalogProps = {}) 
                   </SelectContent>
                 </Select>
               </div>
-            )}
+            }
             {draft.kind === 'COACH' && (
               <fieldset className="space-y-2">
                 <legend className="mb-2 text-sm font-medium">Grup coaching</legend>
@@ -343,7 +338,6 @@ export default function CoachingCatalog({ groupId }: CoachingCatalogProps = {}) 
                 </Link>
               </fieldset>
             )}
-            {draft.kind === 'BALLBOY' && <p className="text-sm">Olahraga: Tennis</p>}
             <div className="space-y-2">
               <Label htmlFor="coaching-phone">Telepon (opsional)</Label>
               <Input

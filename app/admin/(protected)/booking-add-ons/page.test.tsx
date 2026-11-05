@@ -27,6 +27,8 @@ vi.mock('@/components/admin/booking/BookingCoachSelection', async (importOrigina
           onSelect(sessions[0], {
             coachId: 'coach',
             coachName: 'Coach A',
+            coachingGroupId: 'academy',
+            coachingGroupName: 'SR Academy',
             slotId: 'coach-slot',
             date: sessions[0].date,
             timeSlot: sessions[0].timeSlot,
@@ -40,6 +42,32 @@ vi.mock('@/components/admin/booking/BookingCoachSelection', async (importOrigina
         Pilih Coach A
       </button>
       <button onClick={() => onSelect(sessions[0], null)}>Tanpa coach</button>
+    </section>
+  )
+}));
+vi.mock('@/components/admin/booking/BookingBallboySelection', () => ({
+  default: ({ sessions, onSelect }: any) => (
+    <section aria-label="Pilihan ballboy">
+      <button
+        onClick={() =>
+          onSelect(sessions[0], {
+            ballboyId: 'ballboy',
+            ballboyName: 'Budi',
+            slotId: 'ballboy-slot',
+            price: 45000,
+            date: sessions[0].date,
+            timeSlot: sessions[0].timeSlot,
+            startAt: sessions[0].startAt,
+            endAt: sessions[0].endAt,
+            courtId: sessions[0].courtId,
+            courtName: sessions[0].courtName,
+            courtSlotId: sessions[0].slotId,
+            courtSport: sessions[0].sport
+          })
+        }
+      >
+        Pilih Ballboy
+      </button>
     </section>
   )
 }));
@@ -115,24 +143,15 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-it('shows coach choices on the services page and submits equipment for booked sessions', () => {
+it('shows coach and ballboy choices without equipment or inventory availability requests', () => {
   render(<BookingAddOns />);
-  expect(screen.getAllByText('Racket')).toHaveLength(1);
   expect(screen.getByRole('region', { name: 'Pilihan coach' })).toBeInTheDocument();
-  expect(mocks.queries.mock.calls.every(([key]) => key.includes('inventory'))).toBe(true);
-  fireEvent.click(screen.getByRole('button', { name: 'Tambah Racket' }));
-  expect(useBookingStore.getState().selectedInventories).toHaveLength(3);
+  expect(screen.getByRole('region', { name: 'Pilihan ballboy' })).toBeInTheDocument();
+  expect(screen.queryByRole('region', { name: 'Equipment' })).not.toBeInTheDocument();
+  expect(screen.queryByText('Racket')).not.toBeInTheDocument();
+  expect(mocks.queries).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }));
-  const payload = mocks.mutate.mock.calls[0][0];
-  expect(payload.inventories).toEqual(
-    [19, 20, 21].map((hour) => ({
-      inventoryId: 'racket',
-      quantity: 1,
-      courtSlotId: `slot-${hour}`
-    }))
-  );
-  expect(payload).not.toHaveProperty('coachSlots');
-  expect(payload).not.toHaveProperty('ballboySlots');
+  expect(mocks.mutate.mock.calls[0][0]).not.toHaveProperty('inventories');
 });
 
 it('cleans retired items from the persisted cart', () => {
@@ -141,7 +160,9 @@ it('cleans retired items from the persisted cart', () => {
     selectedBallboys: [{ ballboyId: 'old' }] as any,
     coachTotal: 100000,
     ballboyTotal: 50000,
-    coachDescription: 'old note'
+    coachDescription: 'old note',
+    selectedInventories: [{ inventoryId: 'racket', quantity: 2, price: 100000 }] as any,
+    inventoryTotal: 100000
   });
   render(<BookingAddOns />);
   expect(useBookingStore.getState()).toMatchObject({
@@ -149,31 +170,23 @@ it('cleans retired items from the persisted cart', () => {
     selectedBallboys: [],
     coachTotal: 0,
     ballboyTotal: 0,
-    coachDescription: null
+    coachDescription: null,
+    selectedInventories: [],
+    inventoryTotal: 0
   });
 });
 
-it('books equipment by date without a time picker', () => {
+it('requires a court booking and cannot confirm a persisted equipment-only cart', () => {
   useBookingStore.getState().setBookingItems([]);
-  render(<BookingAddOns />);
-  expect(screen.getByText('Equipment booking')).toBeInTheDocument();
-  expect(screen.queryByRole('combobox', { name: 'Time' })).not.toBeInTheDocument();
-  expect(screen.getByRole('combobox', { name: 'Sport' })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Tambah Racket' }));
-  const selection = useBookingStore.getState().selectedInventories[0];
-  expect(selection.quantity).toBe(1);
-  expect(new Date(selection.endAt!).getTime() - new Date(selection.startAt!).getTime()).toBe(
-    86400000
-  );
-  fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }));
-  expect(mocks.mutate.mock.calls[0][0].inventories[0]).toMatchObject({
-    inventoryId: 'racket',
-    quantity: 1,
-    startAt: selection.startAt,
-    endAt: selection.endAt
+  useBookingStore.setState({
+    selectedInventories: [{ inventoryId: 'racket', quantity: 1, price: 50000 }] as any,
+    inventoryTotal: 50000
   });
-
-  expect(screen.queryByText('Select Date & Time for Add-Ons')).not.toBeInTheDocument();
+  render(<BookingAddOns />);
+  expect(screen.getByText(/Pilih lapangan dan jam bermain terlebih dahulu/)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Konfirmasi Booking' })).toBeDisabled();
+  expect(useBookingStore.getState().selectedInventories).toEqual([]);
+  expect(mocks.mutate).not.toHaveBeenCalled();
 });
 
 it('checks coach availability then confirms courts and coach together with customer and note', async () => {
@@ -192,6 +205,7 @@ it('checks coach availability then confirms courts and coach together with custo
       userId: 'customer',
       courtSlots: ['slot-19', 'slot-20', 'slot-21'],
       coachSlots: ['coach-slot'],
+      coachGroups: [{ slotId: 'coach-slot', coachingGroupId: 'academy' }],
       totalHours: 3,
       adminNote: 'Catatan admin',
       useMembership: false
@@ -263,3 +277,44 @@ it('checks the court booking cutoff again on the services page before confirmati
   expect(mocks.mutate).not.toHaveBeenCalled();
   expect(useBookingStore.getState().bookingItems).toHaveLength(3);
 });
+
+it('excludes persisted equipment from displayed totals and the submitted booking', () => {
+  useBookingStore.setState({
+    selectedInventories: [{ inventoryId: 'racket', quantity: 2, price: 100000 }] as any,
+    inventoryTotal: 100000
+  });
+  render(<BookingAddOns />);
+  fireEvent.click(screen.getByRole('button', { name: 'Pilih Coach A' }));
+  expect(mocks.summary.totalAmount).toBe(500000);
+  expect(mocks.summary.selectedInventories).toBeUndefined();
+  expect(useBookingStore.getState().inventoryTotal).toBe(0);
+});
+
+it.each(['PADEL', 'TENNIS'] as const)(
+  'confirms a %s booking with an optional ballboy and no coach',
+  async (sport) => {
+    useBookingStore.setState({
+      bookingItems: useBookingStore.getState().bookingItems.map((item) => ({ ...item, sport }))
+    });
+    mocks.availability.mockResolvedValue({
+      data: { data: [{ slotId: 'ballboy-slot', price: 45000 }] }
+    });
+    render(<BookingAddOns />);
+    fireEvent.click(screen.getByRole('button', { name: 'Pilih Ballboy' }));
+    expect(mocks.summary.ballboyTotal).toBe(45000);
+    expect(mocks.summary.totalAmount).toBe(345000);
+    await act(async () =>
+      fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }))
+    );
+    expect(mocks.availability).toHaveBeenCalledWith(
+      '/ballboy/availability',
+      expect.objectContaining({ params: expect.objectContaining({ courtSport: sport }) })
+    );
+    expect(mocks.mutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ballboySlots: [{ slotId: 'ballboy-slot', courtSlotId: 'slot-19' }]
+      })
+    );
+    expect(mocks.mutate.mock.calls[0][0]).not.toHaveProperty('coachSlots');
+  }
+);

@@ -55,6 +55,7 @@ function mount(groupId?: string) {
 }
 beforeEach(() => {
   vi.clearAllMocks();
+  HTMLElement.prototype.scrollIntoView = vi.fn();
   mocks.kind = 'COACH';
   mocks.list.mockResolvedValue(people);
   mocks.groups.mockResolvedValue([]);
@@ -180,4 +181,20 @@ it('prevents adding a member when the group is inactive or unavailable in the br
   mount('northwest');
   await waitFor(() => expect(mocks.groups).toHaveBeenCalled());
   expect(screen.getByRole('button', { name: 'Tambah Coach' })).toBeDisabled();
+});
+
+it('lets admins set a ballboy profile to Padel instead of forcing Tennis', async () => {
+  mocks.kind = 'BALLBOY';
+  mount();
+  const edit = await screen.findByRole('button', { name: 'Edit profil Ballboy Ibnu' });
+  fireEvent.click(edit);
+  fireEvent.click(screen.getByRole('combobox', { name: 'Olahraga' }));
+  fireEvent.click(await screen.findByRole('option', { name: 'Padel' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Simpan profil' }));
+  await waitFor(() =>
+    expect(mocks.save).toHaveBeenCalledWith(
+      'ballboy',
+      expect.objectContaining({ kind: 'BALLBOY', coachType: 'PADEL' })
+    )
+  );
 });

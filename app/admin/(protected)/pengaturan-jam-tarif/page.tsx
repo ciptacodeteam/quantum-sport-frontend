@@ -45,6 +45,7 @@ function TariffEditor({ rules, sport }: { rules: TariffRule[]; sport: 'PADEL' | 
   const [bands, setBands] = useState<TariffBands>(active);
   const [happyCoachDiscount, setHappyCoachDiscount] = useState(active.happyCoachDiscount ?? 0);
   const [peakCoachDiscount, setPeakCoachDiscount] = useState(active.peakCoachDiscount ?? 0);
+  const [focusedDiscount, setFocusedDiscount] = useState<string | null>(null);
   const [effectiveFrom, setEffectiveFrom] = useState(today);
   const client = useQueryClient();
   const mutation = useMutation({
@@ -192,18 +193,26 @@ function TariffEditor({ rules, sport }: { rules: TariffRule[]; sport: 'PADEL' | 
               ).map(([id, label, value, setValue]) => (
                 <Field key={id}>
                   <FieldLabel htmlFor={id}>{label}</FieldLabel>
-                  <Input
-                    id={id}
-                    type="number"
-                    min={0}
-                    max={2147483647}
-                    step={1}
-                    required
-                    value={value}
-                    onChange={(event) =>
-                      setValue(event.target.value === '' ? 0 : Number(event.target.value))
-                    }
-                  />
+                  <div className="relative">
+                    <span className="text-muted-foreground pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm">
+                      Rp
+                    </span>
+                    <Input
+                      className="[appearance:textfield] pl-10 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                      onFocus={() => setFocusedDiscount(id)}
+                      onBlur={() => setFocusedDiscount(null)}
+                      id={id}
+                      type="number"
+                      min={0}
+                      max={2147483647}
+                      step={1}
+                      required
+                      value={focusedDiscount === id && value === 0 ? '' : value}
+                      onChange={(event) =>
+                        setValue(event.target.value === '' ? 0 : Number(event.target.value))
+                      }
+                    />
+                  </div>
                 </Field>
               ))}
             </div>
