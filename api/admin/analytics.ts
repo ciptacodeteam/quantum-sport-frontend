@@ -1,4 +1,28 @@
 import { adminApi } from '@/lib/adminApi';
+import type { ServiceIncomeFilters, ServiceIncomeReport } from '@/types/service-income';
+
+export async function getServiceIncomeApi(
+  startDate: string,
+  endDate: string,
+  filters: ServiceIncomeFilters = {}
+): Promise<ServiceIncomeReport> {
+  const response = await adminApi.get('/analytics/coach-ballboy-income', {
+    params: { startDate, endDate, ...filters }
+  });
+  return response.data.data;
+}
+
+export async function exportServiceIncomeApi(
+  startDate: string,
+  endDate: string,
+  filters: ServiceIncomeFilters = {}
+) {
+  const response = await adminApi.get('/analytics/coach-ballboy-income/export', {
+    params: { startDate, endDate, ...filters },
+    responseType: 'blob'
+  });
+  return response.data as Blob;
+}
 import { mergedQueryParamUrl } from '@/lib/utils';
 import type { SearchParamsData } from '@/types';
 

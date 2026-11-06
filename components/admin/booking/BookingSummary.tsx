@@ -151,6 +151,7 @@ export interface BookingSummaryProps {
   /** Display options */
   /** Show customer selection UI (default: true) */
   showCustomerSelection?: boolean;
+  customerOptional?: boolean;
   /** Show membership information (default: true) */
   showMembershipInfo?: boolean;
   /** Show add-ons section (coaches, inventory) (default: true) */
@@ -230,6 +231,7 @@ export default function BookingSummary({
   primaryAction,
   secondaryActions = [],
   showCustomerSelection = true,
+  customerOptional = false,
   showMembershipInfo = true,
   showAddOns = true,
   showCourtBookings = true,
@@ -391,7 +393,9 @@ export default function BookingSummary({
           {/* Customer Selection */}
           {showCustomerSelection && (
             <div className="space-y-2">
-              <label className="text-sm font-medium">Pilih Pelanggan</label>
+              <label className="text-sm font-medium">
+                {customerOptional ? 'Pelanggan / penanggung jawab (opsional)' : 'Pilih Pelanggan'}
+              </label>
               <div className="flex items-center gap-2">
                 <div className="min-w-0 flex-1">
                   <Popover

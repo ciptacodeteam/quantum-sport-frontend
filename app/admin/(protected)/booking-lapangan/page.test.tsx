@@ -144,6 +144,35 @@ it('preserves the existing regular booking route', () => {
   expect(fixtures.mutate).not.toHaveBeenCalled();
   expect(fixtures.push).toHaveBeenCalledWith('/admin/booking-add-ons?courtSport=PADEL');
 });
+
+it.each([
+  ['Training Coach', 'COACH_TRAINING', 'Nama coach'],
+  ['Event', 'EVENT', 'Nama event']
+])('allows %s without selecting a customer or walk-in', async (label, purpose, fieldLabel) => {
+  render(<BookingLapangan />);
+  fireEvent.keyDown(screen.getByRole('combobox', { name: 'Jenis booking' }), { key: 'Enter' });
+  fireEvent.click(await screen.findByRole('option', { name: label }));
+  fireEvent.change(screen.getByLabelText(fieldLabel), { target: { value: 'Latihan atau event' } });
+  fireEvent.click(screen.getByRole('button', { name: /Court A/ }));
+  fireEvent.click(screen.getByRole('button', { name: '12:00' }));
+  fireEvent.click(screen.getByRole('button', { name: /Add to Booking/ }));
+  expect(screen.getByRole('button', { name: 'Simpan Booking' })).toBeEnabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Simpan Booking' }));
+  expect(fixtures.mutate).toHaveBeenCalledWith({
+    purpose,
+    activityName: 'Latihan atau event',
+    courtSlots: ['slot-court-a']
+  });
+  expect(useBookingStore.getState().selectedCustomerId).toBeNull();
+});
+
+it('still requires a customer for regular bookings', () => {
+  render(<BookingLapangan />);
+  fireEvent.click(screen.getByRole('button', { name: /Court A/ }));
+  fireEvent.click(screen.getByRole('button', { name: '12:00' }));
+  fireEvent.click(screen.getByRole('button', { name: /Add to Booking/ }));
+  expect(screen.getByRole('button', { name: 'Tambah Layanan' })).toBeDisabled();
+});
 afterEach(() => {
   cleanup();
   vi.useRealTimers();

@@ -140,7 +140,7 @@ const OnGoingBookingScheduleSection = () => {
                       <TableCell className="py-4 font-medium">
                         {isInternalBooking(item.booking)
                           ? `${bookingPurposeLabel(item.booking.purpose)} — ${item.booking.activityName || ''}`
-                          : item.user.name}
+                          : item.user?.name || 'Tanpa pelanggan'}
                       </TableCell>
                       <TableCell className="max-w-60 whitespace-normal">{services}</TableCell>
                       <TableCell>

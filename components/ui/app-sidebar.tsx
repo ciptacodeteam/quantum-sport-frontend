@@ -55,6 +55,10 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
           url: '/admin/analytics/income-by-source'
         },
         {
+          title: 'Pendapatan Coach & Ballboy',
+          url: '/admin/analytics/coach-ballboy-income'
+        },
+        {
           title: 'Payment Methods',
           url: '/admin/analytics/payment-methods'
         },

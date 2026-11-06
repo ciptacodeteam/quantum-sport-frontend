@@ -424,7 +424,7 @@ export type Booking = {
   activityName?: string | null;
   serviceForBookingId?: string | null;
   id: string;
-  userId: string;
+  userId: string | null;
   status: BookingStatus;
   totalPrice: number;
   processingFee: number;
@@ -441,7 +441,7 @@ export type Booking = {
   membershipUserId?: string | null;
   membershipSessionsUsed?: number;
 
-  user?: UserProfile;
+  user?: UserProfile | null;
   cashier?: Cashier;
   details?: BookingDetail[];
   inventories?: Inventory[] | BookingInventory[];
@@ -669,7 +669,7 @@ export type OngoingBookingItem = {
     purpose?: 'REGULAR' | 'COACH_TRAINING' | 'EVENT';
     activityName?: string | null;
     id: string;
-    userId: string;
+    userId: string | null;
     status: string;
     totalPrice: number;
     processingFee: number;
@@ -681,7 +681,7 @@ export type OngoingBookingItem = {
     email: string | null;
     phone: string;
     image: string | null;
-  };
+  } | null;
   schedule: OngoingBookingSchedule;
   courts: OngoingBookingCourt[];
   coaches: OngoingBookingCoach[];

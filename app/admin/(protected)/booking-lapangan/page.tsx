@@ -713,7 +713,7 @@ export default function BookingLapangan() {
       toast.error('Ada slot yang melewati batas pemesanan 15 menit. Silakan pilih ulang.');
       return;
     }
-    if (!localCustomerId && !(storeWalkInName && storeWalkInPhone)) {
+    if (!internalBooking && !localCustomerId && !(storeWalkInName && storeWalkInPhone)) {
       toast.error('Silakan pilih pelanggan atau isi data walk-in terlebih dahulu');
       return;
     }
@@ -743,7 +743,9 @@ export default function BookingLapangan() {
         courtSlots,
         ...(localCustomerId
           ? { userId: localCustomerId }
-          : { name: storeWalkInName!, phone: storeWalkInPhone! }),
+          : storeWalkInName && storeWalkInPhone
+            ? { name: storeWalkInName, phone: storeWalkInPhone }
+            : {}),
         ...(bookingAdminNote ? { adminNote: bookingAdminNote } : {})
       });
       return;
@@ -1295,6 +1297,7 @@ export default function BookingLapangan() {
 
           {/* Booking Summary - Responsive */}
           <BookingSummary
+            customerOptional={internalBooking}
             bookingControls={
               <section className="space-y-3" aria-label="Jenis booking">
                 <div className="space-y-2">
@@ -1337,7 +1340,7 @@ export default function BookingLapangan() {
                     <p className="text-muted-foreground text-xs">
                       Tanpa pembayaran dan tidak masuk revenue. Slot yang dibooking tidak tersedia
                       untuk user maupun admin. Pelanggan atau walk-in di atas dicatat sebagai
-                      penanggung jawab.
+                      penanggung jawab opsional; boleh dikosongkan.
                     </p>
                   </>
                 )}
@@ -1502,7 +1505,7 @@ export default function BookingLapangan() {
               onClick: handleAddServices,
               loading: internalBookingMutation.isPending,
               disabled:
-                (!localCustomerId && !(storeWalkInName && storeWalkInPhone)) ||
+                (!internalBooking && !localCustomerId && !(storeWalkInName && storeWalkInPhone)) ||
                 (internalBooking && !activityName.trim()) ||
                 bookings.length === 0
             }}
