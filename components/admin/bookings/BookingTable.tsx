@@ -145,11 +145,7 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
         header: 'Invoice',
         cell: (info) =>
           isInternalBooking(info.row.original) ? (
-            <div className="min-w-44 space-y-1">
-              <Badge variant="outline">{bookingPurposeLabel(info.row.original.purpose)}</Badge>
-              <p className="text-sm">{info.row.original.activityName}</p>
-              <p className="text-muted-foreground text-xs">Tanpa pembayaran</p>
-            </div>
+            <Badge variant="outline">{bookingPurposeLabel(info.row.original.purpose)}</Badge>
           ) : (
             <div className="flex min-w-44 items-center gap-2">
               <span className="font-mono text-xs" title={info.getValue() || undefined}>

@@ -66,7 +66,7 @@ export default function CoachBallboyIncomePage() {
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <AppSectionHeader
-        title="Pendapatan Coach & Ballboy"
+        title="Income Layanan"
         description="Rekap pembayaran jasa dan hak pendapatan 100% untuk masing-masing club."
         className="mb-0 gap-4 pb-0 sm:items-center"
       >

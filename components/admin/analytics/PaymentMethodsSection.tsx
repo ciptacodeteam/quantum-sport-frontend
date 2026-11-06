@@ -1,10 +1,19 @@
 'use client';
 
-import { format } from 'date-fns';
+import { useState } from 'react';
 import Image from 'next/image';
 import { IconCreditCard, IconReceiptTax, IconTrendingUp, IconUsers } from '@tabler/icons-react';
 
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription
+} from '@/components/ui/dialog';
+import IncomeTransactionTable, { type IncomeTransaction } from './IncomeTransactionTable';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,6 +25,7 @@ interface PaymentMethodAnalytics {
   total: number;
   processingFee: number;
   percentage: number;
+  transactions?: IncomeTransaction[];
 }
 
 interface PaymentMethodsSectionProps {
@@ -36,6 +46,7 @@ interface PaymentMethodsSectionProps {
 }
 
 export default function PaymentMethodsSection({ data, isLoading }: PaymentMethodsSectionProps) {
+  const [selectedMethod, setSelectedMethod] = useState<string | null>(null);
   if (isLoading) {
     return (
       <div className="flex flex-col gap-8" role="status" aria-label="Loading payment analytics">
@@ -86,6 +97,16 @@ export default function PaymentMethodsSection({ data, isLoading }: PaymentMethod
   const feePercentage = totalAmount > 0 ? (totalFees / totalAmount) * 100 : 0;
   const sortedMethods = [...(data.methods ?? [])].sort((a, b) => b.total - a.total);
   const methodCount = summary.methodCount ?? sortedMethods.length;
+  const selected = sortedMethods.find(
+    (method) => (method.method.id ?? 'unknown') === selectedMethod
+  );
+  const dateLabel = (value: string) =>
+    new Intl.DateTimeFormat('id-ID', {
+      timeZone: 'Asia/Jakarta',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    }).format(new Date(value));
   const stats = [
     {
       label: 'Gross Revenue',
@@ -149,23 +170,23 @@ export default function PaymentMethodsSection({ data, isLoading }: PaymentMethod
         ))}
       </section>
 
-      <Card className="gap-6 py-6 sm:py-8">
-        <CardHeader className="flex flex-col gap-4 px-6 sm:flex-row sm:items-start sm:justify-between sm:px-8">
+      <section className="space-y-5" aria-label="Payment Methods">
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex flex-col gap-2">
-            <CardTitle className="text-base leading-snug">Payment Methods</CardTitle>
-            <CardDescription className="text-xs leading-relaxed sm:text-sm">
+            <h3 className="text-base leading-snug font-semibold">Payment Methods</h3>
+            <p className="text-muted-foreground text-xs leading-relaxed sm:text-sm">
               {data.dateRange?.startDate && data.dateRange?.endDate
-                ? `${format(new Date(data.dateRange.startDate), 'dd MMM yyyy')} — ${format(new Date(data.dateRange.endDate), 'dd MMM yyyy')}`
+                ? `${dateLabel(data.dateRange.startDate)} — ${dateLabel(data.dateRange.endDate)} WIB`
                 : 'Revenue and fees by payment method'}
-            </CardDescription>
+            </p>
           </div>
           {sortedMethods.length > 0 && (
             <Badge variant="secondary" className="self-start px-3 py-1">
               {methodCount} payment method{methodCount === 1 ? '' : 's'}
             </Badge>
           )}
-        </CardHeader>
-        <CardContent className="px-6 sm:px-8">
+        </header>
+        <div>
           {sortedMethods.length === 0 ? (
             <div className="bg-muted/30 flex min-h-56 flex-col items-center justify-center gap-4 rounded-xl border border-dashed px-6 py-10 text-center">
               <div className="bg-background rounded-2xl border p-3">
@@ -195,7 +216,7 @@ export default function PaymentMethodsSection({ data, isLoading }: PaymentMethod
                   <article
                     key={method.method.id ?? 'unknown'}
                     aria-label={method.method.name}
-                    className="flex min-w-0 flex-col gap-6 rounded-xl border p-5 sm:p-6"
+                    className="bg-card text-card-foreground flex min-w-0 flex-col gap-6 rounded-xl border p-5 sm:p-6"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex min-w-0 items-center gap-3">
@@ -251,13 +272,50 @@ export default function PaymentMethodsSection({ data, isLoading }: PaymentMethod
                         </div>
                       ))}
                     </dl>
+                    <Button
+                      variant="outline"
+                      className="w-full sm:w-auto sm:self-end"
+                      aria-label={`Lihat detail invoice ${method.method.name}`}
+                      onClick={() => setSelectedMethod(method.method.id ?? 'unknown')}
+                    >
+                      Lihat detail invoice
+                    </Button>
                   </article>
                 );
               })}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </section>
+
+      <Dialog
+        open={!!selected}
+        onOpenChange={(open) => {
+          if (!open) setSelectedMethod(null);
+        }}
+      >
+        {selected && (
+          <DialogContent className="flex max-h-[90dvh] max-w-[calc(100vw-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-6xl">
+            <DialogHeader className="shrink-0 gap-2 border-b px-5 py-5 pr-12 sm:px-6">
+              <DialogTitle>Invoice · {selected.method.name}</DialogTitle>
+              <DialogDescription>
+                {selected.count} invoice · Gross {formatCurrency(selected.total)} · Biaya proses{' '}
+                {formatCurrency(selected.processingFee)} · Net{' '}
+                {formatCurrency(selected.total - selected.processingFee)}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="min-h-0 overflow-y-auto px-5 py-5 sm:px-6">
+              <IncomeTransactionTable
+                key={selected.method.id ?? 'unknown'}
+                embedded
+                title="Daftar invoice"
+                description="Invoice lunas dengan metode pembayaran ini, sesuai periode dan cabang pilihan. Klik nomor invoice untuk melihat detail pesanan."
+                transactions={selected.transactions}
+              />
+            </div>
+          </DialogContent>
+        )}
+      </Dialog>
 
       {sortedMethods.length > 1 && (
         <Card className="gap-6 py-6 sm:py-8">

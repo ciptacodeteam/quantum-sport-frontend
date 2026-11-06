@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, expect, it } from 'vitest';
 import PaymentMethodsSection from './PaymentMethodsSection';
 
@@ -65,4 +65,68 @@ it('keeps loading content separate from the empty state', () => {
   render(<PaymentMethodsSection data={undefined} isLoading />);
   expect(screen.getByRole('status', { name: 'Loading payment analytics' })).toBeInTheDocument();
   expect(screen.queryByText('No payments in this period')).not.toBeInTheDocument();
+});
+
+it('opens only the selected method invoices with matching amounts and invoice links', () => {
+  const transaction = (id: string, name: string, amount: number, fee: number) => ({
+    id,
+    invoiceNumber: `INV-${id}`,
+    customerName: `Customer ${id}`,
+    branchName: 'Cemara',
+    source: 'Cashier',
+    paymentMethod: name,
+    paidAt: '2026-11-05T17:30:00Z',
+    amount,
+    processingFee: fee,
+    netAmount: amount - fee
+  });
+  render(
+    <PaymentMethodsSection
+      isLoading={false}
+      data={{
+        summary: {
+          totalAmount: 152000,
+          totalProcessingFees: 2000,
+          totalTransactions: 2,
+          methodCount: 2
+        },
+        methods: [
+          {
+            method: { id: 'qris', name: 'QRIS' },
+            total: 102000,
+            processingFee: 2000,
+            count: 1,
+            percentage: 67,
+            transactions: [transaction('qris', 'QRIS', 102000, 2000)]
+          },
+          {
+            method: { id: 'cash', name: 'Cash' },
+            total: 50000,
+            processingFee: 0,
+            count: 1,
+            percentage: 33,
+            transactions: [transaction('cash', 'Cash', 50000, 0)]
+          }
+        ]
+      }}
+    />
+  );
+  const methods = screen.getByRole('region', { name: 'Payment Methods' });
+  expect(methods.closest('[data-slot="card"]')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Lihat detail invoice QRIS' }));
+  const dialog = screen.getByRole('dialog', { name: 'Invoice · QRIS' });
+  expect(within(dialog).getByRole('link', { name: 'INV-qris' })).toHaveAttribute(
+    'href',
+    '/admin/kelola-transaksi/qris'
+  );
+  expect(within(dialog).queryByText('INV-cash')).toBeNull();
+  expect(within(dialog).getByRole('row', { name: /Total periode/ })).toHaveTextContent(
+    /102\.000.*2\.000.*100\.000/
+  );
+  expect(dialog.querySelector('[data-slot="card"]')).toBeNull();
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Lihat detail invoice Cash' }));
+  const cash = screen.getByRole('dialog', { name: 'Invoice · Cash' });
+  expect(within(cash).getByRole('link', { name: 'INV-cash' })).toBeInTheDocument();
+  expect(within(cash).queryByText('INV-qris')).toBeNull();
 });

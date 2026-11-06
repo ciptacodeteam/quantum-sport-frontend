@@ -180,3 +180,17 @@ it('debounces server search, resets the page and forwards supported sorting to t
     order: 'asc'
   });
 });
+
+it.each([
+  ['COACH_TRAINING', 'Training Coach'],
+  ['EVENT', 'Event']
+])('keeps the invoice column concise for %s', (purpose, label) => {
+  render(<BookingTable courtSport="PADEL" />);
+  const column = mocks.table.columns.find((column: any) => column.accessorKey === 'invoice.number');
+  render(
+    column.cell({ row: { original: { purpose, activityName: 'Andi' } }, getValue: () => undefined })
+  );
+  expect(screen.getByText(label, { selector: '[data-slot="badge"]' })).toBeInTheDocument();
+  expect(screen.queryByText('Andi')).toBeNull();
+  expect(screen.queryByText('Tanpa pembayaran')).toBeNull();
+});

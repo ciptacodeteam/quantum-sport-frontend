@@ -41,6 +41,12 @@ export default function BookingDetailsDialog({
   const courtTotal = booking.details?.reduce((sum, detail) => sum + detail.price, 0) || 0;
   const otherCharges = booking.totalPrice - courtTotal;
   const fee = booking.processingFee || 0;
+  const paymentMethod = isInternalBooking(booking)
+    ? 'Tanpa pembayaran'
+    : booking.invoice?.payment?.method?.name ||
+      (booking.membershipUserId && booking.totalPrice === 0
+        ? 'Membership / Value Pack'
+        : 'Belum tersedia');
   const statusLabel =
     status === BookingStatus.HOLD
       ? 'Menunggu'
@@ -93,6 +99,25 @@ export default function BookingDetailsDialog({
               <dd className="text-muted-foreground text-xs">Kasir: {booking.cashier.name}</dd>
             )}
           </div>
+        </dl>
+
+        <dl className="grid grid-cols-1 gap-4 border-t pt-4 sm:grid-cols-2">
+          <div className="space-y-1">
+            <dt className="text-muted-foreground text-xs">Metode pembayaran</dt>
+            <dd className="text-sm font-semibold">{paymentMethod}</dd>
+          </div>
+          {booking.invoice && (
+            <div className="space-y-1">
+              <dt className="text-muted-foreground text-xs">Status pembayaran</dt>
+              <dd className="text-sm">
+                {booking.invoice.status === 'PAID'
+                  ? 'Lunas'
+                  : booking.invoice.status === 'PENDING'
+                    ? 'Menunggu pembayaran'
+                    : booking.invoice.status}
+              </dd>
+            </div>
+          )}
         </dl>
 
         {status === BookingStatus.HOLD && booking.holdExpiresAt && (

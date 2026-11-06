@@ -47,9 +47,15 @@ const paymentTime = (value: string | null) =>
     : '—';
 
 export default function IncomeTransactionTable({
-  transactions
+  transactions,
+  embedded = false,
+  title = 'Rincian transaksi customer',
+  description = 'Invoice lunas yang membentuk angka revenue di atas, berdasarkan tanggal pembayaran (WIB) pada periode dan cabang pilihan. Satu baris untuk satu invoice.'
 }: {
   transactions?: IncomeTransaction[];
+  embedded?: boolean;
+  title?: string;
+  description?: string;
 }) {
   const [search, setSearch] = useState('');
   const [source, setSource] = useState('all');
@@ -75,15 +81,13 @@ export default function IncomeTransactionTable({
     { amount: 0, processingFee: 0, netAmount: 0 }
   );
   const hasFilters = source !== 'all' || term !== '';
+  const Container = embedded ? 'section' : Card;
 
   return (
-    <Card className="gap-5 py-6" id="income-transactions">
-      <CardHeader className="gap-3 px-6 sm:px-8">
-        <CardTitle className="text-base">Rincian transaksi customer</CardTitle>
-        <CardDescription>
-          Invoice lunas yang membentuk angka revenue di atas, berdasarkan tanggal pembayaran (WIB)
-          pada periode dan cabang pilihan. Satu baris untuk satu invoice.
-        </CardDescription>
+    <Container className={embedded ? 'min-w-0 space-y-5' : 'gap-5 py-6'} id="income-transactions">
+      <CardHeader className={embedded ? 'gap-3 px-0' : 'gap-3 px-6 sm:px-8'}>
+        <CardTitle className="text-base">{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
         {transactions && (
           <div className="mt-2 grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px]">
             <SearchInput
@@ -117,7 +121,7 @@ export default function IncomeTransactionTable({
           </div>
         )}
       </CardHeader>
-      <CardContent className="px-6 sm:px-8">
+      <CardContent className={embedded ? 'px-0' : 'px-6 sm:px-8'}>
         {!transactions ? (
           <p className="text-muted-foreground py-6 text-center text-sm">
             Rincian transaksi belum tersedia untuk periode ini.
@@ -247,6 +251,6 @@ export default function IncomeTransactionTable({
           </>
         )}
       </CardContent>
-    </Card>
+    </Container>
   );
 }

@@ -32,7 +32,11 @@ export default function PaymentMethodsPage() {
         <DateRangeInput value={range} onValueChange={(r) => setRange(r ?? undefined)} />
       </AppSectionHeader>
 
-      <PaymentMethodsSection data={paymentData} isLoading={isLoading} />
+      <PaymentMethodsSection
+        key={`${startDate}:${endDate}`}
+        data={paymentData}
+        isLoading={isLoading}
+      />
     </div>
   );
 }
