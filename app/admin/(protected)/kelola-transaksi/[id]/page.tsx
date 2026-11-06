@@ -17,6 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 type SlotTime = { startAt?: string | null; endAt?: string | null };
 type ScheduleRow = {
   key: string;
+  kind?: 'Lapangan' | 'Coach' | 'Ballboy';
   name: string;
   description?: string;
   slot?: SlotTime;
@@ -49,70 +50,85 @@ const bookingLabels: Record<string, string> = {
   CANCELLED: 'Dibatalkan'
 };
 
-function ScheduleTable({ title, rows }: { title: string; rows: ScheduleRow[] }) {
+function ScheduleTable({ rows }: { rows: ScheduleRow[] }) {
   if (!rows.length) return null;
   return (
-    <section className="space-y-3">
-      <h3 className="text-sm font-semibold">{title}</h3>
-      <div className="overflow-x-auto rounded-lg border">
-        <table
-          className="w-full min-w-[580px] text-sm"
-          aria-label={`Jadwal ${title.toLowerCase()}`}
-        >
-          <thead className="bg-muted/40">
-            <tr>
-              {[title, 'Tanggal main', 'Jam main (WIB)', 'Harga'].map((label, index) => (
+    <div className="overflow-x-auto">
+      <table
+        className="w-full min-w-[760px] table-fixed text-sm"
+        aria-label="Jadwal lapangan dan layanan"
+      >
+        <colgroup>
+          <col className="w-28" />
+          <col />
+          <col className="w-44" />
+          <col className="w-40" />
+          <col className="w-40" />
+        </colgroup>
+        <thead className="bg-muted/40 border-b">
+          <tr>
+            {['Jenis', 'Lapangan / layanan', 'Tanggal main', 'Jam (WIB)', 'Harga'].map(
+              (label, index) => (
                 <th
                   key={label}
                   scope="col"
-                  className={`text-muted-foreground px-4 py-3 font-medium ${index === 3 ? 'text-right' : 'text-left'}`}
+                  className={`text-muted-foreground px-5 py-3 text-xs font-medium ${index === 4 ? 'text-right' : 'text-left'}`}
                 >
                   {label}
                 </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {rows.map((row) => {
-              const date = formatScheduleSlotTime(row.slot?.startAt, 'DD MMM YYYY');
-              const endDate = formatScheduleSlotTime(row.slot?.endAt, 'DD MMM YYYY');
-              return (
-                <tr key={row.key}>
-                  <th scope="row" className="px-4 py-4 text-left font-medium">
-                    {row.name}
-                    {row.description && (
-                      <p className="text-muted-foreground mt-1 text-xs font-normal">
-                        {row.description}
-                      </p>
-                    )}
-                  </th>
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    {date}
-                    {endDate !== '-' && endDate !== date ? ` – ${endDate}` : ''}
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap tabular-nums">
-                    {row.slot?.startAt && row.slot?.endAt
-                      ? `${formatScheduleSlotTime(row.slot.startAt)}–${formatScheduleSlotTime(row.slot.endAt)} WIB`
-                      : '—'}
-                  </td>
-                  <td className="px-4 py-4 text-right whitespace-nowrap tabular-nums">
-                    {row.normalPrice != null && row.price > 0 && row.price < row.normalPrice && (
-                      <p className="text-muted-foreground text-xs line-through">
-                        {money(row.normalPrice)}
-                      </p>
-                    )}
-                    <p className="font-medium">{money(row.price)}</p>
-                    {row.valuePack && (
-                      <p className="text-muted-foreground mt-1 text-xs">Menggunakan Value Pack</p>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </section>
+              )
+            )}
+          </tr>
+        </thead>
+        <tbody className="divide-y">
+          {rows.map((row, index) => {
+            const date = formatScheduleSlotTime(row.slot?.startAt, 'DD MMM YYYY');
+            const endDate = formatScheduleSlotTime(row.slot?.endAt, 'DD MMM YYYY');
+            return (
+              <tr key={`${row.kind}-${row.key}-${index}`} className="align-middle">
+                <td className="px-5 py-4">
+                  <Badge variant="outline" className="text-muted-foreground font-normal">
+                    {row.kind}
+                  </Badge>
+                </td>
+                <th scope="row" className="px-5 py-4 text-left font-medium">
+                  <p className="break-words">{row.name}</p>
+                  {row.description && row.description.toLowerCase() !== 'default' && (
+                    <p className="text-muted-foreground mt-1 text-xs font-normal">
+                      {row.description}
+                    </p>
+                  )}
+                </th>
+                <td className="px-5 py-4 text-xs tabular-nums sm:text-sm">
+                  <p className="whitespace-nowrap">{date}</p>
+                  {endDate !== '-' && endDate !== date && (
+                    <p className="text-muted-foreground mt-1 text-xs whitespace-nowrap">
+                      s.d. {endDate}
+                    </p>
+                  )}
+                </td>
+                <td className="px-5 py-4 whitespace-nowrap tabular-nums">
+                  {row.slot?.startAt && row.slot?.endAt
+                    ? `${formatScheduleSlotTime(row.slot.startAt)}–${formatScheduleSlotTime(row.slot.endAt)}`
+                    : '—'}
+                </td>
+                <td className="px-5 py-4 text-right whitespace-nowrap tabular-nums">
+                  {row.normalPrice != null && row.price > 0 && row.price < row.normalPrice && (
+                    <p className="text-muted-foreground mb-0.5 text-xs line-through">
+                      {money(row.normalPrice)}
+                    </p>
+                  )}
+                  <p className="font-semibold">{money(row.price)}</p>
+                  {row.valuePack && (
+                    <p className="text-muted-foreground mt-1 text-xs">Menggunakan Value Pack</p>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -273,28 +289,32 @@ export default function InvoiceDetailPage() {
       </div>
 
       {booking && (
-        <Card className="min-w-0 gap-5 py-6">
-          <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 px-5 sm:px-6">
-            <div className="space-y-2">
-              <CardTitle className="text-base">Jadwal booking</CardTitle>
-              <CardDescription>
-                Tanggal dan jam main dalam WIB, mengikuti jadwal lapangan.
-              </CardDescription>
+        <section aria-labelledby="booking-schedule-title" className="min-w-0 space-y-4">
+          <header className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1.5">
+              <h2 id="booking-schedule-title" className="text-base font-semibold">
+                Jadwal booking
+              </h2>
+              <p className="text-muted-foreground text-sm">
+                Rincian lapangan dan layanan. Semua jam mengikuti WIB.
+              </p>
             </div>
-            <Badge variant="outline">{bookingLabels[booking.status] ?? booking.status}</Badge>
-          </CardHeader>
-          <CardContent className="space-y-6 px-5 sm:px-6">
-            <div className="bg-muted/40 flex flex-wrap justify-between gap-3 rounded-lg px-4 py-3 text-sm">
-              <span className="text-muted-foreground">Nilai booking di luar biaya proses</span>
-              <span className="font-semibold tabular-nums">{money(booking.totalPrice)}</span>
-            </div>
-            <ScheduleTable title="Lapangan" rows={courts} />
-            <ScheduleTable title="Coach" rows={coaches} />
-            <ScheduleTable title="Ballboy" rows={ballboys} />
+            <Badge variant={booking.status === 'CONFIRMED' ? 'lightSuccess' : 'outline'}>
+              {bookingLabels[booking.status] ?? booking.status}
+            </Badge>
+          </header>
+          <div className="bg-card overflow-hidden rounded-xl border">
+            <ScheduleTable
+              rows={[
+                ...courts.map((row) => ({ ...row, kind: 'Lapangan' as const })),
+                ...coaches.map((row) => ({ ...row, kind: 'Coach' as const })),
+                ...ballboys.map((row) => ({ ...row, kind: 'Ballboy' as const }))
+              ]}
+            />
             {booking.inventories?.length > 0 && (
-              <section className="space-y-3">
+              <section className="space-y-3 border-t px-5 py-4">
                 <h3 className="text-sm font-semibold">Inventori</h3>
-                <div className="overflow-x-auto rounded-lg border">
+                <div className="overflow-x-auto">
                   <table className="w-full min-w-[420px] text-sm" aria-label="Rincian inventori">
                     <thead className="bg-muted/40">
                       <tr>
@@ -327,8 +347,17 @@ export default function InvoiceDetailPage() {
                 </div>
               </section>
             )}
-          </CardContent>
-        </Card>
+            <footer className="bg-muted/20 flex flex-wrap items-center justify-between gap-4 border-t px-5 py-4">
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Total nilai booking</p>
+                <p className="text-muted-foreground text-xs">Di luar biaya proses</p>
+              </div>
+              <p className="text-lg font-semibold tracking-tight tabular-nums">
+                {money(booking.totalPrice)}
+              </p>
+            </footer>
+          </div>
+        </section>
       )}
 
       {invoice.classBooking && (

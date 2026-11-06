@@ -61,12 +61,18 @@ it.each([
   for (const section of ['courts', 'coaches', 'ballboys'])
     mocks.invoice.booking[section][0].slot = { startAt, endAt };
   render(<InvoiceDetailPage />);
-  for (const title of ['lapangan', 'coach', 'ballboy']) {
-    const table = screen.getByRole('table', { name: `Jadwal ${title}` });
-    expect(within(table).getByText('14:00–15:00 WIB')).toBeInTheDocument();
-    expect(within(table).getByText('01 Nov 2026')).toBeInTheDocument();
-    expect(table).not.toHaveTextContent('21:00');
+  const table = screen.getByRole('table', { name: 'Jadwal lapangan dan layanan' });
+  for (const [kind, name] of [
+    ['Lapangan', 'Court 1 Tennis'],
+    ['Coach', 'Coach A'],
+    ['Ballboy', 'Ballboy A']
+  ]) {
+    const row = within(table).getByRole('row', { name: new RegExp(`^${kind} ${name}`) });
+    expect(row).toHaveTextContent('14:00–15:00');
+    expect(row).toHaveTextContent('01 Nov 2026');
+    expect(row).not.toHaveTextContent('21:00');
   }
+  expect(within(table).getByRole('columnheader', { name: 'Jam (WIB)' })).toBeInTheDocument();
   expect(screen.getByText('Diterbitkan').parentElement).toHaveTextContent(
     '01 Nov 2026 · 13:46 WIB'
   );
@@ -82,9 +88,11 @@ it('shows both playing dates for a slot crossing midnight', () => {
     endAt: '2026-11-01T00:00:00Z'
   };
   render(<InvoiceDetailPage />);
-  const table = screen.getByRole('table', { name: 'Jadwal lapangan' });
-  expect(table).toHaveTextContent('31 Okt 2026 – 01 Nov 2026');
-  expect(table).toHaveTextContent('23:00–00:00 WIB');
+  const table = screen.getByRole('table', { name: 'Jadwal lapangan dan layanan' });
+  const row = within(table).getByRole('row', { name: /^Lapangan Court 1 Tennis/ });
+  expect(row).toHaveTextContent('31 Okt 2026');
+  expect(row).toHaveTextContent('s.d. 01 Nov 2026');
+  expect(row).toHaveTextContent('23:00–00:00');
 });
 
 it('does not replace missing timestamps with the current time', () => {
@@ -103,10 +111,11 @@ it('shows zero court payment for a value-pack booking and reads the nested packa
     membership: { name: 'Happy Hour Pack', duration: 30, sessions: 10 }
   };
   render(<InvoiceDetailPage />);
-  const table = screen.getByRole('table', { name: 'Jadwal lapangan' });
-  expect(table).toHaveTextContent(/Rp\s*0/);
-  expect(table).not.toHaveTextContent('250.000');
-  expect(within(table).getByText('Menggunakan Value Pack')).toBeInTheDocument();
+  const table = screen.getByRole('table', { name: 'Jadwal lapangan dan layanan' });
+  const row = within(table).getByRole('row', { name: /^Lapangan Court 1 Tennis/ });
+  expect(row).toHaveTextContent(/Rp\s*0/);
+  expect(row).not.toHaveTextContent('250.000');
+  expect(within(row).getByText('Menggunakan Value Pack')).toBeInTheDocument();
   expect(screen.getByText('Happy Hour Pack')).toBeInTheDocument();
 });
 
@@ -116,4 +125,28 @@ it('offers retry for API errors', () => {
   expect(screen.getByRole('alert')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Coba lagi' }));
   expect(mocks.refetch).toHaveBeenCalled();
+});
+
+it('presents courts and services in one aligned table with the booking total below', () => {
+  mocks.invoice.booking.coaches[0].coachType.name = 'Default';
+  mocks.invoice.booking.coaches[0].price = 0;
+  mocks.invoice.booking.courts[0].discountPrice = 150000;
+  mocks.invoice.booking.totalPrice = 200000;
+  render(<InvoiceDetailPage />);
+  const section = screen.getByRole('region', { name: 'Jadwal booking' });
+  expect(within(section).getAllByRole('table')).toHaveLength(1);
+  expect(
+    within(section)
+      .getAllByRole('columnheader')
+      .map((header) => header.textContent)
+  ).toEqual(['Jenis', 'Lapangan / layanan', 'Tanggal main', 'Jam (WIB)', 'Harga']);
+  const table = within(section).getByRole('table');
+  const court = within(table).getByRole('row', { name: /^Lapangan Court 1 Tennis/ });
+  expect(court).toHaveTextContent(/250\.000.*150\.000/);
+  expect(within(table).getByRole('row', { name: /Coach A/ })).toHaveTextContent(/Rp\s*0/);
+  expect(within(section).queryByText('Default')).toBeNull();
+  expect(within(section).getByText('Total nilai booking').closest('footer')).toHaveTextContent(
+    /200\.000/
+  );
+  expect(section.querySelector('[data-slot="card"]')).toBeNull();
 });
