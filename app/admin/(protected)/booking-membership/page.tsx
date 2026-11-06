@@ -369,7 +369,7 @@ const BookingMembershipPage = () => {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="walkInPhone">Nomor Telepon</Label>
+                          <Label htmlFor="walkInPhone">Nomor WhatsApp</Label>
                           <Input
                             id="walkInPhone"
                             placeholder="08xxxxxxxxxx"

@@ -42,15 +42,17 @@ type Props = {
 const LoginForm = ({ onRegisterClick, openVerifyPhoneOtpModal, onLoginSuccess }: Props) => {
   const router = useRouter();
 
+  const storedPhone = usePhoneStore((state) => state.phone);
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      phone: '',
+      phone: storedPhone?.replace(/^\+62/, '') ?? '',
       password: ''
     }
   });
 
   const [isAccountExists, setIsAccountExists] = useState(false);
+  const setRegistrationMode = usePhoneStore((state) => state.setRegistrationMode);
   const setRequestId = usePhoneStore((state) => state.setRequestId);
   const setPhone = usePhoneStore((state) => state.setPhone);
 
@@ -63,6 +65,7 @@ const LoginForm = ({ onRegisterClick, openVerifyPhoneOtpModal, onLoginSuccess }:
           setIsAccountExists(true);
         } else {
           setPhone(res?.data?.phone || '');
+          setRegistrationMode(res?.data?.nextAction === 'ACTIVATE' ? 'activate' : 'register');
           onRegisterClick?.();
         }
       },
@@ -124,7 +127,14 @@ const LoginForm = ({ onRegisterClick, openVerifyPhoneOtpModal, onLoginSuccess }:
         onLoginSuccess?.();
       },
       onError: (err) => {
-        console.error('Login error:', err);
+        const details = (err as { errors?: { nextAction?: string; phone?: string } })?.errors;
+        if (details?.nextAction === 'ACTIVATE') {
+          setPhone(details.phone ?? formatPhone(form.getValues('phone')));
+          setRegistrationMode('activate');
+          setIsAccountExists(false);
+          onRegisterClick?.();
+          return;
+        }
         mapApiErrorsToForm(form, err);
       }
     })
@@ -174,7 +184,7 @@ const LoginForm = ({ onRegisterClick, openVerifyPhoneOtpModal, onLoginSuccess }:
             description="Log in to book your court and get back in the game."
           />
           <Field>
-            <FieldLabel htmlFor="phone">WhatsApp Number</FieldLabel>
+            <FieldLabel htmlFor="phone">Nomor WhatsApp</FieldLabel>
             <InputGroup>
               <InputGroupText className="px-3">+62</InputGroupText>
               <Input
@@ -243,7 +253,10 @@ const LoginForm = ({ onRegisterClick, openVerifyPhoneOtpModal, onLoginSuccess }:
               <button
                 type="button"
                 className="cursor-pointer font-medium text-[#ad422b] underline underline-offset-4 hover:text-black"
-                onClick={onRegisterClick}
+                onClick={() => {
+                  setRegistrationMode('register');
+                  onRegisterClick?.();
+                }}
               >
                 Register
               </button>

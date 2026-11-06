@@ -7,19 +7,15 @@ import { Field, FieldError, FieldGroup, FieldSet } from '@/components/ui/field';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { DialogTitle } from '@/components/ui/dialog';
 import { formatPhone } from '@/lib/utils';
-import { registerMutationOptions, verifyPhoneOtpMutationOptions } from '@/mutations/auth';
-import { forgotPasswordApi, verifyResetPasswordOtpApi } from '@/api/auth';
+import { verifyPhoneOtpMutationOptions } from '@/mutations/auth';
+import { forgotPasswordApi, verifyResetPasswordOtpApi, verifyRegistrationOtpApi } from '@/api/auth';
 import { sendPhoneOtpApi, verifyPhoneOtpApi } from '@/api/phone';
 import { sendPhoneOtpMutationOptions } from '@/mutations/phone';
-import { profileQueryOptions } from '@/queries/profile';
-import useAuthRedirectStore from '@/stores/useAuthRedirectStore';
-import useAuthStore from '@/stores/useAuthStore';
 import { usePhoneStore } from '@/stores/usePhoneStore';
 import { useRegisterStore } from '@/stores/useRegisterStore';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { Phone } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { useCallback } from 'react';
 import { Controller, type SubmitHandler, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -42,6 +38,7 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
   const requestId = usePhoneStore((state) => state.requestId);
   const setRequestId = usePhoneStore((state) => state.setRequestId);
   const phone = usePhoneStore((state) => state.phone);
+  const setRegistrationToken = usePhoneStore((state) => state.setRegistrationToken);
   const setResetToken = usePhoneStore((state) => state.setResetToken);
 
   const form = useForm({
@@ -52,37 +49,6 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
       otp: ''
     }
   });
-
-  const router = useRouter();
-
-  const queryClient = useQueryClient();
-  const setAuth = useAuthStore((state) => state.setAuth);
-  const consumeRedirectPath = useAuthRedirectStore((state) => state.consumeRedirectPath);
-
-  const clearRegisterData = useRegisterStore((state) => state.clear);
-
-  const { mutate: mutateRegister, isPending: isRegisterPending } = useMutation(
-    registerMutationOptions({
-      onSuccess: (res) => {
-        const token = res?.data?.token;
-
-        if (!token && res?.success !== true) {
-          toast.error('Login failed: No token received.');
-          return;
-        }
-
-        setAuth(true);
-        const redirectPath = consumeRedirectPath();
-        router.push(redirectPath ?? '/');
-        clearRegisterData();
-        queryClient.invalidateQueries({ queryKey: profileQueryOptions.queryKey });
-        onVerifySuccess?.();
-      },
-      onError: (err) => {
-        mapApiErrorsToForm(form, err);
-      }
-    })
-  );
 
   const { mutate: resendOtp, isPending: isResendOtpPending } = useMutation({
     ...sendPhoneOtpMutationOptions({
@@ -103,6 +69,14 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
   const { mutate, isPending } = useMutation({
     ...verifyPhoneOtpMutationOptions({
       onSuccess: (res) => {
+        if (type === 'register') {
+          const token = res?.data?.registrationToken;
+          if (!token) {
+            toast.error('Verifikasi gagal. Silakan minta OTP baru.');
+            return;
+          }
+          setRegistrationToken(token);
+        }
         if (type === 'reset') {
           const resetToken = res?.data?.resetToken;
           if (!resetToken) {
@@ -118,7 +92,12 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
         mapApiErrorsToForm(form, err);
       }
     }),
-    mutationFn: type === 'reset' ? verifyResetPasswordOtpApi : verifyPhoneOtpApi
+    mutationFn:
+      type === 'reset'
+        ? verifyResetPasswordOtpApi
+        : type === 'register'
+          ? verifyRegistrationOtpApi
+          : verifyPhoneOtpApi
   });
 
   const registerData = useRegisterStore((state) => state.registerData);
@@ -142,22 +121,9 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
 
       const formatedPhone = formatPhone(data.phone);
 
-      if (type === 'register') {
-        mutateRegister({
-          ...registerData,
-          phone: formatedPhone,
-          code: data.otp,
-          requestId: data.requestId
-        });
-      } else {
-        mutate({
-          phone: formatedPhone,
-          code: data.otp,
-          requestId: data.requestId
-        });
-      }
+      mutate({ phone: formatedPhone, code: data.otp, requestId: data.requestId });
     },
-    [mutateRegister, registerData, mutate, type]
+    [registerData, mutate, type]
   );
 
   const handleResendOtp = () => {
@@ -166,7 +132,10 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
       return;
     }
 
-    resendOtp({ phone: formatPhone(phone) });
+    resendOtp({
+      phone: formatPhone(phone),
+      ...(type === 'register' ? { purpose: 'REGISTER' } : {})
+    });
   };
 
   const maxLength = 4;
@@ -214,7 +183,7 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
                 name="otp"
                 control={form.control}
                 defaultValue=""
-                disabled={isRegisterPending || isPending || isResendOtpPending}
+                disabled={isPending || isResendOtpPending}
                 render={({ field }) => (
                   <InputOTP
                     id="otp"
@@ -227,7 +196,7 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
                     value={field.value}
                     onChange={(value) => {
                       field.onChange(value);
-                      if (value.length === maxLength && !isPending && !isRegisterPending) {
+                      if (value.length === maxLength && !isPending) {
                         form.handleSubmit(onSubmit)();
                       }
                     }}
@@ -244,7 +213,7 @@ const VerifyPhoneOtpForm = ({ onVerifySuccess, type = 'global' }: Props) => {
               <FieldError className="mt-3 text-center">
                 {form.formState.errors.otp?.message}
               </FieldError>
-              {(isPending || isRegisterPending) && (
+              {isPending && (
                 <p role="status" className="mt-3 text-xs text-black/50">
                   Memverifikasi kode...
                 </p>

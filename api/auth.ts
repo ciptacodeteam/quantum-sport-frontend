@@ -16,6 +16,11 @@ export async function sendLoginOtpApi(payload) {
   return data;
 }
 
+export async function verifyRegistrationOtpApi(payload) {
+  const { data } = await api.post('/auth/verify-registration-otp', payload);
+  return data;
+}
+
 export async function registerApi(payload) {
   const { data } = await api.post('/auth/register', payload);
   return data;

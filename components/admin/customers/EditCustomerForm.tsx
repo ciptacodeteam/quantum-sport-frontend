@@ -105,7 +105,7 @@ const EditCustomerForm = ({ customerId }: Props) => {
             <FieldError>{form.formState.errors.name?.message}</FieldError>
           </Field>
           <Field>
-            <FieldLabel htmlFor="phone">No. Telepon</FieldLabel>
+            <FieldLabel htmlFor="phone">Nomor WhatsApp</FieldLabel>
             <InputGroup>
               <InputGroupText className="px-3">+62</InputGroupText>
               <Input

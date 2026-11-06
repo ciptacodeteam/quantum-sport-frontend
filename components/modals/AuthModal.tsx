@@ -9,6 +9,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import LoginForm from '../forms/auth/LoginForm';
 import RegisterForm from '../forms/auth/RegisterForm';
+import RegistrationPasswordForm from '../forms/auth/RegistrationPasswordForm';
 import ResetPasswordForm from '../forms/auth/ResetPasswordForm';
 import VerifyPhoneOtpForm from '../forms/auth/VerifyPhoneOtpForm';
 import { Dialog, DialogContent } from '../ui/dialog';
@@ -22,6 +23,7 @@ const AuthModal = () => {
   const pathname = usePathname();
 
   const [otpOpen, setOtpOpen] = useState(false);
+  const [registrationPasswordOpen, setRegistrationPasswordOpen] = useState(false);
   const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
 
   const [verifyType, setVerifyType] = useState<'reset' | 'register'>('reset');
@@ -153,10 +155,7 @@ const AuthModal = () => {
               type={verifyType}
               onVerifySuccess={() => {
                 if (verifyType === 'register') {
-                  setPhone(null);
-                  setRequestId(null);
-                  clearRegisterData();
-                  setRegisterOpen(false);
+                  setRegistrationPasswordOpen(true);
                 } else {
                   setResetPasswordOpen(true);
                 }
@@ -165,6 +164,21 @@ const AuthModal = () => {
               }}
             />
           </main>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={registrationPasswordOpen}
+        onOpenChange={(value) => {
+          setRegistrationPasswordOpen(value);
+          if (!value) {
+            setPhone(null);
+            setRequestId(null);
+            clearRegisterData();
+          }
+        }}
+      >
+        <DialogContent className="auth-dialog max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-none border-black/15 bg-[#f8f8f6] p-6 pt-10 text-[#171717] shadow-2xl sm:max-w-[480px] sm:p-10">
+          <RegistrationPasswordForm onSuccess={() => setRegistrationPasswordOpen(false)} />
         </DialogContent>
       </Dialog>
       <Dialog

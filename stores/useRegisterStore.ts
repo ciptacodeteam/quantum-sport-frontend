@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 type RegisterStore = {
   name: string;
+  firstName: string;
+  lastName: string;
   phone: string;
   password: string;
   registerData: Partial<RegisterStore> | null;
@@ -13,6 +15,8 @@ type RegisterStore = {
 
 export const useRegisterStore = create<RegisterStore>((set) => ({
   name: '',
+  firstName: '',
+  lastName: '',
   phone: '',
   password: '',
   registerData: null,
@@ -23,6 +27,8 @@ export const useRegisterStore = create<RegisterStore>((set) => ({
   clear: () =>
     set({
       name: '',
+      firstName: '',
+      lastName: '',
       phone: '',
       password: '',
       registerData: null
