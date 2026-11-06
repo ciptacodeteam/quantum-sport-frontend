@@ -68,12 +68,15 @@ const MembershipTransactionTable = ({ debtsOnly = false }: { debtsOnly?: boolean
   const { dateRange, setDateRange, dateParams } = useBookingDateFilter();
   const [sport, setSport] = useState<MembershipSportFilter>('all');
   const queryParams = useMemo(() => {
-    const params: Record<string, string> = { balance: debtsOnly ? 'negative' : 'nonnegative' };
+    const params: Record<string, string> = { balance: debtsOnly ? 'negative' : 'all' };
     if (sport !== 'all') params.sport = sport;
     if (!debtsOnly && status !== 'all') params.status = status;
     return { ...params, ...dateParams };
   }, [sport, status, debtsOnly, dateParams]);
-  const query = useQuery(adminMembershipTransactionsQueryOptions(queryParams));
+  const query = useQuery({
+    ...adminMembershipTransactionsQueryOptions(queryParams),
+    refetchInterval: debtsOnly ? 30000 : false
+  });
 
   const transactions = query.data ?? [];
 

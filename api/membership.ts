@@ -38,7 +38,14 @@ export async function getMyMembershipTrackingApi() {
 
 export async function getMembershipRenewalPreviewApi(id: string) {
   const { data } = await api.get<{
-    data: { packageSessions: number; debtSessions: number; remainingAfterPurchase: number };
+    data: {
+      packageSessions: number;
+      debtSessions: number;
+      debtSettledSessions?: number;
+      remainingAfterPurchase: number;
+      unsettledDebtSessions?: number;
+      reviewRequired?: boolean;
+    };
   }>(`/memberships/${id}/renewal-preview`);
   return data.data;
 }

@@ -66,9 +66,9 @@ it('uses the shared negative balance report with a debt summary and no mutation 
     })
   ).toBeNull();
 });
-it('uses the nonnegative balance filter for the ordinary transaction page', () => {
+it('keeps all purchases visible in the ordinary transaction page', () => {
   render(<MembershipTransactionTable />, { wrapper: DialogProvider });
-  expect(mocks.query.mock.lastCall?.[0].queryKey.at(-1)).toEqual({ balance: 'nonnegative' });
+  expect(mocks.query.mock.lastCall?.[0].queryKey.at(-1)).toEqual({ balance: 'all' });
   expect(screen.getByLabelText('Status Value Pack')).toBeInTheDocument();
 });
 
@@ -81,7 +81,7 @@ it.each([false, true])(
     fireEvent.click(screen.getByRole('button', { name: /^Date range:/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Today' }));
     const expected = {
-      balance: debtsOnly ? 'negative' : 'nonnegative',
+      balance: debtsOnly ? 'negative' : 'all',
       dateFrom: '2026-11-03',
       dateTo: '2026-11-03'
     };

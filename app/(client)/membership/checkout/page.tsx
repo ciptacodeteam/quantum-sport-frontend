@@ -383,8 +383,28 @@ export default function MembershipCheckoutPage() {
                       </div>
                       <div className="flex justify-between gap-3">
                         <dt>Pelunasan saldo minus</dt>
-                        <dd>−{renewalPreview.data.debtSessions} jam</dd>
+                        <dd>
+                          −
+                          {renewalPreview.data.debtSettledSessions ??
+                            Math.min(
+                              renewalPreview.data.packageSessions,
+                              renewalPreview.data.debtSessions
+                            )}{' '}
+                          jam
+                        </dd>
                       </div>
+                      {!!renewalPreview.data.unsettledDebtSessions && (
+                        <div className="flex justify-between gap-3 text-red-700">
+                          <dt>Tunggakan paket lama yang belum tertutup</dt>
+                          <dd>{renewalPreview.data.unsettledDebtSessions} jam</dd>
+                        </div>
+                      )}
+                      {renewalPreview.data.reviewRequired && (
+                        <p className="text-amber-800">
+                          Saldo paket lama perlu diperiksa admin. Tunggakan belum diperhitungkan
+                          dalam estimasi ini.
+                        </p>
+                      )}
                       <div className="flex justify-between gap-3 font-medium">
                         <dt>Perkiraan sisa kuota</dt>
                         <dd>{renewalPreview.data.remainingAfterPurchase} jam</dd>
