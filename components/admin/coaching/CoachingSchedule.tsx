@@ -47,6 +47,7 @@ export default function CoachingSchedule({
   const [startHour, setStartHour] = useState(6),
     [endHour, setEndHour] = useState(24),
     [price, setPrice] = useState(0);
+  const [additionalHourPrice, setAdditionalHourPrice] = useState<number | null>(null);
   const [editingSlot, setEditingSlot] = useState<CoachingSlot | null>(null);
   const [slotPrice, setSlotPrice] = useState(0);
   const person = useQuery({
@@ -60,6 +61,7 @@ export default function CoachingSchedule({
     setStartHour(rule?.startHour ?? 6);
     setEndHour(rule?.endHour ?? 24);
     setPrice(rule?.price ?? 0);
+    setAdditionalHourPrice(rule?.additionalHourPrice ?? null);
   }, [staffId, branchId, person.data?.rollingServiceSchedule]);
   const schedule = useQuery({
     queryKey: ['admin', 'coaching', branchId, staffId, 'schedule', 'rolling'],
@@ -76,7 +78,8 @@ export default function CoachingSchedule({
         days,
         startHour,
         endHour,
-        price
+        price,
+        ...(person.data?.role === 'COACH' ? { additionalHourPrice } : {})
       }),
     onSuccess: (result) => {
       invalidate();
@@ -118,8 +121,20 @@ export default function CoachingSchedule({
       }
     ),
     col.accessor('price', {
-      header: 'Harga per Jam',
-      cell: ({ row }) => `Rp ${row.original.price.toLocaleString('id-ID')}`
+      header: person.data?.role === 'COACH' ? 'Tarif Coach' : 'Harga per Jam',
+      cell: ({ row }) => (
+        <div>
+          <span>
+            Rp {row.original.price.toLocaleString('id-ID')}
+            {person.data?.role === 'COACH' ? ' / jam pertama' : ''}
+          </span>
+          {person.data?.role === 'COACH' && row.original.additionalHourPrice != null && (
+            <p className="text-muted-foreground text-xs">
+              Berikutnya Rp {row.original.additionalHourPrice.toLocaleString('id-ID')}/jam
+            </p>
+          )}
+        </div>
+      )
     }),
     col.accessor(
       (slot) => (slot.booked ? 'Dibooking' : slot.isAvailable ? 'Tersedia' : 'Ditutup'),
@@ -209,8 +224,8 @@ export default function CoachingSchedule({
             Atur hari, jam layanan, dan tarif. Periode otomatis mengikuti rolling window lapangan.
           </p>
         </div>
-        <div className="grid lg:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="space-y-6 p-5 sm:p-6">
+        <div className="grid xl:grid-cols-[minmax(0,3fr)_minmax(400px,2fr)]">
+          <div className="min-w-0 space-y-6 p-5 sm:p-6">
             <section
               aria-label="Periode layanan"
               className="bg-primary/5 border-primary/20 space-y-2 rounded-xl border p-4"
@@ -288,9 +303,11 @@ export default function CoachingSchedule({
               </p>
             )}
           </div>
-          <aside className="bg-muted/25 space-y-5 border-t p-5 sm:p-6 lg:border-t-0 lg:border-l">
+          <aside className="bg-muted/25 min-w-0 space-y-5 border-t p-5 sm:p-6 xl:border-t-0 xl:border-l">
             <div className="space-y-2">
-              <Label htmlFor="coaching-price">Harga per jam</Label>
+              <Label htmlFor="coaching-price">
+                {person.data.role === 'COACH' ? 'Harga jam pertama' : 'Harga per jam'}
+              </Label>
               <div className="relative">
                 <span className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm">
                   Rp
@@ -308,9 +325,42 @@ export default function CoachingSchedule({
                 />
               </div>
               <p className="text-muted-foreground text-xs">
-                Tarif berlaku untuk setiap slot satu jam. Isi 0 untuk layanan gratis.
+                {person.data.role === 'COACH'
+                  ? 'Harga normal untuk satu jam pertama pada setiap rangkaian sesi.'
+                  : 'Tarif berlaku untuk setiap slot satu jam. Isi 0 untuk layanan gratis.'}
               </p>
             </div>
+            {person.data.role === 'COACH' && (
+              <div className="space-y-2">
+                <Label htmlFor="coaching-additional-price">Harga per jam berikutnya</Label>
+                <div className="relative">
+                  <span className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm">
+                    Rp
+                  </span>
+                  <Input
+                    id="coaching-additional-price"
+                    type="number"
+                    min={0}
+                    max={2147483647}
+                    placeholder="Sama dengan jam pertama"
+                    value={additionalHourPrice ?? ''}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) =>
+                      setAdditionalHourPrice(e.target.value === '' ? null : Number(e.target.value))
+                    }
+                    className={`${priceInputClass} bg-background h-12 pl-10 text-lg font-semibold tabular-nums`}
+                  />
+                </div>
+                <p className="text-muted-foreground text-xs">
+                  Berlaku mulai jam kedua untuk coach yang sama dan jam berurutan. Kosongkan untuk
+                  memakai harga normal. Isi 0 untuk jam tambahan gratis.
+                </p>
+                <p className="text-sm font-medium">
+                  Contoh 3 jam: Rp{' '}
+                  {(price + 2 * (additionalHourPrice ?? price)).toLocaleString('id-ID')}
+                </p>
+              </div>
+            )}
             <dl className="space-y-3 border-y py-4 text-sm">
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Durasi slot</dt>
@@ -321,7 +371,9 @@ export default function CoachingSchedule({
                 <dd className="font-medium">{days.length} hari / minggu</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-muted-foreground">Tarif per slot</dt>
+                <dt className="text-muted-foreground">
+                  {person.data.role === 'COACH' ? 'Jam pertama' : 'Tarif per slot'}
+                </dt>
                 <dd className="font-semibold">Rp {price.toLocaleString('id-ID')}</dd>
               </div>
             </dl>

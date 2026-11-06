@@ -3,6 +3,7 @@ import { adminApi } from '@/lib/adminApi';
 
 export type RollingServiceSchedule = {
   followCourtWindow: true;
+  additionalHourPrice?: number | null;
   days: number[];
   startHour: number;
   endHour: number;
@@ -30,6 +31,7 @@ export type CoachingProfile = {
   isActive: boolean;
 };
 export type CoachingSlot = {
+  additionalHourPrice?: number | null;
   id: string;
   startAt: string;
   endAt: string;

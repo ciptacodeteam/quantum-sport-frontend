@@ -67,6 +67,7 @@ export type InventoryAvailability = {
 };
 
 export type CoachAvailability = {
+  additionalHourPrice?: number | null;
   slotId: string;
   coach: {
     id: string;

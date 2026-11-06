@@ -1,4 +1,5 @@
 'use client';
+import { coachSessionsTotal } from '@/lib/coach-session-pricing';
 
 import type { RecurringBookingRule } from '@/lib/recurring-booking';
 import { create } from 'zustand';
@@ -70,6 +71,7 @@ export interface InventoryItem {
 }
 
 export interface SelectedCoach {
+  additionalHourPrice?: number | null;
   coachingGroupId?: string;
   coachingGroupName?: string;
   coachId: string;
@@ -276,7 +278,7 @@ export const useBookingStore = create<BookingState>()(
 
         if (!exists) {
           const newCoaches = [...state.selectedCoaches, coach];
-          const coachTotal = newCoaches.reduce((sum, c) => sum + c.price, 0);
+          const coachTotal = coachSessionsTotal(newCoaches);
           set({ selectedCoaches: newCoaches, coachTotal });
         }
       },
@@ -290,7 +292,7 @@ export const useBookingStore = create<BookingState>()(
 
           return !(c.coachId === coachId && c.timeSlot === timeSlot);
         });
-        const coachTotal = newCoaches.reduce((sum, c) => sum + c.price, 0);
+        const coachTotal = coachSessionsTotal(newCoaches);
         set({ selectedCoaches: newCoaches, coachTotal });
       },
 

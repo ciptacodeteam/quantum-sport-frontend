@@ -1,5 +1,6 @@
 'use client';
 
+import { pricedCoaches } from '@/lib/coach-session-pricing';
 import { useState, useEffect, useId } from 'react';
 import dayjs from 'dayjs';
 import { useQuery } from '@tanstack/react-query';
@@ -744,7 +745,7 @@ export default function BookingSummary({
                   <p className="text-muted-foreground text-xs">Belum ada coach yang dipilih</p>
                 </div>
               ) : (
-                selectedCoaches.map((coach, index) => (
+                pricedCoaches(selectedCoaches).map((coach, index) => (
                   <div
                     key={index}
                     className="flex items-center justify-between gap-2 rounded bg-blue-50 p-2 text-xs"
@@ -760,7 +761,12 @@ export default function BookingSummary({
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       <span className="text-primary font-semibold">
-                        {formatCurrency(coach.price)}
+                        {formatCurrency(coach.chargedPrice)}
+                        {coach.chargedPrice !== coach.price && (
+                          <span className="block text-right text-[10px] font-normal">
+                            Jam berikutnya
+                          </span>
+                        )}
                       </span>
                       <Button
                         size="sm"

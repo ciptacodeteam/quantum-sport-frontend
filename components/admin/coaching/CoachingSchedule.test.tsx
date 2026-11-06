@@ -115,3 +115,36 @@ it('loads the saved repeating day, hour and price settings', async () => {
     })
   );
 });
+it('saves first and subsequent coach prices separately and previews three hours', async () => {
+  mocks.person.mockResolvedValue({
+    name: 'Coach A',
+    role: 'COACH',
+    rollingServiceSchedule: {
+      followCourtWindow: true,
+      days: [1, 2, 3, 4, 5, 6, 7],
+      startHour: 6,
+      endHour: 24,
+      price: 200000,
+      additionalHourPrice: 100000
+    }
+  });
+  mount();
+  await waitFor(() => expect(screen.getByLabelText('Harga jam pertama')).toHaveValue(200000));
+  expect(screen.getByLabelText('Harga per jam berikutnya')).toHaveValue(100000);
+  expect(screen.getByText('Contoh 3 jam: Rp 400.000')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Simpan jadwal & harga' }));
+  await waitFor(() =>
+    expect(mocks.saveSchedule).toHaveBeenCalledWith(
+      'ballboy',
+      expect.objectContaining({ price: 200000, additionalHourPrice: 100000 })
+    )
+  );
+  fireEvent.change(screen.getByLabelText('Harga per jam berikutnya'), { target: { value: '' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Simpan jadwal & harga' }));
+  await waitFor(() =>
+    expect(mocks.saveSchedule).toHaveBeenLastCalledWith(
+      'ballboy',
+      expect.objectContaining({ additionalHourPrice: null })
+    )
+  );
+});

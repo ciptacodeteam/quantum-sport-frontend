@@ -1,4 +1,5 @@
 'use client';
+import { coachSessionsTotal } from '@/lib/coach-session-pricing';
 
 import OfflinePaymentSelection from '@/components/admin/booking/OfflinePaymentSelection';
 import { adminPaymentMethodsQueryOptions } from '@/queries/admin/paymentMethod';
@@ -81,7 +82,7 @@ export default function BookingAddOns() {
       )
   );
   const ballboyTotal = selectedBallboys.reduce((sum, item) => sum + item.price, 0);
-  const coachTotal = selectedCoaches.reduce((sum, coach) => sum + coach.price, 0);
+  const coachTotal = coachSessionsTotal(selectedCoaches);
 
   const courtSport = useMemo<'PADEL' | 'TENNIS'>(
     () => bookingItems.find((item) => item.sport)?.sport ?? 'PADEL',
@@ -192,7 +193,7 @@ export default function BookingAddOns() {
     ) {
       useBookingStore.setState({
         selectedCoaches: coaches,
-        coachTotal: coaches.reduce((sum, coach) => sum + coach.price, 0),
+        coachTotal: coachSessionsTotal(coaches),
         selectedInventories: [],
         inventoryTotal: 0,
         selectedBallboys: ballboys,
@@ -292,7 +293,10 @@ export default function BookingAddOns() {
               params: { startAt: coach.startAt, endAt: coach.endAt, courtSport }
             });
             return (response.data.data as CoachAvailability[]).some(
-              (option) => option.slotId === coach.slotId && option.price === coach.price
+              (option) =>
+                option.slotId === coach.slotId &&
+                option.price === coach.price &&
+                (option.additionalHourPrice ?? null) === (coach.additionalHourPrice ?? null)
             );
           }),
           ...selectedBallboys.map(async (item) => {

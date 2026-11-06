@@ -248,6 +248,7 @@ function CoachSession({
                           date: session.date,
                           timeSlot: session.timeSlot,
                           price: option.price,
+                          additionalHourPrice: option.additionalHourPrice,
                           startAt: option.startAt,
                           endAt: option.endAt,
                           courtSport: sport,
@@ -262,6 +263,12 @@ function CoachSession({
                         {option && (
                           <span className="text-muted-foreground block text-xs">
                             Rp {option.price.toLocaleString('id-ID')}
+                            {option.additionalHourPrice != null && (
+                              <span className="block text-xs">
+                                Jam berikutnya Rp{' '}
+                                {option.additionalHourPrice.toLocaleString('id-ID')}/jam
+                              </span>
+                            )}
                           </span>
                         )}
                       </span>
