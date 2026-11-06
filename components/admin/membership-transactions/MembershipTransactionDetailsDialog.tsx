@@ -92,6 +92,13 @@ export default function MembershipTransactionDetailsDialog({
                 / {membership?.sessions ?? '—'} sesi
               </span>
             </Field>
+            {transaction.remainingSessions < 0 && (
+              <Field label="Tunggakan kuota">
+                <span className="text-destructive font-semibold">
+                  {-transaction.remainingSessions} jam belum tertutup
+                </span>
+              </Field>
+            )}
             {!!transaction.debtSettledSessions && (
               <Field label="Kuota untuk pelunasan minus">
                 {transaction.debtSettledSessions} sesi

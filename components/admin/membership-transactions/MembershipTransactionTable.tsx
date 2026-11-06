@@ -213,9 +213,10 @@ const MembershipTransactionTable = ({ debtsOnly = false }: { debtsOnly?: boolean
       columnHelper.display({
         id: 'actions',
         header: 'Aksi',
+        enableHiding: !debtsOnly,
         cell: (info) => {
           const transaction = info.row.original;
-          const canApproveOrReject = transaction.invoice?.status === 'PENDING';
+          const canApproveOrReject = !debtsOnly && transaction.invoice?.status === 'PENDING';
 
           return (
             <div className="flex items-center gap-1">
@@ -258,7 +259,7 @@ const MembershipTransactionTable = ({ debtsOnly = false }: { debtsOnly?: boolean
                 </div>
               )}
 
-              {!transaction.isSuspended && canManageMembership(transaction) && (
+              {!debtsOnly && !transaction.isSuspended && canManageMembership(transaction) && (
                 <SuspendMembershipDialog
                   id={transaction.id}
                   pending={suspending}
@@ -267,7 +268,7 @@ const MembershipTransactionTable = ({ debtsOnly = false }: { debtsOnly?: boolean
                   }
                 />
               )}
-              {transaction.isSuspended && canManageMembership(transaction) && (
+              {!debtsOnly && transaction.isSuspended && canManageMembership(transaction) && (
                 <Button
                   size="icon-sm"
                   variant="ghost"
@@ -284,7 +285,7 @@ const MembershipTransactionTable = ({ debtsOnly = false }: { debtsOnly?: boolean
         size: 100
       })
     ],
-    [approveTx, rejectTx, suspendTx, suspending, unsuspendTx]
+    [approveTx, rejectTx, suspendTx, suspending, unsuspendTx, debtsOnly]
   );
 
   if (query.isError)
@@ -312,11 +313,7 @@ const MembershipTransactionTable = ({ debtsOnly = false }: { debtsOnly?: boolean
         </div>
       )}
       <DataTable
-        columns={
-          debtsOnly
-            ? columns.filter((column) => column.id !== 'actions' && column.id !== 'amount')
-            : columns
-        }
+        columns={debtsOnly ? columns.filter((column) => column.id !== 'amount') : columns}
         data={transactions}
         loading={query.isPending}
         enableRowSelection={false}
