@@ -7,7 +7,9 @@ dayjs.extend(timezone);
 export const defaultTariffPeriod = { happyStart: 6, happyEnd: 15, peakStart: 15, peakEnd: 24 };
 export type TariffBands = typeof defaultTariffPeriod;
 export type CoachingDiscounts = { happyCoachDiscount?: number; peakCoachDiscount?: number };
+export type TariffDays = { happyAllDayDays?: number[] };
 export type TariffRule = TariffBands &
+  TariffDays &
   CoachingDiscounts & {
     id: string;
     branchId: string;
@@ -15,6 +17,7 @@ export type TariffRule = TariffBands &
     effectiveFrom: string;
   };
 export type TariffPeriodInput = TariffBands &
+  TariffDays &
   CoachingDiscounts & { sport: 'PADEL' | 'TENNIS'; effectiveFrom: string };
 export type TariffPeriodResponse = { rules: TariffRule[]; defaults: TariffBands };
 export const jakartaToday = () => dayjs().tz('Asia/Jakarta').format('YYYY-MM-DD');
@@ -22,15 +25,30 @@ export const formatTariffHour = (hour: number) => `${String(hour).padStart(2, '0
 export function resolveTariffPeriod(
   rules: TariffRule[],
   date = jakartaToday(),
-  sport: 'PADEL' | 'TENNIS' = 'PADEL'
-): TariffBands & CoachingDiscounts {
-  return (
+  sport: 'PADEL' | 'TENNIS' = 'PADEL',
+  applyDay = true
+): TariffBands & CoachingDiscounts & TariffDays {
+  const rule =
     rules
       .filter(
         (rule) => rule.sport === sport && rule.effectiveFrom.slice(0, 10) <= date.slice(0, 10)
       )
-      .sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom))[0] ?? defaultTariffPeriod
-  );
+      .sort((a, b) => b.effectiveFrom.localeCompare(a.effectiveFrom))[0] ?? defaultTariffPeriod;
+  if (
+    applyDay &&
+    'happyAllDayDays' in rule &&
+    (rule.happyAllDayDays as number[] | undefined)?.includes(dayjs(date.slice(0, 10)).day() || 7)
+  ) {
+    const end = Math.max(rule.happyEnd, rule.peakEnd);
+    return {
+      ...rule,
+      happyStart: Math.min(rule.happyStart, rule.peakStart),
+      happyEnd: end,
+      peakStart: end,
+      peakEnd: end
+    };
+  }
+  return rule;
 }
 export function tariffBand(
   value: string | Date,

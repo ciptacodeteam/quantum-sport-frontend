@@ -40,8 +40,10 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 function TariffEditor({ rules, sport }: { rules: TariffRule[]; sport: 'PADEL' | 'TENNIS' }) {
+  const sportLabel = sport === 'PADEL' ? 'Padel' : 'Tennis';
   const today = jakartaToday();
-  const active = resolveTariffPeriod(rules, today, sport);
+  const active = resolveTariffPeriod(rules, today, sport, false);
+  const [happyAllDayDays, setHappyAllDayDays] = useState<number[]>(active.happyAllDayDays ?? []);
   const [bands, setBands] = useState<TariffBands>(active);
   const [happyCoachDiscount, setHappyCoachDiscount] = useState(active.happyCoachDiscount ?? 0);
   const [peakCoachDiscount, setPeakCoachDiscount] = useState(active.peakCoachDiscount ?? 0);
@@ -75,6 +77,13 @@ function TariffEditor({ rules, sport }: { rules: TariffRule[]; sport: 'PADEL' | 
   const current = history.find((rule) => rule.effectiveFrom.slice(0, 10) <= today)?.id;
   return (
     <div className="space-y-6">
+      <div className="space-y-1">
+        <h2 className="text-lg font-semibold">Tarif &amp; Potongan Coaching {sportLabel}</h2>
+        <p className="text-muted-foreground text-sm">
+          Pengaturan ini khusus {sportLabel}. Nominal potongan dan aturan hari disimpan terpisah
+          untuk setiap olahraga.
+        </p>
+      </div>
       <div className="bg-muted/30 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border p-4 text-sm">
         <span className="flex items-center gap-2 font-medium">
           <Clock3 className="text-primary size-4" />
@@ -92,6 +101,16 @@ function TariffEditor({ rules, sport }: { rules: TariffRule[]; sport: 'PADEL' | 
             {formatTariffHour(active.peakStart)} – {formatTariffHour(active.peakEnd)}
           </strong>
         </span>
+        {!!active.happyAllDayDays?.length && (
+          <span>
+            Happy Hour sepanjang hari:{' '}
+            {active.happyAllDayDays
+              .map(
+                (day) => ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'][day - 1]
+              )
+              .join(', ')}
+          </span>
+        )}
         {!current && <Badge variant="outline">Bawaan sistem</Badge>}
       </div>
       <form
@@ -100,6 +119,7 @@ function TariffEditor({ rules, sport }: { rules: TariffRule[]; sport: 'PADEL' | 
           event.preventDefault();
           if (valid && effectiveFrom >= jakartaToday())
             mutation.mutate({
+              happyAllDayDays,
               happyStart: bands.happyStart,
               happyEnd: bands.happyEnd,
               peakStart: bands.peakStart,
@@ -156,6 +176,37 @@ function TariffEditor({ rules, sport }: { rules: TariffRule[]; sport: 'PADEL' | 
               </section>
             ))}
           </div>
+          <section className="space-y-4 rounded-xl border p-5 sm:p-6">
+            <div className="space-y-1">
+              <h2 className="font-semibold">Hari Happy Hour Sepanjang Hari</h2>
+              <p className="text-muted-foreground text-sm">
+                Hari yang dipilih memakai harga dan potongan coaching Happy Hour sepanjang jam
+                operasional. Hari lainnya mengikuti rentang jam di atas. Jam tutup tetap mengikuti
+                jadwal lapangan.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-4">
+              {['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'].map(
+                (day, index) => (
+                  <label key={day} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      className="accent-primary size-4"
+                      checked={happyAllDayDays.includes(index + 1)}
+                      onChange={(event) =>
+                        setHappyAllDayDays((days) =>
+                          event.target.checked
+                            ? [...days, index + 1].sort((a, b) => a - b)
+                            : days.filter((value) => value !== index + 1)
+                        )
+                      }
+                    />
+                    {day}
+                  </label>
+                )
+              )}
+            </div>
+          </section>
           {!valid && (
             <p role="alert" className="text-destructive text-sm">
               Jam selesai harus setelah jam mulai. Happy Hour dan Peak Hour harus bersebelahan,
@@ -163,11 +214,11 @@ function TariffEditor({ rules, sport }: { rules: TariffRule[]; sport: 'PADEL' | 
             </p>
           )}
           <section
-            aria-label="Potongan coaching admin"
+            aria-label={`Potongan coaching ${sportLabel}`}
             className="space-y-4 rounded-xl border p-5 sm:p-6"
           >
             <div className="space-y-1">
-              <h2 className="font-semibold">Potongan Lapangan untuk Coaching</h2>
+              <h2 className="font-semibold">Potongan Lapangan untuk Coaching {sportLabel}</h2>
               <p className="text-muted-foreground text-sm">
                 Berlaku hanya untuk booking melalui admin ketika coach dipilih pada tanggal dan jam
                 lapangan yang sama. Nominal dipotong dari harga lapangan per slot satu jam. Isi 0
@@ -298,6 +349,15 @@ function TariffEditor({ rules, sport }: { rules: TariffRule[]; sport: 'PADEL' | 
                     {' / Peak Hour Rp '}
                     {(rule.peakCoachDiscount ?? 0).toLocaleString('id-ID')}
                   </p>
+                  <p className="text-muted-foreground text-sm">
+                    Happy Hour sepanjang hari:{' '}
+                    {(rule.happyAllDayDays ?? [])
+                      .map(
+                        (day) =>
+                          ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'][day - 1]
+                      )
+                      .join(', ') || 'Tidak ada'}
+                  </p>
                 </div>
                 <Button
                   type="button"
@@ -305,6 +365,7 @@ function TariffEditor({ rules, sport }: { rules: TariffRule[]; sport: 'PADEL' | 
                   size="sm"
                   onClick={() => {
                     setBands(rule);
+                    setHappyAllDayDays(rule.happyAllDayDays ?? []);
                     setHappyCoachDiscount(rule.happyCoachDiscount ?? 0);
                     setPeakCoachDiscount(rule.peakCoachDiscount ?? 0);
                     setEffectiveFrom(
@@ -365,8 +426,8 @@ export default function TariffPeriodPage() {
             <div className="space-y-5">
               <Tabs value={sport} onValueChange={(value) => setChoice(value as 'PADEL' | 'TENNIS')}>
                 <TabsList aria-label="Kategori olahraga">
-                  <TabsTrigger value="PADEL">Padel</TabsTrigger>
-                  {tennis && <TabsTrigger value="TENNIS">Tennis</TabsTrigger>}
+                  <TabsTrigger value="PADEL">Tarif &amp; Potongan Padel</TabsTrigger>
+                  {tennis && <TabsTrigger value="TENNIS">Tarif &amp; Potongan Tennis</TabsTrigger>}
                 </TabsList>
               </Tabs>
               <TariffEditor key={`${query.branchId}-${sport}`} rules={query.rules} sport={sport} />

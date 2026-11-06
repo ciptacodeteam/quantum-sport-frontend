@@ -56,3 +56,15 @@ it('caps discounts at the actual court price and supports disabling with zero', 
     calculateAdminCoachingDiscount([late], [{ ...coach, timeSlot: late.timeSlot }], [rule])
   ).toBe(25000);
 });
+it('previews the Happy Hour coaching amount on weekend evenings', () => {
+  const rules = [
+    { ...rule, happyAllDayDays: [6, 7], happyCoachDiscount: 50000, peakCoachDiscount: 100000 }
+  ];
+  for (const date of ['2026-11-07', '2026-11-08', '2026-11-09']) {
+    const late = { ...court, date, timeSlot: '20:00 - 21:00', endTime: '21:00' };
+    const selected = { ...coach, date, timeSlot: late.timeSlot };
+    expect(calculateAdminCoachingDiscount([late], [selected], rules)).toBe(
+      date === '2026-11-09' ? 100000 : 50000
+    );
+  }
+});

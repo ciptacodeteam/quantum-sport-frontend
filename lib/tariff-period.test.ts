@@ -64,3 +64,27 @@ it('evaluates Happy Hour membership and discount selections for each cart date',
     })
   ).toBe(false);
 });
+
+it('uses the same weekend category for time-only slots, midnight, membership and weekday prices', () => {
+  const rules = [{ ...rule, happyAllDayDays: [6, 7] }];
+  for (const date of ['2026-11-07', '2026-11-08']) {
+    const bands = resolveTariffPeriod(rules, date, 'PADEL');
+    expect(tariffBand('20:00 - 21:00', bands)).toBe('happyHour');
+    expect(tariffBand('23:00 - 00:00', bands)).toBe('happyHour');
+    expect(tariffBand('05:00 - 06:00', bands)).toBeNull();
+    expect(isTimeAllowedForMembershipType('HAPPY_HOUR', '20:00 - 21:00', { rules, date })).toBe(
+      true
+    );
+    expect(isTimeAllowedForMembershipType('AFTER_HOUR', '20:00 - 21:00', { rules, date })).toBe(
+      false
+    );
+    expect(describeMembershipHours('AFTER_HOUR', rules, date)).toBe(
+      'Tidak ada Peak Hour pada tanggal ini'
+    );
+    expect(resolveTariffPeriod(rules, date, 'PADEL', false).happyEnd).toBe(17);
+  }
+  expect(tariffBand('20:00 - 21:00', resolveTariffPeriod(rules, '2026-11-09'))).toBe('peakHour');
+  expect(tariffBand('20:00 - 21:00', resolveTariffPeriod(rules, '2026-11-07', 'TENNIS'))).toBe(
+    'peakHour'
+  );
+});

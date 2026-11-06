@@ -43,6 +43,7 @@ it('saves explicit whole-hour periods with a Jakarta effective date', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Simpan Aturan Jam Tarif' }));
   expect(mocks.save).toHaveBeenCalledWith({
     sport: 'PADEL',
+    happyAllDayDays: [],
     effectiveFrom: '2026-11-02',
     happyStart: 6,
     happyEnd: 15,
@@ -71,6 +72,7 @@ it('edits an upcoming rule without losing its effective date or hour boundaries'
   fireEvent.click(screen.getByRole('button', { name: 'Simpan Aturan Jam Tarif' }));
   expect(mocks.save).toHaveBeenCalledWith({
     sport: 'PADEL',
+    happyAllDayDays: [],
     effectiveFrom: '2026-11-05',
     happyStart: 8,
     happyEnd: 16,
@@ -160,4 +162,124 @@ it('shows a rupiah prefix and clears zero on focus while restoring zero when lef
   fireEvent.change(input, { target: { value: '25000' } });
   fireEvent.blur(input);
   expect(input).toHaveValue(25000);
+});
+
+it('saves selected full Happy Hour days and can turn them off', () => {
+  render(<TariffPeriodPage />);
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Sabtu' }));
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Minggu' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Simpan Aturan Jam Tarif' }));
+  expect(mocks.save).toHaveBeenLastCalledWith(expect.objectContaining({ happyAllDayDays: [6, 7] }));
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Sabtu' }));
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Minggu' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Simpan Aturan Jam Tarif' }));
+  expect(mocks.save).toHaveBeenLastCalledWith(expect.objectContaining({ happyAllDayDays: [] }));
+});
+it('edits a weekend rule without replacing its weekday hour boundaries', () => {
+  vi.setSystemTime(new Date('2026-11-07T02:00:00Z'));
+  mocks.rules = [
+    {
+      id: 'weekend',
+      branchId: 'cemara',
+      sport: 'PADEL',
+      effectiveFrom: '2026-11-01',
+      happyStart: 6,
+      happyEnd: 15,
+      peakStart: 15,
+      peakEnd: 24,
+      happyAllDayDays: [6, 7]
+    }
+  ];
+  render(<TariffPeriodPage />);
+  expect(screen.getByRole('checkbox', { name: 'Sabtu' })).toBeChecked();
+  expect(screen.getByRole('checkbox', { name: 'Minggu' })).toBeChecked();
+  fireEvent.click(screen.getByRole('button', { name: 'Gunakan Aturan Ini' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Simpan Aturan Jam Tarif' }));
+  expect(mocks.save).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      happyStart: 6,
+      happyEnd: 15,
+      peakStart: 15,
+      peakEnd: 24,
+      happyAllDayDays: [6, 7]
+    })
+  );
+});
+
+it('keeps Padel and Tennis coaching amounts separate when editing and saving', () => {
+  mocks.rules = [
+    {
+      id: 'padel',
+      branchId: 'cemara',
+      sport: 'PADEL',
+      effectiveFrom: '2026-10-01',
+      happyStart: 6,
+      happyEnd: 15,
+      peakStart: 15,
+      peakEnd: 24,
+      happyCoachDiscount: 50000,
+      peakCoachDiscount: 100000,
+      happyAllDayDays: [6, 7]
+    },
+    {
+      id: 'tennis',
+      branchId: 'cemara',
+      sport: 'TENNIS',
+      effectiveFrom: '2026-10-01',
+      happyStart: 6,
+      happyEnd: 15,
+      peakStart: 15,
+      peakEnd: 24,
+      happyCoachDiscount: 25000,
+      peakCoachDiscount: 40000,
+      happyAllDayDays: []
+    }
+  ];
+  render(<TariffPeriodPage />);
+  expect(
+    screen.getByRole('heading', { name: 'Potongan Lapangan untuk Coaching Padel' })
+  ).toBeInTheDocument();
+  expect(screen.getByLabelText('Potongan Coaching Happy Hour (Rp)')).toHaveValue(50000);
+  fireEvent.mouseDown(screen.getByRole('tab', { name: 'Tarif & Potongan Tennis' }), {
+    button: 0,
+    ctrlKey: false
+  });
+  expect(
+    screen.getByRole('heading', { name: 'Potongan Lapangan untuk Coaching Tennis' })
+  ).toBeInTheDocument();
+  expect(screen.getByLabelText('Potongan Coaching Happy Hour (Rp)')).toHaveValue(25000);
+  expect(screen.getByLabelText('Potongan Coaching Peak Hour (Rp)')).toHaveValue(40000);
+  expect(screen.getByRole('checkbox', { name: 'Sabtu' })).not.toBeChecked();
+  fireEvent.change(screen.getByLabelText('Potongan Coaching Happy Hour (Rp)'), {
+    target: { value: '30000' }
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Simpan Aturan Jam Tarif' }));
+  expect(mocks.save).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      sport: 'TENNIS',
+      happyCoachDiscount: 30000,
+      peakCoachDiscount: 40000,
+      happyAllDayDays: []
+    })
+  );
+  fireEvent.mouseDown(screen.getByRole('tab', { name: 'Tarif & Potongan Padel' }), {
+    button: 0,
+    ctrlKey: false
+  });
+  expect(screen.getByLabelText('Potongan Coaching Happy Hour (Rp)')).toHaveValue(50000);
+  fireEvent.click(screen.getByRole('button', { name: 'Simpan Aturan Jam Tarif' }));
+  expect(mocks.save).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      sport: 'PADEL',
+      happyCoachDiscount: 50000,
+      peakCoachDiscount: 100000,
+      happyAllDayDays: [6, 7]
+    })
+  );
+});
+it('only offers Padel tariff and coaching settings outside the tennis branch', () => {
+  mocks.branchId = 's-parman';
+  render(<TariffPeriodPage />);
+  expect(screen.getByRole('tab', { name: 'Tarif & Potongan Padel' })).toBeInTheDocument();
+  expect(screen.queryByRole('tab', { name: 'Tarif & Potongan Tennis' })).toBeNull();
 });

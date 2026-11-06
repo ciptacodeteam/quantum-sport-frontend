@@ -59,6 +59,8 @@ export function describeMembershipHours(
 ) {
   if (type === 'ALL_HOUR') return 'Semua jam operasional';
   const bands = resolveTariffPeriod(rules, date, sport);
+  if (type === 'AFTER_HOUR' && bands.peakStart === bands.peakEnd)
+    return 'Tidak ada Peak Hour pada tanggal ini';
   return type === 'HAPPY_HOUR'
     ? `${formatTariffHour(bands.happyStart)} – ${formatTariffHour(bands.happyEnd)}`
     : `${formatTariffHour(bands.peakStart)} – ${formatTariffHour(bands.peakEnd)}`;
