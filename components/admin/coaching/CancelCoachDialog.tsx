@@ -1,4 +1,5 @@
 'use client';
+import { CircleX } from 'lucide-react';
 import { useId, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { coachingApi } from '@/api/admin/coaching';
@@ -25,12 +26,14 @@ export default function CancelCoachDialog({
   bookingCoachId,
   currentName,
   startAt,
-  status
+  status,
+  iconOnly = false
 }: {
   bookingCoachId: string;
   currentName: string;
   startAt: string;
   status?: string;
+  iconOnly?: boolean;
 }) {
   const isSuperAdmin = useHasRole(['SUPER_ADMIN']);
   const { branchId } = useAdminCourtSports();
@@ -80,15 +83,19 @@ export default function CancelCoachDialog({
   return (
     <>
       <Button
-        variant="destructive"
-        size="sm"
+        variant={iconOnly ? 'outline' : 'destructive'}
+        className={
+          iconOnly ? 'text-destructive hover:bg-destructive/10 hover:text-destructive' : undefined
+        }
+        size={iconOnly ? 'icon-sm' : 'sm'}
+        title={`Batalkan Coach ${currentName}`}
         aria-label={`Batalkan Coach ${currentName}`}
         onClick={() => {
           setReason('');
           setOpen(true);
         }}
       >
-        Batalkan Coach
+        {iconOnly ? <CircleX aria-hidden="true" /> : 'Batalkan Coach'}
       </Button>
       <Dialog
         open={open}

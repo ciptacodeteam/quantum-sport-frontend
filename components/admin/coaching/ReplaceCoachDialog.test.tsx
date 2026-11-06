@@ -1,5 +1,5 @@
 vi.mock('@/hooks/use-mobile', () => ({ useIsMobile: () => false }));
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import ReplaceCoachDialog from './ReplaceCoachDialog';
@@ -41,13 +41,13 @@ const props = {
   startAt: '2026-11-02 13:00:00',
   status: 'CONFIRMED'
 };
-function mount(changes = {}, list = false) {
+function mount(changes = {}, list = false, kind: 'COACH' | 'BALLBOY' = 'COACH') {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } }
   });
   render(
     <QueryClientProvider client={client}>
-      {list ? <CoachingBookings kind="COACH" /> : <ReplaceCoachDialog {...props} {...changes} />}
+      {list ? <CoachingBookings kind={kind} /> : <ReplaceCoachDialog {...props} {...changes} />}
     </QueryClientProvider>
   );
   return client;
@@ -150,7 +150,8 @@ it.each(['ADMIN', 'CASHIER', 'ADMIN_VIEWER', 'COACH', 'BALLBOY', ''])(
     mount({}, true);
     await screen.findByText('Coach A');
     expect(screen.queryByRole('button', { name: /Ganti Coach/ })).toBeNull();
-    expect(screen.queryByRole('columnheader', { name: 'Aksi' })).toBeNull();
+    expect(screen.getByRole('columnheader', { name: 'Aksi' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Lihat detail Coach A' })).toBeInTheDocument();
   }
 );
 
@@ -172,5 +173,97 @@ it('keeps the selected group when one replacement coach belongs to multiple grou
       'item',
       expect.objectContaining({ slotId: 'new-slot', coachingGroupId: 'another' })
     )
+  );
+});
+
+it('keeps the table compact and shows invoice, contact and group only in detail', async () => {
+  mocks.role = 'ADMIN_VIEWER';
+  mocks.bookings.mockResolvedValueOnce([
+    {
+      id: 'item',
+      bookingId: 'booking',
+      name: 'Coach A',
+      coachingGroupName: 'SR Academy',
+      customer: 'Budi',
+      phone: '+6281234567890',
+      court: 'Tennis 1',
+      startAt: '2026-11-02 13:00:00',
+      endAt: '2026-11-02 14:00:00',
+      price: 150000,
+      status: 'CONFIRMED',
+      invoice: {
+        id: 'invoice-1',
+        number: 'INV-DETAIL',
+        status: 'PAID',
+        total: 350000,
+        dueDate: '2026-11-02T07:00:00Z'
+      }
+    }
+  ]);
+  mount({}, true);
+  const view = await screen.findByRole('button', { name: 'Lihat detail Coach A' });
+  expect(screen.queryByRole('columnheader', { name: 'Invoice' })).toBeNull();
+  expect(screen.queryByRole('columnheader', { name: 'Grup coaching' })).toBeNull();
+  expect(screen.queryByText('INV-DETAIL')).toBeNull();
+  expect(screen.queryByText('+6281234567890')).toBeNull();
+  fireEvent.click(view);
+  const detail = within(screen.getByRole('dialog', { name: 'Detail Pemesanan Coach' }));
+  expect(detail.getByText('SR Academy')).toBeInTheDocument();
+  expect(detail.getByText('+6281234567890')).toBeInTheDocument();
+  expect(detail.getByText('INV-DETAIL')).toBeInTheDocument();
+  expect(detail.getByText('Rp 150.000')).toBeInTheDocument();
+  expect(detail.getByText('Rp 350.000')).toBeInTheDocument();
+  expect(detail.getByRole('link', { name: 'Buka detail invoice' })).toHaveAttribute(
+    'href',
+    '/admin/kelola-transaksi/invoice-1'
+  );
+});
+it('uses icon-only controls in the table while keeping accessible action names', async () => {
+  mount({}, true);
+  for (const name of ['Lihat detail Coach A', 'Ganti Coach Coach A', 'Batalkan Coach Coach A']) {
+    const button = await screen.findByRole('button', { name });
+    expect(button.textContent).toBe('');
+    expect(button.querySelector('svg')).not.toBeNull();
+  }
+});
+
+it('also keeps ballboy invoices and contact information in the icon-opened detail', async () => {
+  mocks.bookings.mockResolvedValueOnce([
+    {
+      id: 'ballboy-item',
+      bookingId: 'booking',
+      name: 'Ballboy Ibnu',
+      customer: 'Budi',
+      phone: '+6281234567890',
+      court: 'Padel 1',
+      startAt: '2026-11-02 13:00:00',
+      endAt: '2026-11-02 14:00:00',
+      price: 45000,
+      status: 'CONFIRMED',
+      invoice: {
+        id: 'ballboy-invoice',
+        number: 'INV-BALLBOY',
+        status: 'PAID',
+        total: 195000,
+        dueDate: '2026-11-02T07:00:00Z'
+      }
+    }
+  ]);
+  mount({}, true, 'BALLBOY');
+  const view = await screen.findByRole('button', { name: 'Lihat detail Ballboy Ibnu' });
+  expect(view.textContent).toBe('');
+  expect(view.querySelector('svg')).not.toBeNull();
+  expect(screen.queryByRole('columnheader', { name: 'Invoice' })).toBeNull();
+  expect(screen.queryByText('INV-BALLBOY')).toBeNull();
+  expect(screen.queryByText('+6281234567890')).toBeNull();
+  expect(screen.queryByRole('button', { name: /Ganti Coach|Batalkan Coach/ })).toBeNull();
+  fireEvent.click(view);
+  const detail = within(screen.getByRole('dialog', { name: 'Detail Pemesanan Ballboy' }));
+  expect(detail.getByText('+6281234567890')).toBeInTheDocument();
+  expect(detail.getByText('Rp 45.000')).toBeInTheDocument();
+  expect(detail.getByText('INV-BALLBOY')).toBeInTheDocument();
+  expect(detail.getByRole('link', { name: 'Buka detail invoice' })).toHaveAttribute(
+    'href',
+    '/admin/kelola-transaksi/ballboy-invoice'
   );
 });

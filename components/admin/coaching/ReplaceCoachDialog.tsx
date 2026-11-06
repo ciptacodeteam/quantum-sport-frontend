@@ -1,4 +1,5 @@
 'use client';
+import { ArrowRightLeft } from 'lucide-react';
 import { useId, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { coachingApi } from '@/api/admin/coaching';
@@ -25,12 +26,14 @@ export default function ReplaceCoachDialog({
   bookingCoachId,
   currentName,
   startAt,
-  status
+  status,
+  iconOnly = false
 }: {
   bookingCoachId: string;
   currentName: string;
   startAt: string;
   status?: string;
+  iconOnly?: boolean;
 }) {
   const canWrite = useHasRole(['SUPER_ADMIN']);
   const { branchId } = useAdminCourtSports();
@@ -85,7 +88,8 @@ export default function ReplaceCoachDialog({
     <>
       <Button
         variant="outline"
-        size="sm"
+        size={iconOnly ? 'icon-sm' : 'sm'}
+        title={`Ganti Coach ${currentName}`}
         aria-label={`Ganti Coach ${currentName}`}
         onClick={() => {
           setSlotId('');
@@ -94,7 +98,7 @@ export default function ReplaceCoachDialog({
           setOpen(true);
         }}
       >
-        Ganti Coach
+        {iconOnly ? <ArrowRightLeft aria-hidden="true" /> : 'Ganti Coach'}
       </Button>
       <Dialog
         open={open}

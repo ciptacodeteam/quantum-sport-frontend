@@ -1,4 +1,7 @@
 'use client';
+import { useState } from 'react';
+import { Eye } from 'lucide-react';
+import CoachingBookingDetail from './CoachingBookingDetail';
 import BookingDateFilter from '@/components/admin/bookings/BookingDateFilter';
 import { useBookingDateFilter } from '@/hooks/useBookingDateFilter';
 
@@ -16,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
 export default function CoachingBookings({ kind }: { kind: 'COACH' | 'BALLBOY' }) {
+  const [detailId, setDetailId] = useState<string | null>(null);
   const { branchId } = useAdminCourtSports();
   const { dateRange, setDateRange, dateParams } = useBookingDateFilter();
   const canManageCoaches = useHasRole(['SUPER_ADMIN']);
@@ -27,23 +31,10 @@ export default function CoachingBookings({ kind }: { kind: 'COACH' | 'BALLBOY' }
   const col = createColumnHelper<CoachingBooking>();
   const columns = [
     col.accessor('name', { header: kind === 'COACH' ? 'Coach' : 'Ballboy' }),
-    ...(kind === 'COACH'
-      ? [
-          col.accessor('coachingGroupName', {
-            header: 'Grup coaching',
-            cell: ({ getValue }) => getValue() || 'Coach Independen'
-          })
-        ]
-      : []),
     col.display({
       id: 'customer',
       header: 'Pelanggan',
-      cell: ({ row }) => (
-        <div>
-          <p>{row.original.customer}</p>
-          <p className="text-muted-foreground text-xs">{row.original.phone}</p>
-        </div>
-      )
+      cell: ({ row }) => <span>{row.original.customer}</span>
     }),
     col.display({
       id: 'time',
@@ -77,64 +68,53 @@ export default function CoachingBookings({ kind }: { kind: 'COACH' | 'BALLBOY' }
       )
     }),
     col.display({
-      id: 'invoice',
-      header: 'Invoice',
-      cell: ({ row: { original: r } }) =>
-        r.invoice ? (
-          <div className="space-y-1">
-            <Link
-              className="text-primary underline"
-              href={`/admin/kelola-transaksi/${r.invoice.id}`}
-            >
-              {r.invoice.number} ↗
-            </Link>
-            <p className="text-muted-foreground text-xs">
-              {r.invoice.status === 'PAID'
-                ? 'Lunas'
-                : r.invoice.status === 'PENDING'
-                  ? 'Menunggu pembayaran'
-                  : r.invoice.status}{' '}
-              · Rp {r.invoice.total.toLocaleString('id-ID')}
-            </p>
-          </div>
-        ) : (
-          '-'
-        )
+      id: 'action',
+      header: 'Aksi',
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1.5 whitespace-nowrap">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-sm"
+            aria-label={`Lihat detail ${row.original.name}`}
+            title="Lihat detail pemesanan"
+            onClick={() => setDetailId(row.original.id)}
+          >
+            <Eye aria-hidden="true" />
+          </Button>
+          {kind === 'COACH' && canManageCoaches && (
+            <>
+              <ReplaceCoachDialog
+                iconOnly
+                bookingCoachId={row.original.id}
+                currentName={row.original.name}
+                startAt={row.original.startAt}
+                status={row.original.status}
+              />
+              <CancelCoachDialog
+                iconOnly
+                bookingCoachId={row.original.id}
+                currentName={row.original.name}
+                startAt={row.original.startAt}
+                status={row.original.status}
+              />
+            </>
+          )}
+        </div>
+      )
     })
   ];
-  if (kind === 'COACH' && canManageCoaches)
-    columns.push(
-      col.display({
-        id: 'action',
-        header: 'Aksi',
-        cell: ({ row }) => (
-          <div className="flex flex-wrap gap-2">
-            <ReplaceCoachDialog
-              bookingCoachId={row.original.id}
-              currentName={row.original.name}
-              startAt={row.original.startAt}
-              status={row.original.status}
-            />
-            <CancelCoachDialog
-              bookingCoachId={row.original.id}
-              currentName={row.original.name}
-              startAt={row.original.startAt}
-              status={row.original.status}
-            />
-          </div>
-        )
-      })
-    );
+  const detail = query.data?.find((item) => item.id === detailId);
   return (
     <main className="space-y-6">
+      <CoachingBookingDetail booking={detail} kind={kind} onClose={() => setDetailId(null)} />
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">
             Pemesanan {kind === 'COACH' ? 'Coach' : 'Ballboy'}
           </h1>
           <p className="text-muted-foreground mt-2 text-sm">
-            500 pemesanan terbaru beserta invoice. Tambahkan layanan melalui detail booking lapangan
-            di Schedule.
+            500 pemesanan terbaru. Buka detail untuk melihat informasi pelanggan dan invoice.
           </p>
         </div>
         <Button asChild>
