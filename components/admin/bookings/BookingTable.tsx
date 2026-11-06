@@ -12,6 +12,7 @@ import BookingRowActions from '@/components/admin/bookings/BookingRowActions';
 import type { PaginationState, SortingState } from '@tanstack/react-table';
 import { useSearchParams } from 'next/navigation';
 import { isMembershipBooking } from '@/lib/booking-membership';
+import { bookingPurposeLabel, isInternalBooking } from '@/lib/booking-purpose';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/clipboard-copy';
@@ -142,21 +143,28 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
     () => [
       colHelper.accessor('invoice.number', {
         header: 'Invoice',
-        cell: (info) => (
-          <div className="flex min-w-44 items-center gap-2">
-            <span className="font-mono text-xs" title={info.getValue() || undefined}>
-              {info.getValue() || 'Belum ada invoice'}
-            </span>
-            {info.getValue() && (
-              <CopyButton
-                variant="ghost"
-                size="sm"
-                aria-label="Salin nomor invoice"
-                content={info.getValue()}
-              />
-            )}
-          </div>
-        )
+        cell: (info) =>
+          isInternalBooking(info.row.original) ? (
+            <div className="min-w-44 space-y-1">
+              <Badge variant="outline">{bookingPurposeLabel(info.row.original.purpose)}</Badge>
+              <p className="text-sm">{info.row.original.activityName}</p>
+              <p className="text-muted-foreground text-xs">Tanpa pembayaran</p>
+            </div>
+          ) : (
+            <div className="flex min-w-44 items-center gap-2">
+              <span className="font-mono text-xs" title={info.getValue() || undefined}>
+                {info.getValue() || 'Belum ada invoice'}
+              </span>
+              {info.getValue() && (
+                <CopyButton
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Salin nomor invoice"
+                  content={info.getValue()}
+                />
+              )}
+            </div>
+          )
       }),
       colHelper.accessor('user.name', {
         header: 'Pelanggan',
@@ -203,16 +211,24 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
           );
         }
       }),
-      colHelper.accessor((booking) => (isMembershipBooking(booking) ? 'Membership' : 'Reguler'), {
-        id: 'checkoutType',
-        enableSorting: false,
-        header: 'Jenis pemesanan',
-        cell: (info) => (
-          <Badge variant={info.getValue() === 'Membership' ? 'lightInfo' : 'outline'}>
-            {info.getValue()}
-          </Badge>
-        )
-      }),
+      colHelper.accessor(
+        (booking) =>
+          isInternalBooking(booking)
+            ? bookingPurposeLabel(booking.purpose)
+            : isMembershipBooking(booking)
+              ? 'Membership'
+              : 'Reguler',
+        {
+          id: 'checkoutType',
+          enableSorting: false,
+          header: 'Jenis pemesanan',
+          cell: (info) => (
+            <Badge variant={info.getValue() === 'Membership' ? 'lightInfo' : 'outline'}>
+              {info.getValue()}
+            </Badge>
+          )
+        }
+      ),
       colHelper.accessor('status', {
         header: 'Status',
         cell: (info) => {
@@ -420,6 +436,8 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
                   <SelectItem value="all">Semua pemesanan</SelectItem>
                   <SelectItem value="regular">Reguler</SelectItem>
                   <SelectItem value="membership">Membership</SelectItem>
+                  <SelectItem value="coach_training">Training Coach</SelectItem>
+                  <SelectItem value="event">Event</SelectItem>
                 </SelectContent>
               </Select>
             </div>

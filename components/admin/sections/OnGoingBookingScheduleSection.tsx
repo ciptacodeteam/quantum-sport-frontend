@@ -1,4 +1,5 @@
 'use client';
+import { bookingPurposeLabel, isInternalBooking } from '@/lib/booking-purpose';
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -136,7 +137,11 @@ const OnGoingBookingScheduleSection = () => {
                   const date = formatScheduleTime(start ?? item.schedule.startAt, 'DD MMM');
                   return (
                     <TableRow key={item.booking.id}>
-                      <TableCell className="py-4 font-medium">{item.user.name}</TableCell>
+                      <TableCell className="py-4 font-medium">
+                        {isInternalBooking(item.booking)
+                          ? `${bookingPurposeLabel(item.booking.purpose)} — ${item.booking.activityName || ''}`
+                          : item.user.name}
+                      </TableCell>
                       <TableCell className="max-w-60 whitespace-normal">{services}</TableCell>
                       <TableCell>
                         <span className="text-muted-foreground">{date}</span>

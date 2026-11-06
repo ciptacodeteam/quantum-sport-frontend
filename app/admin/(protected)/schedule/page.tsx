@@ -1,4 +1,5 @@
 'use client';
+import { bookingPurposeLabel, isInternalBooking } from '@/lib/booking-purpose';
 import { useAdminCourtSports } from '@/hooks/useAdminCourtSports';
 
 import CancelCoachDialog from '@/components/admin/coaching/CancelCoachDialog';
@@ -454,7 +455,9 @@ export default function SchedulePage() {
         if (slotDate !== selectedDateString) return;
 
         const courtId = detail.court.id;
-        const customerName = booking.user?.name || 'Walk-in Customer';
+        const customerName = isInternalBooking(booking)
+          ? `${bookingPurposeLabel(booking.purpose)} — ${booking.activityName || ''}`
+          : booking.user?.name || 'Walk-in Customer';
         const customerPhone = booking.user?.phone || '-';
         const status = getBookingStatus(booking.status as number | BookingStatus);
 

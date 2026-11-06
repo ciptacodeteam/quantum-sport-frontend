@@ -74,7 +74,9 @@ async function choose(label: string) {
 }
 it.each([
   ['Reguler', 'regular'],
-  ['Membership', 'membership']
+  ['Membership', 'membership'],
+  ['Training Coach', 'coach_training'],
+  ['Event', 'event']
 ])('filters the table and export by %s checkout', async (label, value) => {
   render(<BookingTable courtSport="PADEL" />);
   expect(screen.getAllByRole('combobox')).toHaveLength(1);

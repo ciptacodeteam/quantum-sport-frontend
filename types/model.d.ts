@@ -420,6 +420,8 @@ export type Cashier = {
 };
 
 export type Booking = {
+  purpose?: 'REGULAR' | 'COACH_TRAINING' | 'EVENT';
+  activityName?: string | null;
   serviceForBookingId?: string | null;
   id: string;
   userId: string;
@@ -664,6 +666,8 @@ export type OngoingBookingInvoice = {
 
 export type OngoingBookingItem = {
   booking: {
+    purpose?: 'REGULAR' | 'COACH_TRAINING' | 'EVENT';
+    activityName?: string | null;
     id: string;
     userId: string;
     status: string;

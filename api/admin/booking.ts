@@ -31,6 +31,19 @@ export async function createBookingApi(payload: CreateMutationPayload) {
   return data;
 }
 
+export async function createInternalCourtBookingApi(payload: {
+  purpose: 'COACH_TRAINING' | 'EVENT';
+  activityName: string;
+  courtSlots: string[];
+  userId?: string;
+  name?: string;
+  phone?: string;
+  adminNote?: string;
+}) {
+  const { data } = await adminApi.post('/bookings/internal', payload);
+  return data;
+}
+
 export async function updateBookingStatusApi(id: string, status: string) {
   const { data } = await adminApi.put(`/bookings/${id}/status`, { status });
   return data;

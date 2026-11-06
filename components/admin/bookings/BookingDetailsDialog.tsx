@@ -1,4 +1,5 @@
 'use client';
+import { bookingPurposeLabel, isInternalBooking } from '@/lib/booking-purpose';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -31,9 +32,7 @@ export default function BookingDetailsDialog({
 }) {
   const groups = new Map<string, { name: string; date: string; details: BookingDetail[] }>();
   for (const detail of booking.details || []) {
-    const date = detail.slot
-      ? formatBookingSlotDate(detail.slot.startAt, 'YYYY-MM-DD')
-      : '';
+    const date = detail.slot ? formatBookingSlotDate(detail.slot.startAt, 'YYYY-MM-DD') : '';
     const key = `${detail.court?.id || detail.courtId || detail.court?.name}-${date}`;
     if (!groups.has(key))
       groups.set(key, { name: detail.court?.name || 'Lapangan', date, details: [] });
@@ -196,6 +195,16 @@ export default function BookingDetailsDialog({
           </section>
         )}
 
+        {isInternalBooking(booking) && (
+          <section className="bg-muted/40 space-y-1.5 rounded-lg p-3">
+            <h3 className="text-sm font-medium">
+              {bookingPurposeLabel(booking.purpose)} — {booking.activityName}
+            </h3>
+            <p className="text-muted-foreground text-xs">
+              Tanpa pembayaran dan tidak masuk revenue.
+            </p>
+          </section>
+        )}
         {booking.adminNote && (
           <section className="space-y-1.5">
             <h3 className="text-muted-foreground text-xs font-medium">Catatan admin</h3>

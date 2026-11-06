@@ -66,8 +66,9 @@ vi.mock('@tanstack/react-query', async (importOriginal) => ({
   }
 }));
 vi.mock('@/components/admin/booking/BookingSummary', () => ({
-  default: ({ recurringControls, primaryAction, coachControls }: any) => (
+  default: ({ bookingControls, recurringControls, primaryAction, coachControls }: any) => (
     <aside aria-label="Booking Summary">
+      {bookingControls}
       {recurringControls}
       {coachControls}
       <button
@@ -89,6 +90,7 @@ vi.mock('@/hooks/useMembershipDiscount', () => ({
 }));
 
 beforeEach(() => {
+  Element.prototype.scrollIntoView = vi.fn();
   vi.clearAllMocks();
   fixtures.pending = false;
   fixtures.membership = null;
@@ -99,6 +101,48 @@ beforeEach(() => {
   });
   useBookingStore.getState().clearAll();
   useBookingStore.setState({ selectedDate: new Date(2040, 0, 2) });
+});
+
+it.each([
+  ['Training Coach', 'COACH_TRAINING', 'Nama coach'],
+  ['Event', 'EVENT', 'Nama event']
+])(
+  'saves %s directly without navigating to add-ons or payment',
+  async (label, purpose, fieldLabel) => {
+    useBookingStore.setState({ selectedCustomerId: 'customer', useMembership: true });
+    render(<BookingLapangan />);
+    fireEvent.keyDown(screen.getByRole('combobox', { name: 'Jenis booking' }), { key: 'Enter' });
+    fireEvent.click(await screen.findByRole('option', { name: label }));
+    expect(useBookingStore.getState().useMembership).toBe(false);
+    expect(useBookingStore.getState().recurringBooking).toBeNull();
+    expect(screen.getByRole('button', { name: 'Simpan Booking' })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText(fieldLabel), { target: { value: '  Andi  ' } });
+    fireEvent.click(screen.getByRole('button', { name: /Court A/ }));
+    fireEvent.click(screen.getByRole('button', { name: '12:00' }));
+    fireEvent.click(screen.getByRole('button', { name: /Add to Booking/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Simpan Booking' }));
+    expect(fixtures.mutate).toHaveBeenCalledWith({
+      purpose,
+      activityName: 'Andi',
+      userId: 'customer',
+      courtSlots: ['slot-court-a']
+    });
+    expect(fixtures.push).not.toHaveBeenCalled();
+    act(() => fixtures.mutationOptions.onSuccess());
+    expect(useBookingStore.getState().bookingItems).toEqual([]);
+    expect(fixtures.push).toHaveBeenCalledWith('/admin/schedule?courtSport=PADEL');
+  }
+);
+
+it('preserves the existing regular booking route', () => {
+  useBookingStore.setState({ selectedCustomerId: 'customer' });
+  render(<BookingLapangan />);
+  fireEvent.click(screen.getByRole('button', { name: /Court A/ }));
+  fireEvent.click(screen.getByRole('button', { name: '12:00' }));
+  fireEvent.click(screen.getByRole('button', { name: /Add to Booking/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Tambah Layanan' }));
+  expect(fixtures.mutate).not.toHaveBeenCalled();
+  expect(fixtures.push).toHaveBeenCalledWith('/admin/booking-add-ons?courtSport=PADEL');
 });
 afterEach(() => {
   cleanup();

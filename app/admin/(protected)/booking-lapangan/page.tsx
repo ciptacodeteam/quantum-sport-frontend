@@ -1,6 +1,18 @@
 'use client';
 
 import { Repeat2 } from 'lucide-react';
+import { createInternalCourtBookingApi } from '@/api/admin/booking';
+import { getApiErrorMessage } from '@/lib/api-error';
+import { type BookingPurpose } from '@/lib/booking-purpose';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 import { useTariffPeriods } from '@/hooks/useTariffPeriods';
 import { useBookingClock } from '@/hooks/useBookingClock';
 import { isCourtWallSlotBookable } from '@/lib/booking-time-policy';
@@ -25,7 +37,7 @@ import type { CustomerSearchResult } from '@/queries/admin/customer';
 import { useBookingStore } from '@/stores/useBookingStore';
 import type { Court, Slot } from '@/types/model';
 import { IconCalendar, IconCheck, IconClock, IconMapPin } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import timezone from 'dayjs/plugin/timezone';
@@ -95,6 +107,10 @@ type SelectedBooking = {
 };
 
 export default function BookingLapangan() {
+  const queryClient = useQueryClient();
+  const [bookingPurpose, setBookingPurpose] = useState<BookingPurpose>('REGULAR');
+  const [activityName, setActivityName] = useState('');
+  const internalBooking = bookingPurpose !== 'REGULAR';
   const currentTime = useBookingClock();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -156,9 +172,10 @@ export default function BookingLapangan() {
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerSearchResult | null>(null);
   const activeMembershipType = useMemo<MembershipType | null>(() => {
     const activeMembership = selectedCustomer?.activeMembership;
-    if (!activeMembership || activeMembership.membership.sport !== courtSport) return null;
+    if (internalBooking || !activeMembership || activeMembership.membership.sport !== courtSport)
+      return null;
     return activeMembership.membership.type ?? 'ALL_HOUR';
-  }, [courtSport, selectedCustomer]);
+  }, [courtSport, selectedCustomer, internalBooking]);
 
   // Slot API bounds use Jakarta wall components, matching the selected calendar day.
   const selectedDateString = formatDateString(localSelectedDate);
@@ -201,9 +218,9 @@ export default function BookingLapangan() {
     selectedCustomer ? { activeMembership: selectedCustomer.activeMembership } : null,
     false,
     courtSport,
-    recurringBooking ? true : useMembership,
+    internalBooking ? false : recurringBooking ? true : useMembership,
     undefined,
-    !!recurringBooking
+    !internalBooking && !!recurringBooking
   );
 
   // Update store with membership discount
@@ -663,6 +680,26 @@ export default function BookingLapangan() {
   // Use membership discount calculation
   const totalPrice = membershipDiscount.discountedTotal;
 
+  const internalBookingMutation = useMutation({
+    mutationFn: createInternalCourtBookingApi,
+    onSuccess: () => {
+      useBookingStore.getState().clearAll();
+      setBookings([]);
+      setSelectedTimeSlots([]);
+      setActivityName('');
+      setLocalCustomerId('');
+      setSelectedCustomer(null);
+      void queryClient.invalidateQueries({ queryKey: ['courts'] });
+      void queryClient.invalidateQueries({ queryKey: ['admin'] });
+      toast.success('Booking berhasil disimpan tanpa pembayaran.');
+      router.push(`/admin/schedule?courtSport=${courtSport}`);
+    },
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, 'Booking gagal disimpan. Silakan coba lagi.'));
+      void queryClient.invalidateQueries({ queryKey: ['courts'] });
+    }
+  });
+
   const handleAddServices = () => {
     if (
       bookings.some(
@@ -689,6 +726,26 @@ export default function BookingLapangan() {
     const courtSlots = bookings.map((booking) => booking.slotId);
     if (courtSlots.some((id) => !id)) {
       toast.error('Slot lapangan tidak valid. Silakan pilih ulang.');
+      return;
+    }
+    if (bookingPurpose !== 'REGULAR') {
+      if (!activityName.trim()) {
+        toast.error(
+          bookingPurpose === 'COACH_TRAINING'
+            ? 'Isi nama coach terlebih dahulu.'
+            : 'Isi nama event terlebih dahulu.'
+        );
+        return;
+      }
+      internalBookingMutation.mutate({
+        purpose: bookingPurpose,
+        activityName: activityName.trim(),
+        courtSlots,
+        ...(localCustomerId
+          ? { userId: localCustomerId }
+          : { name: storeWalkInName!, phone: storeWalkInPhone! }),
+        ...(bookingAdminNote ? { adminNote: bookingAdminNote } : {})
+      });
       return;
     }
     router.push(`/admin/booking-add-ons?courtSport=${courtSport}`);
@@ -1238,8 +1295,60 @@ export default function BookingLapangan() {
 
           {/* Booking Summary - Responsive */}
           <BookingSummary
+            bookingControls={
+              <section className="space-y-3" aria-label="Jenis booking">
+                <div className="space-y-2">
+                  <Label htmlFor="booking-purpose">Jenis booking</Label>
+                  <Select
+                    value={bookingPurpose}
+                    disabled={internalBookingMutation.isPending}
+                    onValueChange={(value) => {
+                      setBookingPurpose(value as BookingPurpose);
+                      if (value !== 'REGULAR') {
+                        setUseMembership(false);
+                        setRecurringBooking(null);
+                      }
+                    }}
+                  >
+                    <SelectTrigger id="booking-purpose" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="REGULAR">Reguler</SelectItem>
+                      <SelectItem value="COACH_TRAINING">Training Coach</SelectItem>
+                      <SelectItem value="EVENT">Event</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {internalBooking && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="booking-activity">
+                        {bookingPurpose === 'COACH_TRAINING' ? 'Nama coach' : 'Nama event'}
+                      </Label>
+                      <Input
+                        id="booking-activity"
+                        value={activityName}
+                        maxLength={200}
+                        disabled={internalBookingMutation.isPending}
+                        onChange={(event) => setActivityName(event.target.value)}
+                      />
+                    </div>
+                    <p className="text-muted-foreground text-xs">
+                      Tanpa pembayaran dan tidak masuk revenue. Slot yang dibooking tidak tersedia
+                      untuk user maupun admin. Pelanggan atau walk-in di atas dicatat sebagai
+                      penanggung jawab.
+                    </p>
+                  </>
+                )}
+              </section>
+            }
+            showMembershipInfo={!internalBooking}
             recurringControls={
-              useMembership && localCustomerId && membershipDiscount.activeMembership ? (
+              !internalBooking &&
+              useMembership &&
+              localCustomerId &&
+              membershipDiscount.activeMembership ? (
                 <section
                   aria-label="Pengaturan booking rutin"
                   className="border-primary/20 bg-primary/5 space-y-3 rounded-xl border p-4"
@@ -1324,7 +1433,16 @@ export default function BookingLapangan() {
                 </section>
               ) : undefined
             }
-            bookingItems={bookingItemsForDiscount}
+            bookingItems={
+              internalBooking
+                ? bookingItemsForDiscount.map((item) => ({
+                    ...item,
+                    price: 0,
+                    normalPrice: 0,
+                    discountPrice: 0
+                  }))
+                : bookingItemsForDiscount
+            }
             selectedCustomerId={localCustomerId || null}
             selectedCustomerName={storeCustomerName}
             selectedCustomerPhone={storeCustomerPhone}
@@ -1354,10 +1472,21 @@ export default function BookingLapangan() {
               setWalkInCustomer(null, null);
               setBookingAdminNote(null);
             }}
-            courtTotal={membershipDiscount.originalTotal}
-            totalAmount={totalPrice}
-            membershipDiscountDetails={membershipDiscount}
-            useMembership={recurringBooking ? true : useMembership}
+            courtTotal={internalBooking ? 0 : membershipDiscount.originalTotal}
+            totalAmount={internalBooking ? 0 : totalPrice}
+            membershipDiscountDetails={
+              internalBooking
+                ? {
+                    canUseMembership: false,
+                    slotsToDeduct: 0,
+                    discountAmount: 0,
+                    originalTotal: 0,
+                    discountedTotal: 0,
+                    activeMembership: null
+                  }
+                : membershipDiscount
+            }
+            useMembership={internalBooking ? false : recurringBooking ? true : useMembership}
             onUseMembershipChange={recurringBooking ? undefined : setUseMembership}
             onBookingRemove={(courtId, timeSlot, date) => {
               // Find the booking index
@@ -1369,10 +1498,12 @@ export default function BookingLapangan() {
               }
             }}
             primaryAction={{
-              label: 'Tambah Layanan',
+              label: internalBooking ? 'Simpan Booking' : 'Tambah Layanan',
               onClick: handleAddServices,
+              loading: internalBookingMutation.isPending,
               disabled:
                 (!localCustomerId && !(storeWalkInName && storeWalkInPhone)) ||
+                (internalBooking && !activityName.trim()) ||
                 bookings.length === 0
             }}
             secondaryActions={[

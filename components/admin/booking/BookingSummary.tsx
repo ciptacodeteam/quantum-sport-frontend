@@ -129,6 +129,7 @@ export interface BookingSummaryProps {
 
   /** Booking controls rendered alongside customer and membership information. */
   recurringControls?: React.ReactNode;
+  bookingControls?: React.ReactNode;
   coachControls?: React.ReactNode;
   paymentControls?: React.ReactNode;
 
@@ -223,6 +224,7 @@ export default function BookingSummary({
   useMembership = true,
   onUseMembershipChange,
   recurringControls,
+  bookingControls,
   coachControls,
   paymentControls,
   primaryAction,
@@ -569,6 +571,8 @@ export default function BookingSummary({
           )}
 
           <Separator />
+
+          {bookingControls}
 
           {/* Show membership information if available */}
           {showMembershipInfo && selectedCustomerId && membershipDiscount.activeMembership && (
