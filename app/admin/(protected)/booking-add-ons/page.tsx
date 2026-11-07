@@ -500,6 +500,11 @@ export default function BookingAddOns() {
           selectedCoaches={selectedCoaches}
           onCoachRemove={removeCoach}
           coachTotal={coachTotal}
+          onBookingGroupRemove={(items) => {
+            const removed = new Set(items.map((item) => item.slotId));
+            const state = useBookingStore.getState();
+            state.setBookingItems(state.bookingItems.filter((item) => !removed.has(item.slotId)));
+          }}
           onBookingRemove={removeBookingItem}
           showCourtBookings={bookingItems.length > 0}
           courtTotal={courtTotal}

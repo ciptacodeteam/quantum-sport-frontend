@@ -1516,6 +1516,12 @@ export default function BookingLapangan() {
             }
             useMembership={internalBooking ? false : recurringBooking ? true : useMembership}
             onUseMembershipChange={recurringBooking ? undefined : setUseMembership}
+            onBookingGroupRemove={(items) => {
+              const removed = new Set(items.map((item) => item.slotId));
+              setBookings((previous) => previous.filter((item) => !removed.has(item.slotId)));
+              const state = useBookingStore.getState();
+              state.setBookingItems(state.bookingItems.filter((item) => !removed.has(item.slotId)));
+            }}
             onBookingRemove={(courtId, timeSlot, date) => {
               // Find the booking index
               const bookingIndex = bookings.findIndex(

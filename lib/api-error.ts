@@ -36,12 +36,30 @@ export function isValidationError(error: unknown): error is ApiErrorResponse & {
 
 export function getValidationFieldErrors(error: unknown): Record<string, string> | null {
   if (!isValidationError(error)) return null;
-  return error.errors.fields;
+  const fields = error.errors?.fields;
+  if (!fields || typeof fields !== 'object' || Array.isArray(fields)) return null;
+  return Object.fromEntries(
+    Object.entries(fields).filter(
+      (entry): entry is [string, string] => typeof entry[1] === 'string'
+    )
+  );
 }
 
-export function getApiErrorMessage(error: unknown, fallback = 'Terjadi kesalahan. Silakan coba lagi.'): string {
+export function getApiErrorMessage(
+  error: unknown,
+  fallback = 'Terjadi kesalahan. Silakan coba lagi.'
+): string {
   if (!error || typeof error !== 'object') return fallback;
 
+  const fieldErrors = getValidationFieldErrors(error);
+  const messages = [
+    ...new Set(
+      Object.values(fieldErrors ?? {})
+        .map((message) => message.trim())
+        .filter(Boolean)
+    )
+  ];
+  if (messages.length) return messages.join(' ');
   const apiError = error as ApiErrorResponse;
   return apiError.msg || apiError.message || fallback;
 }

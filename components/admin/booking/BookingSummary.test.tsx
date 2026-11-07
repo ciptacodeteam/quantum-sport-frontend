@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import BookingSummary from './BookingSummary';
 import { useBookingStore } from '@/stores/useBookingStore';
@@ -176,4 +176,71 @@ it('lets an active member choose regular payment and switch back without losing 
   });
   fireEvent.click(screen.getByRole('radio', { name: 'Pakai membership' }));
   expect(useBookingStore.getState().useMembership).toBe(true);
+});
+
+it('displays consecutive court hours as a single range with their combined price and removes the whole range', () => {
+  const items = [6, 7, 8].map((hour) => ({
+    courtId: 'court-1',
+    courtName: 'Court 1',
+    slotId: `slot-${hour}`,
+    date: '2040-01-02',
+    timeSlot: `0${hour}:00 - 0${hour + 1}:00`,
+    endTime: `0${hour + 1}:00`,
+    price: 100000
+  }));
+  const remove = vi.fn();
+  render(
+    <BookingSummary
+      bookingItems={items}
+      courtTotal={300000}
+      totalAmount={300000}
+      selectedCustomerId={null}
+      showCustomerSelection={false}
+      showMembershipInfo={false}
+      showAddOns={false}
+      onCustomerSelect={vi.fn()}
+      onCustomerClear={vi.fn()}
+      onWalkInSet={vi.fn()}
+      onWalkInClear={vi.fn()}
+      onBookingGroupRemove={remove}
+    />
+  );
+  const summary = within(screen.getByRole('region', { name: 'Court bookings' }));
+  expect(summary.getAllByText('Court 1')).toHaveLength(1);
+  expect(summary.getByText('06:00 - 09:00')).toBeInTheDocument();
+  expect(summary.getByText('Rp 300.000')).toBeInTheDocument();
+  expect(summary.getByText('3 slot')).toBeInTheDocument();
+  expect(summary.queryByText('06:00 - 07:00')).toBeNull();
+  fireEvent.click(summary.getByRole('button', { name: 'Hapus Court 1 2040-01-02 06:00 - 09:00' }));
+  expect(remove).toHaveBeenCalledOnce();
+  expect(remove).toHaveBeenCalledWith(items);
+});
+it('keeps separate ranges when the court schedule has a gap', () => {
+  const items = [6, 8].map((hour) => ({
+    courtId: 'court-1',
+    courtName: 'Court 1',
+    slotId: `slot-${hour}`,
+    date: '2040-01-02',
+    timeSlot: `0${hour}:00 - 0${hour + 1}:00`,
+    endTime: `0${hour + 1}:00`,
+    price: 100000
+  }));
+  render(
+    <BookingSummary
+      bookingItems={items}
+      courtTotal={200000}
+      totalAmount={200000}
+      selectedCustomerId={null}
+      showCustomerSelection={false}
+      showMembershipInfo={false}
+      onCustomerSelect={vi.fn()}
+      onCustomerClear={vi.fn()}
+      onWalkInSet={vi.fn()}
+      onWalkInClear={vi.fn()}
+    />
+  );
+  const summary = within(screen.getByRole('region', { name: 'Court bookings' }));
+  expect(summary.getAllByText('Court 1')).toHaveLength(2);
+  expect(summary.getByText('06:00 - 07:00')).toBeInTheDocument();
+  expect(summary.getByText('08:00 - 09:00')).toBeInTheDocument();
 });

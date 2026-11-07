@@ -14,6 +14,7 @@ export const adminCheckoutMutationOptions = ({ onSuccess, onError }: MutationFun
     onError: (error) =>
       handleMutationError(error, {
         onError,
-        fallbackMessage: 'Gagal mengonfirmasi pemesanan. Silakan coba lagi.'
+        fallbackMessage: 'Gagal mengonfirmasi pemesanan. Silakan coba lagi.',
+        suppressValidationToast: false
       })
   });

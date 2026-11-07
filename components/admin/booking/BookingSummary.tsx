@@ -1,6 +1,7 @@
 'use client';
 
 import { pricedCoaches } from '@/lib/coach-session-pricing';
+import { groupCourtBookingRanges } from '@/lib/court-booking-ranges';
 import { useState, useEffect, useId } from 'react';
 import dayjs from 'dayjs';
 import { useQuery } from '@tanstack/react-query';
@@ -160,6 +161,8 @@ export interface BookingSummaryProps {
   showCourtBookings?: boolean;
   /** Callback to remove a court booking (optional - for booking-lapangan page) */
   onBookingRemove?: (courtId: string, timeSlot: string, date: string) => void;
+  /** Remove all source slots in a displayed range in one state update. */
+  onBookingGroupRemove?: (items: BookingItem[]) => void;
 
   /** Additional CSS classes */
   className?: string;
@@ -236,6 +239,7 @@ export default function BookingSummary({
   showAddOns = true,
   showCourtBookings = true,
   onBookingRemove,
+  onBookingGroupRemove,
   className,
   sticky = true,
   width = 'w-full min-w-0'
@@ -665,7 +669,7 @@ export default function BookingSummary({
 
           {/* Court Bookings */}
           {showCourtBookings && (
-            <div className="space-y-2">
+            <div role="region" aria-label="Court bookings" className="space-y-2">
               <h4 className="text-muted-foreground text-sm font-medium">Court Bookings</h4>
               {bookingItems.length === 0 ? (
                 <div className="bg-muted rounded-lg p-4 text-center">
@@ -677,26 +681,16 @@ export default function BookingSummary({
                     <div className="text-muted-foreground text-xs font-medium">
                       {dateInfo.shortDate}
                     </div>
-                    {dateInfo.items.map((booking, index) => {
-                      // Check if this booking is free due to membership
-                      const sortedBookings = [...bookingItems].sort((a, b) => {
-                        const dateCompare = a.date.localeCompare(b.date);
-                        if (dateCompare !== 0) return dateCompare;
-                        return a.timeSlot.localeCompare(b.timeSlot);
-                      });
-                      const bookingIndex = sortedBookings.findIndex(
-                        (b) =>
-                          b.courtId === booking.courtId &&
-                          b.timeSlot === booking.timeSlot &&
-                          b.date === booking.date
+                    {groupCourtBookingRanges(dateInfo.items).map((booking) => {
+                      const isFree = membershipDiscount.canUseMembership;
+                      const displayPrice = booking.items.reduce(
+                        (sum, item) => sum + getPricing(item).displayPrice,
+                        0
                       );
-                      const isFree = membershipDiscount.canUseMembership && bookingIndex >= 0;
-
-                      const { displayPrice } = getPricing(booking);
 
                       return (
                         <div
-                          key={`${date}-${index}`}
+                          key={`${date}-${booking.courtId}-${booking.startAt}`}
                           className={cn(
                             'flex flex-wrap items-center justify-between gap-3 rounded-lg p-3 text-xs',
                             isFree ? 'border-l-4 border-l-green-500 bg-green-50' : 'bg-muted'
@@ -714,20 +708,33 @@ export default function BookingSummary({
                                 </Badge>
                               )}
                             </div>
-                            <p className="text-muted-foreground">{booking.timeSlot}</p>
+                            <p className="text-muted-foreground">
+                              {booking.startTime} - {booking.endTime}
+                            </p>
+                            {booking.items.length > 1 && (
+                              <p className="text-muted-foreground mt-1 text-[10px]">
+                                {booking.items.length} slot
+                              </p>
+                            )}
                           </div>
                           <div className="flex shrink-0 items-center gap-2">
                             <span className="text-primary font-semibold tabular-nums">
                               {isFree ? 'Gratis' : formatCurrency(displayPrice)}
                             </span>
-                            {onBookingRemove && (
+                            {(onBookingGroupRemove ||
+                              (booking.items.length === 1 && onBookingRemove)) && (
                               <Button
                                 size="sm"
                                 variant="ghost"
                                 className="h-9 w-9 p-0 text-red-500 hover:bg-red-50 hover:text-red-700"
-                                onClick={() =>
-                                  onBookingRemove(booking.courtId, booking.timeSlot, booking.date)
-                                }
+                                aria-label={`Hapus ${booking.courtName} ${booking.date} ${booking.startTime} - ${booking.endTime}`}
+                                onClick={() => {
+                                  if (onBookingGroupRemove) onBookingGroupRemove(booking.items);
+                                  else {
+                                    const item = booking.items[0];
+                                    onBookingRemove?.(item.courtId, item.timeSlot, item.date);
+                                  }
+                                }}
                               >
                                 <IconX className="h-3 w-3" />
                               </Button>
