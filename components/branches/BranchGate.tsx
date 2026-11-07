@@ -40,8 +40,8 @@ export default function BranchGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     setSwitching(false);
   }, [pathname]);
-  const tennisPage = /^\/(?:booking\/tennis|add-ons)(?:\/|$)/.test(pathname);
-  const tennisSelection = /^\/(?:booking\/tennis|add-ons)(?:[/?#]|$)/.test(pendingHref || pathname);
+  const tennisPage = /^\/booking\/tennis(?:\/|$)/.test(pathname);
+  const tennisSelection = /^\/booking\/tennis(?:[/?#]|$)/.test(pendingHref || pathname);
   const availableBranches = tennisSelection
     ? branches?.filter((item) => branchSupportsTennis(item.id))
     : branches;

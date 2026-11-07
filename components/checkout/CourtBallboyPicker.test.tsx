@@ -114,3 +114,20 @@ it('blocks double booking the same person even when the API has different overla
   ).toBeDisabled();
   client.clear();
 });
+
+it.each(['PADEL', 'TENNIS'] as const)(
+  'loads and saves ballboy add-ons using the selected %s court sport',
+  async (sport) => {
+    const client = mount([{ ...court('Court 1'), sport }]);
+    fireEvent.click(await screen.findByRole('button', { name: 'Pilih Budi untuk Court 1 08:00' }));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Simpan add-ons' })).toBeEnabled()
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Simpan add-ons' }));
+    expect(mocks.availability).toHaveBeenCalledWith(expect.objectContaining({ courtSport: sport }));
+    expect(mocks.save).toHaveBeenCalledWith([
+      expect.objectContaining({ courtSport: sport, courtSlotId: 'Court 1' })
+    ]);
+    client.clear();
+  }
+);

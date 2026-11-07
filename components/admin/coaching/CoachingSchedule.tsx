@@ -206,7 +206,7 @@ export default function CoachingSchedule({
         <h1 className="text-2xl font-semibold">Jadwal & Harga · {person.data.name}</h1>
         <p className="text-muted-foreground mt-2 text-sm">
           {person.data.role === 'BALLBOY'
-            ? `Ballboy · ${coachingSportLabel(person.data.coachType ?? 'TENNIS')}`
+            ? 'Ballboy · Padel & Tennis'
             : `Coach · ${coachingSportLabel(person.data.coachType)}`}{' '}
           · Waktu dalam WIB
         </p>

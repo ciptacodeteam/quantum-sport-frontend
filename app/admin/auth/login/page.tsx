@@ -1,9 +1,10 @@
+import loginImage from '@/assets/img/image1.png';
 import LoginForm from '@/components/admin/forms/LoginForm';
 import RegisterForm from '@/components/admin/forms/RegisterForm';
 import { Card, CardContent } from '@/components/ui/card';
 import { FieldDescription } from '@/components/ui/field';
 import { env } from '@/env';
-import { cn, getPlaceholderImageUrl } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -58,14 +59,14 @@ export default async function LoginPage() {
             ) : (
               <RegisterForm />
             )}
-            <div className="bg-muted relative hidden md:block">
+            <div className="relative hidden bg-white md:block">
               <Image
-                src={getPlaceholderImageUrl({ width: 600, height: 800, text: 'Quantum Sport' })}
-                alt="Image"
-                className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
+                src={loginImage}
+                alt="Logo Black Padel"
+                className="absolute inset-0 h-full w-full object-contain p-8"
                 fill
                 preload
-                unoptimized
+                sizes="(min-width: 768px) 50vw, 100vw"
               />
             </div>
           </CardContent>

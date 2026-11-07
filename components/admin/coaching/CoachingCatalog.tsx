@@ -61,7 +61,7 @@ export default function CoachingCatalog({ groupId }: CoachingCatalogProps = {}) 
   const [draft, setDraft] = useState<CoachingProfile>({
     name: '',
     kind,
-    coachType: 'PADEL',
+    coachType: kind === 'BALLBOY' ? 'PADEL_TENNIS' : 'PADEL',
     isActive: true,
     groupIds: []
   });
@@ -84,7 +84,8 @@ export default function CoachingCatalog({ groupId }: CoachingCatalogProps = {}) 
               name: person.name,
               kind: person.role,
               groupIds: (person.coachingGroups ?? []).map((m) => m.group.id),
-              coachType: person.coachType ?? (person.role === 'BALLBOY' ? 'TENNIS' : undefined),
+              coachType:
+                person.role === 'BALLBOY' ? 'PADEL_TENNIS' : (person.coachType ?? undefined),
               phone: person.phone ?? undefined,
               coachProfile: person.coachProfile ?? undefined,
               isActive: person.isActive
@@ -92,7 +93,7 @@ export default function CoachingCatalog({ groupId }: CoachingCatalogProps = {}) 
           : {
               name: '',
               kind,
-              coachType: 'PADEL',
+              coachType: kind === 'BALLBOY' ? 'PADEL_TENNIS' : 'PADEL',
               isActive: true,
               groupIds: groupId && groupId !== 'independent' ? [groupId] : []
             }
@@ -131,7 +132,9 @@ export default function CoachingCatalog({ groupId }: CoachingCatalogProps = {}) 
       }),
       col.accessor(
         (person) =>
-          coachingSportLabel(person.coachType ?? (person.role === 'BALLBOY' ? 'TENNIS' : 'PADEL')),
+          coachingSportLabel(
+            person.role === 'BALLBOY' ? 'PADEL_TENNIS' : (person.coachType ?? 'PADEL')
+          ),
         {
           id: 'sport',
           header: 'Olahraga',
@@ -270,7 +273,7 @@ export default function CoachingCatalog({ groupId }: CoachingCatalogProps = {}) 
                 onChange={(e) => setDraft({ ...draft, name: e.target.value })}
               />
             </div>
-            {
+            {draft.kind === 'COACH' ? (
               <div className="space-y-2">
                 <Label htmlFor="coaching-sport">Olahraga</Label>
                 <Select
@@ -293,7 +296,11 @@ export default function CoachingCatalog({ groupId }: CoachingCatalogProps = {}) 
                   </SelectContent>
                 </Select>
               </div>
-            }
+            ) : (
+              <p className="text-muted-foreground text-sm">
+                Ballboy tersedia untuk Padel & Tennis sesuai cabang dan jadwalnya.
+              </p>
+            )}
             {draft.kind === 'COACH' && (
               <fieldset className="space-y-2">
                 <legend className="mb-2 text-sm font-medium">Grup coaching</legend>

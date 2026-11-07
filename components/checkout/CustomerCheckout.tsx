@@ -105,7 +105,7 @@ export default function CustomerCheckout({ ballboyOnly = false }: { ballboyOnly?
   const supportsBallboy =
     !ballboyOnly &&
     bookingItems.length > 0 &&
-    bookingItems.every((court) => court.sport === 'TENNIS');
+    bookingItems.every((court) => court.sport === 'TENNIS' || court.sport === 'PADEL');
   const ballboys = useMemo(
     () =>
       ballboyOnly

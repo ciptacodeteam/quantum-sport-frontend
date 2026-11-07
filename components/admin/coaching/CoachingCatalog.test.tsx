@@ -183,18 +183,17 @@ it('prevents adding a member when the group is inactive or unavailable in the br
   expect(screen.getByRole('button', { name: 'Tambah Coach' })).toBeDisabled();
 });
 
-it('lets admins set a ballboy profile to Padel instead of forcing Tennis', async () => {
+it('keeps ballboys available to both sports without a restrictive sport selector', async () => {
   mocks.kind = 'BALLBOY';
   mount();
   const edit = await screen.findByRole('button', { name: 'Edit profil Ballboy Ibnu' });
   fireEvent.click(edit);
-  fireEvent.click(screen.getByRole('combobox', { name: 'Olahraga' }));
-  fireEvent.click(await screen.findByRole('option', { name: 'Padel' }));
+  expect(screen.queryByRole('combobox', { name: 'Olahraga' })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Simpan profil' }));
   await waitFor(() =>
     expect(mocks.save).toHaveBeenCalledWith(
       'ballboy',
-      expect.objectContaining({ kind: 'BALLBOY', coachType: 'PADEL' })
+      expect.objectContaining({ kind: 'BALLBOY', coachType: 'PADEL_TENNIS' })
     )
   );
 });

@@ -23,6 +23,7 @@ import type { BallboyAvailability } from '@/types/model';
 import { isScheduleWallSlotVisible } from '@/lib/booking-time-policy';
 import { availableBallboyHours, ballboyCartItem } from '@/lib/ballboy-booking';
 import { parseScheduleDatetime } from '@/lib/admin-schedule-time';
+import { useBookingDateRollover } from '@/hooks/useBookingDateRollover';
 import { useBookingClock } from '@/hooks/useBookingClock';
 import dayjs, { nowJakarta } from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
@@ -44,15 +45,15 @@ export default function AddOnsPage() {
   }));
   const selected = draft.branchId === branch?.id ? draft.items : [];
   const windowQuery = useQuery({
-    queryKey: ['courts', 'booking-window', branch?.id, 'TENNIS'],
-    queryFn: () => getCourtBookingWindowApi('TENNIS'),
+    queryKey: ['courts', 'booking-window', branch?.id, 'PADEL'],
+    queryFn: () => getCourtBookingWindowApi('PADEL'),
     enabled: !!branch,
     staleTime: 60000,
     refetchInterval: 60000
   });
   const withinWindow = !!windowQuery.data && date >= today && date <= windowQuery.data.endDate;
   const roster = useQuery({
-    queryKey: ['ballboy', 'catalog', branch?.id, 'TENNIS'],
+    queryKey: ['ballboy', 'catalog', branch?.id, 'PADEL'],
     queryFn: getBallboysApi,
     enabled: !!branch,
     staleTime: 60000,
@@ -71,12 +72,12 @@ export default function AddOnsPage() {
   }, [today, windowQuery.data]);
 
   const availability = useQuery({
-    queryKey: ['ballboy', 'availability', branch?.id, date, 'TENNIS'],
+    queryKey: ['ballboy', 'availability', branch?.id, date, 'PADEL'],
     queryFn: async () => {
       const response = await getBallboyAvailabilityApi({
         startAt: `${date}T00:00:00`,
         endAt: `${dayjs(date).add(1, 'day').format('YYYY-MM-DD')}T00:00:00`,
-        courtSport: 'TENNIS'
+        courtSport: 'PADEL'
       });
       return {
         options: response.data as BallboyAvailability[],
@@ -91,8 +92,8 @@ export default function AddOnsPage() {
     () => availableBallboyHours(availability.data?.options ?? [], date, now),
     [availability.data, date, now]
   );
-  const hours = useMemo(() => {
-    const scheduledHours =
+  const scheduledHours = useMemo(
+    () =>
       availability.data?.hours ??
       [
         ...new Set(
@@ -100,9 +101,21 @@ export default function AddOnsPage() {
             parseScheduleDatetime(option.startAt).format('HH:mm')
           )
         )
-      ].sort();
-    return scheduledHours.filter((time) => isScheduleWallSlotVisible(`${date}T${time}:00`, now));
-  }, [availability.data, date, now]);
+      ].sort(),
+    [availability.data]
+  );
+  const hours = useMemo(
+    () => scheduledHours.filter((time) => isScheduleWallSlotVisible(`${date}T${time}:00`, now)),
+    [scheduledHours, date, now]
+  );
+  useBookingDateRollover({
+    date,
+    endDate: windowQuery.data?.endDate ?? today,
+    scheduledHours,
+    now,
+    enabled: !!windowQuery.data && !windowQuery.isError && availability.isSuccess,
+    onDateChange: setDate
+  });
   const slotMap = useMemo(
     () =>
       new Map(

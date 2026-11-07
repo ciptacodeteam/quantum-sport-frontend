@@ -248,17 +248,13 @@ it.each(['/membership', '/membership/pack', '/membership/checkout', '/my-package
   }
 );
 
-it('requires a Tennis branch for the standalone ballboy checkout', async () => {
+it('allows standalone ballboy checkout at a Padel branch without requiring Tennis support', async () => {
   mocks.path = '/add-ons/checkout';
   useBranchStore.setState({ branch: branches[1] });
   sessionStorage.setItem('confirmed-branch', 's-parman');
   show();
-  expect(await screen.findByRole('dialog')).toBeInTheDocument();
-  const cemara = await screen.findByRole('button', { name: /^Black Padel Cemara/ });
-  expect(screen.queryByText('Booking content')).toBeNull();
-  expect(screen.queryByRole('button', { name: /Black Padel S. Parman/ })).toBeNull();
-  fireEvent.click(cemara);
   expect(await screen.findByText('Booking content')).toBeInTheDocument();
+  expect(screen.queryByRole('dialog')).toBeNull();
 });
 it('protects a standalone ballboy cart until a branch switch is confirmed', async () => {
   mocks.path = '/';

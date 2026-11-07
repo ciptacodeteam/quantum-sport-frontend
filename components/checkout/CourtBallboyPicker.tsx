@@ -30,13 +30,21 @@ export default function CourtBallboyPicker({
     queries: sessions.map((session) => {
       const range = courtBallboyRange(session);
       return {
-        queryKey: ['ballboy', 'availability', branchId, session.slotId, range.startAt, range.endAt],
+        queryKey: [
+          'ballboy',
+          'availability',
+          branchId,
+          session.slotId,
+          range.startAt,
+          range.endAt,
+          session.sport
+        ],
         queryFn: async () => {
-          const response = await getBallboyAvailabilityApi({ ...range, courtSport: 'TENNIS' });
+          const response = await getBallboyAvailabilityApi({ ...range, courtSport: session.sport });
           return (response.data as BallboyAvailability[]).filter(
             (option) =>
               ballboyMatchesCourt(
-                { ...ballboyCartItem(option), courtSlotId: session.slotId },
+                { ...ballboyCartItem(option, session.sport), courtSlotId: session.slotId },
                 session
               ) && parseScheduleDatetime(option.startAt).valueOf() > Date.now()
           );
@@ -145,7 +153,7 @@ export default function CourtBallboyPicker({
                               : [
                                   ...remaining,
                                   {
-                                    ...ballboyCartItem(option),
+                                    ...ballboyCartItem(option, court.sport),
                                     courtSlotId: court.slotId,
                                     courtId: court.courtId,
                                     courtName: court.courtName

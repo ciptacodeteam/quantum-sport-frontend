@@ -4,9 +4,11 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import useAuthStore from '@/stores/useAuthStore';
 import { useBranchStore } from '@/stores/useBranchStore';
 import { useBookingStore } from '@/stores/useBookingStore';
+import type { TariffRule } from '@/lib/tariff-period';
 import BookingPage from './page';
 const mocks = vi.hoisted(() => ({
   schedule: vi.fn(),
+  tariffs: [] as TariffRule[],
   now: '2030-01-02 09:00:00',
   pathname: '/booking/tennis'
 }));
@@ -17,7 +19,7 @@ vi.mock('next/navigation', () => ({
 vi.mock('@/components/headers/MainHeader', () => ({ default: () => null }));
 vi.mock('@/components/booking/CourtDetailsDialog', () => ({ default: () => null }));
 vi.mock('@/hooks/useCourtBookingSchedule', () => ({ useCourtBookingSchedule: mocks.schedule }));
-vi.mock('@/hooks/useTariffPeriods', () => ({ useTariffPeriods: () => ({ rules: [] }) }));
+vi.mock('@/hooks/useTariffPeriods', () => ({ useTariffPeriods: () => ({ rules: mocks.tariffs }) }));
 vi.mock('@/queries/membership', () => ({
   myMembershipQueryOptions: { queryKey: ['test-membership'], queryFn: async () => null }
 }));
@@ -48,6 +50,7 @@ function mount() {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.now = '2030-01-02 09:00:00';
+  mocks.tariffs = [];
   mocks.pathname = '/booking/tennis';
   useAuthStore.setState({ isAuth: true, user: { id: 'me' } as never });
   useBranchStore.setState({
@@ -61,7 +64,12 @@ beforeEach(() => {
       data: [
         slot('mine', 'a', 'Court A'),
         slot('other', 'b', 'Court B'),
-        slot('free', 'c', 'Court C', true)
+        slot('free', 'c', 'Court C', true),
+        {
+          ...slot('last', 'c', 'Court C'),
+          startAt: '2030-01-02 23:00:00',
+          endAt: '2030-01-03 00:00:00'
+        }
       ],
       isLoading: false,
       refetch: vi.fn()
@@ -126,5 +134,116 @@ it('switches to the new Jakarta day and keeps its future hours visible after mid
   });
   expect(mocks.schedule).toHaveBeenLastCalledWith('2030-01-03', '2030-01-03', 'TENNIS');
   expect(screen.getByText('10:00', { selector: 'td' })).toBeInTheDocument();
+  client.clear();
+});
+
+it.each(['/booking', '/booking/tennis'])(
+  'opens the next day after the last hour has disappeared in %s',
+  async (pathname) => {
+    mocks.pathname = pathname;
+    mocks.now = '2030-01-02 23:45:00';
+    const client = mount();
+    await waitFor(() =>
+      expect(mocks.schedule).toHaveBeenLastCalledWith(
+        '2030-01-03',
+        '2030-01-02',
+        pathname.includes('tennis') ? 'TENNIS' : 'PADEL'
+      )
+    );
+    expect(screen.getByRole('button', { name: '03 Jan 2030' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    client.clear();
+  }
+);
+it('advances an open court schedule exactly when its final row expires', async () => {
+  mocks.now = '2030-01-02 23:29:59';
+  const client = mount();
+  expect(screen.getByRole('button', { name: '02 Jan 2030' })).toHaveAttribute(
+    'aria-pressed',
+    'true'
+  );
+  await act(async () => {
+    mocks.now = '2030-01-02 23:30:00';
+    window.dispatchEvent(new Event('focus'));
+  });
+  expect(screen.getByRole('button', { name: '03 Jan 2030' })).toHaveAttribute(
+    'aria-pressed',
+    'true'
+  );
+  client.clear();
+});
+it('preserves a future date chosen by the customer when today closes', async () => {
+  const client = mount();
+  fireEvent.click(screen.getByRole('button', { name: '05 Jan 2030' }));
+  await act(async () => {
+    mocks.now = '2030-01-02 23:45:00';
+    window.dispatchEvent(new Event('focus'));
+  });
+  expect(screen.getByRole('button', { name: '05 Jan 2030' })).toHaveAttribute(
+    'aria-pressed',
+    'true'
+  );
+  client.clear();
+});
+it('does not skip today because the availability request failed', async () => {
+  mocks.now = '2030-01-02 23:45:00';
+  const schedule = mocks.schedule();
+  mocks.schedule.mockReturnValue({
+    ...schedule,
+    slotQuery: { ...schedule.slotQuery, isError: true }
+  });
+  const client = mount();
+  expect(screen.getByRole('button', { name: '02 Jan 2030' })).toHaveAttribute(
+    'aria-pressed',
+    'true'
+  );
+  expect(screen.getByRole('alert')).toHaveTextContent('Jadwal belum dapat dimuat');
+  client.clear();
+});
+
+it('uses current operating bands rather than legacy rows outside the closing time', async () => {
+  mocks.now = '2030-01-02 20:29:59';
+  mocks.tariffs = [
+    {
+      id: 'early-close',
+      branchId: 'cemara',
+      sport: 'TENNIS',
+      effectiveFrom: '2030-01-01',
+      happyStart: 6,
+      happyEnd: 15,
+      peakStart: 15,
+      peakEnd: 21
+    }
+  ];
+  const schedule = mocks.schedule();
+  mocks.schedule.mockReturnValue({
+    ...schedule,
+    slotQuery: {
+      ...schedule.slotQuery,
+      data: [
+        ...schedule.slotQuery.data,
+        {
+          ...slot('closing', 'c', 'Court C'),
+          startAt: '2030-01-02 20:00:00',
+          endAt: '2030-01-02 21:00:00'
+        }
+      ]
+    }
+  });
+  const client = mount();
+  expect(screen.getByRole('button', { name: '02 Jan 2030' })).toHaveAttribute(
+    'aria-pressed',
+    'true'
+  );
+  await act(async () => {
+    mocks.now = '2030-01-02 20:30:00';
+    window.dispatchEvent(new Event('focus'));
+  });
+  expect(screen.getByRole('button', { name: '03 Jan 2030' })).toHaveAttribute(
+    'aria-pressed',
+    'true'
+  );
   client.clear();
 });

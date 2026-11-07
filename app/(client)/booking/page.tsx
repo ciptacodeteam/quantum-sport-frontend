@@ -3,6 +3,8 @@
 import { useTariffPeriods } from '@/hooks/useTariffPeriods';
 import { resolveTariffPeriod, tariffBand } from '@/lib/tariff-period';
 
+import { useBookingDateRollover } from '@/hooks/useBookingDateRollover';
+import { parseScheduleDatetime } from '@/lib/admin-schedule-time';
 import { useCourtBookingSchedule } from '@/hooks/useCourtBookingSchedule';
 import MainHeader from '@/components/headers/MainHeader';
 import { Button } from '@/components/ui/button';
@@ -122,6 +124,39 @@ export default function BookingPage() {
 
   const { rules: tariffRules } = useTariffPeriods(false);
   const slots = useMemo(() => slotsData ?? [], [slotsData]);
+  const scheduledHours = useMemo(
+    () =>
+      [
+        ...new Set(
+          slots
+            .filter(
+              (slot) =>
+                !slot.scheduleClosed &&
+                parseScheduleDatetime(slot.startAt).format('YYYY-MM-DD') === selectedFullDate &&
+                tariffBand(
+                  formatSlotTime(slot.startAt),
+                  resolveTariffPeriod(tariffRules, selectedFullDate, courtSport)
+                )
+            )
+            .map((slot) => formatSlotTime(slot.startAt))
+        )
+      ].sort(),
+    [slots, selectedFullDate, tariffRules, courtSport]
+  );
+  useBookingDateRollover({
+    date: selectedFullDate,
+    endDate: windowEndKey,
+    scheduledHours,
+    now: currentTime.valueOf(),
+    enabled:
+      hasMounted &&
+      !!bookingWindow &&
+      !windowQuery.isError &&
+      !isSlotsLoading &&
+      !isSlotsError &&
+      slotsData !== undefined,
+    onDateChange: setSelectedDate
+  });
   const activeMembershipType = useMemo<MembershipType | null>(() => {
     const activeMembership = userMembershipData?.activeMembership;
     if (

@@ -15,7 +15,10 @@ export function availableBallboyHours(options: BallboyAvailability[], date: stri
   });
 }
 
-export function ballboyCartItem(option: BallboyAvailability): SelectedBallboy {
+export function ballboyCartItem(
+  option: BallboyAvailability,
+  courtSport?: 'PADEL' | 'TENNIS'
+): SelectedBallboy {
   const start = parseScheduleDatetime(option.startAt);
   const end = parseScheduleDatetime(option.endAt);
   return {
@@ -27,7 +30,7 @@ export function ballboyCartItem(option: BallboyAvailability): SelectedBallboy {
     timeSlot: `${start.format('HH:mm')} - ${end.format('HH:mm')}`,
     startAt: option.startAt,
     endAt: option.endAt,
-    courtSport: 'TENNIS'
+    ...(courtSport ? { courtSport } : {})
   };
 }
 
@@ -46,7 +49,13 @@ export function courtBallboyRange(court: BookingItem) {
 }
 
 export function ballboyMatchesCourt(item: SelectedBallboy, court: BookingItem) {
-  if (court.sport !== 'TENNIS' || item.courtSlotId !== court.slotId || !item.startAt || !item.endAt)
+  if (
+    (court.sport !== 'TENNIS' && court.sport !== 'PADEL') ||
+    (item.courtSport !== undefined && item.courtSport !== court.sport) ||
+    item.courtSlotId !== court.slotId ||
+    !item.startAt ||
+    !item.endAt
+  )
     return false;
   const range = courtBallboyRange(court);
   return (

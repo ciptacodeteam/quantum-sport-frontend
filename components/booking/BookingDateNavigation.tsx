@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { IconCalendarFilled } from '@tabler/icons-react';
 import { Button } from '@/components/ui/button';
 import { DatePickerModal, DatePickerModalTrigger } from '@/components/ui/date-picker-modal';
@@ -27,6 +27,18 @@ export default function BookingDateNavigation({
   label?: string;
 }) {
   const strip = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const container = strip.current;
+    const target = container?.querySelector<HTMLButtonElement>(`[data-date="${selectedDate}"]`);
+    if (!container || !target) return;
+    const bounds = container.getBoundingClientRect();
+    const selected = target.getBoundingClientRect();
+    if (selected.left < bounds.left || selected.right > bounds.right)
+      container.scrollTo({
+        left: selected.left - bounds.left + container.scrollLeft,
+        behavior: 'smooth'
+      });
+  }, [selectedDate, dates.length]);
   const chooseCalendarDate = (value: Date | null) => {
     if (!value) return;
     const next = dayjs(value).format('YYYY-MM-DD');

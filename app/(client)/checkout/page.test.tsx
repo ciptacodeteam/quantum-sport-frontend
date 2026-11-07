@@ -32,7 +32,7 @@ vi.mock('@/components/checkout/CourtBallboyPicker', () => ({
               timeSlot: '08:00 - 09:00',
               startAt: sessions[0].startAt,
               endAt: sessions[0].endAt,
-              courtSport: 'TENNIS',
+              courtSport: sessions[0].sport,
               price: 45000
             }
           ])
@@ -387,46 +387,58 @@ function addTennisCourt(membership = false) {
     );
   mocks.methods = [{ id: 'qris', name: 'QRIS', channel: 'QRIS', fees: 1000, percentage: '0' }];
 }
-it('adds ballboy from the dotted checkout button and pays courts and add-ons in one order', async () => {
-  addTennisCourt();
-  render(<CheckoutPage />);
-  const button = screen.getByRole('button', { name: 'Tambah Add-ons' });
-  expect(button).toHaveClass('border-dotted', 'bg-transparent');
-  fireEvent.click(button);
-  fireEvent.click(screen.getByRole('button', { name: 'Simpan add-ons' }));
-  expect(screen.queryByRole('dialog')).toBeNull();
-  expect(screen.getByRole('region', { name: 'Add-ons lapangan' })).toHaveTextContent(
-    'Ballboy · Budi'
-  );
-  expect(screen.getAllByText('Rp246.110').length).toBeGreaterThan(0);
-  fireEvent.click(screen.getAllByRole('button', { name: 'Bayar Sekarang' })[0]);
-  await waitFor(() => expect(mocks.mutate).toHaveBeenCalled());
-  expect(mocks.mutate.mock.calls[0][0]).toMatchObject({
-    courtSlots: ['court-slot'],
-    ballboySlots: [{ slotId: 'linked-ballboy', courtSlotId: 'court-slot' }],
-    paymentMethodId: 'qris',
-    useMembership: false
-  });
-});
-it('charges the ballboy while the court is paid with Value Pack, and recalculates after removal', async () => {
-  addTennisCourt(true);
-  render(<CheckoutPage />);
-  expect(screen.getAllByRole('button', { name: 'Konfirmasi booking' }).length).toBeGreaterThan(0);
-  fireEvent.click(screen.getByRole('button', { name: 'Tambah Add-ons' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Simpan add-ons' }));
-  expect(screen.getAllByText('Rp46.110').length).toBeGreaterThan(0);
-  fireEvent.click(screen.getAllByRole('button', { name: 'Bayar Sekarang' })[0]);
-  await waitFor(() => expect(mocks.mutate).toHaveBeenCalled());
-  expect(mocks.mutate.mock.calls[0][0]).toMatchObject({
-    courtSlots: ['court-slot'],
-    ballboySlots: [{ slotId: 'linked-ballboy', courtSlotId: 'court-slot' }],
-    useMembership: true,
-    paymentMethodId: 'qris'
-  });
-  fireEvent.click(screen.getByRole('button', { name: /Hapus ballboy Budi/ }));
-  expect(useBallboyCartStore.getState().courtItems).toEqual([]);
-  expect(screen.getAllByRole('button', { name: 'Konfirmasi booking' }).length).toBeGreaterThan(0);
-});
+it.each(['PADEL', 'TENNIS'] as const)(
+  'adds ballboy and pays courts and add-ons in one %s checkout',
+  async (sport) => {
+    addTennisCourt();
+    useBookingStore
+      .getState()
+      .setBookingItems(useBookingStore.getState().bookingItems.map((item) => ({ ...item, sport })));
+    render(<CheckoutPage />);
+    const button = screen.getByRole('button', { name: 'Tambah Add-ons' });
+    expect(button).toHaveClass('border-dotted', 'bg-transparent');
+    fireEvent.click(button);
+    fireEvent.click(screen.getByRole('button', { name: 'Simpan add-ons' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByRole('region', { name: 'Add-ons lapangan' })).toHaveTextContent(
+      'Ballboy · Budi'
+    );
+    expect(screen.getAllByText('Rp246.110').length).toBeGreaterThan(0);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Bayar Sekarang' })[0]);
+    await waitFor(() => expect(mocks.mutate).toHaveBeenCalled());
+    expect(mocks.mutate.mock.calls[0][0]).toMatchObject({
+      courtSlots: ['court-slot'],
+      ballboySlots: [{ slotId: 'linked-ballboy', courtSlotId: 'court-slot' }],
+      paymentMethodId: 'qris',
+      useMembership: false
+    });
+  }
+);
+it.each(['PADEL', 'TENNIS'] as const)(
+  'charges the ballboy while the %s court is paid with Value Pack',
+  async (sport) => {
+    addTennisCourt(true);
+    useBookingStore
+      .getState()
+      .setBookingItems(useBookingStore.getState().bookingItems.map((item) => ({ ...item, sport })));
+    render(<CheckoutPage />);
+    expect(screen.getAllByRole('button', { name: 'Konfirmasi booking' }).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Tambah Add-ons' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Simpan add-ons' }));
+    expect(screen.getAllByText('Rp46.110').length).toBeGreaterThan(0);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Bayar Sekarang' })[0]);
+    await waitFor(() => expect(mocks.mutate).toHaveBeenCalled());
+    expect(mocks.mutate.mock.calls[0][0]).toMatchObject({
+      courtSlots: ['court-slot'],
+      ballboySlots: [{ slotId: 'linked-ballboy', courtSlotId: 'court-slot' }],
+      useMembership: true,
+      paymentMethodId: 'qris'
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Hapus ballboy Budi/ }));
+    expect(useBallboyCartStore.getState().courtItems).toEqual([]);
+    expect(screen.getAllByRole('button', { name: 'Konfirmasi booking' }).length).toBeGreaterThan(0);
+  }
+);
 it('cancels add-on selection without changing the court order', () => {
   addTennisCourt();
   render(<CheckoutPage />);

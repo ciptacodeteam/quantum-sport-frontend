@@ -88,7 +88,7 @@ it('blocks the selected hour if another customer books it during availability re
   fireEvent.click(await screen.findByRole('button', { name: 'Budi, 11:00, Tersedia' }));
   await act(async () => {
     await client.cancelQueries();
-    client.setQueryData(['ballboy', 'availability', 'cemara', '2030-10-22', 'TENNIS'], {
+    client.setQueryData(['ballboy', 'availability', 'cemara', '2030-10-22', 'PADEL'], {
       options: [],
       hours: ['11:00']
     });
@@ -228,5 +228,45 @@ it('keeps future-day ballboy hours visible even when that hour has passed today'
   await screen.findByRole('table', { name: 'Jadwal booking ballboy' });
   fireEvent.click(screen.getByRole('button', { name: '23 Okt 2030' }));
   expect(await screen.findByRole('rowheader', { name: '09:00' })).toBeInTheDocument();
+  client.clear();
+});
+
+it('opens tomorrow when all of today’s scheduled ballboy rows have expired', async () => {
+  mocks.now = Date.parse('2030-10-22T12:30:00+07:00');
+  const client = mount();
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: '23 Okt 2030' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+  );
+  await waitFor(() =>
+    expect(mocks.availability).toHaveBeenLastCalledWith({
+      startAt: '2030-10-23T00:00:00',
+      endAt: '2030-10-24T00:00:00',
+      courtSport: 'PADEL'
+    })
+  );
+  client.clear();
+});
+it('keeps today selected if ballboys are fully booked but later scheduled hours still exist', async () => {
+  mocks.availability.mockResolvedValue({ data: [], hours: ['09:00', '11:00', '12:00'] });
+  const client = mount();
+  await screen.findByRole('table', { name: 'Jadwal booking ballboy' });
+  expect(screen.getByRole('button', { name: '22 Okt 2030' })).toHaveAttribute(
+    'aria-pressed',
+    'true'
+  );
+  client.clear();
+});
+it('does not advance beyond the final date in the booking window', async () => {
+  mocks.now = Date.parse('2030-10-22T12:30:00+07:00');
+  mocks.window.mockResolvedValue({ startDate: '2030-10-22', endDate: '2030-10-22', months: 1 });
+  const client = mount();
+  await screen.findByText('Tidak ada jadwal ballboy yang tersisa pada tanggal ini.');
+  expect(screen.getByRole('button', { name: '22 Okt 2030' })).toHaveAttribute(
+    'aria-pressed',
+    'true'
+  );
   client.clear();
 });
