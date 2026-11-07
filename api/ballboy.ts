@@ -13,3 +13,9 @@ export async function getBallboyAvailabilityApi(params: BallboyAvailabilityParam
 
   return data;
 }
+
+export type BallboySummary = { id: string; name: string };
+export async function getBallboysApi(): Promise<BallboySummary[]> {
+  const { data } = await api.get('/ballboys');
+  return data.data;
+}

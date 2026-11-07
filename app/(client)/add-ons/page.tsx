@@ -3,12 +3,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { Clock3, UserRound, X } from 'lucide-react';
+import { CalendarDays, X } from 'lucide-react';
 import MainHeader from '@/components/headers/MainHeader';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { DatePickerModal, DatePickerModalTrigger } from '@/components/ui/date-picker-modal';
 import { getCourtBookingWindowApi } from '@/api/court';
-import { getBallboyAvailabilityApi } from '@/api/ballboy';
+import { getBallboyAvailabilityApi, getBallboysApi } from '@/api/ballboy';
 import { useBranchStore } from '@/stores/useBranchStore';
 import { useBallboyCartStore } from '@/stores/useBallboyCartStore';
 import type { SelectedBallboy } from '@/stores/useBookingStore';
@@ -30,7 +30,6 @@ export default function AddOnsPage() {
   const now = useBookingClock();
   const today = dayjs(now).tz('Asia/Jakarta').format('YYYY-MM-DD');
   const [date, setDate] = useState(() => nowJakarta().format('YYYY-MM-DD'));
-  const [hour, setHour] = useState<string | null>(null);
   const [draft, setDraft] = useState<{ branchId: string | null; items: SelectedBallboy[] }>(() => ({
     branchId: cart.branchId,
     items: cart.items
@@ -43,6 +42,24 @@ export default function AddOnsPage() {
     refetchInterval: 60000
   });
   const withinWindow = !!windowQuery.data && date >= today && date <= windowQuery.data.endDate;
+  const roster = useQuery({
+    queryKey: ['ballboy', 'catalog', branch?.id, 'TENNIS'],
+    queryFn: getBallboysApi,
+    enabled: !!branch,
+    refetchInterval: 60000,
+    refetchOnWindowFocus: true
+  });
+  const dateList = useMemo(() => {
+    if (!windowQuery.data) return [];
+    const count = Math.min(
+      367,
+      Math.max(0, dayjs(windowQuery.data.endDate).diff(dayjs(today), 'day') + 1)
+    );
+    return Array.from({ length: count }, (_, index) =>
+      dayjs(today).add(index, 'day').format('YYYY-MM-DD')
+    );
+  }, [today, windowQuery.data]);
+
   const availability = useQuery({
     queryKey: ['ballboy', 'availability', branch?.id, date, 'TENNIS'],
     queryFn: async () => {
@@ -53,7 +70,7 @@ export default function AddOnsPage() {
       });
       return response.data as BallboyAvailability[];
     },
-    enabled: !!branch && withinWindow,
+    enabled: !!branch && date >= today && (!windowQuery.data || withinWindow),
     refetchInterval: 10000,
     refetchOnWindowFocus: true
   });
@@ -61,11 +78,28 @@ export default function AddOnsPage() {
     () => availableBallboyHours(availability.data ?? [], date, now),
     [availability.data, date, now]
   );
+  const slotMap = useMemo(
+    () =>
+      new Map(
+        options.map((option) => [
+          `${option.ballboy.id}|${parseScheduleDatetime(option.startAt).format('HH:mm')}`,
+          option
+        ])
+      ),
+    [options]
+  );
   const dayItems = selected.filter((item) => item.date === date);
   const invalid =
+    (!roster.isPending &&
+      !roster.isError &&
+      selected.some((item) => !roster.data?.some((person) => person.id === item.ballboyId))) ||
     selected.some(
       (item) => !item.startAt || parseScheduleDatetime(item.startAt).valueOf() <= now
-    ) || dayItems.some((item) => !options.some((option) => option.slotId === item.slotId));
+    ) ||
+    dayItems.some(
+      (item) =>
+        !options.some((option) => option.slotId === item.slotId && option.price === item.price)
+    );
   const total = selected.reduce((sum, item) => sum + item.price, 0);
 
   // Hydration may finish after the initial render; restore only a matching branch cart.
@@ -106,30 +140,90 @@ export default function AddOnsPage() {
         ) : (
           <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
             <section
-              className="min-w-0 space-y-6 border border-black/15 bg-white p-5 sm:p-6"
+              className="min-w-0 space-y-5 border border-black/15 bg-[#f8f8f6] p-4 sm:p-5"
               aria-label="Jadwal ballboy"
             >
-              <div className="flex flex-wrap items-end justify-between gap-4">
-                <div>
-                  <label htmlFor="ballboy-date" className="mb-2 block text-sm font-medium">
-                    Tanggal bermain
-                  </label>
-                  <Input
-                    id="ballboy-date"
-                    type="date"
-                    value={date}
-                    min={today}
-                    max={windowQuery.data?.endDate ?? today}
-                    onChange={(event) => {
-                      setDate(event.target.value);
-                      setHour(null);
-                    }}
-                    className="w-auto rounded-none"
-                  />
+              <div className="flex min-w-0 items-center gap-3 border-b border-black/15 pb-4">
+                <DatePickerModal
+                  value={dayjs(date).toDate()}
+                  minDate={dayjs(today).toDate()}
+                  maxDate={dayjs(windowQuery.data?.endDate ?? today).toDate()}
+                  label="Pilih tanggal bermain"
+                  onChange={(value) => {
+                    if (!value) return;
+                    const next = dayjs(value).format('YYYY-MM-DD');
+                    if (next >= today && windowQuery.data && next <= windowQuery.data.endDate)
+                      setDate(next);
+                  }}
+                >
+                  <DatePickerModalTrigger>
+                    <Button
+                      variant="ghost"
+                      size="icon-lg"
+                      aria-label="Pilih tanggal pemesanan"
+                      disabled={!windowQuery.data || windowQuery.isError}
+                      className="shrink-0 rounded-none border border-black/15 bg-white text-black hover:bg-black/5"
+                    >
+                      <CalendarDays className="size-5" />
+                    </Button>
+                  </DatePickerModalTrigger>
+                </DatePickerModal>
+                <div
+                  role="group"
+                  aria-label="Tanggal booking ballboy"
+                  className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1"
+                >
+                  {dateList.map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-label={dayjs(value).format('DD MMM YYYY')}
+                      aria-pressed={date === value}
+                      onClick={() => setDate(value)}
+                      className={cn(
+                        'flex h-16 min-w-16 shrink-0 flex-col items-center justify-center border px-3 py-2 transition-colors focus-visible:outline-2 focus-visible:outline-black',
+                        date === value
+                          ? 'border-[#111111] bg-[#111111] text-white'
+                          : 'border-transparent text-black/60 hover:border-black/15 hover:bg-white'
+                      )}
+                    >
+                      <span className="text-xs">{dayjs(value).format('ddd')}</span>
+                      <span className="mt-0.5 text-sm font-semibold">
+                        {dayjs(value).format('DD MMM')}
+                      </span>
+                    </button>
+                  ))}
                 </div>
-                <span className="text-xs text-black/50">{branch.name}</span>
               </div>
-              {windowQuery.isError || availability.isError ? (
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-medium">Jadwal Ballboy</h2>
+                  <p className="mt-1 text-xs text-black/50">
+                    {dayjs(date).format('dddd, DD MMM YYYY')} · {branch.name} · WIB
+                  </p>
+                </div>
+                <span className="text-xs text-black/50">
+                  Geser tabel untuk melihat semua ballboy
+                </span>
+              </div>
+              <div
+                aria-label="Keterangan jadwal"
+                className="flex flex-wrap gap-5 text-[11px] text-black/55"
+              >
+                <span className="flex items-center gap-2">
+                  <span className="size-2.5 border border-black/25 bg-white" />
+                  Tersedia
+                </span>
+                <span className="flex items-center gap-2">
+                  <span className="size-2.5 bg-[#111111]" />
+                  Dipilih
+                </span>
+                <span className="flex items-center gap-2">
+                  <span className="size-2.5 bg-[#e5e5e2]" />
+                  Tidak tersedia
+                </span>
+              </div>
+              {windowQuery.isError || availability.isError || roster.isError ? (
                 <div role="alert" className="space-y-3 text-sm text-red-700">
                   <p>Jadwal ballboy belum dapat dimuat.</p>
                   <Button
@@ -137,12 +231,15 @@ export default function AddOnsPage() {
                     onClick={() => {
                       void windowQuery.refetch();
                       void availability.refetch();
+                      void roster.refetch();
                     }}
                   >
                     Coba lagi
                   </Button>
                 </div>
-              ) : windowQuery.isPending || (withinWindow && availability.isPending) ? (
+              ) : windowQuery.isPending ||
+                roster.isPending ||
+                (withinWindow && availability.isPending) ? (
                 <p role="status" className="text-sm text-black/50">
                   Memuat jadwal ballboy...
                 </p>
@@ -150,111 +247,97 @@ export default function AddOnsPage() {
                 <p role="status" className="text-sm text-black/50">
                   Pilih tanggal dalam periode pemesanan yang tersedia.
                 </p>
+              ) : !roster.data?.length ? (
+                <p role="status" className="text-sm text-black/50">
+                  Belum ada ballboy yang dapat dipesan di cabang ini.
+                </p>
               ) : (
                 <>
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h2 className="text-sm font-medium">Pilih jam</h2>
-                    <span className="text-xs text-black/45">Jam abu-abu tidak tersedia</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                    {hours.map((time) => {
-                      const choices = options.filter(
-                        (option) => parseScheduleDatetime(option.startAt).format('HH:mm') === time
-                      );
-                      const chosen = dayItems.some((item) => item.timeSlot.startsWith(time));
-                      const unavailable = choices.length === 0;
-                      return (
-                        <button
-                          key={time}
-                          type="button"
-                          disabled={unavailable}
-                          aria-pressed={hour === time}
-                          aria-label={`Jam ${time}${unavailable ? ' tidak tersedia' : ''}`}
-                          onClick={() => setHour(time)}
-                          className={cn(
-                            'min-h-20 border p-3 text-left text-sm transition-colors disabled:cursor-not-allowed disabled:border-black/5 disabled:bg-black/5 disabled:text-black/25',
-                            hour === time
-                              ? 'border-[#ad422b] bg-[#ad422b]/5'
-                              : 'border-black/15 hover:border-[#ad422b]',
-                            chosen && 'ring-1 ring-[#ad422b]'
-                          )}
-                        >
-                          <span className="block font-medium">
-                            {time}–{dayjs(`${date}T${time}`).add(1, 'hour').format('HH:mm')}
-                          </span>
-                          <span className="mt-1 block text-[11px]">
-                            {unavailable
-                              ? 'Tidak tersedia'
-                              : chosen
-                                ? 'Dipilih'
-                                : `Mulai ${currency(Math.min(...choices.map((option) => option.price)))}`}
-                          </span>
-                        </button>
-                      );
-                    })}
+                  <p className="text-xs text-black/50">
+                    Klik harga pada jam yang diinginkan. Pilih satu ballboy untuk setiap jam;
+                    pilihan pada tanggal lain tetap tersimpan.
+                  </p>
+                  <div
+                    className="max-h-[640px] overflow-auto border border-black/15"
+                    aria-busy={availability.isFetching}
+                  >
+                    <table
+                      aria-label="Jadwal booking ballboy"
+                      className="w-full border-separate border-spacing-0 text-center"
+                    >
+                      <thead className="sticky top-0 z-20 bg-[#f8f8f6]">
+                        <tr>
+                          <th
+                            scope="col"
+                            className="sticky left-0 z-30 w-20 border-r border-b border-black/10 bg-[#f8f8f6] px-4 py-4 text-left text-[10px] font-medium tracking-wider text-black/45 uppercase"
+                          >
+                            Waktu
+                          </th>
+                          {roster.data.map((person) => (
+                            <th
+                              key={person.id}
+                              scope="col"
+                              className="min-w-[150px] border-r border-b border-black/10 bg-[#f8f8f6] px-3 py-4 text-xs font-medium"
+                            >
+                              {person.name}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {hours.map((time) => (
+                          <tr key={time}>
+                            <th
+                              scope="row"
+                              className="sticky left-0 z-10 border-r border-b border-black/10 bg-[#f8f8f6] px-4 py-2 text-left text-xs font-medium tabular-nums"
+                            >
+                              {time}
+                            </th>
+                            {roster.data.map((person) => {
+                              const option = slotMap.get(`${person.id}|${time}`);
+                              const chosen =
+                                !!option && dayItems.some((item) => item.slotId === option.slotId);
+                              return (
+                                <td
+                                  key={person.id}
+                                  className="border-r border-b border-black/10 p-1.5"
+                                >
+                                  <button
+                                    type="button"
+                                    disabled={!option}
+                                    aria-pressed={chosen}
+                                    aria-label={`${person.name}, ${time}, ${!option ? 'Tidak tersedia' : chosen ? 'Dipilih' : 'Tersedia'}`}
+                                    onClick={() => {
+                                      if (option) toggle(option);
+                                    }}
+                                    className={cn(
+                                      'flex h-16 w-full flex-col items-start justify-center gap-1 border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black',
+                                      !option
+                                        ? 'cursor-not-allowed border-transparent bg-[#eaeae6] text-black/35'
+                                        : chosen
+                                          ? 'border-[#111111] bg-[#111111] text-white'
+                                          : 'border-black/15 bg-white text-[#171717] hover:border-[#ad422b] hover:bg-[#ad422b]/5'
+                                    )}
+                                  >
+                                    <span className="text-sm font-medium tabular-nums">
+                                      {option ? currency(option.price) : '—'}
+                                    </span>
+                                    <span className="text-[10px] font-normal">
+                                      {!option ? 'Tidak tersedia' : chosen ? 'Dipilih' : 'per jam'}
+                                    </span>
+                                  </button>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                   {!options.length && (
-                    <p className="text-sm text-black/50">
+                    <p role="status" className="text-sm text-black/50">
                       Tidak ada ballboy tersedia pada tanggal ini.
                     </p>
-                  )}
-                  {hour && (
-                    <section
-                      aria-label={`Ballboy jam ${hour}`}
-                      className="space-y-3 border-t border-black/10 pt-5"
-                    >
-                      <h2 className="flex items-center gap-2 text-sm font-medium">
-                        <Clock3 className="size-4" />
-                        Pilih ballboy · {hour}
-                      </h2>
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        {options
-                          .filter(
-                            (option) =>
-                              parseScheduleDatetime(option.startAt).format('HH:mm') === hour
-                          )
-                          .map((option) => {
-                            const chosen = selected.some((item) => item.slotId === option.slotId);
-                            return (
-                              <button
-                                key={option.slotId}
-                                type="button"
-                                aria-pressed={chosen}
-                                onClick={() => toggle(option)}
-                                className={cn(
-                                  'flex items-center gap-3 border p-4 text-left',
-                                  chosen
-                                    ? 'border-[#ad422b] bg-[#ad422b]/5'
-                                    : 'border-black/15 hover:border-[#ad422b]'
-                                )}
-                              >
-                                <UserRound
-                                  className="size-6 shrink-0 text-[#ad422b]"
-                                  strokeWidth={1.5}
-                                />
-                                <span className="flex-1">
-                                  <span className="block text-sm font-medium">
-                                    {option.ballboy.name}
-                                  </span>
-                                  <span className="mt-1 block text-xs text-black/50">
-                                    {currency(option.price)}/jam
-                                  </span>
-                                </span>
-                                <span className="text-xs text-[#ad422b]">
-                                  {chosen ? 'Dipilih' : 'Pilih'}
-                                </span>
-                              </button>
-                            );
-                          })}
-                      </div>
-                      {!options.some(
-                        (option) => parseScheduleDatetime(option.startAt).format('HH:mm') === hour
-                      ) && (
-                        <p role="status" className="text-sm text-black/50">
-                          Jam ini sudah tidak tersedia. Pilih jam lain.
-                        </p>
-                      )}
-                    </section>
                   )}
                 </>
               )}
@@ -295,7 +378,8 @@ export default function AddOnsPage() {
               )}
               {selected.length > 0 && invalid && (
                 <p role="alert" className="text-xs text-red-700">
-                  Ada jam yang sudah tidak tersedia. Hapus pilihan tersebut dan pilih ulang.
+                  Ada jam yang sudah tidak tersedia atau harganya berubah. Hapus pilihan tersebut
+                  dan pilih ulang.
                 </p>
               )}
               <div className="flex justify-between border-t border-black/15 pt-4 text-sm">
@@ -308,6 +392,8 @@ export default function AddOnsPage() {
                   !selected.length ||
                   invalid ||
                   availability.isError ||
+                  roster.isError ||
+                  roster.isPending ||
                   availability.isFetching ||
                   !withinWindow
                 }
