@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { ArrowUpRight, CalendarDays, X } from 'lucide-react';
+import { ArrowUpRight, Loader2, X } from 'lucide-react';
+import { IconCalendarFilled } from '@tabler/icons-react';
 import MainHeader from '@/components/headers/MainHeader';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,7 +28,6 @@ import dayjs, { nowJakarta } from '@/lib/dayjs';
 import { cn } from '@/lib/utils';
 
 const currency = (amount: number) => `Rp${amount.toLocaleString('id-ID')}`;
-const hours = Array.from({ length: 24 }, (_, hour) => `${String(hour).padStart(2, '0')}:00`);
 
 export default function AddOnsPage() {
   const router = useRouter();
@@ -47,6 +47,7 @@ export default function AddOnsPage() {
     queryKey: ['courts', 'booking-window', branch?.id, 'TENNIS'],
     queryFn: () => getCourtBookingWindowApi('TENNIS'),
     enabled: !!branch,
+    staleTime: 60000,
     refetchInterval: 60000
   });
   const withinWindow = !!windowQuery.data && date >= today && date <= windowQuery.data.endDate;
@@ -54,6 +55,7 @@ export default function AddOnsPage() {
     queryKey: ['ballboy', 'catalog', branch?.id, 'TENNIS'],
     queryFn: getBallboysApi,
     enabled: !!branch,
+    staleTime: 60000,
     refetchInterval: 60000,
     refetchOnWindowFocus: true
   });
@@ -76,15 +78,30 @@ export default function AddOnsPage() {
         endAt: `${dayjs(date).add(1, 'day').format('YYYY-MM-DD')}T00:00:00`,
         courtSport: 'TENNIS'
       });
-      return response.data as BallboyAvailability[];
+      return {
+        options: response.data as BallboyAvailability[],
+        hours: response.hours as string[] | undefined
+      };
     },
     enabled: !!branch && date >= today && (!windowQuery.data || withinWindow),
     refetchInterval: 10000,
     refetchOnWindowFocus: true
   });
   const options = useMemo(
-    () => availableBallboyHours(availability.data ?? [], date, now),
+    () => availableBallboyHours(availability.data?.options ?? [], date, now),
     [availability.data, date, now]
+  );
+  const hours = useMemo(
+    () =>
+      availability.data?.hours ??
+      [
+        ...new Set(
+          (availability.data?.options ?? []).map((option) =>
+            parseScheduleDatetime(option.startAt).format('HH:mm')
+          )
+        )
+      ].sort(),
+    [availability.data]
   );
   const slotMap = useMemo(
     () =>
@@ -174,7 +191,7 @@ export default function AddOnsPage() {
         {!branch ? (
           <Button onClick={() => openSelector('/add-ons')}>Pilih cabang</Button>
         ) : (
-          <div className="grid h-full min-h-0 min-w-0 items-start gap-4 lg:h-auto lg:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="grid h-full min-h-0 min-w-0 grid-rows-[minmax(0,1fr)] items-start gap-0 lg:h-auto lg:grid-cols-[minmax(0,1fr)_300px] lg:grid-rows-none lg:gap-4">
             <section
               className="flex h-full min-h-0 min-w-0 flex-col lg:h-auto"
               aria-label="Jadwal ballboy"
@@ -198,9 +215,9 @@ export default function AddOnsPage() {
                       size="icon-lg"
                       aria-label="Pilih tanggal pemesanan"
                       disabled={!windowQuery.data || windowQuery.isError}
-                      className="shrink-0 rounded-none border border-black/15 bg-white text-black hover:bg-black/5"
+                      className="shrink-0 rounded-none border border-black/15 bg-white p-2 text-black hover:bg-black/5"
                     >
-                      <CalendarDays className="size-5" />
+                      <IconCalendarFilled className="size-5" />
                     </Button>
                   </DatePickerModalTrigger>
                 </DatePickerModal>
@@ -274,7 +291,10 @@ export default function AddOnsPage() {
                 </div>
               )}
               {windowQuery.isError || availability.isError || roster.isError ? (
-                <div role="alert" className="space-y-3 text-sm text-red-700">
+                <div
+                  role="alert"
+                  className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-6 text-center text-sm text-red-700 lg:min-h-64"
+                >
                   <p>Jadwal ballboy belum dapat dimuat.</p>
                   <Button
                     variant="outline"
@@ -290,15 +310,28 @@ export default function AddOnsPage() {
               ) : windowQuery.isPending ||
                 roster.isPending ||
                 (withinWindow && availability.isPending) ? (
-                <p role="status" className="text-sm text-black/50">
-                  Memuat jadwal ballboy...
-                </p>
+                <div
+                  role="status"
+                  className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-6 text-center text-sm text-black/50 lg:min-h-64"
+                >
+                  <Loader2
+                    aria-hidden="true"
+                    className="size-6 animate-spin motion-reduce:animate-none"
+                  />
+                  <span>Memuat jadwal ballboy...</span>
+                </div>
               ) : !withinWindow ? (
-                <p role="status" className="text-sm text-black/50">
+                <p
+                  role="status"
+                  className="flex flex-1 items-center justify-center p-6 text-center text-sm text-black/50"
+                >
                   Pilih tanggal dalam periode pemesanan yang tersedia.
                 </p>
               ) : !roster.data?.length ? (
-                <p role="status" className="text-sm text-black/50">
+                <p
+                  role="status"
+                  className="flex flex-1 items-center justify-center p-6 text-center text-sm text-black/50"
+                >
                   Belum ada ballboy yang dapat dipesan di cabang ini.
                 </p>
               ) : (
@@ -313,7 +346,10 @@ export default function AddOnsPage() {
                   >
                     <table
                       aria-label="Jadwal booking ballboy"
-                      className="w-full border-separate border-spacing-0 text-center"
+                      className={cn(
+                        'w-full min-w-full border-separate border-spacing-0 text-center lg:h-auto',
+                        hours.length > 0 && 'h-full'
+                      )}
                     >
                       <thead className="sticky top-0 z-20 bg-[#f8f8f6]">
                         <tr>
@@ -327,7 +363,7 @@ export default function AddOnsPage() {
                             <th
                               key={person.id}
                               scope="col"
-                              className="min-w-[150px] border-r border-b border-black/10 bg-[#f8f8f6] px-3 py-4 text-xs font-medium"
+                              className="min-w-[150px] border-r border-b border-black/10 bg-[#f8f8f6] px-3 py-3 text-xs font-medium text-black/70"
                             >
                               {person.name}
                             </th>
@@ -369,12 +405,13 @@ export default function AddOnsPage() {
                                           : 'border-black/15 bg-white text-[#171717] hover:border-[#ad422b] hover:bg-[#ad422b]/5'
                                     )}
                                   >
-                                    <span className="text-sm font-medium tabular-nums">
-                                      {option ? currency(option.price) : '—'}
-                                    </span>
-                                    <span className="text-[10px] font-normal">
-                                      {!option ? 'Tidak tersedia' : chosen ? 'Dipilih' : 'per jam'}
-                                    </span>
+                                    {option ? (
+                                      <span className="text-sm tabular-nums">
+                                        {currency(option.price)}
+                                      </span>
+                                    ) : (
+                                      <span className="text-[11px]">Tidak tersedia</span>
+                                    )}
                                   </button>
                                 </td>
                               );
@@ -383,12 +420,12 @@ export default function AddOnsPage() {
                         ))}
                       </tbody>
                     </table>
+                    {!hours.length && (
+                      <p role="status" className="p-8 text-center text-sm text-black/50">
+                        Tidak ada jadwal ballboy pada tanggal ini.
+                      </p>
+                    )}
                   </div>
-                  {!options.length && (
-                    <p role="status" className="text-sm text-black/50">
-                      Tidak ada ballboy tersedia pada tanggal ini.
-                    </p>
-                  )}
                 </>
               )}
             </section>

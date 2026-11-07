@@ -51,7 +51,10 @@ beforeEach(() => {
     { id: 'andi', name: 'Andi' }
   ]);
   mocks.window.mockResolvedValue({ startDate: '2030-10-22', endDate: '2030-11-22', months: 1 });
-  mocks.availability.mockResolvedValue({ data: [slot(9), slot(11), slot(12)] });
+  mocks.availability.mockResolvedValue({
+    data: [slot(9), slot(11), slot(12)],
+    hours: ['09:00', '10:00', '11:00', '12:00']
+  });
 });
 afterEach(() => {
   cleanup();
@@ -82,7 +85,10 @@ it('blocks the selected hour if another customer books it during availability re
   fireEvent.click(await screen.findByRole('button', { name: 'Budi, 11:00, Tersedia' }));
   await act(async () => {
     await client.cancelQueries();
-    client.setQueryData(['ballboy', 'availability', 'cemara', '2030-10-22', 'TENNIS'], []);
+    client.setQueryData(['ballboy', 'availability', 'cemara', '2030-10-22', 'TENNIS'], {
+      options: [],
+      hours: ['11:00']
+    });
   });
   expect(await screen.findByRole('alert')).toHaveTextContent('sudah tidak tersedia');
   expect(screen.getByRole('button', { name: 'Lanjut ke pembayaran' })).toBeDisabled();
@@ -163,5 +169,37 @@ it('keeps the subtotal and continue action in the mobile bottom bar and supports
   fireEvent.click(within(sheet).getByRole('button', { name: 'Kembali ke jadwal' }));
   expect(within(bar).getByText('Subtotal · 0 slot')).toBeInTheDocument();
   expect(within(bar).getByRole('button', { name: 'Lanjut ke pembayaran' })).toBeDisabled();
+  client.clear();
+});
+
+it('centers the loading indicator within the remaining schedule area', () => {
+  mocks.availability.mockReturnValue(new Promise(() => {}));
+  const client = mount();
+  const loading = screen.getByRole('status');
+  expect(loading).toHaveTextContent('Memuat jadwal ballboy');
+  expect(loading).toHaveClass('flex-1', 'items-center', 'justify-center', 'text-center');
+  client.clear();
+});
+
+it('uses scheduled WIB hours including unavailable rows and excludes hours outside the schedule', async () => {
+  mocks.availability.mockResolvedValue({ data: [slot(11)], hours: ['10:00', '11:00', '12:00'] });
+  const client = mount();
+  const table = await screen.findByRole('table', { name: 'Jadwal booking ballboy' });
+  expect(
+    within(table)
+      .getAllByRole('rowheader')
+      .map((row) => row.textContent)
+  ).toEqual(['10:00', '11:00', '12:00']);
+  expect(screen.getByRole('button', { name: 'Budi, 12:00, Tidak tersedia' })).toBeDisabled();
+  expect(screen.queryByRole('button', { name: 'Budi, 21:00, Tersedia' })).not.toBeInTheDocument();
+  expect(table).toHaveClass('h-full', 'lg:h-auto');
+  client.clear();
+});
+
+it('shows an empty schedule when no operating hours exist', async () => {
+  mocks.availability.mockResolvedValue({ data: [], hours: [] });
+  const client = mount();
+  expect(await screen.findByText('Tidak ada jadwal ballboy pada tanggal ini.')).toBeInTheDocument();
+  expect(screen.queryAllByRole('rowheader')).toHaveLength(0);
   client.clear();
 });
