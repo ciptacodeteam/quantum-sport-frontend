@@ -250,3 +250,45 @@ it('accepts a custom offline method from the catalog only after confirming recei
     })
   );
 });
+
+it('shows recently loaded availability immediately when reopening the same booking', async () => {
+  const { client, unmount } = mount();
+  await screen.findByRole('checkbox', { name: /Coach A/ });
+  unmount();
+  render(
+    <QueryClientProvider client={client}>
+      <AddBookingService {...props} />
+    </QueryClientProvider>
+  );
+  expect(screen.getByRole('checkbox', { name: /Coach A/ })).toBeInTheDocument();
+  expect(mocks.available).toHaveBeenCalledTimes(1);
+  client.clear();
+});
+it('cancels the pending availability request when the booking detail is closed', () => {
+  mocks.available.mockReturnValue(new Promise(() => {}));
+  const { client, unmount } = mount();
+  expect(screen.getByRole('status')).toHaveTextContent('Mencari jadwal tersedia');
+  const signal = mocks.available.mock.calls[0][3] as AbortSignal;
+  expect(signal.aborted).toBe(false);
+  unmount();
+  expect(signal.aborted).toBe(true);
+  client.clear();
+});
+it('shows a retry action immediately on a failed search instead of repeated automatic retries', async () => {
+  mocks.available.mockRejectedValueOnce(new Error('timeout'));
+  const client = new QueryClient({ defaultOptions: { queries: { retry: 3 } } });
+  render(
+    <QueryClientProvider client={client}>
+      <AddBookingService {...props} />
+    </QueryClientProvider>
+  );
+  expect(await screen.findByRole('alert')).toHaveTextContent('Layanan belum dapat dimuat');
+  expect(mocks.available).toHaveBeenCalledTimes(1);
+  mocks.available.mockResolvedValueOnce([]);
+  fireEvent.click(screen.getByRole('button', { name: 'Coba lagi' }));
+  expect(
+    await screen.findByText('Tidak ada coach atau ballboy tersedia pada jam ini.')
+  ).toBeInTheDocument();
+  expect(mocks.available).toHaveBeenCalledTimes(2);
+  client.clear();
+});

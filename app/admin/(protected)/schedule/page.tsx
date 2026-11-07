@@ -4,6 +4,7 @@ import { useAdminCourtSports } from '@/hooks/useAdminCourtSports';
 
 import CancelCoachDialog from '@/components/admin/coaching/CancelCoachDialog';
 import ReplaceCoachDialog from '@/components/admin/coaching/ReplaceCoachDialog';
+import MoveCourtSection from '@/components/admin/bookings/MoveCourtSection';
 import AddBookingService from '@/components/admin/coaching/AddBookingService';
 import { BookingBallboySection } from '@/components/admin/bookings/BookingBallboySection';
 import { Badge } from '@/components/ui/badge';
@@ -1121,6 +1122,11 @@ export default function SchedulePage() {
                                             <DialogTitle>Detail Pemesanan</DialogTitle>
                                           </DialogHeader>
                                           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
+                                            <MoveCourtSection
+                                              key={`${bookingCell.detail.id}-${bookingCell.detail.slotId}`}
+                                              detail={bookingCell.detail}
+                                              booking={bookingCell.booking}
+                                            />
                                             <AddBookingService
                                               detailId={bookingCell.detail.id}
                                               startAt={`${selectedDateString} ${startTime}:00`}

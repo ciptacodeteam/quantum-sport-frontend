@@ -1,5 +1,10 @@
 import { expect, it } from 'vitest';
-import { isCourtSlotBookable, isCourtWallSlotBookable } from './booking-time-policy';
+import {
+  isCourtSlotBookable,
+  isCourtWallSlotBookable,
+  isScheduleSlotVisible,
+  isScheduleWallSlotVisible
+} from './booking-time-policy';
 
 it.each([
   ['2026-10-28T14:59:59+07:00', true],
@@ -36,4 +41,30 @@ it('closes the last evening slot using Jakarta time even after UTC and calendar 
   expect(
     isCourtWallSlotBookable('2026-10-31T23:00:00Z', Date.parse('2026-11-01T00:00:00+07:00'))
   ).toBe(false);
+});
+
+it.each([
+  ['2026-11-01T12:59:59+07:00', true],
+  ['2026-11-01T13:00:00+07:00', true],
+  ['2026-11-01T13:15:00+07:00', true],
+  ['2026-11-01T13:29:59.999+07:00', true],
+  ['2026-11-01T13:30:00+07:00', false],
+  ['2026-11-01T13:31:00+07:00', false],
+  ['2026-11-02T00:00:00+07:00', false]
+])('hides user schedule rows exactly 30 minutes after start at %s', (now, visible) => {
+  const clock = Date.parse(now);
+  expect(isScheduleSlotVisible(Date.parse('2026-11-01T13:00:00+07:00'), clock)).toBe(visible);
+  for (const start of [
+    '2026-11-01 13:00:00',
+    '2026-11-01T13:00:00Z',
+    new Date('2026-11-01T13:00:00Z')
+  ]) {
+    expect(isScheduleWallSlotVisible(start, clock)).toBe(visible);
+  }
+});
+it('keeps tomorrow visible and hides yesterday across Jakarta midnight', () => {
+  const now = Date.parse('2026-11-02T00:00:00+07:00');
+  expect(isScheduleWallSlotVisible('2026-11-01 23:00:00', now)).toBe(false);
+  expect(isScheduleWallSlotVisible('2026-11-02 00:00:00', now)).toBe(true);
+  expect(isScheduleWallSlotVisible('2026-11-03 06:00:00', now)).toBe(true);
 });

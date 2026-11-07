@@ -1,25 +1,21 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import useAuthStore from '@/stores/useAuthStore';
 import { useBranchStore } from '@/stores/useBranchStore';
 import { useBookingStore } from '@/stores/useBookingStore';
 import BookingPage from './page';
-const mocks = vi.hoisted(() => ({ mySchedule: vi.fn(), schedule: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  schedule: vi.fn(),
+  now: '2030-01-02 09:00:00',
+  pathname: '/booking/tennis'
+}));
 vi.mock('next/navigation', () => ({
-  usePathname: () => '/booking/tennis',
+  usePathname: () => mocks.pathname,
   useRouter: () => ({ push: vi.fn() })
 }));
 vi.mock('@/components/headers/MainHeader', () => ({ default: () => null }));
 vi.mock('@/components/booking/CourtDetailsDialog', () => ({ default: () => null }));
-vi.mock('@/components/booking/ChangeCourtDialog', () => ({
-  default: ({ booking }: { booking: { detailId: string } }) => (
-    <div role="dialog" aria-label="Ganti lapangan">
-      {booking.detailId}
-    </div>
-  )
-}));
-vi.mock('@/api/court-change', () => ({ getMyCourtScheduleApi: mocks.mySchedule }));
 vi.mock('@/hooks/useCourtBookingSchedule', () => ({ useCourtBookingSchedule: mocks.schedule }));
 vi.mock('@/hooks/useTariffPeriods', () => ({ useTariffPeriods: () => ({ rules: [] }) }));
 vi.mock('@/queries/membership', () => ({
@@ -28,16 +24,8 @@ vi.mock('@/queries/membership', () => ({
 vi.mock('@/hooks/useHasMounted', () => ({ useHasMounted: () => true }));
 vi.mock('@/lib/dayjs', async (original) => {
   const actual = await original<typeof import('@/lib/dayjs')>();
-  return { ...actual, nowJakarta: () => actual.default.tz('2030-01-02 09:00:00', 'Asia/Jakarta') };
+  return { ...actual, nowJakarta: () => actual.default.tz(mocks.now, 'Asia/Jakarta') };
 });
-const owned = {
-  detailId: 'detail',
-  slotId: 'mine',
-  courtId: 'a',
-  courtName: 'Court A',
-  startAt: '2030-01-02 10:00:00',
-  endAt: '2030-01-02 11:00:00'
-};
 const slot = (id: string, courtId: string, name: string, isAvailable = false) => ({
   id,
   courtId,
@@ -59,12 +47,13 @@ function mount() {
 }
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.now = '2030-01-02 09:00:00';
+  mocks.pathname = '/booking/tennis';
   useAuthStore.setState({ isAuth: true, user: { id: 'me' } as never });
   useBranchStore.setState({
     branch: { id: 'cemara', name: 'Cemara', isActive: true, address: '' }
   });
   useBookingStore.setState({ bookingItems: [] });
-  mocks.mySchedule.mockResolvedValue([owned]);
   mocks.schedule.mockReturnValue({
     withinWindow: true,
     windowQuery: { data: { startDate: '2030-01-02', endDate: '2030-02-02', months: 1 } },
@@ -84,20 +73,17 @@ afterEach(() => {
   useAuthStore.getState().logout();
   useBookingStore.setState({ bookingItems: [] });
 });
-it('opens court changes from the owned booking without adding it to checkout', async () => {
+it('keeps existing bookings disabled without offering any user court-change action', () => {
   const client = mount();
-  fireEvent.click(
-    await screen.findByRole('button', { name: 'Court A, 10:00, Booking Anda, ganti lapangan' })
-  );
-  expect(screen.getByRole('dialog', { name: 'Ganti lapangan' })).toHaveTextContent('detail');
+  expect(screen.getByRole('button', { name: 'Court A, 10:00, Booked' })).toBeDisabled();
+  expect(screen.queryByText('Booking Anda')).not.toBeInTheDocument();
+  expect(screen.queryByText(/Ganti lapangan|Pindah court/)).not.toBeInTheDocument();
   expect(useBookingStore.getState().bookingItems).toEqual([]);
-  expect(screen.getByRole('button', { name: 'Court B, 10:00, Booked' })).toBeDisabled();
-  expect(mocks.mySchedule).toHaveBeenCalledWith('2030-01-02', 'TENNIS');
   client.clear();
 });
 it('keeps other customers booked slots disabled and allows ordinary booking of empty slots', async () => {
   const client = mount();
-  await screen.findByRole('button', { name: 'Court A, 10:00, Booking Anda, ganti lapangan' });
+  expect(screen.getByRole('button', { name: 'Court A, 10:00, Booked' })).toBeDisabled();
   fireEvent.click(screen.getByRole('button', { name: 'Court C, 10:00, Available' }));
   await waitFor(() =>
     expect(useBookingStore.getState().bookingItems.map((item) => item.slotId)).toEqual(['free'])
@@ -109,7 +95,36 @@ it('does not expose private booking labels to signed-out users', async () => {
   useAuthStore.getState().logout();
   const client = mount();
   expect(screen.getByRole('button', { name: 'Court A, 10:00, Booked' })).toBeDisabled();
-  expect(mocks.mySchedule).not.toHaveBeenCalled();
   expect(screen.queryByText('Booking Anda')).not.toBeInTheDocument();
+  client.clear();
+});
+
+it.each(['/booking', '/booking/tennis'])(
+  'automatically hides elapsed court rows at 30 minutes in %s',
+  async (pathname) => {
+    mocks.pathname = pathname;
+    mocks.now = '2030-01-02 10:29:59';
+    const client = mount();
+    expect(screen.getByText('10:00', { selector: 'td' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Court C, 10:00, Unavailable' })).toBeDisabled();
+    await act(async () => {
+      mocks.now = '2030-01-02 10:30:00';
+      window.dispatchEvent(new Event('focus'));
+    });
+    expect(screen.queryByText('10:00', { selector: 'td' })).not.toBeInTheDocument();
+    expect(screen.getByText('11:00', { selector: 'td' })).toBeInTheDocument();
+    client.clear();
+  }
+);
+
+it('switches to the new Jakarta day and keeps its future hours visible after midnight', async () => {
+  const client = mount();
+  expect(screen.getByText('10:00', { selector: 'td' })).toBeInTheDocument();
+  await act(async () => {
+    mocks.now = '2030-01-03 00:00:00';
+    window.dispatchEvent(new Event('focus'));
+  });
+  expect(mocks.schedule).toHaveBeenLastCalledWith('2030-01-03', '2030-01-03', 'TENNIS');
+  expect(screen.getByText('10:00', { selector: 'td' })).toBeInTheDocument();
   client.clear();
 });

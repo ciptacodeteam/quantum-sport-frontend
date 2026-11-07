@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { ArrowUpRight, Loader2, X } from 'lucide-react';
-import { IconCalendarFilled } from '@tabler/icons-react';
 import MainHeader from '@/components/headers/MainHeader';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,13 +13,14 @@ import {
   SheetTitle,
   SheetDescription
 } from '@/components/ui/sheet';
-import { DatePickerModal, DatePickerModalTrigger } from '@/components/ui/date-picker-modal';
+import BookingDateNavigation from '@/components/booking/BookingDateNavigation';
 import { getCourtBookingWindowApi } from '@/api/court';
 import { getBallboyAvailabilityApi, getBallboysApi } from '@/api/ballboy';
 import { useBranchStore } from '@/stores/useBranchStore';
 import { useBallboyCartStore } from '@/stores/useBallboyCartStore';
 import type { SelectedBallboy } from '@/stores/useBookingStore';
 import type { BallboyAvailability } from '@/types/model';
+import { isScheduleWallSlotVisible } from '@/lib/booking-time-policy';
 import { availableBallboyHours, ballboyCartItem } from '@/lib/ballboy-booking';
 import { parseScheduleDatetime } from '@/lib/admin-schedule-time';
 import { useBookingClock } from '@/hooks/useBookingClock';
@@ -91,8 +91,8 @@ export default function AddOnsPage() {
     () => availableBallboyHours(availability.data?.options ?? [], date, now),
     [availability.data, date, now]
   );
-  const hours = useMemo(
-    () =>
+  const hours = useMemo(() => {
+    const scheduledHours =
       availability.data?.hours ??
       [
         ...new Set(
@@ -100,9 +100,9 @@ export default function AddOnsPage() {
             parseScheduleDatetime(option.startAt).format('HH:mm')
           )
         )
-      ].sort(),
-    [availability.data]
-  );
+      ].sort();
+    return scheduledHours.filter((time) => isScheduleWallSlotVisible(`${date}T${time}:00`, now));
+  }, [availability.data, date, now]);
   const slotMap = useMemo(
     () =>
       new Map(
@@ -175,19 +175,9 @@ export default function AddOnsPage() {
   );
 
   return (
-    <div className="min-h-dvh bg-[#f8f8f6] text-[#171717]">
+    <>
       <MainHeader showBack backHref="/" />
-      <main className="booking-page mx-auto mt-[76px] h-[calc(100dvh-76px)] w-full max-w-7xl overflow-hidden pb-[calc(5rem+env(safe-area-inset-bottom))] text-[#171717] lg:mt-0 lg:h-auto lg:overflow-visible lg:px-8 lg:pt-40 lg:pb-16 xl:pt-32">
-        <div className="mb-8 hidden max-w-xl lg:block">
-          <p className="mb-2 text-xs font-medium tracking-widest text-[#ad422b] uppercase">
-            Add-ons · Tennis
-          </p>
-          <h1 className="text-3xl font-medium tracking-tight sm:text-4xl">Pesan Ballboy</h1>
-          <p className="mt-3 text-sm leading-relaxed text-black/55">
-            Pesan ballboy resmi sesuai jam bermain Anda, tanpa membeli lapangan lagi. Pilih satu
-            atau beberapa jam. Semua waktu dalam WIB.
-          </p>
-        </div>
+      <main className="booking-page mx-auto mt-[76px] h-[calc(100dvh-76px)] w-full max-w-7xl overflow-hidden pb-[calc(5rem+env(safe-area-inset-bottom))] text-[#171717] lg:mt-0 lg:h-auto lg:overflow-visible lg:px-8 lg:pt-28 lg:pb-16 xl:pt-32">
         {!branch ? (
           <Button onClick={() => openSelector('/add-ons')}>Pilih cabang</Button>
         ) : (
@@ -196,70 +186,15 @@ export default function AddOnsPage() {
               className="flex h-full min-h-0 min-w-0 flex-col lg:h-auto"
               aria-label="Jadwal ballboy"
             >
-              <div className="flex min-w-0 shrink-0 items-center gap-2 border-y border-black/15 bg-[#f8f8f6] p-3 lg:border">
-                <DatePickerModal
-                  value={dayjs(date).toDate()}
-                  minDate={dayjs(today).toDate()}
-                  maxDate={dayjs(windowQuery.data?.endDate ?? today).toDate()}
-                  label="Pilih tanggal bermain"
-                  onChange={(value) => {
-                    if (!value) return;
-                    const next = dayjs(value).format('YYYY-MM-DD');
-                    if (next >= today && windowQuery.data && next <= windowQuery.data.endDate)
-                      setDate(next);
-                  }}
-                >
-                  <DatePickerModalTrigger>
-                    <Button
-                      variant="ghost"
-                      size="icon-lg"
-                      aria-label="Pilih tanggal pemesanan"
-                      disabled={!windowQuery.data || windowQuery.isError}
-                      className="shrink-0 rounded-none border border-black/15 bg-white p-2 text-black hover:bg-black/5"
-                    >
-                      <IconCalendarFilled className="size-5" />
-                    </Button>
-                  </DatePickerModalTrigger>
-                </DatePickerModal>
-                <span aria-hidden="true" className="mx-1 h-10 w-px shrink-0 bg-black/25" />
-                <div
-                  role="group"
-                  aria-label="Tanggal booking ballboy"
-                  className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1"
-                >
-                  {dateList.map((value) => (
-                    <button
-                      key={value}
-                      type="button"
-                      aria-label={dayjs(value).format('DD MMM YYYY')}
-                      aria-pressed={date === value}
-                      onClick={() => setDate(value)}
-                      className={cn(
-                        'flex h-16 min-w-16 shrink-0 flex-col items-center justify-center border px-3 py-2 transition-colors focus-visible:outline-2 focus-visible:outline-black',
-                        date === value
-                          ? 'border-[#111111] bg-[#111111] text-white'
-                          : 'border-transparent text-black/60 hover:border-black/15 hover:bg-white'
-                      )}
-                    >
-                      <span className="text-xs">{dayjs(value).format('ddd')}</span>
-                      <span className="mt-0.5 text-sm font-semibold">
-                        {dayjs(value).format('DD MMM')}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="my-4 hidden flex-wrap items-center justify-between gap-3 lg:flex">
-                <div>
-                  <h2 className="text-base font-medium">Jadwal Ballboy</h2>
-                  <p className="mt-1 text-xs text-black/50">
-                    {dayjs(date).format('dddd, DD MMM YYYY')} · {branch.name} · WIB
-                  </p>
-                </div>
-                <span className="text-xs text-black/50">
-                  Geser tabel untuk melihat semua ballboy
-                </span>
-              </div>
+              <BookingDateNavigation
+                selectedDate={date}
+                dates={dateList}
+                minDate={today}
+                maxDate={windowQuery.data?.endDate ?? today}
+                disabled={!windowQuery.data || windowQuery.isError}
+                onDateChange={setDate}
+                label="Tanggal booking ballboy"
+              />
               <div
                 aria-label="Keterangan jadwal"
                 className="flex shrink-0 flex-wrap gap-5 px-5 py-4 text-[11px] text-black/55 lg:px-0"
@@ -336,22 +271,15 @@ export default function AddOnsPage() {
                 </p>
               ) : (
                 <>
-                  <p className="mb-3 hidden text-xs text-black/50 lg:block">
-                    Klik harga pada jam yang diinginkan. Pilih satu ballboy untuk setiap jam;
-                    pilihan pada tanggal lain tetap tersimpan.
-                  </p>
                   <div
                     className="min-h-0 flex-1 overflow-auto border-y border-black/15 lg:max-h-[640px] lg:flex-none lg:border"
                     aria-busy={availability.isFetching}
                   >
                     <table
                       aria-label="Jadwal booking ballboy"
-                      className={cn(
-                        'w-full min-w-full border-separate border-spacing-0 text-center lg:h-auto',
-                        hours.length > 0 && 'h-full'
-                      )}
+                      className="w-full min-w-full border-separate border-spacing-0 text-center"
                     >
-                      <thead className="sticky top-0 z-20 bg-[#f8f8f6]">
+                      <thead className="sticky top-0 z-20 bg-[#f8f8f6] text-xs">
                         <tr>
                           <th
                             scope="col"
@@ -363,9 +291,11 @@ export default function AddOnsPage() {
                             <th
                               key={person.id}
                               scope="col"
-                              className="min-w-[150px] border-r border-b border-black/10 bg-[#f8f8f6] px-3 py-3 text-xs font-medium text-black/70"
+                              className="min-w-[150px] border-r border-b border-black/10 bg-[#f8f8f6] px-3 py-3 text-xs font-medium"
                             >
-                              {person.name}
+                              <span className="mx-auto flex h-9 items-center justify-center gap-2 px-3 py-2 text-sm font-medium whitespace-nowrap text-black/70">
+                                {person.name}
+                              </span>
                             </th>
                           ))}
                         </tr>
@@ -375,7 +305,7 @@ export default function AddOnsPage() {
                           <tr key={time}>
                             <th
                               scope="row"
-                              className="sticky left-0 z-10 border-r border-b border-black/10 bg-[#f8f8f6] px-4 py-2 text-left text-xs font-medium tabular-nums"
+                              className="sticky left-0 z-10 w-20 border-r border-b border-black/10 bg-[#f8f8f6] px-4 py-2 text-left text-xs font-medium tabular-nums"
                             >
                               {time}
                             </th>
@@ -406,9 +336,7 @@ export default function AddOnsPage() {
                                     )}
                                   >
                                     {option ? (
-                                      <span className="text-sm tabular-nums">
-                                        {currency(option.price)}
-                                      </span>
+                                      <span className="text-sm">{currency(option.price)}</span>
                                     ) : (
                                       <span className="text-[11px]">Tidak tersedia</span>
                                     )}
@@ -422,7 +350,7 @@ export default function AddOnsPage() {
                     </table>
                     {!hours.length && (
                       <p role="status" className="p-8 text-center text-sm text-black/50">
-                        Tidak ada jadwal ballboy pada tanggal ini.
+                        Tidak ada jadwal ballboy yang tersisa pada tanggal ini.
                       </p>
                     )}
                   </div>
@@ -452,7 +380,7 @@ export default function AddOnsPage() {
                 </button>
                 <Button
                   aria-label="Lanjut ke pembayaran"
-                  className="h-12 shrink-0 rounded-full bg-[#111111] px-5 text-sm text-white hover:bg-black/80 disabled:bg-black/15 disabled:text-black/40 disabled:opacity-100 lg:w-full"
+                  className="h-12 shrink-0 rounded-full bg-[#111111] px-6 text-sm text-white hover:bg-black/80 disabled:bg-black/15 disabled:text-black/40 disabled:opacity-100 lg:w-full"
                   disabled={
                     !selected.length ||
                     invalid ||
@@ -503,6 +431,6 @@ export default function AddOnsPage() {
           </div>
         )}
       </main>
-    </div>
+    </>
   );
 }

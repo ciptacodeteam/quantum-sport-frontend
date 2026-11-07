@@ -1,4 +1,5 @@
 'use client';
+import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -51,8 +52,10 @@ export default function AddBookingService({
   } | null>(null);
   const available = useQuery({
     queryKey: ['admin', 'coaching', 'availability', detailId, startAt, endAt],
-    queryFn: () => coachingApi.available(detailId!, startAt, endAt),
+    queryFn: ({ signal }) => coachingApi.available(detailId!, startAt, endAt, signal),
     enabled: canWrite && canAdd,
+    staleTime: 10000,
+    retry: false,
     refetchInterval: 10000
   });
   const methods = useQuery({ ...adminPaymentMethodsQueryOptions, enabled: canWrite && canAdd });
@@ -180,7 +183,13 @@ export default function AddBookingService({
           </Button>
         </div>
       ) : available.isPending ? (
-        <p className="text-sm">Mencari jadwal tersedia...</p>
+        <div
+          role="status"
+          className="text-muted-foreground flex min-h-20 items-center justify-center gap-2 text-sm"
+        >
+          <Loader2 aria-hidden="true" className="size-4 animate-spin motion-reduce:animate-none" />
+          Mencari jadwal tersedia...
+        </div>
       ) : !available.data?.length ? (
         <p className="text-muted-foreground text-sm">
           Tidak ada coach atau ballboy tersedia pada jam ini.
@@ -321,6 +330,7 @@ export default function AddBookingService({
             disabled={
               !selectionValid ||
               attach.isPending ||
+              available.isFetching ||
               !canAdd ||
               (price > 0 && (isManual ? !received : !selectedMethod))
             }

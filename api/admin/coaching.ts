@@ -114,10 +114,12 @@ export const coachingApi = {
     adminApi.patch(`/coaching/slots/${id}`, { isAvailable }),
   updatePrice: async (id: string, price: number) =>
     adminApi.patch(`/coaching/slots/${id}`, { price }),
-  available: async (detailId: string, startAt: string, endAt: string) =>
+  available: async (detailId: string, startAt: string, endAt: string, signal?: AbortSignal) =>
     (
       await adminApi.get(`/coaching/booking-details/${detailId}/availability`, {
-        params: { startAt, endAt }
+        params: { startAt, endAt },
+        signal,
+        timeout: 15000
       })
     ).data.data as CoachingOption[],
   attach: async (

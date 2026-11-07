@@ -8,7 +8,8 @@ const mocks = vi.hoisted(() => ({
   push: vi.fn(),
   availability: vi.fn(),
   window: vi.fn(),
-  roster: vi.fn()
+  roster: vi.fn(),
+  now: Date.parse('2030-10-22T10:00:00+07:00')
 }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mocks.push }) }));
 vi.mock('@/components/headers/MainHeader', () => ({ default: () => null }));
@@ -18,7 +19,7 @@ vi.mock('@/api/ballboy', () => ({
   getBallboysApi: mocks.roster
 }));
 vi.mock('@/hooks/useBookingClock', () => ({
-  useBookingClock: () => Date.parse('2030-10-22T10:00:00+07:00')
+  useBookingClock: () => mocks.now
 }));
 vi.mock('@/lib/dayjs', async (original) => {
   const actual = await original<typeof import('@/lib/dayjs')>();
@@ -42,6 +43,7 @@ function mount() {
 }
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.now = Date.parse('2030-10-22T10:00:00+07:00');
   useBranchStore.setState({
     branch: { id: 'cemara', name: 'Cemara', address: '', isActive: true }
   });
@@ -62,7 +64,8 @@ afterEach(() => {
 });
 it('blocks unavailable and past hours, then checks out multiple ballboy hours without courts', async () => {
   const client = mount();
-  expect(await screen.findByRole('button', { name: 'Budi, 09:00, Tidak tersedia' })).toBeDisabled();
+  await screen.findByRole('table', { name: 'Jadwal booking ballboy' });
+  expect(screen.queryByRole('rowheader', { name: '09:00' })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Budi, 10:00, Tidak tersedia' })).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Lanjut ke pembayaran' })).toBeDisabled();
   fireEvent.click(screen.getByRole('button', { name: 'Budi, 11:00, Tersedia' }));
@@ -192,14 +195,38 @@ it('uses scheduled WIB hours including unavailable rows and excludes hours outsi
   ).toEqual(['10:00', '11:00', '12:00']);
   expect(screen.getByRole('button', { name: 'Budi, 12:00, Tidak tersedia' })).toBeDisabled();
   expect(screen.queryByRole('button', { name: 'Budi, 21:00, Tersedia' })).not.toBeInTheDocument();
-  expect(table).toHaveClass('h-full', 'lg:h-auto');
+  expect(table).toHaveClass('w-full', 'min-w-full', 'border-separate', 'border-spacing-0');
   client.clear();
 });
 
 it('shows an empty schedule when no operating hours exist', async () => {
   mocks.availability.mockResolvedValue({ data: [], hours: [] });
   const client = mount();
-  expect(await screen.findByText('Tidak ada jadwal ballboy pada tanggal ini.')).toBeInTheDocument();
+  expect(
+    await screen.findByText('Tidak ada jadwal ballboy yang tersisa pada tanggal ini.')
+  ).toBeInTheDocument();
   expect(screen.queryAllByRole('rowheader')).toHaveLength(0);
+  client.clear();
+});
+
+it.each([
+  ['10:29:59', true],
+  ['10:30:00', false],
+  ['10:31:00', false]
+])('hides elapsed ballboy hours at the 30-minute WIB boundary: %s', async (time, visible) => {
+  mocks.now = Date.parse(`2030-10-22T${time}+07:00`);
+  const client = mount();
+  await screen.findByRole('table', { name: 'Jadwal booking ballboy' });
+  expect(!!screen.queryByRole('rowheader', { name: '10:00' })).toBe(visible);
+  expect(screen.queryByRole('rowheader', { name: '09:00' })).not.toBeInTheDocument();
+  expect(screen.getByRole('rowheader', { name: '11:00' })).toBeInTheDocument();
+  client.clear();
+});
+it('keeps future-day ballboy hours visible even when that hour has passed today', async () => {
+  mocks.availability.mockResolvedValue({ data: [], hours: ['09:00', '10:00', '11:00'] });
+  const client = mount();
+  await screen.findByRole('table', { name: 'Jadwal booking ballboy' });
+  fireEvent.click(screen.getByRole('button', { name: '23 Okt 2030' }));
+  expect(await screen.findByRole('rowheader', { name: '09:00' })).toBeInTheDocument();
   client.clear();
 });
