@@ -1,0 +1,1459 @@
+'use client';
+import BranchLabel from '@/components/branches/BranchLabel';
+import CourtBallboyPicker from './CourtBallboyPicker';
+import { ballboyMatchesCourt } from '@/lib/ballboy-booking';
+import { useBallboyCartStore } from '@/stores/useBallboyCartStore';
+import { useBranchStore } from '@/stores/useBranchStore';
+import { parseScheduleDatetime } from '@/lib/admin-schedule-time';
+import { useBookingClock } from '@/hooks/useBookingClock';
+
+import PaymentLoading, { PaymentProcessingOverlay } from '@/components/invoice/PaymentLoading';
+import MainHeader from '@/components/headers/MainHeader';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription
+} from '@/components/ui/dialog';
+import { useConfirm } from '@/components/ui/confirm-dialog';
+import SavedCardSelector from '@/components/forms/payment/SavedCardSelector';
+import CreditCardForm, { type CreditCardFormData } from '@/components/forms/payment/CreditCardForm';
+import { useMembershipDiscount } from '@/hooks/useMembershipDiscount';
+import { cheaperRegularRate } from '@/lib/membership-rate';
+import { getCardToken, getMidtransConfig, payWithSnap } from '@/lib/midtrans';
+import { cn, resolveMediaUrl } from '@/lib/utils';
+import { isCourtSlotBookable } from '@/lib/booking-time-policy';
+import { getCheckoutSelections } from '@/lib/checkout-selections';
+import { applyPromoMutationOptions, checkoutMutationOptions } from '@/mutations/booking';
+import { paymentMethodsQueryOptions } from '@/queries/paymentMethod';
+import { profileQueryOptions } from '@/queries/profile';
+import useAuthModalStore from '@/stores/useAuthModalStore';
+import useAuthRedirectStore from '@/stores/useAuthRedirectStore';
+import { useBookingStore } from '@/stores/useBookingStore';
+import type { PaymentMethod, CreditCard } from '@/types/model';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import dayjs, { nowJakarta } from '@/lib/dayjs';
+import 'dayjs/locale/id';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
+import { ArrowUpRight, ShoppingBag, Plus, X } from 'lucide-react';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
+
+dayjs.locale('id');
+dayjs.extend(customParseFormat);
+
+const currencyFormatter = new Intl.NumberFormat('id-ID', {
+  style: 'currency',
+  currency: 'IDR',
+  minimumFractionDigits: 0
+});
+
+// Override default format supaya tidak ada spasi
+const formatCurrency = (value: number) => currencyFormatter.format(value).replace(/\s/g, '');
+const PAYMENT_METHOD_STORAGE_KEY = 'checkout-selected-payment';
+
+const normalizeSlotTime = (time: string) => time?.trim().replace(/ /g, '').replace(/\t/g, '') ?? '';
+
+const parseSlotTime = (time: string): dayjs.Dayjs | null => {
+  const sanitized = normalizeSlotTime(time).replace(/\./g, ':');
+  const candidates = ['HH:mm', 'H:mm'];
+  for (const format of candidates) {
+    const parsed = dayjs(sanitized, format, true);
+    if (parsed.isValid()) return parsed;
+  }
+  return null;
+};
+
+const getSlotDisplayRange = (timeSlot: string) => {
+  const parsed = parseSlotTime(timeSlot);
+  if (!parsed) {
+    return {
+      start: timeSlot,
+      end: timeSlot
+    };
+  }
+
+  const start = parsed.format('HH:mm');
+  const end = parsed.add(1, 'hour').format('HH:mm');
+
+  return { start, end };
+};
+
+const getBookingItemStart = (item: { date: string; timeSlot: string; startAt?: string }) => {
+  const date = dayjs(item.date, 'YYYY-MM-DD', true);
+  const time = parseSlotTime(item.timeSlot);
+
+  if (date.isValid() && time) {
+    return dayjs.tz(`${date.format('YYYY-MM-DD')}T${time.format('HH:mm')}:00`, 'Asia/Jakarta');
+  }
+
+  return item.startAt ? dayjs(item.startAt) : null;
+};
+
+export default function CustomerCheckout({ ballboyOnly = false }: { ballboyOnly?: boolean }) {
+  const router = useRouter();
+  // const pathname = usePathname();
+  // const searchParams = useSearchParams();
+  const courtItems = useBookingStore((state) => state.bookingItems);
+  const ballboyCart = useBallboyCartStore();
+  const branchId = useBranchStore((state) => state.branch?.id);
+  const bookingItems = useMemo(() => (ballboyOnly ? [] : courtItems), [ballboyOnly, courtItems]);
+  const supportsBallboy =
+    !ballboyOnly &&
+    bookingItems.length > 0 &&
+    bookingItems.every((court) => court.sport === 'TENNIS');
+  const ballboys = useMemo(
+    () =>
+      ballboyOnly
+        ? branchId === ballboyCart.branchId
+          ? ballboyCart.items
+          : []
+        : supportsBallboy && branchId === ballboyCart.courtBranchId
+          ? ballboyCart.courtItems.filter((item) =>
+              bookingItems.some((court) => ballboyMatchesCourt(item, court))
+            )
+          : [],
+    [
+      ballboyOnly,
+      branchId,
+      ballboyCart.branchId,
+      ballboyCart.items,
+      ballboyCart.courtBranchId,
+      ballboyCart.courtItems,
+      bookingItems,
+      supportsBallboy
+    ]
+  );
+  const [isAddOnsOpen, setAddOnsOpen] = useState(false);
+  const ballboyTotal = ballboys.reduce((sum, item) => sum + item.price, 0);
+  const now = useBookingClock();
+  const hasExpiredBallboy = ballboys.some(
+    (item) => !item.startAt || parseScheduleDatetime(item.startAt).valueOf() <= now
+  );
+  const hasCheckoutItems = bookingItems.length > 0 || ballboys.length > 0;
+
+  // Authentication check
+  const { data: user, isPending: isUserPending } = useQuery(profileQueryOptions);
+  const isAuthenticated = !!user?.id;
+  const openAuthModal = useAuthModalStore((state) => state.open);
+  const setRedirectPath = useAuthRedirectStore((state) => state.setRedirectPath);
+  const [membershipSelection, setMembershipSelection] = useState<string[] | null>(null);
+  const courtSport = useMemo(
+    () => bookingItems.find((item) => item.sport)?.sport ?? 'PADEL',
+    [bookingItems]
+  );
+  const bookingHref = ballboyOnly
+    ? '/add-ons'
+    : courtSport === 'TENNIS'
+      ? '/booking/tennis'
+      : '/booking';
+
+  // Calculate membership discount for court bookings (only if user is authenticated)
+  const membershipDiscount = useMembershipDiscount(
+    user?.id || null,
+    bookingItems,
+    undefined,
+    true, // isUser = true, so it fetches membership for current logged-in user
+    courtSport,
+    true,
+    membershipSelection
+  );
+  const membershipSlotIds = membershipDiscount.membershipSlotIds ?? [];
+  const allMembershipSlotsSelected =
+    membershipSlotIds.length > 0 &&
+    bookingItems.every(
+      (item) =>
+        membershipSlotIds.includes(item.slotId) ||
+        !!membershipDiscount.membershipSlotReasons?.[item.slotId]
+    );
+
+  // Apply membership discount to court total
+  const courtSubtotal = membershipDiscount.originalTotal;
+  const discountedCourtTotal = membershipDiscount.discountedTotal;
+  const grandTotal = discountedCourtTotal + ballboyTotal;
+  const isCoveredByMembership =
+    bookingItems.length > 0 &&
+    membershipDiscount.canUseMembership &&
+    membershipDiscount.slotsToDeduct > 0 &&
+    grandTotal === 0;
+
+  const { data: paymentMethods = [], isPending: isLoadingPaymentMethods } = useQuery(
+    paymentMethodsQueryOptions()
+  );
+
+  const [isNavigatingToPayment, setNavigatingToPayment] = useState(false);
+  const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
+  const [selectedCard, setSelectedCard] = useState<CreditCard | null>(null);
+  const [selectedCardCvv, setSelectedCardCvv] = useState<string>('');
+  const [isAddCardModalOpen, setAddCardModalOpen] = useState(false);
+  const [newCardData, setNewCardData] = useState<CreditCardFormData | null>(null);
+  const [promoCode, setPromoCode] = useState('');
+  const [appliedPromoCode, setAppliedPromoCode] = useState<string | null>(null);
+  const [promoDiscountAmount, setPromoDiscountAmount] = useState(0);
+  const [promoError, setPromoError] = useState<string | null>(null);
+
+  const readStoredPaymentMethodId = useCallback(() => {
+    if (typeof window === 'undefined') return null;
+    return sessionStorage.getItem(PAYMENT_METHOD_STORAGE_KEY);
+  }, []);
+
+  const persistPaymentMethodId = useCallback((methodId: string | null) => {
+    if (typeof window === 'undefined') return;
+    if (methodId) {
+      sessionStorage.setItem(PAYMENT_METHOD_STORAGE_KEY, methodId);
+    } else {
+      sessionStorage.removeItem(PAYMENT_METHOD_STORAGE_KEY);
+    }
+  }, []);
+
+  const [isTokenizingCard, setTokenizingCard] = useState(false);
+  const [checkoutMode, setCheckoutMode] = useState<'snap' | 'core'>('snap');
+  const cardPayTab = useRef<Window | null>(null);
+  const confirm = useConfirm();
+  const queryClient = useQueryClient();
+  const useSnapCheckout = checkoutMode === 'snap';
+
+  useEffect(() => {
+    void getMidtransConfig()
+      .then((config) => {
+        if (config.checkoutMode === 'core' || config.checkoutMode === 'snap') {
+          setCheckoutMode(config.checkoutMode);
+        }
+      })
+      .catch(() => undefined);
+  }, []);
+
+  const goToInvoice = useCallback(
+    (invoiceNumber?: string | null) => {
+      setNavigatingToPayment(true);
+      persistPaymentMethodId(null);
+      if (ballboyOnly) useBallboyCartStore.getState().clearStandaloneItems();
+      else {
+        useBookingStore.getState().clearAll();
+        useBallboyCartStore.getState().clearCourtItems();
+      }
+      if (invoiceNumber) {
+        router.push(`/invoice/${invoiceNumber}`);
+        return;
+      }
+      router.push('/checkout/payment');
+    },
+    [persistPaymentMethodId, router, ballboyOnly]
+  );
+
+  const checkoutMutation = useMutation(
+    // eslint-disable-next-line react-hooks/refs -- The factory stores callbacks; the card tab ref is only accessed after checkout completes.
+    checkoutMutationOptions({
+      onSuccess: (data) => {
+        void queryClient.invalidateQueries({ queryKey: ['memberships', 'my'] });
+        void queryClient.invalidateQueries({ queryKey: ['courts', 'slots'] });
+        void queryClient.invalidateQueries({ queryKey: ['ballboy', 'availability'] });
+        const invoiceNumber = data?.data?.invoiceNumber as string | undefined;
+        const snapToken = data?.data?.snapToken as string | undefined;
+
+        if (snapToken) {
+          cardPayTab.current?.close();
+          cardPayTab.current = null;
+          void payWithSnap(snapToken, {
+            onSuccess: () => goToInvoice(invoiceNumber),
+            onPending: () => goToInvoice(invoiceNumber),
+            onError: () => goToInvoice(invoiceNumber),
+            onClose: () => goToInvoice(invoiceNumber)
+          }).catch((err: Error) => {
+            toast.error(err.message || 'Gagal membuka pembayaran Snap');
+            goToInvoice(invoiceNumber);
+          });
+          return;
+        }
+
+        const paymentUrl = data?.data?.paymentUrl;
+        const needsCard3ds =
+          selectedPaymentMethod?.channel === 'CARDS' &&
+          paymentUrl &&
+          data?.data?.paymentStatus !== 'PAID';
+        if (needsCard3ds) {
+          const tab = cardPayTab.current;
+          cardPayTab.current = null;
+          if (tab && !tab.closed) {
+            tab.location.href = paymentUrl;
+            tab.opener = null;
+          } else {
+            setNavigatingToPayment(true);
+            window.location.assign(paymentUrl);
+            return;
+          }
+        } else {
+          cardPayTab.current?.close();
+          cardPayTab.current = null;
+        }
+
+        setNavigatingToPayment(true);
+        // Clear booking store after successful checkout (non-card payments only)
+        persistPaymentMethodId(null);
+        if (ballboyOnly) useBallboyCartStore.getState().clearStandaloneItems();
+        else {
+          useBookingStore.getState().clearAll();
+          useBallboyCartStore.getState().clearCourtItems();
+        }
+
+        // Redirect to invoice page using the invoice number from response
+        if (invoiceNumber) {
+          router.push(`/invoice/${invoiceNumber}`);
+        } else {
+          // Fallback to old payment page if invoice number not available
+          const enhancedData = {
+            ...data,
+            paymentMethod: selectedPaymentMethod
+              ? {
+                  id: selectedPaymentMethod.id,
+                  name: selectedPaymentMethod.name,
+                  channel: selectedPaymentMethod.channel,
+                  logo: selectedPaymentMethod.logo
+                }
+              : undefined,
+            courtSlots: bookingItems.map((item) => ({
+              courtId: item.courtId,
+              courtName: item.courtName,
+              timeSlot: item.timeSlot,
+              date: item.date,
+              price: item.price
+            })),
+            promoCode: appliedPromoCode || undefined,
+            breakdown: data.breakdown || {
+              courtTotal: courtSubtotal,
+              addOnsTotal: ballboyTotal,
+              processingFee: paymentFeeBreakdown.totalFee,
+              promoDiscount: promoDiscountAmount,
+              total: totalAfterPromo
+            }
+          };
+          sessionStorage.setItem('checkoutData', JSON.stringify(enhancedData));
+          router.push('/checkout/payment');
+        }
+      },
+      onError: () => {
+        void queryClient.invalidateQueries({ queryKey: ['memberships', 'my'] });
+        void queryClient.invalidateQueries({ queryKey: ['courts', 'slots'] });
+      }
+    })
+  );
+
+  const applyPromoMutation = useMutation(applyPromoMutationOptions());
+
+  // Show login modal if user is not authenticated and has items in cart
+  // const currentPath = useMemo(() => {
+  //   const params = searchParams.toString();
+  //   return params ? `${pathname}?${params}` : pathname;
+  // }, [pathname, searchParams]);
+
+  useEffect(() => {
+    if (!isUserPending && !isAuthenticated && hasCheckoutItems) {
+      setRedirectPath(ballboyOnly ? '/add-ons/checkout' : '/checkout');
+      openAuthModal();
+    }
+  }, [
+    isUserPending,
+    isAuthenticated,
+    hasCheckoutItems,
+    openAuthModal,
+    setRedirectPath,
+    ballboyOnly
+    // currentPath
+  ]);
+
+  useEffect(() => {
+    if (paymentMethods.length === 0) return;
+
+    setSelectedPaymentMethod((current) => {
+      if (current) {
+        const stillExists = paymentMethods.find((method) => method.id === current.id);
+        if (stillExists) {
+          return stillExists;
+        }
+      }
+
+      const storedId = readStoredPaymentMethodId();
+      if (storedId) {
+        const stored = paymentMethods.find((method) => method.id === storedId);
+        if (stored) {
+          return stored;
+        }
+      }
+
+      return paymentMethods[0] ?? null;
+    });
+  }, [paymentMethods, readStoredPaymentMethodId]);
+
+  useEffect(() => {
+    persistPaymentMethodId(selectedPaymentMethod?.id ?? null);
+  }, [selectedPaymentMethod, persistPaymentMethodId]);
+
+  const paymentFeeBreakdown = (() => {
+    if (isCoveredByMembership || !selectedPaymentMethod) {
+      return {
+        fixedFee: 0,
+        percentageRate: 0,
+        percentageFee: 0,
+        totalFee: 0
+      };
+    }
+
+    const percentageRate = Number(selectedPaymentMethod.percentage ?? 0);
+    const fixedFee = Number.isFinite(selectedPaymentMethod.fees)
+      ? Number(selectedPaymentMethod.fees)
+      : 0;
+    const percentageFee = Math.round(
+      (Math.max(0, grandTotal - promoDiscountAmount) * percentageRate) / 100
+    );
+    const baseFee = fixedFee + percentageFee;
+
+    return {
+      fixedFee,
+      percentageRate,
+      percentageFee,
+      totalFee: baseFee + Math.round(baseFee * 0.11)
+    };
+  })();
+
+  const totalWithPaymentFee = grandTotal + paymentFeeBreakdown.totalFee;
+  const totalAfterPromo = Math.max(0, totalWithPaymentFee - promoDiscountAmount);
+
+  const buildCheckoutSelections = useCallback(
+    () =>
+      getCheckoutSelections({
+        bookingItems,
+        selectedCoaches: [],
+        selectedBallboys: ballboys,
+        selectedInventories: []
+      }),
+    [bookingItems, ballboys]
+  );
+
+  const groupedCourts = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        courtName: string;
+        date: string;
+        slots: typeof bookingItems;
+      }
+    >();
+
+    bookingItems.forEach((item) => {
+      const normalizedDate = dayjs(item.date, 'YYYY-MM-DD', true).isValid()
+        ? dayjs(item.date).format('YYYY-MM-DD')
+        : dayjs(item.date, 'DD MMM', true).isValid()
+          ? dayjs(item.date, 'DD MMM').format('YYYY-MM-DD')
+          : dayjs().format('YYYY-MM-DD');
+
+      const key = `${item.courtId}-${normalizedDate}`;
+      if (!map.has(key)) {
+        map.set(key, {
+          courtName: item.courtName,
+          date: normalizedDate,
+          slots: []
+        });
+      }
+      map.get(key)!.slots.push({ ...item, date: normalizedDate });
+    });
+
+    return Array.from(map.values()).sort(
+      (a, b) => dayjs(a.date).valueOf() - dayjs(b.date).valueOf()
+    );
+  }, [bookingItems]);
+
+  if (isNavigatingToPayment)
+    return (
+      <PaymentLoading
+        title="Menyiapkan pesanan"
+        description="Mohon tunggu, pesanan Anda sedang dimuat."
+      />
+    );
+
+  if (!hasCheckoutItems) {
+    return (
+      <div className="min-h-dvh">
+        <MainHeader
+          title="Detail Pembayaran"
+          backHref={bookingHref}
+          showBack
+          withCartBadge
+          withLogo={false}
+        />
+        <main className="checkout-page mx-auto flex min-h-[calc(100dvh-76px)] w-full max-w-7xl flex-col items-center justify-center gap-3 px-6 pt-28 pb-12 text-center">
+          <ShoppingBag className="mb-2 size-10 text-black/25" strokeWidth={1} aria-hidden="true" />
+          <h1 className="text-2xl font-medium tracking-tight text-[#171717]">Belum ada pesanan</h1>
+          <p className="text-muted-foreground text-sm">
+            {ballboyOnly
+              ? 'Pilih tanggal, jam, dan ballboy untuk melanjutkan.'
+              : 'Pilih jadwal lapangan untuk melanjutkan.'}
+          </p>
+          <Button
+            className="mt-3 h-12 gap-3 rounded-full bg-[#111111] px-7 text-sm text-white hover:bg-black/80 has-[>svg]:px-7"
+            onClick={() => router.push(bookingHref)}
+          >
+            Pilih jadwal <ArrowUpRight className="size-4" aria-hidden="true" />
+          </Button>
+        </main>
+      </div>
+    );
+  }
+
+  const handlePaymentMethodClick = () => {
+    setPaymentModalOpen(true);
+  };
+
+  const handleSelectPaymentMethod = (method: PaymentMethod) => {
+    setSelectedPaymentMethod(method);
+    setPaymentModalOpen(false);
+    // Reset card selection when changing payment method
+    if (method.channel !== 'CARDS') {
+      setSelectedCard(null);
+      setSelectedCardCvv('');
+      setNewCardData(null);
+    }
+  };
+
+  const handleAddNewCard = () => {
+    setAddCardModalOpen(true);
+  };
+
+  const handleNewCardSubmit = (data: CreditCardFormData) => {
+    // Store new card data for checkout
+    setNewCardData(data);
+    setSelectedCard(null); // Clear saved card selection
+    setSelectedCardCvv('');
+    setAddCardModalOpen(false);
+  };
+
+  const handleApplyPromo = () => {
+    if (!selectedPaymentMethod) return;
+
+    const trimmedCode = promoCode.trim();
+    if (!trimmedCode) {
+      setPromoError('Masukkan kode promo terlebih dahulu.');
+      return;
+    }
+
+    const selections = buildCheckoutSelections();
+
+    applyPromoMutation.mutate(
+      {
+        promoCode: trimmedCode,
+        courtSlots: selections.courtSlots.filter((id) => !membershipSlotIds.includes(id)),
+        ...(selections.ballboySlots.length ? { ballboySlots: selections.ballboySlots } : {})
+      },
+      {
+        onSuccess: (response) => {
+          const isValid = response?.data?.isValid;
+          const discountAmount = Number(response?.data?.discountAmount ?? 0);
+
+          if (isValid) {
+            setAppliedPromoCode(trimmedCode);
+            setPromoDiscountAmount(Math.max(0, discountAmount));
+            setPromoError(null);
+            toast.success(response?.msg || 'Promo berhasil diterapkan.');
+          } else {
+            setAppliedPromoCode(null);
+            setPromoDiscountAmount(0);
+            setPromoError(response?.msg || 'Kode promo tidak valid.');
+          }
+        }
+      }
+    );
+  };
+
+  const handlePromoInputChange = (value: string) => {
+    setPromoCode(value);
+    if (appliedPromoCode && value.trim() !== appliedPromoCode) {
+      setAppliedPromoCode(null);
+      setPromoDiscountAmount(0);
+    }
+    if (promoError) {
+      setPromoError(null);
+    }
+  };
+
+  const handleCheckout = async () => {
+    // Check authentication first
+    if (!isAuthenticated) {
+      openAuthModal();
+      return;
+    }
+
+    if (!isCoveredByMembership && !selectedPaymentMethod) {
+      return;
+    }
+
+    // For CARDS channel in Core mode, require card details (Snap handles cards itself)
+    if (
+      !useSnapCheckout &&
+      !isCoveredByMembership &&
+      selectedPaymentMethod?.channel === 'CARDS' &&
+      !selectedCard &&
+      !newCardData
+    ) {
+      return;
+    }
+
+    if (
+      !useSnapCheckout &&
+      !isCoveredByMembership &&
+      selectedPaymentMethod?.channel === 'CARDS' &&
+      selectedCard &&
+      !selectedCardCvv
+    ) {
+      return;
+    }
+
+    const checkoutTime = nowJakarta();
+    const hasExpiredCourtSlot = bookingItems.some((item) => {
+      const slotStart = getBookingItemStart(item);
+      return !slotStart || !isCourtSlotBookable(slotStart.valueOf(), checkoutTime.valueOf());
+    });
+
+    if (hasExpiredBallboy) {
+      toast.error('Salah satu jam ballboy sudah lewat. Silakan pilih ulang jadwal.');
+      if (ballboyOnly) router.push('/add-ons');
+      else setAddOnsOpen(true);
+      return;
+    }
+
+    if (hasExpiredCourtSlot) {
+      useBookingStore.getState().clearAll();
+      toast.error('Salah satu slot sudah lewat. Silakan pilih ulang jadwal booking.');
+      router.push(bookingHref);
+      return;
+    }
+
+    const { courtSlots, ballboySlots } = buildCheckoutSelections();
+
+    const payload: any = {
+      ...(!isCoveredByMembership && selectedPaymentMethod
+        ? { paymentMethodId: selectedPaymentMethod.id }
+        : {}),
+      useMembership: membershipSlotIds.length > 0,
+      membershipCourtSlotIds: membershipSlotIds,
+      ...(membershipSlotIds.length > 0 && membershipDiscount.activeMembership
+        ? { membershipUserId: membershipDiscount.activeMembership.id }
+        : {})
+    };
+
+    if (appliedPromoCode && !isCoveredByMembership) {
+      payload.promoCode = appliedPromoCode;
+    }
+
+    if (courtSlots.length > 0) {
+      payload.courtSlots = courtSlots;
+    }
+
+    if (ballboySlots.length > 0) payload.ballboySlots = ballboySlots;
+
+    // Add card payment data if CARDS channel (Core API only; Snap collects card in popup)
+    if (!useSnapCheckout && !isCoveredByMembership && selectedPaymentMethod?.channel === 'CARDS') {
+      if (selectedCard) {
+        // Use saved card
+        payload.cardPayment = {
+          savedCardId: selectedCard.id,
+          cvv: selectedCardCvv
+        };
+      } else if (newCardData) {
+        payload.cardPayment = { saveCard: newCardData.saveCard || false };
+      }
+    }
+
+    const checkoutConfirmationDescription = (
+      <div className="space-y-3">
+        <p>Pastikan pesanan sudah sesuai.</p>
+        <p>
+          Reschedule: <span className="text-foreground font-medium">hubungi admin</span> maksimal
+          H-2.
+        </p>
+        {courtSport === 'TENNIS' && (
+          <p>
+            Khusus booking tennis, ballboy dari luar tidak diperkenankan. Jika membutuhkan layanan
+            ballboy, silakan gunakan ballboy resmi yang tersedia di Black Padel.
+          </p>
+        )}
+      </div>
+    );
+
+    const willTokenizeCard =
+      !useSnapCheckout &&
+      !isCoveredByMembership &&
+      selectedPaymentMethod?.channel === 'CARDS' &&
+      !!newCardData;
+    if (willTokenizeCard) {
+      cardPayTab.current?.close();
+      cardPayTab.current = window.open('', '_blank');
+    }
+
+    // Ask for user confirmation before sending to backend to create Payment Session
+    try {
+      const ok = await confirm({
+        title: 'Konfirmasi Pemesanan',
+        description: membershipDiscount.canUseMembership ? (
+          <div className="space-y-2">
+            <p>
+              {membershipDiscount.slotsToDeduct} sesi Value Pack digunakan.
+              {isCoveredByMembership
+                ? ' Tidak ada pembayaran tambahan.'
+                : ` Sisa pembayaran ${formatCurrency(totalAfterPromo)}.`}
+            </p>
+            {checkoutConfirmationDescription}
+          </div>
+        ) : (
+          checkoutConfirmationDescription
+        ),
+        confirmText: isCoveredByMembership ? 'Konfirmasi booking' : 'Bayar Sekarang',
+        cancelText: 'Cek Lagi',
+        dismissible: true
+      });
+
+      if (!ok) {
+        cardPayTab.current?.close();
+        cardPayTab.current = null;
+        return;
+      }
+    } catch {
+      cardPayTab.current?.close();
+      cardPayTab.current = null;
+      return;
+    }
+
+    if (
+      !useSnapCheckout &&
+      !isCoveredByMembership &&
+      selectedPaymentMethod?.channel === 'CARDS' &&
+      newCardData
+    ) {
+      setTokenizingCard(true);
+      try {
+        const tokenId = await getCardToken({
+          cardNumber: newCardData.cardNumber,
+          expiryMonth: newCardData.expiryMonth,
+          expiryYear: newCardData.expiryYear,
+          cvv: newCardData.cvv
+        });
+        payload.cardPayment = { tokenId, saveCard: newCardData.saveCard || false };
+      } catch (err: any) {
+        cardPayTab.current?.close();
+        cardPayTab.current = null;
+        toast.error(err.message || 'Card processing failed. Please try again.');
+        setTokenizingCard(false);
+        return;
+      }
+      setTokenizingCard(false);
+    }
+
+    // Send to backend to create Payment Session
+    checkoutMutation.mutate(payload, {
+      onError: () => {
+        cardPayTab.current?.close();
+        cardPayTab.current = null;
+      }
+    });
+  };
+
+  const checkoutAction = (
+    <Button
+      size="lg"
+      className="h-12 w-full min-w-0 rounded-full bg-[#111111] px-3 text-xs font-medium text-white hover:bg-black/80 disabled:bg-black/15 disabled:text-black/40 disabled:opacity-100"
+      onClick={handleCheckout}
+      disabled={
+        isAuthenticated &&
+        (checkoutMutation.isPending ||
+          hasExpiredBallboy ||
+          isTokenizingCard ||
+          (!isCoveredByMembership &&
+            (!selectedPaymentMethod ||
+              (!useSnapCheckout &&
+                selectedPaymentMethod.channel === 'CARDS' &&
+                !selectedCard &&
+                !newCardData) ||
+              (!useSnapCheckout &&
+                selectedPaymentMethod.channel === 'CARDS' &&
+                !!selectedCard &&
+                !selectedCardCvv))))
+      }
+    >
+      {isUserPending
+        ? 'Memuat...'
+        : !isAuthenticated
+          ? 'Login untuk Checkout'
+          : isTokenizingCard
+            ? 'Memproses Kartu...'
+            : checkoutMutation.isPending
+              ? 'Memproses...'
+              : isCoveredByMembership
+                ? 'Konfirmasi booking'
+                : !useSnapCheckout &&
+                    selectedPaymentMethod?.channel === 'CARDS' &&
+                    !selectedCard &&
+                    !newCardData
+                  ? 'Pilih Kartu'
+                  : selectedPaymentMethod
+                    ? 'Bayar Sekarang'
+                    : 'Pilih Metode'}
+    </Button>
+  );
+
+  return (
+    <div className="min-h-dvh">
+      {(checkoutMutation.isPending || isTokenizingCard) && (
+        <PaymentProcessingOverlay
+          title={isCoveredByMembership ? 'Mengonfirmasi pesanan' : undefined}
+          description={
+            isCoveredByMembership
+              ? 'Mohon tunggu, jadwal dan penggunaan Value Pack sedang dikonfirmasi.'
+              : undefined
+          }
+        />
+      )}
+      <MainHeader
+        title="Detail Pembayaran"
+        backHref={bookingHref}
+        showBack
+        withCartBadge
+        withLogo={false}
+        withBorder
+      />
+
+      <main className="checkout-page mx-auto w-full max-w-7xl px-5 pt-24 pb-[calc(8rem+env(safe-area-inset-bottom))] text-[#171717] sm:px-8 lg:pb-16 xl:pt-32">
+        <header className="mb-6 flex items-center justify-between gap-4 border-b border-black/15 pb-5">
+          <h1 className="text-2xl font-medium tracking-tight sm:text-3xl">Checkout</h1>
+        </header>
+        <BranchLabel detailed />
+        <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-6">
+          <div className="min-w-0 space-y-4">
+            {groupedCourts.length > 0 && (
+              <section className="space-y-4 border border-black/15 bg-[#f8f8f6] p-5 sm:p-6">
+                {groupedCourts.map((group, index) => (
+                  <div
+                    key={`${group.courtName}-${group.date}`}
+                    className={cn(
+                      'space-y-3',
+                      index < groupedCourts.length - 1 &&
+                        'border-b border-dashed border-black/10 pb-4'
+                    )}
+                  >
+                    <header className="space-y-1">
+                      <div className="flex items-center justify-between gap-4">
+                        <h2 className="text-base font-medium text-[#171717]">{group.courtName}</h2>
+                        {index === 0 && (
+                          <button
+                            type="button"
+                            className="text-sm font-medium text-[#ad422b] underline underline-offset-4 disabled:cursor-not-allowed disabled:opacity-40"
+                            disabled={
+                              !membershipDiscount.activeMembership ||
+                              membershipDiscount.activeMembership.isExpired ||
+                              membershipDiscount.activeMembership.isSuspended ||
+                              membershipDiscount.remainingSessions <= 0 ||
+                              checkoutMutation.isPending ||
+                              applyPromoMutation.isPending ||
+                              isNavigatingToPayment ||
+                              isTokenizingCard
+                            }
+                            onClick={() => {
+                              setMembershipSelection(allMembershipSlotsSelected ? [] : null);
+                              setAppliedPromoCode(null);
+                              setPromoDiscountAmount(0);
+                              setPromoError(null);
+                            }}
+                          >
+                            {allMembershipSlotsSelected ? 'Batalkan pilihan' : 'Pilih semua'}
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-muted-foreground text-sm">
+                        {dayjs(group.date).format('dddd, DD MMM YYYY')}
+                      </p>
+                    </header>
+
+                    <div className="space-y-2">
+                      {[...group.slots]
+                        .sort((a, b) => {
+                          const dateCompare = a.date.localeCompare(b.date);
+                          if (dateCompare !== 0) return dateCompare;
+                          return a.timeSlot.localeCompare(b.timeSlot);
+                        })
+                        .map((slot, slotIndex) => {
+                          const isFree = membershipSlotIds.includes(slot.slotId);
+                          const membershipReason =
+                            membershipDiscount.membershipSlotReasons?.[slot.slotId];
+                          const rateComparison =
+                            (!membershipReason ||
+                              membershipReason === 'Sisa sesi tidak mencukupi') &&
+                            membershipDiscount.remainingSessions > 0
+                              ? cheaperRegularRate(
+                                  slot,
+                                  membershipDiscount.activeMembership?.membership
+                                )
+                              : null;
+                          const range = getSlotDisplayRange(slot.timeSlot);
+                          const cashPrice =
+                            (slot.discountPrice ?? 0) > 0 ? slot.discountPrice! : slot.price;
+
+                          return (
+                            <div
+                              key={`${slot.courtId}-${slot.timeSlot}-${slotIndex}`}
+                              className={cn(
+                                'space-y-3 rounded-none border border-black/10 px-4 py-3',
+                                isFree ? 'border-[#ad422b]/25 bg-[#ad422b]/5' : 'bg-muted/50'
+                              )}
+                            >
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <span className="text-sm font-medium">
+                                  {range.start} - {range.end}
+                                </span>
+                                {!isFree && (
+                                  <span className="text-sm font-semibold">
+                                    {formatCurrency(cashPrice)}
+                                  </span>
+                                )}
+                              </div>
+                              <label className="flex items-center justify-between gap-3 border-t border-black/10 pt-3 text-sm">
+                                <span>Pakai membership</span>
+                                <input
+                                  type="checkbox"
+                                  aria-label={`Pakai membership untuk ${slot.courtName} ${slot.date} ${range.start}`}
+                                  checked={isFree}
+                                  disabled={
+                                    !!membershipReason ||
+                                    checkoutMutation.isPending ||
+                                    applyPromoMutation.isPending ||
+                                    isNavigatingToPayment ||
+                                    isTokenizingCard
+                                  }
+                                  onChange={(event) => {
+                                    setMembershipSelection(
+                                      event.target.checked
+                                        ? [...membershipSlotIds, slot.slotId]
+                                        : membershipSlotIds.filter((id) => id !== slot.slotId)
+                                    );
+                                    setAppliedPromoCode(null);
+                                    setPromoDiscountAmount(0);
+                                    setPromoError(null);
+                                  }}
+                                  className="size-4 shrink-0 accent-[#ad422b] disabled:opacity-40"
+                                />
+                              </label>
+                              {rateComparison && (
+                                <aside
+                                  aria-label="Perbandingan harga per jam"
+                                  className="space-y-2 border-l-2 border-[#ad422b]/50 bg-white/70 px-3 py-3"
+                                >
+                                  <p className="text-sm font-medium text-[#171717]">
+                                    Harga reguler lebih rendah
+                                  </p>
+                                  <p className="text-sm leading-relaxed text-black/60">
+                                    Reguler{' '}
+                                    <span className="font-medium text-[#171717] tabular-nums">
+                                      {formatCurrency(Math.round(rateComparison.regularPerHour))}
+                                      /jam
+                                    </span>{' '}
+                                    · Membership rata-rata{' '}
+                                    <span className="font-medium tabular-nums">
+                                      {formatCurrency(Math.round(rateComparison.membershipPerHour))}
+                                      /jam
+                                    </span>
+                                    .
+                                  </p>
+                                  <p className="text-xs leading-relaxed text-black/50">
+                                    Rata-rata dihitung dari harga paket ÷ total jam. Simpan kuota
+                                    membership untuk jam lain.
+                                  </p>
+                                  <p className="text-xs text-black/45">
+                                    Perbandingan tarif lapangan, sebelum biaya layanan.
+                                  </p>
+                                </aside>
+                              )}
+                              {membershipReason && (
+                                <p className="text-muted-foreground text-xs">{membershipReason}</p>
+                              )}
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                ))}
+              </section>
+            )}
+            {supportsBallboy && branchId && (
+              <section aria-label="Add-ons lapangan" className="space-y-3">
+                <button
+                  type="button"
+                  className="flex min-h-16 w-full items-center justify-center gap-3 rounded-xl border-2 border-dotted border-[#ad422b]/60 bg-transparent px-5 py-4 text-sm font-medium text-[#ad422b] transition-colors hover:bg-[#ad422b]/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ad422b] disabled:opacity-50"
+                  disabled={checkoutMutation.isPending || isTokenizingCard}
+                  onClick={() => setAddOnsOpen(true)}
+                >
+                  <Plus className="size-5" strokeWidth={1.5} aria-hidden="true" /> Tambah Add-ons
+                </button>
+                <p className="text-xs text-black/50">
+                  Ballboy sesuai jam lapangan, dibayar sekaligus dengan booking Anda.
+                </p>
+                {ballboys.length > 0 && (
+                  <ul className="divide-y divide-black/10 border border-black/15 bg-white px-5">
+                    {ballboys.map((item) => (
+                      <li
+                        key={`${item.courtSlotId}-${item.slotId}`}
+                        className="flex items-start justify-between gap-3 py-4"
+                      >
+                        <div>
+                          <p className="text-sm font-medium">Ballboy · {item.ballboyName}</p>
+                          <p className="mt-1 text-xs text-black/50">
+                            {item.courtName} · {dayjs(item.date).format('DD MMM YYYY')} ·{' '}
+                            {item.timeSlot}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-[#ad422b]">
+                            {formatCurrency(item.price)}
+                          </span>
+                          <button
+                            type="button"
+                            aria-label={`Hapus ballboy ${item.ballboyName} ${item.courtName} ${item.timeSlot}`}
+                            disabled={checkoutMutation.isPending || isTokenizingCard}
+                            onClick={() => {
+                              ballboyCart.setCourtItems(
+                                branchId,
+                                ballboys.filter((entry) => entry.courtSlotId !== item.courtSlotId)
+                              );
+                              setAppliedPromoCode(null);
+                              setPromoDiscountAmount(0);
+                              setPromoError(null);
+                            }}
+                            className="p-2 text-black/45"
+                          >
+                            <X className="size-4" />
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {hasExpiredBallboy && (
+                  <p role="alert" className="text-xs text-red-700">
+                    Ada jam ballboy yang sudah lewat. Hapus atau ubah pilihan add-ons.
+                  </p>
+                )}
+              </section>
+            )}
+            {supportsBallboy && branchId && (
+              <Dialog open={isAddOnsOpen} onOpenChange={setAddOnsOpen}>
+                <DialogContent className="max-h-[90dvh] overflow-y-auto bg-[#f8f8f6] sm:max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Tambah Add-ons · Ballboy</DialogTitle>
+                    <DialogDescription>
+                      Pilih ballboy sesuai jadwal lapangan. Biayanya dibayar sekaligus dengan
+                      booking Anda.
+                    </DialogDescription>
+                  </DialogHeader>
+                  {isAddOnsOpen && (
+                    <CourtBallboyPicker
+                      sessions={bookingItems}
+                      branchId={branchId}
+                      selected={ballboys}
+                      onCancel={() => setAddOnsOpen(false)}
+                      onSave={(items) => {
+                        ballboyCart.setCourtItems(branchId, items);
+                        setAppliedPromoCode(null);
+                        setPromoDiscountAmount(0);
+                        setPromoError(null);
+                        setAddOnsOpen(false);
+                      }}
+                    />
+                  )}
+                </DialogContent>
+              </Dialog>
+            )}
+            {ballboyOnly && (
+              <section
+                aria-label="Detail pesanan ballboy"
+                className="border border-black/15 bg-white p-5 sm:p-6"
+              >
+                <h2 className="mb-4 text-lg font-medium">Add-ons · Ballboy</h2>
+                <p className="mb-4 text-xs text-black/50">
+                  Layanan ballboy tanpa pembelian lapangan. Semua waktu dalam WIB.
+                </p>
+                <ul className="divide-y divide-black/10">
+                  {ballboys.map((item) => (
+                    <li key={item.slotId} className="flex items-start justify-between gap-4 py-4">
+                      <div>
+                        <p className="text-sm font-medium">{item.ballboyName}</p>
+                        <p className="mt-1 text-xs text-black/50">
+                          {dayjs(item.date).format('DD MMM YYYY')} · {item.timeSlot}
+                        </p>
+                      </div>
+                      <span className="text-sm font-medium text-[#ad422b]">
+                        {formatCurrency(item.price)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                {hasExpiredBallboy && (
+                  <p role="alert" className="text-sm text-red-700">
+                    Ada jam ballboy yang sudah lewat. Kembali untuk memilih ulang.
+                  </p>
+                )}
+                <Button
+                  variant="outline"
+                  className="mt-4 rounded-full"
+                  onClick={() => router.push('/add-ons')}
+                >
+                  Ubah pilihan ballboy
+                </Button>
+              </section>
+            )}
+
+            <section className="grid min-w-0 gap-4">
+              {!isCoveredByMembership && (
+                <div className="min-w-0 border border-black/15 bg-[#f8f8f6] p-5 sm:p-6">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      {selectedPaymentMethod ? (
+                        resolveMediaUrl(selectedPaymentMethod.logo) ? (
+                          <Image
+                            src={resolveMediaUrl(selectedPaymentMethod.logo)!}
+                            alt={selectedPaymentMethod.name}
+                            width={48}
+                            height={48}
+                            className="h-12 w-12 rounded-none object-contain"
+                            unoptimized
+                          />
+                        ) : (
+                          <div className="bg-muted text-muted-foreground flex h-12 w-12 items-center justify-center rounded-none text-sm font-semibold">
+                            {selectedPaymentMethod.name.slice(0, 2).toUpperCase()}
+                          </div>
+                        )
+                      ) : null}
+                      <div>
+                        <p className="text-sm font-medium">
+                          {selectedPaymentMethod
+                            ? selectedPaymentMethod.name
+                            : 'Pilih Metode Pembayaran'}
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          {selectedPaymentMethod
+                            ? 'Konfirmasi Instan'
+                            : 'Klik untuk memilih metode pembayaran'}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="link"
+                      className="h-10 rounded-full border border-black/15 px-4 text-xs text-[#ad422b] no-underline hover:bg-black/5"
+                      onClick={handlePaymentMethodClick}
+                    >
+                      Ganti Metode
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Card Payment Selection - Show only if CARDS channel is selected */}
+              {!isCoveredByMembership && selectedPaymentMethod?.channel === 'CARDS' && (
+                <div className="min-w-0 border border-black/15 bg-[#f8f8f6] p-5 sm:p-6">
+                  {!newCardData ? (
+                    <SavedCardSelector
+                      onCardSelect={(card, cvv) => {
+                        setSelectedCard(card);
+                        setSelectedCardCvv(cvv);
+                      }}
+                      onAddNewCard={handleAddNewCard}
+                      isLoading={checkoutMutation.isPending}
+                    />
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium">Kartu Baru</p>
+                          <p className="text-muted-foreground text-xs">
+                            {newCardData.cardholderName}
+                          </p>
+                          <p className="text-muted-foreground text-xs">
+                            •••• •••• •••• {newCardData.cardNumber.slice(-4)}
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setNewCardData(null)}
+                        >
+                          Ganti Kartu
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {!isCoveredByMembership && (
+                <div className="space-y-3 border border-black/15 bg-[#f8f8f6] p-5 sm:p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">Kode Promo</p>
+                      <p className="text-muted-foreground text-xs">
+                        Masukkan kode promo untuk mendapatkan diskon
+                      </p>
+                    </div>
+                    {appliedPromoCode && promoDiscountAmount > 0 && (
+                      <span className="text-xs font-semibold text-[#ad422b]">Terpasang</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="text"
+                      aria-label="Kode promo"
+                      placeholder="Masukkan kode promo"
+                      value={promoCode}
+                      onChange={(event) => handlePromoInputChange(event.target.value)}
+                      className="h-11 min-w-0 flex-1 border border-black/15 bg-white px-3 text-base transition outline-none placeholder:text-sm placeholder:font-normal placeholder:text-black/40 focus:border-[#ad422b] focus:ring-2 focus:ring-[#ad422b]/10 sm:text-sm"
+                    />
+                    <Button
+                      type="button"
+                      className="h-11 shrink-0 rounded-full bg-[#111111] px-5 text-xs text-white hover:bg-black/80"
+                      onClick={handleApplyPromo}
+                      disabled={
+                        !selectedPaymentMethod || applyPromoMutation.isPending || !promoCode.trim()
+                      }
+                    >
+                      {applyPromoMutation.isPending ? 'Memproses...' : 'Gunakan'}
+                    </Button>
+                  </div>
+                  {promoError && <p className="text-xs text-red-600">{promoError}</p>}
+                  {!promoError && appliedPromoCode && promoDiscountAmount > 0 && (
+                    <p className="text-xs text-[#ad422b]">
+                      Diskon {formatCurrency(promoDiscountAmount)} diterapkan
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Membership Information */}
+              {isAuthenticated &&
+                bookingItems.length > 0 &&
+                membershipDiscount.activeMembership && (
+                  <div className="rounded-none border border-black/15 bg-[#ad422b]/5 p-4">
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="text-sm font-medium text-[#ad422b]">Membership Aktif</span>
+                      <span
+                        className={
+                          membershipDiscount.activeMembership.isExpired ||
+                          membershipDiscount.activeMembership.isSuspended
+                            ? 'text-xs text-red-600'
+                            : 'text-xs text-[#ad422b]'
+                        }
+                      >
+                        {membershipDiscount.activeMembership.isExpired
+                          ? 'Expired'
+                          : membershipDiscount.activeMembership.isSuspended
+                            ? 'Suspended'
+                            : 'Active'}
+                      </span>
+                    </div>
+                    <div className="space-y-1 text-xs">
+                      <div>
+                        <span className="text-muted-foreground">Paket:</span>{' '}
+                        <span className="font-medium">
+                          {membershipDiscount.activeMembership.membership.name}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Sisa Sesi:</span>{' '}
+                        <span className="font-medium">
+                          {membershipDiscount.remainingSessions} sesi
+                        </span>
+                      </div>
+                      {membershipDiscount.canUseMembership && bookingItems.length > 0 && (
+                        <div className="mt-1 font-medium text-[#ad422b]">
+                          {membershipDiscount.slotsToDeduct} jam akan dipotong dari membership
+                        </div>
+                      )}
+                      {membershipSlotIds.length === 0 && (
+                        <div className="text-muted-foreground mt-1">
+                          Paket tidak dipakai untuk booking ini.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+            </section>
+          </div>
+          <aside
+            aria-label="Ringkasan pembayaran"
+            className="min-w-0 border border-black/15 bg-[#f8f8f6] p-5 sm:p-6 lg:sticky lg:top-28"
+          >
+            <div className="space-y-4">
+              <h3 className="mb-4 text-lg font-medium tracking-tight">Ringkasan pembayaran</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-muted-foreground">
+                    {ballboyOnly ? 'Subtotal' : 'Subtotal lapangan'}
+                  </span>
+                  <span className="text-foreground font-medium">
+                    {formatCurrency(ballboyOnly ? ballboyTotal : courtSubtotal)}
+                  </span>
+                </div>
+                {!ballboyOnly && ballboyTotal > 0 && (
+                  <div className="flex items-start justify-between gap-3 text-sm">
+                    <span className="text-muted-foreground">Add-ons ballboy</span>
+                    <span className="font-medium">{formatCurrency(ballboyTotal)}</span>
+                  </div>
+                )}
+                {membershipDiscount.canUseMembership && membershipDiscount.slotsToDeduct > 0 && (
+                  <div className="flex items-start justify-between gap-3 text-[#ad422b]">
+                    <span>Potongan Value Pack ({membershipDiscount.slotsToDeduct} jam)</span>
+                    <span className="font-medium">
+                      - {formatCurrency(membershipDiscount.discountAmount)}
+                    </span>
+                  </div>
+                )}
+                {selectedPaymentMethod && paymentFeeBreakdown.totalFee > 0 && (
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="text-muted-foreground">Biaya Layanan</span>
+                    <span className="text-foreground font-medium">
+                      {formatCurrency(paymentFeeBreakdown.totalFee)}
+                    </span>
+                  </div>
+                )}
+                {!isCoveredByMembership && promoDiscountAmount > 0 && (
+                  <div className="flex items-start justify-between gap-3 text-[#ad422b]">
+                    <span>Promo {appliedPromoCode}</span>
+                    <span className="font-medium">- {formatCurrency(promoDiscountAmount)}</span>
+                  </div>
+                )}
+                <div className="flex items-end justify-between gap-4 border-t border-black/15 pt-4 text-sm font-medium">
+                  <span>Total Pembayaran</span>
+                  <span className="text-[#ad422b]">{formatCurrency(totalAfterPromo)}</span>
+                </div>
+              </div>
+            </div>
+            <div className="mt-5 hidden border-t border-black/15 pt-5 lg:block">
+              {checkoutAction}
+            </div>
+          </aside>
+        </div>
+      </main>
+
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-black/15 bg-[#f8f8f6] px-5 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:hidden">
+        <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] items-center gap-3">
+          <div className="min-w-0">
+            <p className="text-[10px] text-black/50">Total pembayaran</p>
+            <p className="mt-1 text-xl font-medium tracking-tight tabular-nums">
+              {formatCurrency(totalAfterPromo)}
+            </p>
+          </div>
+          {checkoutAction}
+        </div>
+      </div>
+
+      <Dialog open={isPaymentModalOpen} onOpenChange={setPaymentModalOpen}>
+        <DialogContent className="auth-dialog max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-none border-black/15 bg-[#f8f8f6] p-5 text-[#171717] sm:max-w-lg sm:p-7">
+          <DialogHeader>
+            <DialogTitle className="pr-6 text-left text-xl font-medium tracking-tight text-[#171717]">
+              Pilih Metode Pembayaran
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            {isLoadingPaymentMethods ? (
+              <div className="text-muted-foreground py-6 text-center text-sm">
+                Memuat metode pembayaran...
+              </div>
+            ) : paymentMethods.length === 0 ? (
+              <div className="text-muted-foreground py-6 text-center text-sm">
+                Tidak ada metode pembayaran tersedia
+              </div>
+            ) : (
+              paymentMethods.map((method) => {
+                const percentage = Number(method.percentage ?? 0);
+                const baseFee = Number.isFinite(method.fees) ? method.fees : 0;
+                const feesValue = Math.round(baseFee + (grandTotal * percentage) / 100);
+                const isSelected = selectedPaymentMethod?.id === method.id;
+
+                return (
+                  <button
+                    key={method.id}
+                    onClick={() => handleSelectPaymentMethod(method)}
+                    className={cn(
+                      'flex w-full items-center justify-between gap-3 border p-4 text-left transition-colors',
+                      isSelected
+                        ? 'border-[#ad422b] bg-[#ad422b]/5'
+                        : 'hover:bg-muted/10 border-black/15 hover:border-[#ad422b]/40'
+                    )}
+                  >
+                    {/* Kiri: Logo + Nama */}
+                    <div className="flex min-w-0 items-center gap-3">
+                      {resolveMediaUrl(method.logo) ? (
+                        <Image
+                          src={resolveMediaUrl(method.logo)!}
+                          alt={method.name}
+                          width={48}
+                          height={48}
+                          className="h-12 w-12 rounded-none bg-white object-contain p-1"
+                          unoptimized
+                        />
+                      ) : (
+                        <div className="bg-muted text-muted-foreground flex h-12 w-12 items-center justify-center rounded-none text-sm font-semibold">
+                          {method.name.slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
+
+                      <div className="flex min-w-0 flex-col items-start">
+                        <p className="text-foreground text-sm leading-tight font-semibold">
+                          {method.name}
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          Biaya {formatCurrency(feesValue)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Kanan: Biaya dan Radio */}
+                    <div>
+                      <div
+                        className={cn(
+                          'mt-1 flex h-5 w-5 items-center justify-center rounded-full border transition-all',
+                          isSelected
+                            ? 'border-[#ad422b] bg-[#ad422b]'
+                            : 'bg-background border-black/15'
+                        )}
+                      >
+                        {isSelected && <span className="h-2.5 w-2.5 rounded-full bg-white" />}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add New Card Dialog */}
+      <Dialog open={isAddCardModalOpen} onOpenChange={setAddCardModalOpen}>
+        <DialogContent className="auth-dialog max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-none border-black/15 bg-[#f8f8f6] p-5 text-[#171717] sm:max-w-lg sm:p-7">
+          <DialogHeader>
+            <DialogTitle className="pr-6 text-left text-xl font-medium tracking-tight text-[#171717]">
+              Tambah Kartu Baru
+            </DialogTitle>
+          </DialogHeader>
+
+          <CreditCardForm
+            onSubmit={handleNewCardSubmit}
+            isLoading={checkoutMutation.isPending}
+            showSaveOption={true}
+            submitButtonText="Gunakan Kartu Ini"
+          />
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

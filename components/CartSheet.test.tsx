@@ -1,25 +1,26 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { useBookingStore } from '@/stores/useBookingStore';
+import { useBallboyCartStore } from '@/stores/useBallboyCartStore';
+import { useBranchStore } from '@/stores/useBranchStore';
 import CartSheet from './CartSheet';
 const mocks = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mocks.push }) }));
 afterEach(() => {
   cleanup();
+  useBallboyCartStore.getState().clear();
   useBookingStore.getState().clearAll();
   useBookingStore.getState().setCartOpen(false);
   vi.clearAllMocks();
 });
 function addLegacyEquipment() {
-  useBookingStore
-    .getState()
-    .addInventory({
-      inventoryId: 'balls',
-      inventoryName: 'Tennis Balls',
-      quantity: 2,
-      price: 50000,
-      timeSlot: 'default'
-    });
+  useBookingStore.getState().addInventory({
+    inventoryId: 'balls',
+    inventoryName: 'Tennis Balls',
+    quantity: 2,
+    price: 50000,
+    timeSlot: 'default'
+  });
 }
 it('does not offer equipment-only checkout from a legacy cart', () => {
   addLegacyEquipment();
@@ -30,19 +31,17 @@ it('does not offer equipment-only checkout from a legacy cart', () => {
 });
 it('checks out courts without including legacy equipment in the subtotal', () => {
   addLegacyEquipment();
-  useBookingStore
-    .getState()
-    .setBookingItems([
-      {
-        courtId: 'court',
-        courtName: 'Padel 1',
-        slotId: 'slot',
-        date: '2030-10-23',
-        timeSlot: '08:00',
-        endTime: '09:00',
-        price: 200000
-      }
-    ]);
+  useBookingStore.getState().setBookingItems([
+    {
+      courtId: 'court',
+      courtName: 'Padel 1',
+      slotId: 'slot',
+      date: '2030-10-23',
+      timeSlot: '08:00',
+      endTime: '09:00',
+      price: 200000
+    }
+  ]);
   render(<CartSheet />);
   fireEvent.click(screen.getByRole('button', { name: 'Buka keranjang booking' }));
   expect(screen.getByText('Padel 1')).toBeInTheDocument();
@@ -53,4 +52,27 @@ it('checks out courts without including legacy equipment in the subtotal', () =>
   fireEvent.click(checkout);
   expect(mocks.push).toHaveBeenCalledWith('/checkout');
   expect(useBookingStore.getState().selectedInventories).toHaveLength(1);
+});
+
+it('shows standalone ballboy services and offers their separate checkout', () => {
+  useBranchStore.setState({
+    branch: { id: 'cemara', name: 'Cemara', address: '', isActive: true }
+  });
+  useBallboyCartStore
+    .getState()
+    .setItems('cemara', [
+      {
+        ballboyId: 'ballboy',
+        ballboyName: 'Budi',
+        slotId: 'ballboy-slot',
+        date: '2030-10-23',
+        timeSlot: '08:00 - 09:00',
+        price: 45000
+      }
+    ]);
+  render(<CartSheet />);
+  fireEvent.click(screen.getByRole('button', { name: 'Buka keranjang booking' }));
+  expect(screen.getByRole('region', { name: 'Keranjang ballboy' })).toHaveTextContent('Budi');
+  fireEvent.click(screen.getByRole('button', { name: /Checkout ballboy/ }));
+  expect(mocks.push).toHaveBeenCalledWith('/add-ons/checkout');
 });

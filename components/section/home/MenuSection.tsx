@@ -4,13 +4,18 @@ import BranchLink from '@/components/branches/BranchLink';
 const menus = [
   { title: 'Padel', href: '/booking', image: '/assets/icons/mobile-menu/padel-2d.svg' },
   { title: 'Tennis', href: '/booking/tennis', image: '/assets/icons/mobile-menu/tennis-2d.svg' },
-  { title: 'Value Pack', href: '/membership', image: '/assets/icons/mobile-menu/value-pack-2d.svg' }
+  {
+    title: 'Value Pack',
+    href: '/membership',
+    image: '/assets/icons/mobile-menu/value-pack-2d.svg'
+  },
+  { title: 'Add-ons', href: '/add-ons', image: '/assets/icons/mobile-menu/ballboy-2d.svg' }
 ];
 
 export default function MenuSection() {
   return (
     <nav aria-label="Menu olahraga" className="py-6 lg:hidden">
-      <ul className="mx-auto grid max-w-md grid-cols-3 gap-2">
+      <ul className="mx-auto grid max-w-md grid-cols-4 gap-2">
         {menus.map((menu) => (
           <li key={menu.href}>
             <BranchLink

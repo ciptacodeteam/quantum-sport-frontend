@@ -2,7 +2,8 @@
 
 ## Current icons
 
-The home menu uses `padel-2d.svg`, `tennis-2d.svg`, and `value-pack-2d.svg`.
+The home menu uses `padel-2d.svg`, `tennis-2d.svg`, `value-pack-2d.svg`, and
+`ballboy-2d.svg` (the Add-ons shortcut for standalone customer ballboy orders).
 These flat detailed icons use ivory `#f2e8d6`, natural racket proportions,
 perforations, fine tennis strings, wrapped grips, and seamed balls. Value Pack
 uses notched tickets with perforations, a racket stamp, and barcode detail.

@@ -23,11 +23,12 @@ export function getCheckoutSelections({
     .map((item) => item.slotId);
   const coachSlots = selectedCoaches.filter((coach) => coach.slotId).map((coach) => coach.slotId);
   const ballboySlots = selectedBallboys
-    .filter((ballboy) => ballboy.slotId && ballboy.courtSlotId)
-    .map((ballboy) => ({
-      slotId: ballboy.slotId as string,
-      courtSlotId: ballboy.courtSlotId as string
-    }));
+    .filter((ballboy) => ballboy.slotId)
+    .map((ballboy) =>
+      ballboy.courtSlotId
+        ? { slotId: ballboy.slotId as string, courtSlotId: ballboy.courtSlotId }
+        : (ballboy.slotId as string)
+    );
   const inventories = selectedInventories
     .filter((item) => item.inventoryId && item.quantity > 0)
     .map((item) => ({

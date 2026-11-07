@@ -7,6 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getBranches } from '@/api/branch';
 import { useBranchStore } from '@/stores/useBranchStore';
 import { useBookingStore } from '@/stores/useBookingStore';
+import { useBallboyCartStore } from '@/stores/useBallboyCartStore';
 import { branchSupportsTennis } from '@/lib/court-branch-policy';
 import type { Branch } from '@/types/branch';
 
@@ -14,7 +15,7 @@ export default function BranchGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const requiresBranch =
-    /^\/(booking|checkout)(\/|$)/.test(pathname) && pathname !== '/checkout/3ds-challenge';
+    /^\/(booking|checkout|add-ons)(\/|$)/.test(pathname) && pathname !== '/checkout/3ds-challenge';
   const { branch, selectorOpen, pendingHref, setBranch, closeSelector } = useBranchStore();
   const [ready, setReady] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
@@ -39,8 +40,8 @@ export default function BranchGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     setSwitching(false);
   }, [pathname]);
-  const tennisPage = /^\/booking\/tennis(?:\/|$)/.test(pathname);
-  const tennisSelection = /^\/booking\/tennis(?:[/?#]|$)/.test(pendingHref || pathname);
+  const tennisPage = /^\/(?:booking\/tennis|add-ons)(?:\/|$)/.test(pathname);
+  const tennisSelection = /^\/(?:booking\/tennis|add-ons)(?:[/?#]|$)/.test(pendingHref || pathname);
   const availableBranches = tennisSelection
     ? branches?.filter((item) => branchSupportsTennis(item.id))
     : branches;
@@ -56,7 +57,9 @@ export default function BranchGate({ children }: { children: ReactNode }) {
       cart.bookingItems.length ||
       cart.selectedCoaches.length ||
       cart.selectedBallboys.length ||
-      cart.selectedInventories.length
+      cart.selectedInventories.length ||
+      useBallboyCartStore.getState().items.length ||
+      useBallboyCartStore.getState().courtItems.length
     );
     if (next.id !== branch?.id && hasCart && !discardCart) {
       setPendingBranch(next);
@@ -67,6 +70,7 @@ export default function BranchGate({ children }: { children: ReactNode }) {
     if (next.id !== branch?.id) {
       await queryClient.cancelQueries();
       cart.clearAll();
+      useBallboyCartStore.getState().clear();
       // No query or payment selection from the previous branch may survive a switch.
       queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== 'branches' });
       for (const key of ['checkoutData', 'checkout-selected-payment', 'payment_3ds_data'])

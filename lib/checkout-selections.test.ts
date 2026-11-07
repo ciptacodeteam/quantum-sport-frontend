@@ -52,3 +52,24 @@ describe('checkout item payloads', () => {
     ).toEqual([{ inventoryId: 'racket', quantity: 2 }]);
   });
 });
+
+it('sends standalone ballboy IDs without inventing a court reference', () => {
+  const ballboy = {
+    ballboyId: 'ballboy',
+    ballboyName: 'Budi',
+    slotId: 'ballboy-slot',
+    date: '2030-10-23',
+    timeSlot: '08:00 - 09:00',
+    price: 45000
+  };
+  expect(getCheckoutSelections({ ...empty, selectedBallboys: [ballboy] }).ballboySlots).toEqual([
+    'ballboy-slot'
+  ]);
+  expect(
+    getCheckoutSelections({
+      ...empty,
+      bookingItems: [court],
+      selectedBallboys: [{ ...ballboy, courtSlotId: 'slot-1' }]
+    }).ballboySlots
+  ).toEqual([{ slotId: 'ballboy-slot', courtSlotId: 'slot-1' }]);
+});

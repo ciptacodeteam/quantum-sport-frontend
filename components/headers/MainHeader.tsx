@@ -31,6 +31,7 @@ const navItems = [
   { title: 'Padel', path: '/booking' },
   { title: 'Tennis', path: '/booking/tennis' },
   { title: 'Value Pack', path: '/membership' },
+  { title: 'Add-ons', path: '/add-ons' },
   { title: 'Paket Saya', path: '/my-packages', requiresAuth: true },
   { title: 'Riwayat', path: '/invoice', requiresAuth: true }
 ];

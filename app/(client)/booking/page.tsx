@@ -3,7 +3,7 @@
 import { useTariffPeriods } from '@/hooks/useTariffPeriods';
 import { resolveTariffPeriod, tariffBand } from '@/lib/tariff-period';
 
-import { getCourtBookingWindowApi } from '@/api/court';
+import { useCourtBookingSchedule } from '@/hooks/useCourtBookingSchedule';
 import MainHeader from '@/components/headers/MainHeader';
 import { Button } from '@/components/ui/button';
 import { DatePickerModal, DatePickerModalTrigger } from '@/components/ui/date-picker-modal';
@@ -14,7 +14,6 @@ import { formatSlotTime } from '@/lib/time-utils';
 import { isTimeAllowedForMembershipType, type MembershipType } from '@/lib/membership-hours';
 import { cn } from '@/lib/utils';
 import CourtDetailsDialog from '@/components/booking/CourtDetailsDialog';
-import { courtsSlotsQueryOptions } from '@/queries/court';
 import { myMembershipQueryOptions } from '@/queries/membership';
 import type { BookingItem } from '@/stores/useBookingStore';
 import useAuthStore from '@/stores/useAuthStore';
@@ -104,38 +103,19 @@ export default function BookingPage() {
   const selectedFullDate = activeDate?.fullDate ?? selectedDate;
 
   const todayKey = currentTime.format('YYYY-MM-DD');
-  const windowQuery = useQuery({
-    queryKey: ['courts', 'booking-window', courtSport],
-    queryFn: () => getCourtBookingWindowApi(courtSport),
-    refetchInterval: 60_000,
-    refetchOnWindowFocus: true
-  });
+  const { windowQuery, slotQuery, withinWindow } = useCourtBookingSchedule(
+    selectedFullDate,
+    todayKey,
+    courtSport
+  );
   const bookingWindow = windowQuery.data;
   const windowEndKey = bookingWindow?.endDate ?? todayKey;
-  const withinWindow =
-    !!bookingWindow && selectedFullDate >= todayKey && selectedFullDate <= windowEndKey;
-
-  const slotQueryParams = useMemo(
-    () => ({
-      startAt: dayjs(selectedFullDate).startOf('day').format('YYYY-MM-DD HH:mm:ss'),
-      endAt: dayjs(selectedFullDate).endOf('day').format('YYYY-MM-DD HH:mm:ss'),
-      courtSport,
-      includeUnavailable: 'true'
-    }),
-    [selectedFullDate, courtSport]
-  );
-
   const {
     data: slotsData,
     isLoading: isSlotsLoading,
     isError: isSlotsError,
     refetch: refetchSlots
-  } = useQuery({
-    ...courtsSlotsQueryOptions(slotQueryParams),
-    enabled: withinWindow,
-    refetchInterval: 60_000,
-    refetchOnWindowFocus: true
-  });
+  } = slotQuery;
   const { data: userMembershipData } = useQuery({
     ...myMembershipQueryOptions,
     enabled: isAuthenticated
@@ -648,7 +628,7 @@ export default function BookingPage() {
                   </button>
                 </div>
               )}
-              {(isSlotsLoading || windowQuery.isPending) && (
+              {(isSlotsLoading || (windowQuery.isPending && !slotsData)) && (
                 <div className="text-muted-foreground p-4 text-center text-sm">Memuat slot...</div>
               )}
               <div
@@ -692,7 +672,7 @@ export default function BookingPage() {
                         {courts.map((court) => {
                           const slot = slotMap.get(`${court.id}-${time}`);
                           const hasSlot = !!slot;
-                          const isAvailable = !!slot?.isAvailable;
+                          const isAvailable = withinWindow && !!slot?.isAvailable;
                           const selected = selectedCells.some(
                             (cell) => cell.courtId === court.id && cell.time === time
                           );

@@ -11,6 +11,8 @@ import {
   SheetTrigger
 } from '@/components/ui/sheet';
 import { useBookingStore } from '@/stores/useBookingStore';
+import { useBallboyCartStore } from '@/stores/useBallboyCartStore';
+import { ballboyMatchesCourt } from '@/lib/ballboy-booking';
 import { useBranchStore } from '@/stores/useBranchStore';
 import { IconShoppingCartFilled } from '@tabler/icons-react';
 import { ArrowUpRight, CalendarDays, ShoppingCart, Trash2, X } from 'lucide-react';
@@ -27,9 +29,22 @@ export default function CartSheet({ minimal = false }: { minimal?: boolean }) {
   const setCartOpen = useBookingStore((state) => state.setCartOpen);
   const removeBookingItem = useBookingStore((state) => state.removeBookingItem);
 
-  const hasCartItems = bookingItems.length > 0;
-  const cartItemCount = bookingItems.length;
-  const totalAmount = bookingItems.reduce((sum, item) => sum + item.price, 0);
+  const ballboyCart = useBallboyCartStore();
+  const branchId = useBranchStore((state) => state.branch?.id);
+  const ballboys = branchId === ballboyCart.branchId ? ballboyCart.items : [];
+  const courtBallboys =
+    branchId === ballboyCart.courtBranchId &&
+    bookingItems.every((court) => court.sport === 'TENNIS')
+      ? ballboyCart.courtItems.filter((item) =>
+          bookingItems.some((court) => ballboyMatchesCourt(item, court))
+        )
+      : [];
+  const hasCartItems = bookingItems.length > 0 || ballboys.length > 0;
+  const cartItemCount = bookingItems.length + ballboys.length + courtBallboys.length;
+  const totalAmount =
+    bookingItems.reduce((sum, item) => sum + item.price, 0) +
+    ballboys.reduce((sum, item) => sum + item.price, 0) +
+    courtBallboys.reduce((sum, item) => sum + item.price, 0);
 
   // Group booking items by date
   const groupedBookings = useMemo(() => {
@@ -67,7 +82,7 @@ export default function CartSheet({ minimal = false }: { minimal?: boolean }) {
   };
 
   const handleCheckout = () => {
-    router.push('/checkout');
+    router.push(bookingItems.length ? '/checkout' : '/add-ons/checkout');
     setCartOpen(false);
   };
 
@@ -112,7 +127,7 @@ export default function CartSheet({ minimal = false }: { minimal?: boolean }) {
             </button>
           </div>
           <SheetDescription className="text-xs leading-relaxed text-black/50">
-            Periksa jadwal lapangan sebelum melanjutkan.
+            Periksa jadwal lapangan dan ballboy sebelum melanjutkan.
           </SheetDescription>
         </SheetHeader>
 
@@ -201,6 +216,67 @@ export default function CartSheet({ minimal = false }: { minimal?: boolean }) {
                 </Button>
               </section>
             ) : null}
+            {courtBallboys.length > 0 && (
+              <section
+                aria-label="Ballboy untuk lapangan"
+                className="border border-black/15 bg-white p-4"
+              >
+                <h3 className="text-xs font-medium text-[#ad422b]">Add-ons lapangan · Ballboy</h3>
+                <ul className="divide-y divide-black/10">
+                  {courtBallboys.map((item) => (
+                    <li key={`${item.courtSlotId}-${item.slotId}`} className="py-3 text-sm">
+                      <p className="font-medium">
+                        {item.ballboyName} · {item.courtName}
+                      </p>
+                      <p className="mt-1 text-xs text-black/50">
+                        {item.date} · {item.timeSlot}
+                      </p>
+                      <p className="mt-1 text-xs">Rp{item.price.toLocaleString('id-ID')}</p>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-xs text-black/50">Dibayar sekaligus saat checkout lapangan.</p>
+              </section>
+            )}
+            {ballboys.length > 0 && (
+              <section
+                aria-label="Keranjang ballboy"
+                className="border border-black/15 bg-white p-4"
+              >
+                <h3 className="text-xs font-medium text-[#ad422b]">Add-ons · Ballboy</h3>
+                <ul className="divide-y divide-black/10">
+                  {ballboys.map((item) => (
+                    <li key={item.slotId} className="flex items-start justify-between gap-3 py-3">
+                      <div>
+                        <p className="text-sm font-medium">{item.ballboyName}</p>
+                        <p className="mt-1 text-xs text-black/50">
+                          {dayjs(item.date).format('DD MMM YYYY')} · {item.timeSlot}
+                        </p>
+                        <p className="mt-1 text-xs">Rp{item.price.toLocaleString('id-ID')}</p>
+                      </div>
+                      <button
+                        type="button"
+                        aria-label={`Hapus ballboy ${item.ballboyName} ${item.timeSlot}`}
+                        onClick={() => ballboyCart.removeItem(item.slotId!)}
+                        className="p-2 text-black/40"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <Button
+                  className="mt-3 w-full rounded-full"
+                  onClick={() => {
+                    router.push('/add-ons/checkout');
+                    setCartOpen(false);
+                  }}
+                >
+                  Checkout ballboy · Rp
+                  {ballboys.reduce((sum, item) => sum + item.price, 0).toLocaleString('id-ID')}
+                </Button>
+              </section>
+            )}
           </div>
         </div>
 
@@ -212,21 +288,25 @@ export default function CartSheet({ minimal = false }: { minimal?: boolean }) {
             </p>
           </div>
           <div className="grid auto-cols-fr grid-flow-col gap-3">
-            {bookingItems.length > 0 && (
+            {hasCartItems && (
               <Button
                 variant="outline"
                 className="h-12 w-full rounded-full border-black/20 bg-transparent px-3 text-xs shadow-none hover:bg-black/5"
-                onClick={clearAll}
+                onClick={() => {
+                  clearAll();
+                  ballboyCart.clear();
+                }}
               >
                 Hapus semua
               </Button>
             )}
             <Button
               className="h-12 w-full rounded-full bg-[#111111] px-3 text-xs text-white hover:bg-black/80 disabled:bg-black/15 disabled:text-black/40 disabled:opacity-100"
-              disabled={bookingItems.length === 0}
+              disabled={!hasCartItems}
               onClick={handleCheckout}
             >
-              Checkout <ArrowUpRight className="size-4" strokeWidth={1.5} aria-hidden="true" />
+              {bookingItems.length && ballboys.length ? 'Checkout lapangan' : 'Checkout'}{' '}
+              <ArrowUpRight className="size-4" strokeWidth={1.5} aria-hidden="true" />
             </Button>
           </div>
         </footer>

@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { useBranchStore } from '@/stores/useBranchStore';
 import { useBookingStore } from '@/stores/useBookingStore';
+import { useBallboyCartStore } from '@/stores/useBallboyCartStore';
 import type { Branch } from '@/types/branch';
 const mocks = vi.hoisted(() => ({
   getBranches: vi.fn(),
@@ -27,6 +28,7 @@ beforeEach(() => {
   sessionStorage.clear();
   useBranchStore.setState({ branch: null, selectorOpen: false, pendingHref: null });
   useBookingStore.getState().clearAll();
+  useBallboyCartStore.getState().clear();
   mocks.path = '/booking';
   mocks.replace.mockReset();
   mocks.push.mockReset();
@@ -245,3 +247,39 @@ it.each(['/membership', '/membership/pack', '/membership/checkout', '/my-package
     expect(mocks.getBranches).not.toHaveBeenCalled();
   }
 );
+
+it('requires a Tennis branch for the standalone ballboy checkout', async () => {
+  mocks.path = '/add-ons/checkout';
+  useBranchStore.setState({ branch: branches[1] });
+  sessionStorage.setItem('confirmed-branch', 's-parman');
+  show();
+  expect(await screen.findByRole('dialog')).toBeInTheDocument();
+  const cemara = await screen.findByRole('button', { name: /^Black Padel Cemara/ });
+  expect(screen.queryByText('Booking content')).toBeNull();
+  expect(screen.queryByRole('button', { name: /Black Padel S. Parman/ })).toBeNull();
+  fireEvent.click(cemara);
+  expect(await screen.findByText('Booking content')).toBeInTheDocument();
+});
+it('protects a standalone ballboy cart until a branch switch is confirmed', async () => {
+  mocks.path = '/';
+  useBranchStore.setState({ branch: branches[0] });
+  sessionStorage.setItem('confirmed-branch', 'cemara');
+  useBallboyCartStore.getState().setItems('cemara', [
+    {
+      ballboyId: 'ballboy',
+      ballboyName: 'Budi',
+      slotId: 'slot',
+      date: '2030-10-23',
+      timeSlot: '08:00 - 09:00',
+      price: 45000
+    }
+  ]);
+  show();
+  act(() => useBranchStore.getState().openSelector('/booking'));
+  fireEvent.click(await screen.findByRole('button', { name: /Black Padel S. Parman/ }));
+  expect(useBallboyCartStore.getState().items).toHaveLength(1);
+  expect(mocks.push).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Kosongkan keranjang & pindah' }));
+  await waitFor(() => expect(mocks.push).toHaveBeenCalledWith('/booking'));
+  expect(useBallboyCartStore.getState().items).toEqual([]);
+});

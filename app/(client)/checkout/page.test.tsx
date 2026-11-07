@@ -1,6 +1,9 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { useBookingStore } from '@/stores/useBookingStore';
+import { useBallboyCartStore } from '@/stores/useBallboyCartStore';
+import { useBranchStore } from '@/stores/useBranchStore';
+import CustomerCheckout from '@/components/checkout/CustomerCheckout';
 const mocks = vi.hoisted(() => ({
   methods: [] as any[],
   membership: false,
@@ -12,6 +15,36 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock('@/components/headers/MainHeader', () => ({ default: () => null }));
+vi.mock('@/components/checkout/CourtBallboyPicker', () => ({
+  default: ({ sessions, onSave, onCancel }: any) => (
+    <div>
+      <button
+        onClick={() =>
+          onSave([
+            {
+              ballboyId: 'ballboy',
+              ballboyName: 'Budi',
+              slotId: 'linked-ballboy',
+              courtSlotId: sessions[0].slotId,
+              courtId: sessions[0].courtId,
+              courtName: sessions[0].courtName,
+              date: sessions[0].date,
+              timeSlot: '08:00 - 09:00',
+              startAt: sessions[0].startAt,
+              endAt: sessions[0].endAt,
+              courtSport: 'TENNIS',
+              price: 45000
+            }
+          ])
+        }
+      >
+        Simpan add-ons
+      </button>
+      <button onClick={onCancel}>Batal add-ons</button>
+    </div>
+  )
+}));
+
 vi.mock('@/hooks/useMembershipDiscount', async () => {
   const { selectMembershipSlots } = await import('@/lib/membership-slot-selection');
   return {
@@ -38,7 +71,7 @@ vi.mock('@/hooks/useMembershipDiscount', async () => {
               name: 'All Hour',
               price: 1000000,
               sessions: 10,
-              sport: 'PADEL' as const,
+              sport,
               type: 'ALL_HOUR' as const
             }
           }
@@ -89,6 +122,7 @@ afterEach(() => {
   mocks.methods = [];
   mocks.mutate.mockClear();
   useBookingStore.getState().clearAll();
+  useBallboyCartStore.getState().clear();
 });
 it('ignores a legacy equipment-only cart and hides add-on ordering', () => {
   useBookingStore.getState().clearAll();
@@ -276,4 +310,128 @@ it('does not suggest a cheaper regular rate when membership is cheaper', () => {
   addMembershipCourt();
   render(<CheckoutPage />);
   expect(screen.queryByText('Harga reguler lebih rendah')).toBeNull();
+});
+
+function addBallboyOrder() {
+  useBranchStore.setState({
+    branch: { id: 'cemara', name: 'Cemara', address: '', isActive: true }
+  });
+  useBallboyCartStore.getState().setItems('cemara', [
+    {
+      ballboyId: 'ballboy',
+      ballboyName: 'Budi',
+      slotId: 'ballboy-slot',
+      date: '2030-10-23',
+      timeSlot: '08:00 - 09:00',
+      startAt: '2030-10-23 08:00:00',
+      endAt: '2030-10-23 09:00:00',
+      price: 45000,
+      courtSport: 'TENNIS'
+    }
+  ]);
+  mocks.methods = [{ id: 'qris', name: 'QRIS', channel: 'QRIS', fees: 1000, percentage: '0' }];
+}
+it('checks out standalone ballboy slots without court items or membership usage', async () => {
+  addMembershipCourt();
+  addBallboyOrder();
+  render(<CustomerCheckout ballboyOnly />);
+  expect(screen.getByRole('region', { name: 'Detail pesanan ballboy' })).toHaveTextContent('Budi');
+  expect(screen.queryByText('Court 1')).toBeNull();
+  expect(screen.queryByText(/Potongan Value Pack/)).toBeNull();
+  expect(screen.getAllByText('Rp46.110').length).toBeGreaterThan(0);
+  fireEvent.click(screen.getAllByRole('button', { name: 'Bayar Sekarang' })[0]);
+  await waitFor(() => expect(mocks.mutate).toHaveBeenCalled());
+  const payload = mocks.mutate.mock.calls[0][0];
+  expect(payload).toMatchObject({
+    ballboySlots: ['ballboy-slot'],
+    useMembership: false,
+    paymentMethodId: 'qris'
+  });
+  expect(payload).not.toHaveProperty('courtSlots');
+  expect(payload).not.toHaveProperty('coachSlots');
+  act(() => mocks.checkoutSuccess?.({ data: { invoiceNumber: 'INV-BALLBOY' } }));
+  expect(useBallboyCartStore.getState().items).toEqual([]);
+  expect(useBookingStore.getState().bookingItems).toHaveLength(1);
+});
+it('does not show a ballboy cart from a different branch', () => {
+  addBallboyOrder();
+  useBallboyCartStore.setState({ branchId: 'other-branch' });
+  render(<CustomerCheckout ballboyOnly />);
+  expect(screen.getByText('Belum ada pesanan')).toBeInTheDocument();
+  expect(screen.queryByText('Budi')).toBeNull();
+});
+it('blocks payment for expired ballboy hours', () => {
+  addBallboyOrder();
+  useBallboyCartStore.setState({
+    items: useBallboyCartStore
+      .getState()
+      .items.map((item) => ({ ...item, startAt: '2020-01-01 08:00:00' }))
+  });
+  render(<CustomerCheckout ballboyOnly />);
+  expect(screen.getByRole('alert')).toHaveTextContent('sudah lewat');
+  screen
+    .getAllByRole('button', { name: 'Bayar Sekarang' })
+    .forEach((button) => expect(button).toBeDisabled());
+});
+
+function addTennisCourt(membership = false) {
+  addMembershipCourt();
+  mocks.membership = membership;
+  useBranchStore.setState({
+    branch: { id: 'cemara', name: 'Cemara', address: '', isActive: true }
+  });
+  useBookingStore
+    .getState()
+    .setBookingItems(
+      useBookingStore.getState().bookingItems.map((item) => ({ ...item, sport: 'TENNIS' }))
+    );
+  mocks.methods = [{ id: 'qris', name: 'QRIS', channel: 'QRIS', fees: 1000, percentage: '0' }];
+}
+it('adds ballboy from the dotted checkout button and pays courts and add-ons in one order', async () => {
+  addTennisCourt();
+  render(<CheckoutPage />);
+  const button = screen.getByRole('button', { name: 'Tambah Add-ons' });
+  expect(button).toHaveClass('border-dotted', 'bg-transparent');
+  fireEvent.click(button);
+  fireEvent.click(screen.getByRole('button', { name: 'Simpan add-ons' }));
+  expect(screen.queryByRole('dialog')).toBeNull();
+  expect(screen.getByRole('region', { name: 'Add-ons lapangan' })).toHaveTextContent(
+    'Ballboy · Budi'
+  );
+  expect(screen.getAllByText('Rp246.110').length).toBeGreaterThan(0);
+  fireEvent.click(screen.getAllByRole('button', { name: 'Bayar Sekarang' })[0]);
+  await waitFor(() => expect(mocks.mutate).toHaveBeenCalled());
+  expect(mocks.mutate.mock.calls[0][0]).toMatchObject({
+    courtSlots: ['court-slot'],
+    ballboySlots: [{ slotId: 'linked-ballboy', courtSlotId: 'court-slot' }],
+    paymentMethodId: 'qris',
+    useMembership: false
+  });
+});
+it('charges the ballboy while the court is paid with Value Pack, and recalculates after removal', async () => {
+  addTennisCourt(true);
+  render(<CheckoutPage />);
+  expect(screen.getAllByRole('button', { name: 'Konfirmasi booking' }).length).toBeGreaterThan(0);
+  fireEvent.click(screen.getByRole('button', { name: 'Tambah Add-ons' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Simpan add-ons' }));
+  expect(screen.getAllByText('Rp46.110').length).toBeGreaterThan(0);
+  fireEvent.click(screen.getAllByRole('button', { name: 'Bayar Sekarang' })[0]);
+  await waitFor(() => expect(mocks.mutate).toHaveBeenCalled());
+  expect(mocks.mutate.mock.calls[0][0]).toMatchObject({
+    courtSlots: ['court-slot'],
+    ballboySlots: [{ slotId: 'linked-ballboy', courtSlotId: 'court-slot' }],
+    useMembership: true,
+    paymentMethodId: 'qris'
+  });
+  fireEvent.click(screen.getByRole('button', { name: /Hapus ballboy Budi/ }));
+  expect(useBallboyCartStore.getState().courtItems).toEqual([]);
+  expect(screen.getAllByRole('button', { name: 'Konfirmasi booking' }).length).toBeGreaterThan(0);
+});
+it('cancels add-on selection without changing the court order', () => {
+  addTennisCourt();
+  render(<CheckoutPage />);
+  fireEvent.click(screen.getByRole('button', { name: 'Tambah Add-ons' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Batal add-ons' }));
+  expect(useBallboyCartStore.getState().courtItems).toEqual([]);
+  expect(screen.getAllByText('Rp201.110').length).toBeGreaterThan(0);
 });
