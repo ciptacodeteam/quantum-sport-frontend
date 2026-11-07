@@ -3,9 +3,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { CalendarDays, X } from 'lucide-react';
+import { ArrowUpRight, CalendarDays, X } from 'lucide-react';
 import MainHeader from '@/components/headers/MainHeader';
 import { Button } from '@/components/ui/button';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription
+} from '@/components/ui/sheet';
 import { DatePickerModal, DatePickerModalTrigger } from '@/components/ui/date-picker-modal';
 import { getCourtBookingWindowApi } from '@/api/court';
 import { getBallboyAvailabilityApi, getBallboysApi } from '@/api/ballboy';
@@ -29,6 +36,7 @@ export default function AddOnsPage() {
   const cart = useBallboyCartStore();
   const now = useBookingClock();
   const today = dayjs(now).tz('Asia/Jakarta').format('YYYY-MM-DD');
+  const [summaryOpen, setSummaryOpen] = useState(false);
   const [date, setDate] = useState(() => nowJakarta().format('YYYY-MM-DD'));
   const [draft, setDraft] = useState<{ branchId: string | null; items: SelectedBallboy[] }>(() => ({
     branchId: cart.branchId,
@@ -121,11 +129,39 @@ export default function AddOnsPage() {
     );
     setDraft({ branchId: branch!.id, items: exists ? remaining : [...remaining, item] });
   };
+  const selectionList = !selected.length ? (
+    <p className="text-sm text-black/50">Pilih jam dan ballboy terlebih dahulu.</p>
+  ) : (
+    <ul className="divide-y divide-black/10">
+      {[...selected]
+        .sort((a, b) => `${a.date}${a.timeSlot}`.localeCompare(`${b.date}${b.timeSlot}`))
+        .map((item) => (
+          <li key={item.slotId} className="flex items-start justify-between gap-3 py-3">
+            <div>
+              <p className="text-sm font-medium">{item.ballboyName}</p>
+              <p className="mt-1 text-xs text-black/50">
+                {dayjs(item.date).format('DD MMM YYYY')} · {item.timeSlot}
+              </p>
+              <p className="mt-1 text-sm text-[#ad422b]">{currency(item.price)}</p>
+            </div>
+            <button
+              type="button"
+              aria-label={`Hapus ${item.ballboyName} ${item.date} ${item.timeSlot}`}
+              onClick={() => remove(item.slotId)}
+              className="p-1 text-black/50"
+            >
+              <X className="size-4" />
+            </button>
+          </li>
+        ))}
+    </ul>
+  );
+
   return (
     <div className="min-h-dvh bg-[#f8f8f6] text-[#171717]">
       <MainHeader showBack backHref="/" />
-      <main className="booking-page mx-auto w-full max-w-7xl px-5 pt-28 pb-12 sm:px-8 lg:pt-44 xl:pt-32">
-        <div className="mb-8 max-w-xl">
+      <main className="booking-page mx-auto mt-[76px] h-[calc(100dvh-76px)] w-full max-w-7xl overflow-hidden pb-[calc(5rem+env(safe-area-inset-bottom))] text-[#171717] lg:mt-0 lg:h-auto lg:overflow-visible lg:px-8 lg:pt-40 lg:pb-16 xl:pt-32">
+        <div className="mb-8 hidden max-w-xl lg:block">
           <p className="mb-2 text-xs font-medium tracking-widest text-[#ad422b] uppercase">
             Add-ons · Tennis
           </p>
@@ -138,12 +174,12 @@ export default function AddOnsPage() {
         {!branch ? (
           <Button onClick={() => openSelector('/add-ons')}>Pilih cabang</Button>
         ) : (
-          <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="grid h-full min-h-0 min-w-0 items-start gap-4 lg:h-auto lg:grid-cols-[minmax(0,1fr)_300px]">
             <section
-              className="min-w-0 space-y-5 border border-black/15 bg-[#f8f8f6] p-4 sm:p-5"
+              className="flex h-full min-h-0 min-w-0 flex-col lg:h-auto"
               aria-label="Jadwal ballboy"
             >
-              <div className="flex min-w-0 items-center gap-3 border-b border-black/15 pb-4">
+              <div className="flex min-w-0 shrink-0 items-center gap-2 border-y border-black/15 bg-[#f8f8f6] p-3 lg:border">
                 <DatePickerModal
                   value={dayjs(date).toDate()}
                   minDate={dayjs(today).toDate()}
@@ -168,6 +204,7 @@ export default function AddOnsPage() {
                     </Button>
                   </DatePickerModalTrigger>
                 </DatePickerModal>
+                <span aria-hidden="true" className="mx-1 h-10 w-px shrink-0 bg-black/25" />
                 <div
                   role="group"
                   aria-label="Tanggal booking ballboy"
@@ -195,7 +232,7 @@ export default function AddOnsPage() {
                   ))}
                 </div>
               </div>
-              <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="my-4 hidden flex-wrap items-center justify-between gap-3 lg:flex">
                 <div>
                   <h2 className="text-base font-medium">Jadwal Ballboy</h2>
                   <p className="mt-1 text-xs text-black/50">
@@ -208,7 +245,7 @@ export default function AddOnsPage() {
               </div>
               <div
                 aria-label="Keterangan jadwal"
-                className="flex flex-wrap gap-5 text-[11px] text-black/55"
+                className="flex shrink-0 flex-wrap gap-5 px-5 py-4 text-[11px] text-black/55 lg:px-0"
               >
                 <span className="flex items-center gap-2">
                   <span className="size-2.5 border border-black/25 bg-white" />
@@ -223,6 +260,19 @@ export default function AddOnsPage() {
                   Tidak tersedia
                 </span>
               </div>
+              {selected.length > 0 && invalid && (
+                <div role="alert" className="shrink-0 px-5 pb-3 text-xs text-red-700 lg:px-0">
+                  Ada jam yang sudah tidak tersedia atau harganya berubah. Hapus pilihan tersebut
+                  dan pilih ulang.
+                  <button
+                    type="button"
+                    className="ml-1 underline"
+                    onClick={() => setSummaryOpen(true)}
+                  >
+                    Lihat pilihan
+                  </button>
+                </div>
+              )}
               {windowQuery.isError || availability.isError || roster.isError ? (
                 <div role="alert" className="space-y-3 text-sm text-red-700">
                   <p>Jadwal ballboy belum dapat dimuat.</p>
@@ -253,12 +303,12 @@ export default function AddOnsPage() {
                 </p>
               ) : (
                 <>
-                  <p className="text-xs text-black/50">
+                  <p className="mb-3 hidden text-xs text-black/50 lg:block">
                     Klik harga pada jam yang diinginkan. Pilih satu ballboy untuk setiap jam;
                     pilihan pada tanggal lain tetap tersimpan.
                   </p>
                   <div
-                    className="max-h-[640px] overflow-auto border border-black/15"
+                    className="min-h-0 flex-1 overflow-auto border-y border-black/15 lg:max-h-[640px] lg:flex-none lg:border"
                     aria-busy={availability.isFetching}
                   >
                     <table
@@ -344,70 +394,75 @@ export default function AddOnsPage() {
             </section>
             <aside
               aria-label="Ringkasan ballboy"
-              className="space-y-5 border border-black/15 bg-white p-5 sm:p-6 lg:sticky lg:top-40"
+              className="fixed inset-x-0 bottom-0 z-40 h-[calc(5rem+env(safe-area-inset-bottom))] border-t border-black/15 bg-[#f8f8f6] pb-[env(safe-area-inset-bottom)] lg:sticky lg:inset-x-auto lg:top-28 lg:bottom-auto lg:h-auto lg:border lg:p-6"
             >
-              <h2 className="text-lg font-medium">Pesanan ballboy</h2>
-              {!selected.length ? (
-                <p className="text-sm text-black/50">Pilih jam dan ballboy terlebih dahulu.</p>
-              ) : (
-                <ul className="divide-y divide-black/10">
-                  {[...selected]
-                    .sort((a, b) =>
-                      `${a.date}${a.timeSlot}`.localeCompare(`${b.date}${b.timeSlot}`)
-                    )
-                    .map((item) => (
-                      <li key={item.slotId} className="flex items-start justify-between gap-3 py-3">
-                        <div>
-                          <p className="text-sm font-medium">{item.ballboyName}</p>
-                          <p className="mt-1 text-xs text-black/50">
-                            {dayjs(item.date).format('DD MMM YYYY')} · {item.timeSlot}
-                          </p>
-                          <p className="mt-1 text-sm text-[#ad422b]">{currency(item.price)}</p>
-                        </div>
-                        <button
-                          type="button"
-                          aria-label={`Hapus ${item.ballboyName} ${item.date} ${item.timeSlot}`}
-                          onClick={() => remove(item.slotId)}
-                          className="p-1 text-black/50"
-                        >
-                          <X className="size-4" />
-                        </button>
-                      </li>
-                    ))}
-                </ul>
-              )}
-              {selected.length > 0 && invalid && (
-                <p role="alert" className="text-xs text-red-700">
-                  Ada jam yang sudah tidak tersedia atau harganya berubah. Hapus pilihan tersebut
-                  dan pilih ulang.
-                </p>
-              )}
-              <div className="flex justify-between border-t border-black/15 pt-4 text-sm">
-                <span>Subtotal · {selected.length} jam</span>
-                <span className="font-medium">{currency(total)}</span>
+              <h2 className="mb-5 hidden text-lg font-medium lg:block">Pesanan ballboy</h2>
+              <div className="hidden lg:block">{selectionList}</div>
+              <div className="mx-auto flex h-full max-w-7xl items-center justify-between gap-4 px-5 sm:px-8 lg:mt-5 lg:h-auto lg:flex-col lg:items-stretch lg:border-t lg:border-black/15 lg:px-0 lg:pt-4">
+                <button
+                  type="button"
+                  aria-label="Lihat pilihan ballboy"
+                  disabled={!selected.length}
+                  onClick={() => setSummaryOpen(true)}
+                  className="min-w-0 text-left"
+                >
+                  <span className="block text-[11px] text-black/50">
+                    Subtotal · {selected.length} slot
+                  </span>
+                  <span className="mt-1 block text-xl font-medium tracking-tight text-[#171717]">
+                    {currency(total)}
+                  </span>
+                </button>
+                <Button
+                  aria-label="Lanjut ke pembayaran"
+                  className="h-12 shrink-0 rounded-full bg-[#111111] px-5 text-sm text-white hover:bg-black/80 disabled:bg-black/15 disabled:text-black/40 disabled:opacity-100 lg:w-full"
+                  disabled={
+                    !selected.length ||
+                    invalid ||
+                    availability.isError ||
+                    roster.isError ||
+                    roster.isPending ||
+                    availability.isFetching ||
+                    !withinWindow
+                  }
+                  onClick={() => {
+                    cart.setItems(branch.id, selected);
+                    router.push('/add-ons/checkout');
+                  }}
+                >
+                  Lanjutkan{' '}
+                  <ArrowUpRight className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
+                </Button>
               </div>
-              <Button
-                className="h-12 w-full rounded-full bg-black text-white"
-                disabled={
-                  !selected.length ||
-                  invalid ||
-                  availability.isError ||
-                  roster.isError ||
-                  roster.isPending ||
-                  availability.isFetching ||
-                  !withinWindow
-                }
-                onClick={() => {
-                  cart.setItems(branch.id, selected);
-                  router.push('/add-ons/checkout');
-                }}
-              >
-                Lanjut ke pembayaran
-              </Button>
-              <p className="text-xs leading-relaxed text-black/45">
+              <p className="mt-4 hidden text-xs leading-relaxed text-black/45 lg:block">
                 Pemesanan ini khusus layanan ballboy. Biaya lapangan dibeli terpisah.
               </p>
             </aside>
+            <Sheet open={summaryOpen} onOpenChange={setSummaryOpen}>
+              <SheetContent
+                side="bottom"
+                className="max-h-[80dvh] overflow-y-auto bg-[#f8f8f6] pb-[calc(1.5rem+env(safe-area-inset-bottom))]"
+              >
+                <SheetHeader>
+                  <SheetTitle>Pesanan ballboy</SheetTitle>
+                  <SheetDescription>
+                    Periksa pilihan jadwal Anda atau hapus slot yang ingin diganti.
+                  </SheetDescription>
+                </SheetHeader>
+                <div className="px-5">{selectionList}</div>
+                <div className="flex items-center justify-between border-t border-black/15 px-5 pt-4 text-sm">
+                  <span>{selected.length} slot</span>
+                  <span>{currency(total)}</span>
+                </div>
+                <Button
+                  variant="outline"
+                  className="mx-5 rounded-full"
+                  onClick={() => setSummaryOpen(false)}
+                >
+                  Kembali ke jadwal
+                </Button>
+              </SheetContent>
+            </Sheet>
           </div>
         )}
       </main>

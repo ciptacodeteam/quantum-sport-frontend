@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { useBranchStore } from '@/stores/useBranchStore';
@@ -138,5 +138,30 @@ it('retains the previous date selection when booking another day', async () => {
     '2030-10-22',
     '2030-10-23'
   ]);
+  client.clear();
+});
+
+it('keeps the subtotal and continue action in the mobile bottom bar and supports removing a selection', async () => {
+  const client = mount();
+  const bar = screen.getByRole('complementary', { name: 'Ringkasan ballboy' });
+  expect(bar).toHaveClass('fixed', 'bottom-0', 'lg:sticky');
+  expect(within(bar).getByRole('button', { name: 'Lanjut ke pembayaran' })).toHaveTextContent(
+    'Lanjutkan'
+  );
+  expect(within(bar).getByRole('button', { name: 'Lanjut ke pembayaran' })).toBeDisabled();
+  fireEvent.click(await screen.findByRole('button', { name: 'Budi, 11:00, Tersedia' }));
+  expect(within(bar).getByText('Subtotal · 1 slot')).toBeInTheDocument();
+  expect(within(bar).getByRole('button', { name: 'Lihat pilihan ballboy' })).toHaveTextContent(
+    'Rp45.000'
+  );
+  fireEvent.click(within(bar).getByRole('button', { name: 'Lihat pilihan ballboy' }));
+  const sheet = await screen.findByRole('dialog', { name: 'Pesanan ballboy' });
+  fireEvent.click(
+    within(sheet).getByRole('button', { name: 'Hapus Budi 2030-10-22 11:00 - 12:00' })
+  );
+  expect(within(sheet).getByText('Pilih jam dan ballboy terlebih dahulu.')).toBeInTheDocument();
+  fireEvent.click(within(sheet).getByRole('button', { name: 'Kembali ke jadwal' }));
+  expect(within(bar).getByText('Subtotal · 0 slot')).toBeInTheDocument();
+  expect(within(bar).getByRole('button', { name: 'Lanjut ke pembayaran' })).toBeDisabled();
   client.clear();
 });
