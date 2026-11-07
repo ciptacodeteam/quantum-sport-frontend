@@ -4,6 +4,9 @@ import { useTariffPeriods } from '@/hooks/useTariffPeriods';
 import { resolveTariffPeriod, tariffBand } from '@/lib/tariff-period';
 
 import { useCourtBookingSchedule } from '@/hooks/useCourtBookingSchedule';
+import { getMyCourtScheduleApi, type MyCourtBooking } from '@/api/court-change';
+import ChangeCourtDialog from '@/components/booking/ChangeCourtDialog';
+import { useBranchStore } from '@/stores/useBranchStore';
 import MainHeader from '@/components/headers/MainHeader';
 import { Button } from '@/components/ui/button';
 import { DatePickerModal, DatePickerModalTrigger } from '@/components/ui/date-picker-modal';
@@ -67,6 +70,13 @@ export default function BookingPage() {
   const courtSport = pathname.includes('/tennis') ? 'TENNIS' : 'PADEL';
   const bookingTitle = courtSport === 'TENNIS' ? 'Tennis Court' : 'Padel Court';
   const isAuthenticated = useAuthStore((state) => state.isAuth);
+  const userId = useAuthStore((state) => state.user?.id);
+  const branchId = useBranchStore((state) => state.branch?.id);
+  const [courtChange, setCourtChange] = useState<{
+    booking: MyCourtBooking;
+    branchId: string;
+    userId: string;
+  } | null>(null);
   const {
     bookingItems,
     setBookingItems,
@@ -121,6 +131,19 @@ export default function BookingPage() {
     enabled: isAuthenticated
   });
 
+  const mySchedule = useQuery({
+    queryKey: ['courts', 'my-schedule', branchId, userId, selectedFullDate, courtSport],
+    queryFn: () => getMyCourtScheduleApi(selectedFullDate, courtSport),
+    enabled: isAuthenticated && !!userId && !!branchId,
+    refetchInterval: 10000,
+    staleTime: 0
+  });
+  const myBookings = useMemo(
+    () => (isAuthenticated && userId ? (mySchedule.data ?? []) : []),
+    [isAuthenticated, userId, mySchedule.data]
+  );
+  const myBookingsBySlot = new Map(myBookings.map((booking) => [booking.slotId, booking]));
+
   const { rules: tariffRules } = useTariffPeriods(false);
   const slots = useMemo(() => slotsData ?? [], [slotsData]);
   const activeMembershipType = useMemo<MembershipType | null>(() => {
@@ -154,13 +177,27 @@ export default function BookingPage() {
           tariffBand(time, resolveTariffPeriod(tariffRules, selectedFullDate, courtSport))
         );
 
-    if (!isToday) return membershipFilteredSlots;
+    const visibleTimes = [
+      ...new Set([
+        ...membershipFilteredSlots,
+        ...myBookings.map((booking) => formatSlotTime(booking.startAt))
+      ])
+    ].sort();
+    if (!isToday) return visibleTimes;
 
-    return membershipFilteredSlots.filter((time) => {
+    return visibleTimes.filter((time) => {
       const slotStart = dayjs.tz(`${selectedFullDate}T${time}:00`, 'Asia/Jakarta');
       return isCourtSlotBookable(slotStart.valueOf(), currentTime.valueOf());
     });
-  }, [selectedFullDate, hasMounted, activeMembershipType, currentTime, tariffRules, courtSport]);
+  }, [
+    selectedFullDate,
+    hasMounted,
+    activeMembershipType,
+    currentTime,
+    tariffRules,
+    courtSport,
+    myBookings
+  ]);
 
   useEffect(() => {
     const updateCurrentTime = () => setCurrentTime(nowJakarta());
@@ -216,6 +253,14 @@ export default function BookingPage() {
       }
     });
 
+    myBookings.forEach((booking) => {
+      if (!map.has(booking.courtId))
+        map.set(booking.courtId, {
+          id: booking.courtId,
+          name: booking.courtName,
+          image: null
+        });
+    });
     if (map.size === 0) {
       return [
         {
@@ -227,7 +272,7 @@ export default function BookingPage() {
     }
 
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [slots]);
+  }, [slots, myBookings]);
 
   const slotMap = useMemo(() => {
     const map = new Map<string, Slot & { court?: Court }>();
@@ -609,6 +654,19 @@ export default function BookingPage() {
                 On Hold / Booked / Unavailable
               </span>
             </div>
+            {myBookings.length > 0 && (
+              <p className="shrink-0 px-5 pb-3 text-xs text-[#ad422b] lg:px-0">
+                Klik Booking Anda untuk pindah ke lapangan kosong pada jam yang sama.
+              </p>
+            )}
+            {isAuthenticated && mySchedule.isError && (
+              <p role="status" className="shrink-0 px-5 pb-3 text-xs text-red-700 lg:px-0">
+                Booking Anda belum dapat dimuat.{' '}
+                <button className="underline" onClick={() => void mySchedule.refetch()}>
+                  Coba lagi
+                </button>
+              </p>
+            )}
             <div className="flex min-h-0 flex-1 flex-col lg:block">
               {(isSlotsError || windowQuery.isError) && (
                 <div
@@ -671,6 +729,15 @@ export default function BookingPage() {
                         </td>
                         {courts.map((court) => {
                           const slot = slotMap.get(`${court.id}-${time}`);
+                          const ownedBooking = slot
+                            ? myBookingsBySlot.get(slot.id)
+                            : myBookings.find(
+                                (booking) =>
+                                  booking.courtId === court.id &&
+                                  formatSlotTime(booking.startAt) === time
+                              );
+                          const canMove =
+                            !!ownedBooking && isAuthenticated && !!userId && !!branchId;
                           const hasSlot = !!slot;
                           const isAvailable = withinWindow && !!slot?.isAvailable;
                           const selected = selectedCells.some(
@@ -682,20 +749,30 @@ export default function BookingPage() {
                           return (
                             <td key={court.id} className="border-r border-b border-black/10 p-1.5">
                               <button
-                                disabled={!hasSlot || !isAvailable}
+                                disabled={!canMove && (!hasSlot || !isAvailable)}
                                 aria-pressed={selected}
-                                aria-label={`${court.name}, ${time}, ${selected ? 'dipilih' : getCourtSlotLabel(slot)}`}
+                                aria-label={`${court.name}, ${time}, ${canMove ? 'Booking Anda, ganti lapangan' : selected ? 'dipilih' : getCourtSlotLabel(slot)}`}
                                 className={cn(
                                   'flex h-16 w-full flex-col items-start justify-center gap-1 border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black',
-                                  !hasSlot
-                                    ? 'cursor-not-allowed border-transparent bg-[#f3f3f0] text-black/30'
-                                    : !isAvailable
-                                      ? 'cursor-not-allowed border-transparent bg-[#eaeae6] text-black/35'
-                                      : selected
-                                        ? 'border-[#111111] bg-[#111111] text-white'
-                                        : 'border-black/15 bg-white text-[#171717] hover:border-[#ad422b] hover:bg-[#ad422b]/5'
+                                  canMove
+                                    ? 'border-[#ad422b]/40 bg-[#ad422b]/10 text-[#ad422b] hover:bg-[#ad422b]/20'
+                                    : !hasSlot
+                                      ? 'cursor-not-allowed border-transparent bg-[#f3f3f0] text-black/30'
+                                      : !isAvailable
+                                        ? 'cursor-not-allowed border-transparent bg-[#eaeae6] text-black/35'
+                                        : selected
+                                          ? 'border-[#111111] bg-[#111111] text-white'
+                                          : 'border-black/15 bg-white text-[#171717] hover:border-[#ad422b] hover:bg-[#ad422b]/5'
                                 )}
                                 onClick={() => {
+                                  if (canMove && ownedBooking) {
+                                    setCourtChange({
+                                      booking: ownedBooking,
+                                      branchId: branchId!,
+                                      userId: userId!
+                                    });
+                                    return;
+                                  }
                                   if (!slot || !isAvailable) return;
                                   setSelectionsByDate((prev) => {
                                     const dateKey = selectedDate;
@@ -744,7 +821,14 @@ export default function BookingPage() {
                                   });
                                 }}
                               >
-                                {hasSlot && isAvailable ? (
+                                {canMove ? (
+                                  <>
+                                    <span className="text-xs">Booking Anda</span>
+                                    <span className="text-[10px] underline underline-offset-2">
+                                      Ganti lapangan
+                                    </span>
+                                  </>
+                                ) : hasSlot && isAvailable ? (
                                   <>
                                     {discountPrice > 0 && discountPrice < normalPrice ? (
                                       <span className="flex flex-col items-start text-xs">
@@ -875,6 +959,18 @@ export default function BookingPage() {
         </div>
       </div>
 
+      {courtChange &&
+        isAuthenticated &&
+        courtChange.branchId === branchId &&
+        courtChange.userId === userId && (
+          <ChangeCourtDialog
+            key={`${courtChange.booking.detailId}-${courtChange.booking.slotId}`}
+            booking={courtChange.booking}
+            branchId={courtChange.branchId}
+            userId={courtChange.userId}
+            onClose={() => setCourtChange(null)}
+          />
+        )}
       <CourtDetailsDialog court={selectedCourt} onClose={() => setSelectedCourt(null)} />
     </>
   );
