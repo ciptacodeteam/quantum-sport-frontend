@@ -178,29 +178,31 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
         }
       }),
       colHelper.accessor('details', {
-        header: 'Lapangan & Waktu',
+        header: 'Keterangan',
         enableSorting: false,
         cell: (info) => {
-          const schedules = bookingScheduleInJakarta(info.getValue() || []).flatMap((date) =>
-            date.courts.flatMap((court) =>
-              court.ranges.map((range) => ({ date: date.date, court: court.name, range }))
-            )
-          );
-          if (!schedules.length) return '-';
+          const details = info.getValue() || [];
+          const dates = bookingScheduleInJakarta(details);
+          if (!dates.length) return '-';
+          const courts = [
+            ...new Map(
+              dates.flatMap((date) => date.courts).map((court) => [court.id, court])
+            ).values()
+          ];
+          const firstDate = formatBookingDate(dates[0].date, 'DD MMM YYYY');
+          const lastDate = formatBookingDate(dates[dates.length - 1].date, 'DD MMM YYYY');
           return (
-            <div className="min-w-52 space-y-2">
-              {schedules.slice(0, 2).map((schedule, index) => (
-                <div key={index} className="space-y-1">
-                  <p className="text-sm font-medium">{schedule.court}</p>
-                  <p className="text-muted-foreground text-xs tabular-nums">
-                    {formatBookingDate(schedule.range.start, 'DD MMM YYYY')} ·{' '}
-                    {schedule.range.start.slice(11)}–{schedule.range.end.slice(11)} WIB
-                  </p>
-                </div>
-              ))}
-              {schedules.length > 2 && (
+            <div className="w-56 max-w-56 space-y-1">
+              <p className="truncate text-sm font-medium">
+                {courts[0]?.name}
+                {courts.length > 1 ? ` +${courts.length - 1} lapangan` : ''}
+              </p>
+              <p className="text-muted-foreground text-xs">
+                {details.length} slot · {dates.length === 1 ? firstDate : `${dates.length} tanggal`}
+              </p>
+              {dates.length > 1 && (
                 <p className="text-muted-foreground text-xs">
-                  +{schedules.length - 2} jadwal lainnya
+                  {firstDate} – {lastDate}
                 </p>
               )}
             </div>

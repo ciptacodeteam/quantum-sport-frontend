@@ -538,7 +538,7 @@ export default function BookingLapangan() {
     if (selectedTimeSlots.includes(timeSlot)) {
       setSelectedTimeSlots((prev) => prev.filter((time) => time !== timeSlot));
     } else {
-      setSelectedTimeSlots((prev) => [...prev, timeSlot]);
+      setSelectedTimeSlots((prev) => [...prev, timeSlot].sort());
     }
   };
 
@@ -836,6 +836,13 @@ export default function BookingLapangan() {
         isCourtWallSlotBookable(slot.startAt, currentTime)
     );
   };
+
+  const selectableTimeSlots = selectedCourt
+    ? availableTimeSlots.filter((time) => !isTimeSlotBooked(time, selectedCourt))
+    : [];
+  const allTimeSlotsSelected =
+    selectableTimeSlots.length > 0 &&
+    selectableTimeSlots.every((time) => selectedTimeSlots.includes(time));
 
   // const handleClearBookings = () => {
   //   setBookings([]);
@@ -1173,6 +1180,24 @@ export default function BookingLapangan() {
                 </p>
               </CardHeader>
               <CardContent className="min-w-0 px-5 sm:px-6">
+                {selectedCourt && !isSlotsLoading && (
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-muted-foreground text-xs">
+                      {selectableTimeSlots.length} slot tersedia untuk lapangan dan tanggal ini
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={!selectableTimeSlots.length}
+                      onClick={() =>
+                        setSelectedTimeSlots(allTimeSlotsSelected ? [] : selectableTimeSlots)
+                      }
+                    >
+                      {allTimeSlotsSelected ? 'Batalkan pilihan' : 'Pilih semua slot tersedia'}
+                    </Button>
+                  </div>
+                )}
                 {isSlotsLoading ? (
                   <div className="py-8 text-center">
                     <p className="text-muted-foreground text-sm">Loading time slots...</p>
@@ -1253,7 +1278,7 @@ export default function BookingLapangan() {
                 {selectedTimeSlots.length > 0 && (
                   <div className="bg-primary/5 flex-between mt-4 rounded-lg p-3">
                     <p className="text-primary text-sm font-medium">
-                      Selected: {selectedTimeSlots.join(', ')}
+                      {selectedTimeSlots.length} slot dipilih
                     </p>
                   </div>
                 )}

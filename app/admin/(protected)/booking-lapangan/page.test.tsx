@@ -399,3 +399,50 @@ it('shows recurring controls only after selecting a customer with a membership a
     screen.queryByRole('region', { name: 'Pengaturan booking rutin' })
   ).not.toBeInTheDocument();
 });
+
+it('selects all available slots for the current court and date, excluding booked, closed and already added slots', () => {
+  const original = [...fixtures.slots];
+  const base = fixtures.slots[0];
+  fixtures.slots.push(
+    { ...base, id: 'available-13', startAt: '2040-01-02T13:00:00Z', endAt: '2040-01-02T14:00:00Z' },
+    {
+      ...base,
+      id: 'booked-14',
+      startAt: '2040-01-02T14:00:00Z',
+      endAt: '2040-01-02T15:00:00Z',
+      isAvailable: false
+    },
+    {
+      ...base,
+      id: 'closed-15',
+      startAt: '2040-01-02T15:00:00Z',
+      endAt: '2040-01-02T16:00:00Z',
+      scheduleClosed: true
+    } as any,
+    { ...base, id: 'another-day', startAt: '2040-01-03T16:00:00Z', endAt: '2040-01-03T17:00:00Z' }
+  );
+  try {
+    render(<BookingLapangan />);
+    expect(screen.queryByRole('button', { name: 'Pilih semua slot tersedia' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Court A/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pilih semua slot tersedia' }));
+    expect(screen.getByText('2 slot dipilih')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '12:00' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: '13:00' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: '14:00 · Booked' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '15:00 · Booked' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Batalkan pilihan' }));
+    expect(screen.queryByText('2 slot dipilih')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Add to Booking/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Pilih semua slot tersedia' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add to Booking (2)' }));
+    expect(useBookingStore.getState().bookingItems.map((item) => item.slotId)).toEqual([
+      'slot-court-a',
+      'available-13'
+    ]);
+    expect(screen.getByRole('button', { name: /Court A/ })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Pilih semua slot tersedia' })).toBeNull();
+  } finally {
+    fixtures.slots.splice(0, fixtures.slots.length, ...original);
+  }
+});

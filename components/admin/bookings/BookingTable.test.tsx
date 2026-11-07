@@ -194,3 +194,40 @@ it.each([
   expect(screen.queryByText('Andi')).toBeNull();
   expect(screen.queryByText('Tanpa pembayaran')).toBeNull();
 });
+
+it('keeps an all-day booking concise while preserving every slot for the detail view', () => {
+  render(<BookingTable courtSport="PADEL" />);
+  const column = mocks.table.columns.find((column: any) => column.accessorKey === 'details');
+  const details = Array.from({ length: 18 }, (_, index) => ({
+    id: `detail-${index}`,
+    court: { id: 'court-1', name: 'Court 1' },
+    slot: {
+      startAt: new Date(Date.UTC(2040, 0, 2, index + 6)).toISOString(),
+      endAt: new Date(Date.UTC(2040, 0, 2, index + 7)).toISOString()
+    }
+  }));
+  const { container } = render(column.cell({ getValue: () => details }));
+  expect(column.header).toBe('Keterangan');
+  expect(screen.getByText('Court 1')).toBeInTheDocument();
+  expect(screen.getByText('18 slot · 02 Jan 2040')).toBeInTheDocument();
+  expect(container.querySelectorAll('p')).toHaveLength(2);
+  expect(container.textContent).not.toContain('06:00');
+  expect(details).toHaveLength(18);
+});
+it('summarizes multiple courts and dates without expanding each schedule', () => {
+  render(<BookingTable courtSport="TENNIS" />);
+  const column = mocks.table.columns.find((column: any) => column.accessorKey === 'details');
+  const details = Array.from({ length: 60 }, (_, index) => ({
+    court: { id: `court-${index % 2}`, name: `Court ${(index % 2) + 1}` },
+    slot: {
+      startAt: new Date(
+        Date.UTC(2040, 0, 2 + Math.floor(index / 12), 8 + (index % 12))
+      ).toISOString(),
+      endAt: new Date(Date.UTC(2040, 0, 2 + Math.floor(index / 12), 9 + (index % 12))).toISOString()
+    }
+  }));
+  const { container } = render(column.cell({ getValue: () => details }));
+  expect(screen.getByText('Court 1 +1 lapangan')).toBeInTheDocument();
+  expect(screen.getByText('60 slot · 5 tanggal')).toBeInTheDocument();
+  expect(container.querySelectorAll('p')).toHaveLength(3);
+});
