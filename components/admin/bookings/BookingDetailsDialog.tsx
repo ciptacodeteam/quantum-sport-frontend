@@ -21,6 +21,25 @@ import { RescheduleCourtDialog, type BookingDetailWithSlot } from './RescheduleC
 const currency = (value: number) => `Rp ${new Intl.NumberFormat('id-ID').format(value)}`;
 const time = (value: Date | string) => formatBookingSlotDate(value, 'HH:mm');
 
+function groupCourtDetailRanges(details: BookingDetail[]) {
+  const ranges: { start: string; end: string; price: number; details: BookingDetail[] }[] = [];
+  const wall = (value: Date | string) => formatBookingSlotDate(value, 'YYYY-MM-DD HH:mm');
+  const ordered = [...details].sort((a, b) =>
+    (a.slot ? wall(a.slot.startAt) : '').localeCompare(b.slot ? wall(b.slot.startAt) : '')
+  );
+  for (const detail of ordered) {
+    const start = detail.slot ? wall(detail.slot.startAt) : '';
+    const end = detail.slot ? wall(detail.slot.endAt) : '';
+    const last = ranges[ranges.length - 1];
+    if (last && start && start !== '-' && end && end !== '-' && last.end === start) {
+      last.end = end;
+      last.price += detail.price;
+      last.details.push(detail);
+    } else ranges.push({ start, end, price: detail.price, details: [detail] });
+  }
+  return ranges;
+}
+
 export default function BookingDetailsDialog({
   booking,
   status,
@@ -53,6 +72,33 @@ export default function BookingDetailsDialog({
       : status === BookingStatus.CONFIRMED
         ? 'Dikonfirmasi'
         : 'Dibatalkan';
+
+  const renderSlotDetail = (detail: BookingDetail) => (
+    <div key={detail.id} className="flex flex-wrap items-center justify-between gap-3 px-3 py-3">
+      <p className="text-sm font-medium tabular-nums">
+        {detail.slot
+          ? `${time(detail.slot.startAt)}–${time(detail.slot.endAt)} WIB`
+          : 'Waktu belum tersedia'}
+      </p>
+      <div className="ml-auto flex items-center gap-3">
+        <span className="text-sm tabular-nums">{currency(detail.price)}</span>
+        {detail.slot && status !== BookingStatus.CANCELLED && (
+          <RescheduleCourtDialog
+            detail={detail as BookingDetailWithSlot}
+            canReschedule={
+              status === BookingStatus.CONFIRMED &&
+              (!booking.invoice || booking.invoice.status === 'PAID')
+            }
+            membershipCovered={
+              (booking.membershipSessionsUsed ?? 0) > 0 &&
+              (booking.courtDiscountPrice === 0 || detail.discountPrice === 0)
+            }
+            onSuccess={onRescheduleSuccess}
+          />
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <DialogContent className="flex max-h-[90dvh] max-w-[calc(100vw-2rem)] flex-col gap-0 overflow-hidden rounded-xl p-0 sm:max-w-2xl">
@@ -141,39 +187,35 @@ export default function BookingDetailsDialog({
                   </p>
                 </div>
                 <div className="divide-y">
-                  {[...group.details]
-                    .sort((a, b) =>
-                      String(a.slot?.startAt || '').localeCompare(String(b.slot?.startAt || ''))
-                    )
-                    .map((detail) => (
-                      <div
-                        key={detail.id}
-                        className="flex flex-wrap items-center justify-between gap-3 px-3 py-3"
-                      >
-                        <p className="text-sm font-medium tabular-nums">
-                          {detail.slot
-                            ? `${time(detail.slot.startAt)}–${time(detail.slot.endAt)} WIB`
-                            : 'Waktu belum tersedia'}
-                        </p>
-                        <div className="ml-auto flex items-center gap-3">
-                          <span className="text-sm tabular-nums">{currency(detail.price)}</span>
-                          {detail.slot && status !== BookingStatus.CANCELLED && (
-                            <RescheduleCourtDialog
-                              detail={detail as BookingDetailWithSlot}
-                              canReschedule={
-                                status === BookingStatus.CONFIRMED &&
-                                (!booking.invoice || booking.invoice.status === 'PAID')
-                              }
-                              membershipCovered={
-                                (booking.membershipSessionsUsed ?? 0) > 0 &&
-                                (booking.courtDiscountPrice === 0 || detail.discountPrice === 0)
-                              }
-                              onSuccess={onRescheduleSuccess}
-                            />
-                          )}
+                  {groupCourtDetailRanges(group.details).map((range) =>
+                    range.details.length === 1 ? (
+                      renderSlotDetail(range.details[0])
+                    ) : (
+                      <div key={range.details[0].id}>
+                        <div className="flex flex-wrap items-center justify-between gap-3 px-3 py-3">
+                          <div>
+                            <p className="text-sm font-medium tabular-nums">
+                              {range.start.slice(11)}–{range.end.slice(11)} WIB
+                            </p>
+                            <p className="text-muted-foreground mt-1 text-xs">
+                              {range.details.length} slot
+                            </p>
+                          </div>
+                          <span className="text-sm tabular-nums">{currency(range.price)}</span>
                         </div>
+                        <details className="bg-muted/10 border-t">
+                          <summary className="text-primary cursor-pointer px-3 py-2.5 text-xs font-medium">
+                            {status === BookingStatus.CANCELLED
+                              ? 'Rincian per jam'
+                              : 'Rincian per jam & reschedule'}
+                          </summary>
+                          <div className="divide-y border-t">
+                            {range.details.map(renderSlotDetail)}
+                          </div>
+                        </details>
                       </div>
-                    ))}
+                    )
+                  )}
                 </div>
               </div>
             ))}

@@ -35,6 +35,7 @@ import { cn } from '@/lib/utils';
 import { adminCourtCostingQueryOptions } from '@/queries/admin/court';
 import type { CustomerSearchResult } from '@/queries/admin/customer';
 import { useBookingStore } from '@/stores/useBookingStore';
+import { useBranchStore } from '@/stores/useBranchStore';
 import type { Court, Slot } from '@/types/model';
 import { IconCalendar, IconCheck, IconClock, IconMapPin } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -188,10 +189,18 @@ export default function BookingLapangan() {
     };
   }, [selectedDateString, courtSport]);
 
-  const { data: slotsData, isLoading: isSlotsLoading } = useQuery(
-    // courtsSlotsQueryOptions(slotQueryParams)
-    adminCourtCostingQueryOptions(slotQueryParams)
-  );
+  const adminBranchId = useBranchStore((state) => state.adminBranchId);
+  const {
+    data: slotsData,
+    isLoading: isSlotsLoading,
+    isError: isSlotsError,
+    refetch: refetchSlots
+  } = useQuery({
+    ...adminCourtCostingQueryOptions(slotQueryParams, adminBranchId),
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchInterval: 60000
+  });
 
   // Calculate membership discount - convert SelectedBooking to BookingItem format
   const bookingItemsForDiscount = useMemo(
@@ -697,6 +706,7 @@ export default function BookingLapangan() {
     onError: (error) => {
       toast.error(getApiErrorMessage(error, 'Booking gagal disimpan. Silakan coba lagi.'));
       void queryClient.invalidateQueries({ queryKey: ['courts'] });
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'court-costing'] });
     }
   });
 
@@ -932,6 +942,14 @@ export default function BookingLapangan() {
                 </p>
               </CardHeader>
               <CardContent className="min-w-0 px-5 sm:px-6">
+                {isSlotsError && (
+                  <div role="alert" className="mb-4 space-y-2 text-sm text-red-700">
+                    <p>Jadwal lapangan belum dapat dimuat.</p>
+                    <Button variant="outline" size="sm" onClick={() => void refetchSlots()}>
+                      Coba lagi
+                    </Button>
+                  </div>
+                )}
                 {isSlotsLoading ? (
                   <div className="py-8 text-center">
                     <p className="text-muted-foreground text-sm">Loading courts...</p>

@@ -217,7 +217,7 @@ function CourtPerformanceContent({ branch }: { branch: string | null | undefined
               {data.courts.find((c) => c.id === applied.courtId)?.name ?? 'Semua lapangan'}
             </span>
             <span className="rounded-full border px-3 py-0.5 text-xs">
-              {query.isFetching ? 'Memperbarui…' : 'Booking confirmed'}
+              {query.isFetching ? 'Memperbarui…' : 'Booking pelanggan confirmed'}
             </span>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -279,10 +279,11 @@ function CourtPerformanceContent({ branch }: { branch: string | null | undefined
           </div>
           <div className="bg-muted/40 text-muted-foreground rounded-lg px-4 py-3 text-xs leading-relaxed">
             Okupansi = jam terisi ÷ kapasitas slot yang sudah diterbitkan. Slot nonaktif tidak masuk
-            kapasitas, kecuali sudah dibooking. Periode di luar jadwal yang terbit belum punya
-            kapasitas. Nilai pemakaian = pembayaran lapangan + alokasi Value Pack; alokasi paket
-            merupakan nilai penggunaan, bukan penerimaan kas baru. Booking mendatang termasuk dalam
-            periode ini.
+            kapasitas, kecuali sudah dibooking pelanggan. Periode di luar jadwal yang terbit belum
+            punya kapasitas. Nilai pemakaian = pembayaran lapangan + alokasi Value Pack; alokasi
+            paket merupakan nilai penggunaan, bukan penerimaan kas baru. Booking mendatang termasuk
+            dalam periode ini. Booking Event dan Training Coach dikecualikan dari revenue, alokasi
+            Value Pack, jam bermain, jumlah booking, dan okupansi.
             {data.summary.unvaluedMembershipHours > 0 && (
               <p className="text-foreground mt-2 font-medium">
                 {n(data.summary.unvaluedMembershipHours)} jam Value Pack belum dapat dinilai karena

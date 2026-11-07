@@ -198,3 +198,9 @@ it('shows branch comparison only in the all-branches report', () => {
   expect(screen.getByText('S. Parman')).toBeInTheDocument();
   expect(screen.getByText('60%')).toBeInTheDocument();
 });
+
+it('explains that event and training reservations are excluded from the report metrics', () => {
+  render(<CourtPerformancePage />);
+  expect(screen.getByText('Booking pelanggan confirmed')).toBeInTheDocument();
+  expect(screen.getByText(/Booking Event dan Training Coach dikecualikan/)).toBeInTheDocument();
+});

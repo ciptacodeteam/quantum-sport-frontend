@@ -17,8 +17,8 @@ const mocks = vi.hoisted(() => ({
         id: `new-${courtId}`,
         courtId,
         isAvailable: true,
-        startAt: '2040-01-05T03:00:00Z',
-        endAt: '2040-01-05T04:00:00Z',
+        startAt: '2040-01-05T10:00:00Z',
+        endAt: '2040-01-05T11:00:00Z',
         price: 150000
       })),
       {
@@ -26,8 +26,8 @@ const mocks = vi.hoisted(() => ({
         courtId: 'padel',
         isAvailable: false,
         availabilityStatus: 'BOOKED',
-        startAt: '2040-01-05T04:00:00Z',
-        endAt: '2040-01-05T05:00:00Z',
+        startAt: '2040-01-05T11:00:00Z',
+        endAt: '2040-01-05T12:00:00Z',
         price: 150000
       },
       {
@@ -35,8 +35,8 @@ const mocks = vi.hoisted(() => ({
         courtId: 'padel',
         isAvailable: false,
         availabilityStatus: 'BOOKED',
-        startAt: '2040-01-05T02:00:00Z',
-        endAt: '2040-01-05T03:00:00Z',
+        startAt: '2040-01-05T09:00:00Z',
+        endAt: '2040-01-05T10:00:00Z',
         price: 150000
       }
     ]
@@ -65,8 +65,8 @@ function detail(sport?: 'PADEL' | 'TENNIS') {
     slot: {
       id: 'old-slot',
       courtId,
-      startAt: '2040-01-05T02:00:00Z',
-      endAt: '2040-01-05T03:00:00Z'
+      startAt: '2040-01-05T09:00:00Z',
+      endAt: '2040-01-05T10:00:00Z'
     }
   } as unknown as BookingDetailWithSlot;
 }
@@ -134,12 +134,12 @@ it('disables rescheduling less than 48 hours before the original slot', () => {
 });
 
 it('prevents saving when the H-2 deadline passes while the dialog is open', () => {
-  const time = vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2040-01-03T01:59:59Z'));
+  const time = vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2040-01-03T08:59:59Z'));
   try {
     render(<RescheduleCourtDialog detail={detail('PADEL')} canReschedule />);
     fireEvent.click(screen.getByRole('button', { name: 'Reschedule' }));
     fireEvent.click(screen.getByRole('button', { name: /10:00–11:00/ }));
-    time.mockReturnValue(Date.parse('2040-01-03T02:00:00.001Z'));
+    time.mockReturnValue(Date.parse('2040-01-03T09:00:00.001Z'));
     fireEvent.click(screen.getByRole('button', { name: 'Simpan jadwal' }));
     expect(mocks.mutate).not.toHaveBeenCalled();
   } finally {

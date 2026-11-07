@@ -49,3 +49,28 @@ it('requests the full day including the 23:00–24:00 slot', async () => {
   const { startAt, endAt } = mocks.slots.mock.calls[0][0];
   expect(new Date(endAt).getTime() - new Date(startAt).getTime()).toBe(86_399_999);
 });
+
+it('starts the slots request while the court catalog is still loading', async () => {
+  let finishCourts!: (value: { data: { id: string; sport: string }[] }) => void;
+  mocks.courts.mockReturnValue(
+    new Promise((resolve) => {
+      finishCourts = resolve;
+    })
+  );
+  const options = adminCourtsWithSlotsQueryOptions('2040-01-05', undefined, 'PADEL', true);
+  if (typeof options.queryFn !== 'function') throw new Error('Missing query function');
+  const request = options.queryFn({} as never);
+  expect(mocks.courts).toHaveBeenCalledOnce();
+  expect(mocks.slots).toHaveBeenCalledOnce();
+  finishCourts({ data: [{ id: 'padel', sport: 'PADEL' }] });
+  const result = await request;
+  expect(result.slots).toEqual([{ id: 'booked', courtId: 'padel', isAvailable: false }]);
+});
+it('keeps admin court slots separate from public slots and other branches in the cache', async () => {
+  const { adminCourtCostingQueryOptions } = await import('./court');
+  const params = { courtSport: 'TENNIS' };
+  const first = adminCourtCostingQueryOptions(params, 'cemara');
+  const other = adminCourtCostingQueryOptions(params, 'other');
+  expect(first.queryKey.slice(0, 2)).toEqual(['admin', 'court-costing']);
+  expect(first.queryKey).not.toEqual(other.queryKey);
+});

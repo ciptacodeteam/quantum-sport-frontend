@@ -224,8 +224,10 @@ it('opens today in WIB instead of a persisted October 31 before the first slots 
     .find((button) => button.getAttribute('aria-pressed') === 'true')!;
   expect(selected).toHaveTextContent('1');
   expect(selected).toHaveTextContent('Nov');
-  const firstQuery = fixtures.queries.find((options) => options.queryKey[0] === 'courts');
-  expect(firstQuery.queryKey[2]).toMatchObject({
+  const firstQuery = fixtures.queries.find(
+    (options) => options.queryKey[0] === 'admin' && options.queryKey[1] === 'court-costing'
+  );
+  expect(firstQuery.queryKey.at(-1)).toMatchObject({
     startAt: '2026-11-01T00:00:00.000Z',
     endAt: '2026-11-01T23:59:59.999Z'
   });

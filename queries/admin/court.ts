@@ -23,9 +23,12 @@ export const adminCourtQueryOptions = (id: string) =>
     select: (res) => res.data as Court
   });
 
-export const adminCourtCostingQueryOptions = (queryParams: SearchParamsData) =>
+export const adminCourtCostingQueryOptions = (
+  queryParams: SearchParamsData,
+  branchId?: string | null
+) =>
   queryOptions({
-    queryKey: ['courts', 'slots', queryParams],
+    queryKey: ['admin', 'court-costing', branchId ?? 'assigned', queryParams],
     queryFn: () => getCourtsSlotsApi(queryParams),
     select: (res) => res.data as (Slot & { court?: Court })[]
   });
@@ -51,8 +54,20 @@ export const adminCourtsWithSlotsQueryOptions = (
       const startAt = `${date}T00:00:00.000Z`;
       const endAt = `${date}T23:59:59.999Z`;
 
-      // First, fetch all courts (don't filter by availability)
-      const courtsResponse = await getCourtsApi(courtSport ? { courtSport } : undefined);
+      // Court catalog and daily slots are independent: start both immediately.
+      // Settle both promises before attempting the per-court fallback.
+      const [courtResult, slotResult] = await Promise.allSettled([
+        getCourtsApi(courtSport ? { courtSport } : undefined),
+        getCourtsSlotsApi({
+          startAt,
+          endAt,
+          ...(courtId ? { courtId } : {}),
+          ...(courtSport ? { courtSport } : {}),
+          ...(includeUnavailable ? { includeUnavailable: 'true' } : {})
+        })
+      ]);
+      if (courtResult.status === 'rejected') throw courtResult.reason;
+      const courtsResponse = courtResult.value;
       let courts = courtsResponse.data as Court[];
 
       if (courtSport) {
@@ -67,12 +82,8 @@ export const adminCourtsWithSlotsQueryOptions = (
       // Use the /courts/slots endpoint to get all slots at once (avoids 404s from individual court endpoints)
       let allSlots: Slot[] = [];
       try {
-        const slotsResponse = await getCourtsSlotsApi({
-          startAt,
-          endAt,
-          ...(courtSport ? { courtSport } : {}),
-          ...(includeUnavailable ? { includeUnavailable: 'true' } : {})
-        });
+        if (slotResult.status === 'rejected') throw slotResult.reason;
+        const slotsResponse = slotResult.value;
         allSlots = (slotsResponse.data || []) as Slot[];
       } catch (error) {
         // If the bulk endpoint fails, fall back to individual court endpoints
