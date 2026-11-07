@@ -1,5 +1,44 @@
 # Mobile shortcut illustrations
 
+## Current icons
+
+The home menu uses `padel-2d.svg`, `tennis-2d.svg`, and `value-pack-2d.svg`.
+These flat detailed icons use ivory `#f2e8d6`, natural racket proportions,
+perforations, fine tennis strings, wrapped grips, and seamed balls. Value Pack
+uses notched tickets with perforations, a racket stamp, and barcode detail.
+There are no gradients or shadows. Each icon is centered inside its black tile
+using flex alignment.
+
+## Previous icons (v5)
+
+The home menu now uses `padel-v2.png`, `tennis-v5.png`, and `value-pack-v5.png`.
+The v5 edits match Padel's three-quarter perspective, visible terracotta right
+and lower edges, ivory surfaces, charcoal details, lighting, and bottom shadows.
+Generated with built-in imagegen; transparent PNGs are copied unchanged.
+Exact prompts: [prompts-v5.md](./prompts-v5.md).
+
+## Previous icons (v3/v4)
+
+The previous home menu used `padel-v2.png`, `tennis-v4.png`, and `value-pack-v4.png`
+from `/public/assets/icons/mobile-menu/`. Tennis v3 has an ivory frame and
+terracotta grip. Tennis v4 points upper right with its grip lower left and adds
+a soft bottom contact shadow. Exact edit prompt: [prompts-v4.md](./prompts-v4.md).
+Value Pack v4 is an upright stack of sports-session tickets with a soft bottom
+contact shadow; exact prompt: [value-pack-v4-prompt.md](./value-pack-v4-prompt.md).
+The earlier Value Pack v3 is a stack of sports-session tickets without a
+gift bow. Both use built-in imagegen and transparent backgrounds. Exact prompts:
+[prompts-v3.md](./prompts-v3.md). Padel keeps the v2 design.
+
+## Previous icons (v2)
+
+The v2 set contains `padel-v2.png`, `tennis-v2.png`, and `value-pack-v2.png`
+from `/public/assets/icons/mobile-menu/`. Generated with built-in imagegen:
+warm ivory ceramic surfaces, terracotta accents, small charcoal details, and
+transparent backgrounds designed for the menu's black CSS tiles. The original
+icons are preserved. Exact prompts: [prompts-v2.md](./prompts-v2.md).
+
+## Original icons
+
 Generated with the built-in imagegen tool for the mobile menu below the home carousel.
 
 Assets:

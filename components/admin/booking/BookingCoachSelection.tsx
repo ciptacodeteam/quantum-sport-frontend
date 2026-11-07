@@ -64,8 +64,8 @@ export default function BookingCoachSelection({
       <div>
         <h3 className="font-semibold">Pilih coach (opsional)</h3>
         <p className="text-muted-foreground mt-1 text-sm">
-          Klik grup untuk melihat coach. Coach yang tidak tersedia tetap ditampilkan dan tidak dapat
-          dipilih.
+          Pilih beberapa coach untuk jam yang sama. Klik coach terpilih untuk membatalkan pilihan.
+          Coach yang tidak tersedia tetap ditampilkan dan tidak dapat dipilih.
         </p>
       </div>
       {!branchId ? (
@@ -99,7 +99,9 @@ export default function BookingCoachSelection({
             groups={eligibleGroups}
             coaches={coaches}
             independent={independent}
-            selected={selected.find((coach) => coachSessionKey(coach) === coachSessionKey(session))}
+            selected={selected.filter(
+              (coach) => coachSessionKey(coach) === coachSessionKey(session)
+            )}
             onSelect={(coach) => onSelect(session, coach)}
             disabled={disabled}
           />
@@ -126,12 +128,12 @@ function CoachSession({
   groups: CoachingGroup[];
   coaches: CoachingPerson[];
   independent: CoachingPerson[];
-  selected?: SelectedCoach;
+  selected: SelectedCoach[];
   onSelect: (coach: SelectedCoach | null) => void;
   disabled?: boolean;
 }) {
   const [openGroup, setOpenGroup] = useState<string | null>(
-    selected?.coachingGroupId ?? (selected ? 'independent' : null)
+    selected[0]?.coachingGroupId ?? (selected.length ? 'independent' : null)
   );
   const [start, end] = session.timeSlot.split(' - ');
   const startAt = session.startAt ?? `${session.date}T${start}:00`;
@@ -161,17 +163,19 @@ function CoachSession({
   if (independent.length)
     entries.push({ id: 'independent', name: 'Coach Independen', members: independent });
   const unavailable =
-    selected &&
     !availability.isPending &&
-    (!options.some((option) => option.slotId === selected.slotId) ||
-      !(selected.coachingGroupId
-        ? entries.some(
-            (group) =>
-              group.id === selected.coachingGroupId &&
-              group.members.some((coach) => coach.id === selected.coachId)
-          )
-        : independent.some((coach) => coach.id === selected.coachId)) ||
-      !coaches.some((coach) => coach.id === selected.coachId && coach.isActive));
+    selected.some(
+      (selection) =>
+        !options.some((option) => option.slotId === selection.slotId) ||
+        !(selection.coachingGroupId
+          ? entries.some(
+              (group) =>
+                group.id === selection.coachingGroupId &&
+                group.members.some((coach) => coach.id === selection.coachId)
+            )
+          : independent.some((coach) => coach.id === selection.coachId)) ||
+        !coaches.some((coach) => coach.id === selection.coachId && coach.isActive)
+    );
   return (
     <div className="space-y-3 border-t pt-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -180,19 +184,25 @@ function CoachSession({
         </p>
         <Button
           type="button"
-          variant={!selected ? 'default' : 'outline'}
+          variant={!selected.length ? 'default' : 'outline'}
           size="sm"
-          aria-pressed={!selected}
+          aria-pressed={!selected.length}
           disabled={disabled}
           onClick={() => onSelect(null)}
         >
           Tanpa coach
         </Button>
       </div>
-      {selected && (
+      {selected.length > 0 && (
         <p className="text-primary text-xs">
-          Terpilih: {selected.coachName}
-          {selected.coachingGroupName ? ` · ${selected.coachingGroupName}` : ''}
+          Terpilih ({selected.length}):{' '}
+          {selected
+            .map((coach) =>
+              coach.coachingGroupName
+                ? `${coach.coachName} · ${coach.coachingGroupName}`
+                : coach.coachName
+            )
+            .join('; ')}
         </p>
       )}
       {entries.map((group) => {
@@ -228,18 +238,25 @@ function CoachSession({
                 )}
                 {group.members.map((coach) => {
                   const option = optionFor(coach);
-                  const chosen =
-                    selected?.coachId === coach.id &&
-                    (selected.coachingGroupId ?? 'independent') === group.id;
+                  const chosen = selected.some(
+                    (selection) =>
+                      selection.coachId === coach.id &&
+                      (selection.coachingGroupId ?? 'independent') === group.id
+                  );
+                  const chosenCoach = selected.find((selection) => selection.coachId === coach.id);
                   return (
                     <button
                       key={coach.id}
                       type="button"
-                      disabled={disabled || !option}
+                      disabled={disabled || (!option && !chosen)}
                       aria-pressed={chosen}
                       aria-label={`Pilih ${coach.name}`}
                       className={`bg-background flex min-h-20 items-center justify-between gap-3 rounded-lg border p-3 text-left disabled:cursor-not-allowed disabled:opacity-50 ${chosen ? 'border-primary ring-primary/20 ring-2' : ''}`}
                       onClick={() => {
+                        if (chosen && chosenCoach) {
+                          onSelect(chosenCoach);
+                          return;
+                        }
                         if (!option) return;
                         onSelect({
                           coachId: coach.id,

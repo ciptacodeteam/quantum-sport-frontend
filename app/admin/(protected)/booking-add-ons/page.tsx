@@ -431,10 +431,21 @@ export default function BookingAddOns() {
               selected={selectedCoaches}
               disabled={isConfirming || isCheckingCoaches}
               onSelect={(session, coach) => {
-                storedCoaches
-                  .filter((item) => coachSessionKey(item) === coachSessionKey(session))
-                  .forEach((item) => removeCoach(item.coachId, item.timeSlot, item.slotId));
-                if (coach) addCoach(coach);
+                const sessionCoaches = storedCoaches.filter(
+                  (item) => coachSessionKey(item) === coachSessionKey(session)
+                );
+                if (!coach) {
+                  sessionCoaches.forEach((item) =>
+                    removeCoach(item.coachId, item.timeSlot, item.slotId)
+                  );
+                  return;
+                }
+                const existing = sessionCoaches.find((item) => item.coachId === coach.coachId);
+                if (existing) {
+                  removeCoach(existing.coachId, existing.timeSlot, existing.slotId);
+                  if (existing.coachingGroupId === coach.coachingGroupId) return;
+                }
+                addCoach(coach);
               }}
             />
           )}

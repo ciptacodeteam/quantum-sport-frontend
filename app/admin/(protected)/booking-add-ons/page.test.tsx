@@ -47,6 +47,23 @@ vi.mock('@/components/admin/booking/BookingCoachSelection', async (importOrigina
       >
         Pilih Coach A
       </button>
+      <button
+        onClick={() =>
+          onSelect(sessions[0], {
+            coachId: 'coach-b',
+            coachName: 'Coach B',
+            slotId: 'coach-slot-b',
+            date: sessions[0].date,
+            timeSlot: sessions[0].timeSlot,
+            startAt: sessions[0].startAt,
+            endAt: sessions[0].endAt,
+            courtSport: sessions[0].sport,
+            price: 250000
+          })
+        }
+      >
+        Pilih Coach B
+      </button>
       <button onClick={() => onSelect(sessions[0], null)}>Tanpa coach</button>
     </section>
   )
@@ -393,4 +410,45 @@ it('allows fully covered or free bookings without selecting a payment method', (
   fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }));
   expect(mocks.mutate).toHaveBeenCalledOnce();
   expect(mocks.mutate.mock.calls[0][0]).not.toHaveProperty('paymentMethodId');
+});
+
+it('keeps multiple coaches for one hour, updates totals on toggle, and submits every coach slot', async () => {
+  mocks.availability.mockResolvedValue({
+    data: {
+      data: [
+        { slotId: 'coach-slot', price: 200000 },
+        { slotId: 'coach-slot-b', price: 250000 }
+      ]
+    }
+  });
+  render(<BookingAddOns />);
+  fireEvent.click(screen.getByRole('button', { name: 'Pilih Coach A' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Pilih Coach B' }));
+  expect(useBookingStore.getState().selectedCoaches).toHaveLength(2);
+  expect(mocks.summary.coachTotal).toBe(450000);
+  expect(mocks.summary.totalAmount).toBe(750000);
+  fireEvent.click(screen.getByRole('button', { name: 'Pilih Coach A' }));
+  expect(useBookingStore.getState().selectedCoaches.map((coach) => coach.coachId)).toEqual([
+    'coach-b'
+  ]);
+  expect(mocks.summary.coachTotal).toBe(250000);
+  fireEvent.click(screen.getByRole('button', { name: 'Pilih Coach A' }));
+  choosePayment();
+  await act(async () =>
+    fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }))
+  );
+  expect(mocks.mutate).toHaveBeenCalledWith(
+    expect.objectContaining({
+      coachSlots: ['coach-slot-b', 'coach-slot'],
+      coachGroups: [{ slotId: 'coach-slot', coachingGroupId: 'academy' }]
+    })
+  );
+});
+it('clears every coach for the hour when selecting Tanpa coach', () => {
+  render(<BookingAddOns />);
+  fireEvent.click(screen.getByRole('button', { name: 'Pilih Coach A' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Pilih Coach B' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Tanpa coach' }));
+  expect(useBookingStore.getState().selectedCoaches).toEqual([]);
+  expect(mocks.summary.coachTotal).toBe(0);
 });

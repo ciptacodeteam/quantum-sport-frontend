@@ -30,7 +30,12 @@ function Harness({ sessions = [session] }: { sessions?: (typeof session)[] }) {
       sport="PADEL"
       selected={selected}
       onSelect={(_, coach) => {
-        setSelected(coach ? [coach] : []);
+        setSelected((current) => {
+          if (!coach) return [];
+          return current.some((item) => item.slotId === coach.slotId)
+            ? current.filter((item) => item.slotId !== coach.slotId)
+            : [...current, coach];
+        });
         mocks.select(coach);
       }}
     />
@@ -142,6 +147,57 @@ it('uses the next calendar day for a midnight end when the stored end timestamp 
     expect(mocks.availability).toHaveBeenCalledWith('/coach/availability', {
       params: { startAt: '2026-11-05T23:00:00Z', endAt: '2026-11-06T00:00:00', courtSport: 'PADEL' }
     })
+  );
+  client.clear();
+});
+
+it('selects multiple coaches across groups for one hour and toggles each independently', async () => {
+  mocks.availability.mockResolvedValue({
+    data: {
+      data: [
+        {
+          slotId: 'slot-andi',
+          coach: { id: 'available' },
+          startAt: '2026-11-05 22:00:00',
+          endAt: '2026-11-05 23:00:00',
+          price: 200000
+        },
+        {
+          slotId: 'slot-dicky',
+          coach: { id: 'independent' },
+          startAt: '2026-11-05 22:00:00',
+          endAt: '2026-11-05 23:00:00',
+          price: 250000
+        }
+      ]
+    }
+  });
+  const client = mount();
+  fireEvent.click(await screen.findByRole('button', { name: /SR Academy/ }));
+  const andi = await screen.findByRole('button', { name: 'Pilih Coach Andi' });
+  await waitFor(() => expect(andi).toBeEnabled());
+  fireEvent.click(andi);
+  fireEvent.click(screen.getByRole('button', { name: /Coach Independen/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Pilih Coach Dicky' }));
+  expect(screen.getByText(/Terpilih \(2\):/)).toHaveTextContent(
+    'Coach Andi · SR Academy; Coach Dicky'
+  );
+  expect(screen.getByRole('button', { name: 'Pilih Coach Dicky' })).toHaveAttribute(
+    'aria-pressed',
+    'true'
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Pilih Coach Dicky' }));
+  expect(screen.getByText(/Terpilih \(1\):/)).toHaveTextContent('Coach Andi');
+  expect(screen.getByRole('button', { name: 'Pilih Coach Dicky' })).toHaveAttribute(
+    'aria-pressed',
+    'false'
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Pilih Coach Dicky' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Tanpa coach' }));
+  expect(screen.queryByText(/Terpilih/)).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Tanpa coach' })).toHaveAttribute(
+    'aria-pressed',
+    'true'
   );
   client.clear();
 });
