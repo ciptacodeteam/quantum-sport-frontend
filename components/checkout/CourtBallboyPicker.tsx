@@ -68,10 +68,6 @@ export default function CourtBallboyPicker({
   const total = draft.reduce((sum, item) => sum + item.price, 0);
   return (
     <div className="space-y-5">
-      <p className="text-sm leading-relaxed text-black/55">
-        Tambahkan ballboy sesuai lapangan dan jam bermain Anda. Biaya digabung dalam pembayaran ini.
-        Maksimal satu ballboy per lapangan per jam.
-      </p>
       <div className="max-h-[50dvh] space-y-5 overflow-y-auto pr-1">
         {sessions.map((court, index) => {
           const query = queries[index];

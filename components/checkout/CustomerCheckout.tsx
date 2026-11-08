@@ -1049,9 +1049,8 @@ export default function CustomerCheckout({ ballboyOnly = false }: { ballboyOnly?
                 <DialogContent className="max-h-[90dvh] overflow-y-auto bg-[#f8f8f6] sm:max-w-2xl">
                   <DialogHeader>
                     <DialogTitle>Tambah Add-ons · Ballboy</DialogTitle>
-                    <DialogDescription>
-                      Pilih ballboy sesuai jadwal lapangan. Biayanya dibayar sekaligus dengan
-                      booking Anda.
+                    <DialogDescription className="sr-only">
+                      Pilih ballboy untuk setiap lapangan.
                     </DialogDescription>
                   </DialogHeader>
                   {isAddOnsOpen && (
