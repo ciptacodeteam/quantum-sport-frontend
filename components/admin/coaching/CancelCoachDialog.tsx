@@ -43,7 +43,10 @@ export default function CancelCoachDialog({
   const label = kind === 'COACH' ? 'Coach' : 'Ballboy';
   const { branchId } = useAdminCourtSports();
   const now = useBookingClock();
-  const canCancel = isSuperAdmin && status === 'CONFIRMED' && isCourtWallSlotBookable(startAt, now);
+  const canCancel =
+    isSuperAdmin &&
+    (status === 'CONFIRMED' || status === 'HOLD') &&
+    isCourtWallSlotBookable(startAt, now);
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState('');
   const id = useId();

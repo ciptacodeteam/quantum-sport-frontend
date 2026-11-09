@@ -153,3 +153,20 @@ it('allows cashiers to cancel a ballboy', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Batalkan Ballboy' }));
   await waitFor(() => expect(mocks.cancelBallboy).toHaveBeenCalled());
 });
+
+it('allows a cashier to cancel an unpaid HOLD ballboy without confirming payment', async () => {
+  mocks.role = 'CASHIER';
+  mocks.ballboyCancellation.mockResolvedValue({ ...preview, refundRequired: false });
+  mount({ status: 'HOLD' });
+  fireEvent.click(screen.getByRole('button', { name: 'Batalkan Ballboy Ballboy A' }));
+  fireEvent.change(await screen.findByLabelText('Alasan pembatalan'), {
+    target: { value: 'Batal sebelum pembayaran' }
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Batalkan Ballboy' }));
+  await waitFor(() =>
+    expect(mocks.cancelBallboy).toHaveBeenCalledWith('item', {
+      expectedSlotId: 'old-slot',
+      reason: 'Batal sebelum pembayaran'
+    })
+  );
+});

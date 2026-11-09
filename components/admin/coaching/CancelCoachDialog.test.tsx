@@ -152,3 +152,20 @@ it('allows cashiers to cancel a coach', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Batalkan Coach' }));
   await waitFor(() => expect(mocks.cancelCoach).toHaveBeenCalled());
 });
+
+it('allows a cashier to cancel an unpaid HOLD coach without confirming payment', async () => {
+  mocks.role = 'CASHIER';
+  mocks.cancellation.mockResolvedValue({ ...preview, refundRequired: false });
+  mount({ status: 'HOLD' });
+  fireEvent.click(screen.getByRole('button', { name: 'Batalkan Coach Coach A' }));
+  fireEvent.change(await screen.findByLabelText('Alasan pembatalan'), {
+    target: { value: 'Batal sebelum pembayaran' }
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Batalkan Coach' }));
+  await waitFor(() =>
+    expect(mocks.cancelCoach).toHaveBeenCalledWith('item', {
+      expectedSlotId: 'old-slot',
+      reason: 'Batal sebelum pembayaran'
+    })
+  );
+});
