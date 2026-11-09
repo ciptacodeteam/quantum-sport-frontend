@@ -68,7 +68,9 @@ const BookingMembershipPage = () => {
 
   const memberships = useMemo<Membership[]>(() => {
     if (!membershipsData) return [];
-    return [...membershipsData].sort((a, b) => a.sequence - b.sequence);
+    return membershipsData
+      .filter((membership) => membership.isActive)
+      .sort((a, b) => a.sequence - b.sequence);
   }, [membershipsData]);
 
   const [selectedMembershipId, setSelectedMembershipId] = useState<string | null>(null);
@@ -126,7 +128,7 @@ const BookingMembershipPage = () => {
   );
 
   const handleSubmit = () => {
-    if (!selectedMembershipId) {
+    if (!selectedMembership) {
       toast.error('Silakan pilih paket membership terlebih dahulu.');
       return;
     }
@@ -143,7 +145,7 @@ const BookingMembershipPage = () => {
 
     const payload: AdminMembershipCheckoutPayload = {
       ...(amountDue > 0 ? { paymentMethodId: selectedPaymentMethod!.id } : {}),
-      membershipId: selectedMembershipId
+      membershipId: selectedMembership.id
     };
 
     if (startDate) {
@@ -161,7 +163,7 @@ const BookingMembershipPage = () => {
   };
 
   const canSubmit = Boolean(
-    selectedMembershipId &&
+    selectedMembership &&
     paymentReady &&
     (customerId || (walkInName.trim().length > 0 && walkInPhone.trim().length >= 5))
   );
