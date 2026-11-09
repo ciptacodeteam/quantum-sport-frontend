@@ -152,8 +152,8 @@ export default function ServiceIncomeSection({
           <p className="text-muted-foreground">
             Berdasarkan tanggal pembayaran pelanggan (WIB), bukan tanggal latihan. Biaya lapangan
             dan administrasi tidak termasuk. Invoice belum lunas, refund, dan jasa yang dibatalkan
-            tidak dihitung. Angka ini merupakan hak pendapatan, belum menunjukkan pembayaran
-            transfer ke club.
+            tidak dihitung. Coach yang ditandai Lunas ke Club juga tidak masuk rekap dan rincian
+            tagihan. Penanda lunas dicatat manual oleh admin/kasir.
           </p>
         </div>
       </Card>

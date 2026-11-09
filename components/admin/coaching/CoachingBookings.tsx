@@ -9,6 +9,7 @@ import Link from 'next/link';
 import CancelCoachDialog from './CancelCoachDialog';
 import ReplaceCoachDialog from './ReplaceCoachDialog';
 import { useQuery } from '@tanstack/react-query';
+import CoachClubSettlementToggle from './CoachClubSettlementToggle';
 import { createColumnHelper } from '@tanstack/react-table';
 import { coachingApi, type CoachingBooking } from '@/api/admin/coaching';
 import { useHasRole } from '@/hooks/useRoleAccess';
@@ -72,6 +73,15 @@ export default function CoachingBookings({ kind }: { kind: 'COACH' | 'BALLBOY' }
         </Badge>
       )
     }),
+    ...(kind === 'COACH'
+      ? [
+          col.display({
+            id: 'clubSettlement',
+            header: 'Lunas ke Club',
+            cell: ({ row }) => <CoachClubSettlementToggle booking={row.original} />
+          })
+        ]
+      : []),
     col.accessor('createdAt', {
       header: 'Dibuat Pada',
       cell: ({ row, getValue }) => (

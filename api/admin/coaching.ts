@@ -51,6 +51,9 @@ export type CoachingOption = {
   endAt: string;
 };
 export type CoachingBooking = {
+  isClubSettled?: boolean;
+  clubSettlementUpdatedAt?: string | null;
+  clubSettlementUpdatedById?: string | null;
   id: string;
   bookingId: string;
   createdAt?: string;
@@ -99,6 +102,13 @@ export type CoachCancellationPreview = {
   refundRequired: boolean;
 };
 export const coachingApi = {
+  setClubSettlement: async (id: string, isSettled: boolean, expectedIsSettled: boolean) =>
+    (
+      await adminApi.patch(`/coaching/bookings/${id}/club-settlement`, {
+        isSettled,
+        expectedIsSettled
+      })
+    ).data.data,
   list: async () => (await adminApi.get('/coaching')).data.data as CoachingPerson[],
   person: async (id: string) => (await adminApi.get(`/coaching/${id}`)).data.data as CoachingPerson,
   save: async (id: string | undefined, input: CoachingProfile) =>

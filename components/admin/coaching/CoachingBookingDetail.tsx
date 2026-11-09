@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import CoachClubSettlementToggle from './CoachClubSettlementToggle';
 import { ExternalLink } from 'lucide-react';
 import type { CoachingBooking } from '@/api/admin/coaching';
 import { formatScheduleSlotTime } from '@/lib/admin-schedule-time';
@@ -87,6 +88,15 @@ export default function CoachingBookingDetail({
                 </dd>
               </div>
             </dl>
+            {kind === 'COACH' && (
+              <section className="space-y-2 rounded-xl border p-4" aria-label="Pelunasan ke club">
+                <h3 className="font-semibold">Pelunasan ke club</h3>
+                <CoachClubSettlementToggle booking={booking} />
+                <p className="text-muted-foreground text-xs">
+                  Sesi yang ditandai lunas tidak masuk tagihan club di Income Layanan.
+                </p>
+              </section>
+            )}
             <section className="space-y-3 rounded-xl border p-4" aria-label="Invoice layanan">
               <h3 className="font-semibold">Invoice</h3>
               {booking.invoice ? (
