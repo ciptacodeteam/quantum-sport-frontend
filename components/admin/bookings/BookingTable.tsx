@@ -121,7 +121,8 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
     },
     {
       title: 'Batalkan Pemesanan',
-      description: 'Apakah Anda yakin ingin membatalkan pemesanan ini?',
+      description:
+        'Batalkan pemesanan lapangan beserta seluruh coach dan ballboy terkait? Slot layanan akan dilepas, termasuk layanan dengan invoice terpisah. Refund pembayaran lunas perlu ditinjau manual.',
       confirmText: 'Batalkan',
       cancelText: 'Batal',
       destructive: true,
@@ -132,7 +133,11 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
       },
       invalidate: [
         ['admin', 'bookings'],
-        ['admin', 'schedule']
+        ['admin', 'schedule'],
+        ['admin', 'coaching'],
+        ['admin', 'analytics'],
+        ['admin', 'booked-coaches'],
+        ['admin', 'booked-ballboys']
       ]
     }
   );

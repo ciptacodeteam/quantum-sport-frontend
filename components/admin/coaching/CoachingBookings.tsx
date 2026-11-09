@@ -23,6 +23,9 @@ export default function CoachingBookings({ kind }: { kind: 'COACH' | 'BALLBOY' }
   const { branchId } = useAdminCourtSports();
   const { dateRange, setDateRange, dateParams } = useBookingDateFilter();
   const canManageCoaches = useHasRole(['SUPER_ADMIN']);
+  const canCancelServices = useHasRole(
+    kind === 'BALLBOY' ? ['SUPER_ADMIN', 'ADMIN', 'CASHIER'] : ['SUPER_ADMIN', 'CASHIER']
+  );
   const query = useQuery({
     queryKey: ['admin', 'coaching', branchId, 'bookings', kind, dateParams],
     queryFn: () => coachingApi.bookings(kind, dateParams),
@@ -91,14 +94,17 @@ export default function CoachingBookings({ kind }: { kind: 'COACH' | 'BALLBOY' }
                 startAt={row.original.startAt}
                 status={row.original.status}
               />
-              <CancelCoachDialog
-                iconOnly
-                bookingCoachId={row.original.id}
-                currentName={row.original.name}
-                startAt={row.original.startAt}
-                status={row.original.status}
-              />
             </>
+          )}
+          {canCancelServices && (
+            <CancelCoachDialog
+              kind={kind}
+              iconOnly
+              bookingCoachId={row.original.id}
+              currentName={row.original.name}
+              startAt={row.original.startAt}
+              status={row.original.status}
+            />
           )}
         </div>
       )

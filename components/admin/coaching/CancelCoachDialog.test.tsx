@@ -96,7 +96,7 @@ it('requires a cancellation reason, shows the manual refund notice, and submits 
     })
   );
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-  for (const key of ['schedule', 'coaching', 'bookings', 'invoices'])
+  for (const key of ['schedule', 'coaching', 'bookings', 'invoices', 'analytics'])
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['admin', key] });
 });
 it('offers the cancellation action alongside replacement in the coach bookings list', async () => {
@@ -124,7 +124,7 @@ it('does not cancel anything when the dialog is dismissed', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Kembali' }));
   expect(mocks.cancelCoach).not.toHaveBeenCalled();
 });
-it.each(['ADMIN', 'CASHIER', 'ADMIN_VIEWER', 'COACH', 'BALLBOY', ''])(
+it.each(['ADMIN', 'ADMIN_VIEWER', 'COACH', 'BALLBOY', ''])(
   'hides cancellation and does not load preview for role %s',
   (role) => {
     mocks.role = role;
@@ -140,4 +140,15 @@ it('hides the action for cancelled coaches and elapsed hours', () => {
   mocks.now = Date.parse('2026-11-02T13:15:00+07:00');
   mount();
   expect(screen.queryByRole('button')).toBeNull();
+});
+
+it('allows cashiers to cancel a coach', async () => {
+  mocks.role = 'CASHIER';
+  mount();
+  fireEvent.click(screen.getByRole('button', { name: 'Batalkan Coach Coach A' }));
+  fireEvent.change(await screen.findByLabelText('Alasan pembatalan'), {
+    target: { value: 'Batal oleh kasir' }
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Batalkan Coach' }));
+  await waitFor(() => expect(mocks.cancelCoach).toHaveBeenCalled());
 });

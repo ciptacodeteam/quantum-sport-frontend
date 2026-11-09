@@ -156,6 +156,18 @@ export const coachingApi = {
       refundRequired: boolean;
       slotReleased: boolean;
     },
+  ballboyCancellation: async (id: string) =>
+    (await adminApi.get(`/booked-ballboys/${id}/cancellation`)).data
+      .data as CoachCancellationPreview,
+  cancelBallboy: async (id: string, input: { expectedSlotId: string; reason: string }) =>
+    (await adminApi.put(`/booked-ballboys/${id}/cancel`, input)).data.data as {
+      id: string;
+      bookingId: string;
+      name: string;
+      price: number;
+      refundRequired: boolean;
+      slotReleased: boolean;
+    },
   replacements: async (id: string) =>
     (await adminApi.get(`/coaching/bookings/${id}/replacements`)).data
       .data as CoachReplacementAvailability,

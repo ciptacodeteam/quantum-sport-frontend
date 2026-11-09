@@ -15,6 +15,10 @@ export async function getBookedBallboyApi(id: string) {
 }
 
 export async function cancelBookedBallboyApi(id: string, reason?: string) {
-  const { data } = await adminApi.put(`/booked-ballboys/${id}/cancel`, { reason });
+  const preview = await adminApi.get(`/booked-ballboys/${id}/cancellation`);
+  const { data } = await adminApi.put(`/booked-ballboys/${id}/cancel`, {
+    reason: reason || 'Dibatalkan oleh admin',
+    expectedSlotId: preview.data.data.current.slotId
+  });
   return data;
 }

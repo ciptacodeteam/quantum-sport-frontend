@@ -27,6 +27,7 @@ export default function CancelCoachDialog({
   currentName,
   startAt,
   status,
+  kind = 'COACH',
   iconOnly = false
 }: {
   bookingCoachId: string;
@@ -34,8 +35,12 @@ export default function CancelCoachDialog({
   startAt: string;
   status?: string;
   iconOnly?: boolean;
+  kind?: 'COACH' | 'BALLBOY';
 }) {
-  const isSuperAdmin = useHasRole(['SUPER_ADMIN']);
+  const isSuperAdmin = useHasRole(
+    kind === 'BALLBOY' ? ['SUPER_ADMIN', 'ADMIN', 'CASHIER'] : ['SUPER_ADMIN', 'CASHIER']
+  );
+  const label = kind === 'COACH' ? 'Coach' : 'Ballboy';
   const { branchId } = useAdminCourtSports();
   const now = useBookingClock();
   const canCancel = isSuperAdmin && status === 'CONFIRMED' && isCourtWallSlotBookable(startAt, now);
@@ -44,14 +49,17 @@ export default function CancelCoachDialog({
   const id = useId();
   const client = useQueryClient();
   const preview = useQuery({
-    queryKey: ['admin', 'coaching', branchId, 'cancellation', bookingCoachId],
-    queryFn: () => coachingApi.cancellation(bookingCoachId),
+    queryKey: ['admin', 'coaching', branchId, 'cancellation', kind, bookingCoachId],
+    queryFn: () =>
+      kind === 'COACH'
+        ? coachingApi.cancellation(bookingCoachId)
+        : coachingApi.ballboyCancellation(bookingCoachId),
     enabled: open && canCancel,
     staleTime: 0
   });
   const cancel = useMutation({
     mutationFn: () =>
-      coachingApi.cancelCoach(bookingCoachId, {
+      (kind === 'COACH' ? coachingApi.cancelCoach : coachingApi.cancelBallboy)(bookingCoachId, {
         expectedSlotId: preview.data!.current.slotId,
         reason: reason.trim()
       }),
@@ -60,9 +68,11 @@ export default function CancelCoachDialog({
       setReason('');
       for (const queryKey of [
         ['admin', 'coaching'],
+        ['admin', 'analytics'],
         ['admin', 'schedule'],
         ['admin', 'bookings'],
         ['admin', 'booked-coaches'],
+        ['admin', 'booked-ballboys'],
         ['admin', 'courts'],
         ['admin', 'invoices'],
         ['invoice']
@@ -70,12 +80,12 @@ export default function CancelCoachDialog({
         void client.invalidateQueries({ queryKey });
       toast.success(
         result.refundRequired
-          ? `Coach dibatalkan. Tinjau refund Rp ${result.price.toLocaleString('id-ID')} secara manual.`
-          : 'Coach berhasil dibatalkan.'
+          ? `${label} dibatalkan. Tinjau refund Rp ${result.price.toLocaleString('id-ID')} secara manual.`
+          : `${label} berhasil dibatalkan.`
       );
     },
     onError: (error) => {
-      toast.error(getApiErrorMessage(error, 'Coach belum dapat dibatalkan.'));
+      toast.error(getApiErrorMessage(error, `${label} belum dapat dibatalkan.`));
       void preview.refetch();
     }
   });
@@ -88,14 +98,14 @@ export default function CancelCoachDialog({
           iconOnly ? 'text-destructive hover:bg-destructive/10 hover:text-destructive' : undefined
         }
         size={iconOnly ? 'icon-sm' : 'sm'}
-        title={`Batalkan Coach ${currentName}`}
-        aria-label={`Batalkan Coach ${currentName}`}
+        title={`Batalkan ${label} ${currentName}`}
+        aria-label={`Batalkan ${label} ${currentName}`}
         onClick={() => {
           setReason('');
           setOpen(true);
         }}
       >
-        {iconOnly ? <CircleX aria-hidden="true" /> : 'Batalkan Coach'}
+        {iconOnly ? <CircleX aria-hidden="true" /> : `Batalkan ${label}`}
       </Button>
       <Dialog
         open={open}
@@ -105,14 +115,16 @@ export default function CancelCoachDialog({
       >
         <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Batalkan Coach</DialogTitle>
+            <DialogTitle>Batalkan {label}</DialogTitle>
             <DialogDescription>
-              Coach akan dibatalkan dan slotnya dilepas. Booking lapangan dan layanan lain tetap
+              {label} akan dibatalkan dan slotnya dilepas. Booking lapangan dan layanan lain tetap
               aktif.
             </DialogDescription>
           </DialogHeader>
           {preview.isPending ? (
-            <p className="text-muted-foreground py-3 text-sm">Memuat detail coach...</p>
+            <p className="text-muted-foreground py-3 text-sm">
+              Memuat detail {label.toLowerCase()}...
+            </p>
           ) : preview.isError ? (
             <div role="alert" className="space-y-3">
               <p>{getApiErrorMessage(preview.error, 'Detail pembatalan belum dapat dimuat.')}</p>
@@ -141,7 +153,7 @@ export default function CancelCoachDialog({
                 </div>
                 <p className="rounded-lg border p-3 text-sm">
                   {preview.data.refundRequired
-                    ? `Pembayaran sudah lunas. Tinjau refund biaya coach Rp ${preview.data.current.price.toLocaleString('id-ID')} secara manual. Pembatalan ini tidak mengembalikan dana otomatis dan tidak mengubah nominal invoice.`
+                    ? `Pembayaran sudah lunas. Tinjau refund biaya ${label.toLowerCase()} Rp ${preview.data.current.price.toLocaleString('id-ID')} secara manual. Pembatalan ini tidak mengembalikan dana otomatis dan tidak mengubah nominal invoice.`
                     : 'Riwayat invoice tetap disimpan. Pembatalan ini tidak mengirim pengembalian dana otomatis.'}
                 </p>
                 <div className="space-y-2">
@@ -153,7 +165,7 @@ export default function CancelCoachDialog({
                     value={reason}
                     disabled={cancel.isPending}
                     onChange={(e) => setReason(e.target.value)}
-                    placeholder="Contoh: pelanggan membatalkan sesi coach"
+                    placeholder={`Contoh: pelanggan membatalkan sesi ${label.toLowerCase()}`}
                   />
                 </div>
               </div>
@@ -175,7 +187,7 @@ export default function CancelCoachDialog({
               }
               onClick={() => cancel.mutate()}
             >
-              {cancel.isPending ? 'Membatalkan...' : 'Konfirmasi Batalkan Coach'}
+              {cancel.isPending ? 'Membatalkan...' : `Konfirmasi Batalkan ${label}`}
             </Button>
           </DialogFooter>
         </DialogContent>
