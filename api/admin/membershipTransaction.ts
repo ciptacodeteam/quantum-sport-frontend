@@ -51,3 +51,8 @@ export async function unsuspendAdminMembershipTransactionApi(id: string) {
   const { data } = await adminApi.put(`/membership-transactions/${id}/unsuspend`);
   return data;
 }
+
+export async function cancelAdminMembershipTransactionApi(id: string) {
+  const { data } = await adminApi.put(`/membership-transactions/${id}/cancel`);
+  return data;
+}

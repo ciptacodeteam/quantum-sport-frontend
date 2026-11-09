@@ -40,6 +40,7 @@ import { useState } from 'react';
 import { membershipStatus, canManageMembership } from '@/lib/membership-transaction-display';
 import { CopyButton } from '@/components/ui/clipboard-copy';
 import {
+  useCancelMembershipTransactionMutation,
   useApproveMembershipTransactionMutation,
   useRejectMembershipTransactionMutation,
   useSuspendMembershipTransactionMutation,
@@ -80,6 +81,7 @@ const MembershipTransactionTable = ({ debtsOnly = false }: { debtsOnly?: boolean
 
   const transactions = query.data ?? [];
 
+  const { confirmAndMutate: cancelTx } = useCancelMembershipTransactionMutation();
   const { confirmAndMutate: approveTx } = useApproveMembershipTransactionMutation();
   const { confirmAndMutate: rejectTx } = useRejectMembershipTransactionMutation();
   const { mutateAsync: suspendTx, isPending: suspending } =
@@ -262,6 +264,19 @@ const MembershipTransactionTable = ({ debtsOnly = false }: { debtsOnly?: boolean
                 </div>
               )}
 
+              {!debtsOnly && transaction.canCancel && transaction.invoice?.status === 'PAID' && (
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  className="text-destructive"
+                  title="Batalkan Value Pack"
+                  aria-label="Batalkan Value Pack"
+                  onClick={() => cancelTx(transaction.id)}
+                >
+                  <IconX />
+                </Button>
+              )}
+
               {!debtsOnly && !transaction.isSuspended && canManageMembership(transaction) && (
                 <SuspendMembershipDialog
                   id={transaction.id}
@@ -288,7 +303,7 @@ const MembershipTransactionTable = ({ debtsOnly = false }: { debtsOnly?: boolean
         size: 100
       })
     ],
-    [approveTx, rejectTx, suspendTx, suspending, unsuspendTx, debtsOnly]
+    [cancelTx, approveTx, rejectTx, suspendTx, suspending, unsuspendTx, debtsOnly]
   );
 
   if (query.isError)

@@ -1,5 +1,9 @@
 'use client';
 
+import OfflinePaymentSelection from '@/components/admin/booking/OfflinePaymentSelection';
+import { adminPaymentMethodsQueryOptions } from '@/queries/admin/paymentMethod';
+import { isOfflinePaymentMethod } from '@/lib/offline-payment';
+
 import { MembershipHoursDescription } from '@/components/booking/MembershipHoursDescription';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -103,6 +107,15 @@ const BookingMembershipPage = () => {
     [memberships, selectedMembershipId]
   );
 
+  const [paymentMethodId, setPaymentMethodId] = useState('');
+  const amountDue = selectedMembership?.price ?? 0;
+  const paymentMethods = useQuery({ ...adminPaymentMethodsQueryOptions, enabled: amountDue > 0 });
+  const offlineMethods = (paymentMethods.data ?? []).filter(isOfflinePaymentMethod);
+  const selectedPaymentMethod = offlineMethods.find((method) => method.id === paymentMethodId);
+  const paymentReady =
+    amountDue <= 0 ||
+    (!!selectedPaymentMethod && !paymentMethods.isPending && !paymentMethods.isError);
+
   const { mutate: createMembershipCheckout, isPending: isSubmitting } = useMutation(
     adminMembershipCheckoutMutationOptions({
       onSuccess: () => {
@@ -123,7 +136,13 @@ const BookingMembershipPage = () => {
       return;
     }
 
+    if (!paymentReady) {
+      toast.error('Pilih metode pembayaran offline terlebih dahulu.');
+      return;
+    }
+
     const payload: AdminMembershipCheckoutPayload = {
+      ...(amountDue > 0 ? { paymentMethodId: selectedPaymentMethod!.id } : {}),
       membershipId: selectedMembershipId
     };
 
@@ -143,6 +162,7 @@ const BookingMembershipPage = () => {
 
   const canSubmit = Boolean(
     selectedMembershipId &&
+    paymentReady &&
     (customerId || (walkInName.trim().length > 0 && walkInPhone.trim().length >= 5))
   );
 
@@ -446,6 +466,16 @@ const BookingMembershipPage = () => {
                 )}
               </div>
 
+              <OfflinePaymentSelection
+                amountDue={amountDue}
+                methods={offlineMethods}
+                selectedId={selectedPaymentMethod?.id ?? ''}
+                onSelect={setPaymentMethodId}
+                loading={paymentMethods.isPending}
+                error={paymentMethods.isError}
+                onRetry={() => void paymentMethods.refetch()}
+                disabled={isSubmitting}
+              />
               <Separator />
 
               <div className="space-y-2">

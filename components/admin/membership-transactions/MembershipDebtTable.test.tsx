@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   export: vi.fn(),
   row: {
     id: 'debt',
+    canCancel: false,
     remainingSessions: -4,
     remainingDuration: 30,
     isExpired: false,
@@ -29,6 +30,7 @@ vi.mock('@/queries/admin/membershipTransaction', () => ({
   adminMembershipTransactionsQueryOptions: (params: any) => ({ queryKey: ['transactions', params] })
 }));
 vi.mock('@/mutations/admin/membershipTransaction', () => ({
+  useCancelMembershipTransactionMutation: () => ({ confirmAndMutate: vi.fn() }),
   useApproveMembershipTransactionMutation: () => ({ mutate: vi.fn() }),
   useRejectMembershipTransactionMutation: () => ({ mutate: vi.fn() }),
   useSuspendMembershipTransactionMutation: () => ({ mutate: vi.fn() }),
@@ -49,6 +51,7 @@ import MembershipTransactionTable from './MembershipTransactionTable';
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.row.invoice.status = 'PAID';
+  mocks.row.canCancel = false;
 });
 afterEach(() => {
   cleanup();
@@ -114,3 +117,17 @@ it('only offers the detail action in the debt report even when the invoice is pe
   expect(screen.queryByRole('button', { name: 'Setujui pembayaran' })).toBeNull();
   expect(screen.queryByRole('button', { name: 'Tolak pembayaran' })).toBeNull();
 });
+
+it('shows cancellation for an eligible paid unused package', () => {
+  mocks.row.canCancel = true;
+  render(<MembershipTransactionTable />, { wrapper: DialogProvider });
+  expect(screen.getByRole('button', { name: 'Batalkan Value Pack' })).toBeInTheDocument();
+});
+it.each([false, true])(
+  'hides cancellation for used or debt packages with debtsOnly=%s',
+  (debtsOnly) => {
+    mocks.row.canCancel = debtsOnly;
+    render(<MembershipTransactionTable debtsOnly={debtsOnly} />, { wrapper: DialogProvider });
+    expect(screen.queryByRole('button', { name: 'Batalkan Value Pack' })).toBeNull();
+  }
+);

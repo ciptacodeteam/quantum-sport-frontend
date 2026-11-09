@@ -1,4 +1,5 @@
 import {
+  cancelAdminMembershipTransactionApi,
   approveAdminMembershipTransactionApi,
   rejectAdminMembershipTransactionApi,
   suspendAdminMembershipTransactionApi,
@@ -100,4 +101,26 @@ export const useExportMembershipTransactionsExcel = () => {
     },
     onError: () => toast.error('Failed to export Excel')
   });
+};
+
+export const useCancelMembershipTransactionMutation = () => {
+  return useConfirmMutation<string, any>(
+    { mutationFn: cancelAdminMembershipTransactionApi },
+    {
+      title: 'Batalkan Value Pack?',
+      description:
+        'Paket yang belum dipakai akan dinonaktifkan dan invoice dibatalkan. Pengembalian dana yang sudah diterima dilakukan secara manual.',
+      confirmText: 'Batalkan Value Pack',
+      destructive: true,
+      toastMessages: {
+        loading: 'Membatalkan…',
+        success: 'Value Pack berhasil dibatalkan',
+        error: 'Value Pack tidak dapat dibatalkan'
+      },
+      invalidate: [
+        ['admin', 'membership-transactions'],
+        ['admin', 'customers']
+      ]
+    }
+  );
 };

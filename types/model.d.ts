@@ -232,6 +232,7 @@ export type MembershipBenefit = {
 };
 
 export type MembershipUser = {
+  canCancel?: boolean;
   debtSettledSessions?: number;
   id: string;
   membershipId: string;

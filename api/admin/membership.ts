@@ -4,6 +4,7 @@ import type { CreateMutationPayload, SearchParamsData, UpdateMutationPayload } f
 
 export type AdminMembershipCheckoutPayload = {
   membershipId: string;
+  paymentMethodId?: string;
   userId?: string;
   name?: string;
   phone?: string;
