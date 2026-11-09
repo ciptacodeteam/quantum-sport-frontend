@@ -14,6 +14,8 @@ import { coachingApi, type CoachingBooking } from '@/api/admin/coaching';
 import { useHasRole } from '@/hooks/useRoleAccess';
 import { useAdminCourtSports } from '@/hooks/useAdminCourtSports';
 import { formatScheduleSlotTime } from '@/lib/admin-schedule-time';
+import { formatBookingDate } from '@/lib/booking-display';
+import { getTwoWordName } from '@/lib/utils';
 import { DataTable } from '@/components/ui/data-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -68,6 +70,19 @@ export default function CoachingBookings({ kind }: { kind: 'COACH' | 'BALLBOY' }
               ? 'Menunggu pembayaran'
               : 'Dibatalkan'}
         </Badge>
+      )
+    }),
+    col.accessor('createdAt', {
+      header: 'Dibuat Pada',
+      cell: ({ row, getValue }) => (
+        <div className="flex flex-col">
+          <span className="text-muted-foreground text-xs">
+            {row.original.cashier
+              ? `Kasir: ${getTwoWordName(row.original.cashier.name)}`
+              : 'Online'}
+          </span>
+          <span>{getValue() ? formatBookingDate(getValue()!, 'DD/MM/YYYY HH:mm') : '-'}</span>
+        </div>
       )
     }),
     col.display({

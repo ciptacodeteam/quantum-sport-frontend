@@ -64,6 +64,8 @@ beforeEach(() => {
       id: 'item',
       name: 'Coach A',
       customer: 'Budi',
+      createdAt: '2026-11-08T11:35:00Z',
+      cashier: { id: 'fitri', name: 'Fitri' },
       court: 'Tennis 1',
       startAt: props.startAt,
       endAt: '2026-11-02 14:00:00',
@@ -101,6 +103,9 @@ it('requires a cancellation reason, shows the manual refund notice, and submits 
 });
 it('offers the cancellation action alongside replacement in the coach bookings list', async () => {
   mount({}, true);
+  expect(await screen.findByText('Dibuat Pada')).toBeInTheDocument();
+  expect(await screen.findByText('08/11/2026 18:35')).toBeInTheDocument();
+  expect(screen.getByText('Kasir: Fitri')).toBeInTheDocument();
   expect(await screen.findByRole('button', { name: 'Ganti Coach Coach A' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Batalkan Coach Coach A' }));
   expect(await screen.findByLabelText('Alasan pembatalan')).toBeInTheDocument();

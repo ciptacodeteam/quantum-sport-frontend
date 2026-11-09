@@ -53,6 +53,8 @@ export type CoachingOption = {
 export type CoachingBooking = {
   id: string;
   bookingId: string;
+  createdAt?: string;
+  cashier?: { id: string; name: string } | null;
   name: string;
   coachingGroupName?: string | null;
   customer: string;

@@ -65,6 +65,8 @@ beforeEach(() => {
       id: 'item',
       name: 'Ballboy A',
       customer: 'Budi',
+      createdAt: '2026-11-08T11:35:00Z',
+      cashier: null,
       court: 'Tennis 1',
       startAt: props.startAt,
       endAt: '2026-11-02 14:00:00',
@@ -103,6 +105,9 @@ it('requires a cancellation reason, shows the manual refund notice, and submits 
 it('offers ballboy cancellation in the bookings list for a cashier', async () => {
   mocks.role = 'CASHIER';
   mount({}, true);
+  expect(await screen.findByText('Dibuat Pada')).toBeInTheDocument();
+  expect(await screen.findByText('08/11/2026 18:35')).toBeInTheDocument();
+  expect(screen.getByText('Online')).toBeInTheDocument();
   expect(
     await screen.findByRole('button', { name: 'Batalkan Ballboy Ballboy A' })
   ).toBeInTheDocument();
