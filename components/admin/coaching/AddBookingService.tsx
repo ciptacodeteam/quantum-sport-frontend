@@ -4,12 +4,10 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { coachingApi } from '@/api/admin/coaching';
-import { adminPaymentMethodsQueryOptions } from '@/queries/admin/paymentMethod';
 import { useHasRole } from '@/hooks/useRoleAccess';
 import { useBookingClock } from '@/hooks/useBookingClock';
 import { isCourtWallSlotBookable } from '@/lib/booking-time-policy';
 import { getApiErrorMessage } from '@/lib/api-error';
-import { getMidtransConfig } from '@/lib/midtrans';
 import { formatScheduleSlotTime } from '@/lib/admin-schedule-time';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -42,8 +40,6 @@ export default function AddBookingService({
   const client = useQueryClient();
   const [groupId, setGroupId] = useState('independent');
   const [slotIds, setSlotIds] = useState<string[]>([]);
-  const [methodId, setMethodId] = useState('');
-  const [received, setReceived] = useState(false);
   const [created, setCreated] = useState<{
     invoiceId: string;
     invoiceNumber: string;
@@ -58,37 +54,6 @@ export default function AddBookingService({
     retry: false,
     refetchInterval: 10000
   });
-  const methods = useQuery({ ...adminPaymentMethodsQueryOptions, enabled: canWrite && canAdd });
-  const config = useQuery({
-    queryKey: ['midtrans', 'client-config'],
-    queryFn: getMidtransConfig,
-    enabled: canWrite && canAdd
-  });
-  const paymentMethods = (methods.data ?? []).filter(
-    (m) =>
-      m.isActive &&
-      (m.isOffline
-        ? !['EDC', 'QRIS_STATIC', 'BANK_TRANSFER_MANUAL'].includes(m.channel ?? '')
-        : m.channel &&
-          (m.channel.includes('VIRTUAL_ACCOUNT') ||
-            ['QRIS', 'QR'].includes(m.channel) ||
-            (m.channel === 'CARDS' && config.data?.checkoutMode === 'snap')))
-  );
-  const manualMethod =
-    methodId === 'EDC' || methodId === 'QRIS_STATIC' || methodId === 'BANK_TRANSFER_MANUAL'
-      ? methodId
-      : undefined;
-  const selectedMethod = manualMethod
-    ? undefined
-    : (paymentMethods.find((m) => m.id === methodId) ?? paymentMethods.find((m) => !m.isOffline));
-  const isManual = !!manualMethod || !!selectedMethod?.isOffline;
-  const manualLabel = selectedMethod?.isOffline
-    ? selectedMethod.name
-    : manualMethod === 'EDC'
-      ? 'EDC'
-      : manualMethod === 'QRIS_STATIC'
-        ? 'QRIS Statis'
-        : 'Transfer';
   const selected = (available.data ?? []).filter((option) => slotIds.includes(option.slotId));
   const groups = Array.from(
     new Map(
@@ -108,36 +73,30 @@ export default function AddBookingService({
     selected.length > 0 &&
     selected.length === slotIds.length &&
     selected.every((o) => visibleOptions.some((v) => v.slotId === o.slotId));
-  const baseFee =
-    selectedMethod && !isManual && price > 0
-      ? selectedMethod.fees + Math.round((price * Number(selectedMethod.percentage)) / 100)
-      : 0;
-  const total = price + baseFee + Math.round(baseFee * 0.11);
   const attach = useMutation({
     mutationFn: () =>
       coachingApi.attach(
         detailId!,
         slotIds,
-        price > 0 ? selectedMethod?.id : undefined,
-        price > 0 && isManual
-          ? { ...(manualMethod ? { method: manualMethod } : {}), received }
-          : undefined,
+        undefined,
+        undefined,
         ...(selectedCoach && groupId !== 'independent' ? [groupId] : [])
       ),
     onSuccess: (result) => {
       setCreated(result);
       setGroupId('independent');
       setSlotIds([]);
-      setReceived(false);
       for (const key of [
         ['admin', 'schedule'],
+        ['admin', 'analytics'],
+        ['admin', 'invoices'],
         ['admin', 'coaching'],
         ['admin', 'bookings'],
         ['admin', 'booked-coaches'],
         ['admin', 'booked-ballboys']
       ])
         void client.invalidateQueries({ queryKey: key });
-      toast.success('Layanan ditambahkan dan invoice dibuat.');
+      toast.success('Layanan ditambahkan dan dikonfirmasi lunas.');
     },
     onError: (error) => {
       toast.error(getApiErrorMessage(error, 'Layanan belum dapat ditambahkan.'));
@@ -203,7 +162,6 @@ export default function AddBookingService({
                 value={groupId}
                 onValueChange={(value) => {
                   setGroupId(value);
-                  setReceived(false);
                   setSlotIds(
                     slotIds.filter(
                       (id) => available.data?.find((o) => o.slotId === id)?.kind === 'BALLBOY'
@@ -252,7 +210,6 @@ export default function AddBookingService({
                     checked={slotIds.includes(option.slotId)}
                     disabled={attach.isPending}
                     onChange={(e) => {
-                      setReceived(false);
                       setSlotIds(
                         e.target.checked
                           ? [
@@ -279,68 +236,20 @@ export default function AddBookingService({
               ))}
             </div>
           </div>
-          {price > 0 && (
-            <div className="space-y-2">
-              <Label htmlFor="schedule-service-payment">Metode pembayaran invoice</Label>
-              <Select
-                value={manualMethod ?? selectedMethod?.id ?? ''}
-                onValueChange={(value) => {
-                  setMethodId(value);
-                  setReceived(false);
-                }}
-                disabled={attach.isPending}
-              >
-                <SelectTrigger id="schedule-service-payment">
-                  <SelectValue placeholder="Pilih metode pembayaran" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="EDC">EDC</SelectItem>
-                  <SelectItem value="QRIS_STATIC">QRIS Statis</SelectItem>
-                  <SelectItem value="BANK_TRANSFER_MANUAL">Transfer</SelectItem>
-                  {paymentMethods.map((method) => (
-                    <SelectItem key={method.id} value={method.id}>
-                      {method.name}
-                      {method.isOffline ? ' (Offline)' : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {isManual && (
-                <label className="bg-background flex items-start gap-3 rounded-lg border p-3 text-sm">
-                  <input
-                    type="checkbox"
-                    className="accent-primary mt-0.5 size-4 shrink-0"
-                    checked={received}
-                    disabled={attach.isPending}
-                    onChange={(e) => setReceived(e.target.checked)}
-                  />
-                  <span>Pembayaran {manualLabel} sudah diterima. Invoice akan dicatat lunas.</span>
-                </label>
-              )}
-            </div>
-          )}
           {selected.length > 0 && (
             <p className="text-sm">
-              Total invoice{price > 0 && !isManual ? ' termasuk biaya pembayaran' : ''}:{' '}
-              <strong>Rp {total.toLocaleString('id-ID')}</strong>
+              Total layanan:
+              <strong>Rp {price.toLocaleString('id-ID')}</strong>
             </p>
           )}
           <Button
             onClick={() => attach.mutate()}
-            disabled={
-              !selectionValid ||
-              attach.isPending ||
-              available.isFetching ||
-              !canAdd ||
-              (price > 0 && (isManual ? !received : !selectedMethod))
-            }
+            disabled={!selectionValid || attach.isPending || available.isFetching || !canAdd}
           >
-            {attach.isPending ? 'Membuat invoice...' : 'Tambah layanan & buat invoice'}
+            {attach.isPending ? 'Mengonfirmasi...' : 'Tambah layanan & konfirmasi lunas'}
           </Button>
           <p className="text-muted-foreground text-xs">
-            {isManual
-              ? 'Pembayaran offline dicatat lunas setelah penerimaan dikonfirmasi.'
-              : 'Pembayaran online: slot ditahan 10 menit dan dikonfirmasi setelah pembayaran berhasil. Slot dilepas jika pembayaran kedaluwarsa.'}
+            Layanan langsung dikonfirmasi lunas sesuai tarif yang tertera.
           </p>
         </>
       )}

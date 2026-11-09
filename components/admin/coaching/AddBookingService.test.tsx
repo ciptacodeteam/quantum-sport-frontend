@@ -65,24 +65,24 @@ beforeEach(() => {
   mocks.attach.mockResolvedValue({
     invoiceId: 'service-invoice',
     invoiceNumber: 'INV-SERVICE',
-    status: 'PENDING',
-    total: 156105
+    status: 'PAID',
+    total: 150000
   });
 });
 afterEach(cleanup);
-it('creates an invoice directly for the selected staff slot, without a paid confirmation', async () => {
+it('confirms the selected service as paid without a payment method', async () => {
   const { client } = mount();
   const invalidate = vi.spyOn(client, 'invalidateQueries');
   fireEvent.click(await screen.findByRole('checkbox', { name: /Coach A/ }));
-  const button = screen.getByRole('button', { name: 'Tambah layanan & buat invoice' });
+  const button = screen.getByRole('button', { name: 'Tambah layanan & konfirmasi lunas' });
   await waitFor(() => expect(button).toBeEnabled());
   expect(screen.queryByText(/Pembayaran EDC sudah diterima/)).toBeNull();
-  expect(screen.getByText('Rp 156.105')).toBeInTheDocument();
+  expect(screen.getByText('Rp 150.000', { selector: 'strong' })).toBeInTheDocument();
   fireEvent.click(button);
   await waitFor(() =>
-    expect(mocks.attach).toHaveBeenCalledWith('court-detail', ['coach-slot'], 'va', undefined)
+    expect(mocks.attach).toHaveBeenCalledWith('court-detail', ['coach-slot'], undefined, undefined)
   );
-  expect(await screen.findByText('Invoice INV-SERVICE · Menunggu pembayaran')).toBeInTheDocument();
+  expect(await screen.findByText('Invoice INV-SERVICE · Lunas')).toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'Lihat invoice' })).toHaveAttribute(
     'href',
     '/admin/kelola-transaksi/service-invoice'
@@ -112,7 +112,7 @@ it('explains when no staff schedule is available', async () => {
   expect(
     await screen.findByText('Tidak ada coach atau ballboy tersedia pada jam ini.')
   ).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Tambah layanan & buat invoice' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Tambah layanan & konfirmasi lunas' })).toBeNull();
 });
 it('books a paid ballboy for tennis using the same invoice flow as a coach', async () => {
   mocks.available.mockResolvedValue([
@@ -123,54 +123,42 @@ it('books a paid ballboy for tennis using the same invoice flow as a coach', asy
     screen.getByRole('link', { name: 'Kelola profil, jadwal & harga Ballboy' })
   ).toHaveAttribute('href', '/admin/coaching?kind=BALLBOY');
   fireEvent.click(await screen.findByRole('checkbox', { name: /Ballboy Budi/ }));
-  const button = screen.getByRole('button', { name: 'Tambah layanan & buat invoice' });
+  const button = screen.getByRole('button', { name: 'Tambah layanan & konfirmasi lunas' });
   await waitFor(() => expect(button).toBeEnabled());
   fireEvent.click(button);
   await waitFor(() =>
-    expect(mocks.attach).toHaveBeenCalledWith('court-detail', ['ballboy-slot'], 'va', undefined)
+    expect(mocks.attach).toHaveBeenCalledWith(
+      'court-detail',
+      ['ballboy-slot'],
+      undefined,
+      undefined
+    )
   );
-  expect(await screen.findByText('Invoice INV-SERVICE · Menunggu pembayaran')).toBeInTheDocument();
+  expect(await screen.findByText('Invoice INV-SERVICE · Lunas')).toBeInTheDocument();
 });
 
-it.each([
-  ['EDC', 'EDC'],
-  ['QRIS Statis', 'QRIS_STATIC'],
-  ['Transfer', 'BANK_TRANSFER_MANUAL']
-])(
-  'records coach and ballboy together through %s only after payment is confirmed',
-  async (label, method) => {
-    mocks.available.mockResolvedValue([
-      { slotId: 'coach-slot', staffId: 'coach', name: 'Coach A', kind: 'COACH', price: 150000 },
-      { slotId: 'ballboy-slot', staffId: 'ballboy', name: 'Budi', kind: 'BALLBOY', price: 45000 }
-    ]);
-    mocks.attach.mockResolvedValue({
-      invoiceId: 'manual-invoice',
-      invoiceNumber: 'INV-MANUAL',
-      status: 'PAID',
-      total: 195000
-    });
-    mount({ sport: 'TENNIS' });
-    fireEvent.click(await screen.findByRole('checkbox', { name: /Coach A/ }));
-    fireEvent.click(screen.getByRole('checkbox', { name: /Ballboy Budi/ }));
-    fireEvent.click(screen.getByRole('combobox', { name: 'Metode pembayaran invoice' }));
-    fireEvent.click(await screen.findByRole('option', { name: label }));
-    const button = screen.getByRole('button', { name: 'Tambah layanan & buat invoice' });
-    expect(button).toBeDisabled();
-    expect(screen.getByText('Rp 195.000')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('checkbox', { name: /sudah diterima/ }));
-    expect(button).toBeEnabled();
-    fireEvent.click(button);
-    await waitFor(() =>
-      expect(mocks.attach).toHaveBeenCalledWith(
-        'court-detail',
-        ['coach-slot', 'ballboy-slot'],
-        undefined,
-        { method, received: true }
-      )
-    );
-    expect(await screen.findByText('Invoice INV-MANUAL · Lunas')).toBeInTheDocument();
-  }
-);
+it('confirms coach and ballboy together without payment controls', async () => {
+  mocks.available.mockResolvedValue([
+    { slotId: 'coach-slot', kind: 'COACH', name: 'Coach A', price: 150000 },
+    { slotId: 'ballboy-slot', kind: 'BALLBOY', name: 'Budi', price: 45000 }
+  ]);
+  mount({ sport: 'TENNIS' });
+  fireEvent.click(await screen.findByRole('checkbox', { name: /Coach A/ }));
+  fireEvent.click(screen.getByRole('checkbox', { name: /Ballboy Budi/ }));
+  expect(screen.queryByRole('combobox', { name: 'Metode pembayaran invoice' })).toBeNull();
+  expect(screen.queryByRole('checkbox', { name: /sudah diterima/ })).toBeNull();
+  expect(screen.getByText('Rp 195.000')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Tambah layanan & konfirmasi lunas' }));
+  await waitFor(() =>
+    expect(mocks.attach).toHaveBeenCalledWith(
+      'court-detail',
+      ['coach-slot', 'ballboy-slot'],
+      undefined,
+      undefined
+    )
+  );
+  expect(await screen.findByText('Invoice INV-SERVICE · Lunas')).toBeInTheDocument();
+});
 it('replaces a selected coach without clearing the ballboy', async () => {
   mocks.available.mockResolvedValue([
     { slotId: 'coach-slot', kind: 'COACH', name: 'Coach A', price: 150000 },
@@ -222,7 +210,7 @@ it('filters coaches by group, keeps the selected ballboy and submits the group w
   expect(screen.queryByRole('checkbox', { name: /Coach Solo/ })).not.toBeInTheDocument();
   expect(screen.getByRole('checkbox', { name: /Ballboy Budi/ })).toBeChecked();
   fireEvent.click(screen.getByRole('checkbox', { name: /Coach Northwest/ }));
-  fireEvent.click(screen.getByRole('button', { name: 'Tambah layanan & buat invoice' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Tambah layanan & konfirmasi lunas' }));
   await waitFor(() =>
     expect(mocks.attach).toHaveBeenCalledWith(
       'court-detail',
@@ -231,23 +219,6 @@ it('filters coaches by group, keeps the selected ballboy and submits the group w
       undefined,
       'northwest'
     )
-  );
-});
-
-it('accepts a custom offline method from the catalog only after confirming receipt', async () => {
-  mount();
-  fireEvent.click(await screen.findByRole('checkbox', { name: /Coach A/ }));
-  fireEvent.click(screen.getByRole('combobox', { name: 'Metode pembayaran invoice' }));
-  fireEvent.click(await screen.findByRole('option', { name: 'Tunai Kasir (Offline)' }));
-  const button = screen.getByRole('button', { name: 'Tambah layanan & buat invoice' });
-  expect(button).toBeDisabled();
-  expect(screen.getByText('Rp 150.000', { selector: 'strong' })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('checkbox', { name: /Pembayaran Tunai Kasir sudah diterima/ }));
-  fireEvent.click(button);
-  await waitFor(() =>
-    expect(mocks.attach).toHaveBeenCalledWith('court-detail', ['coach-slot'], 'cash', {
-      received: true
-    })
   );
 });
 
