@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { DialogProvider } from '@/components/ui/dialog';
 const mocks = vi.hoisted(() => ({
+  role: 'ADMIN',
   query: vi.fn(),
   export: vi.fn(),
   row: {
@@ -19,6 +20,9 @@ const mocks = vi.hoisted(() => ({
     user: { name: 'Robin', phone: '+6281234567890' },
     invoice: { id: 'invoice', number: 'INV-DEBT', status: 'PAID', total: 5000000 }
   }
+}));
+vi.mock('@/hooks/useRoleAccess', () => ({
+  useHasRole: (roles: string[]) => mocks.role === 'SUPER_ADMIN' || roles.includes(mocks.role)
 }));
 vi.mock('@tanstack/react-query', () => ({
   useQuery: (options: any) => {
@@ -50,6 +54,7 @@ vi.mock('@/components/ui/data-table', () => ({
 import MembershipTransactionTable from './MembershipTransactionTable';
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.role = 'ADMIN';
   mocks.row.invoice.status = 'PAID';
   mocks.row.canCancel = false;
 });
@@ -131,3 +136,23 @@ it.each([false, true])(
     expect(screen.queryByRole('button', { name: 'Batalkan Value Pack' })).toBeNull();
   }
 );
+
+it.each(['CASHIER', 'ADMIN_VIEWER'])('hides paid membership cancellation from %s', (role) => {
+  mocks.role = role;
+  mocks.row.canCancel = true;
+  render(<MembershipTransactionTable />, { wrapper: DialogProvider });
+  expect(screen.queryByRole('button', { name: 'Batalkan Value Pack' })).toBeNull();
+});
+it('hides rejection from cashiers while preserving payment approval', () => {
+  mocks.role = 'CASHIER';
+  mocks.row.invoice.status = 'PENDING';
+  render(<MembershipTransactionTable />, { wrapper: DialogProvider });
+  expect(screen.queryByRole('button', { name: 'Tolak pembayaran' })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Setujui pembayaran' })).toBeInTheDocument();
+});
+it.each(['ADMIN', 'SUPER_ADMIN'])('keeps membership cancellation available to %s', (role) => {
+  mocks.role = role;
+  mocks.row.canCancel = true;
+  render(<MembershipTransactionTable />, { wrapper: DialogProvider });
+  expect(screen.getByRole('button', { name: 'Batalkan Value Pack' })).toBeInTheDocument();
+});

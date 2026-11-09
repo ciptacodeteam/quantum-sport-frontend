@@ -1,4 +1,5 @@
 'use client';
+import { useHasRole } from '@/hooks/useRoleAccess';
 import BookingDateFilter from '@/components/admin/bookings/BookingDateFilter';
 import { useBookingDateFilter } from '@/hooks/useBookingDateFilter';
 
@@ -65,6 +66,7 @@ const formatDate = (date: Date | string): string => {
 };
 
 const MembershipTransactionTable = ({ debtsOnly = false }: { debtsOnly?: boolean }) => {
+  const canCancelMembership = useHasRole(['ADMIN']);
   const [status, setStatus] = useState('all');
   const { dateRange, setDateRange, dateParams } = useBookingDateFilter();
   const [sport, setSport] = useState<MembershipSportFilter>('all');
@@ -251,31 +253,36 @@ const MembershipTransactionTable = ({ debtsOnly = false }: { debtsOnly?: boolean
                   >
                     <IconCheck />
                   </Button>
+                  {canCancelMembership && (
+                    <Button
+                      size="icon-sm"
+                      variant="ghost"
+                      className="text-destructive"
+                      title="Tolak pembayaran"
+                      aria-label="Tolak pembayaran"
+                      onClick={() => rejectTx({ id: transaction.id })}
+                    >
+                      <IconX />
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {canCancelMembership &&
+                !debtsOnly &&
+                transaction.canCancel &&
+                transaction.invoice?.status === 'PAID' && (
                   <Button
                     size="icon-sm"
                     variant="ghost"
                     className="text-destructive"
-                    title="Tolak pembayaran"
-                    aria-label="Tolak pembayaran"
-                    onClick={() => rejectTx({ id: transaction.id })}
+                    title="Batalkan Value Pack"
+                    aria-label="Batalkan Value Pack"
+                    onClick={() => cancelTx(transaction.id)}
                   >
                     <IconX />
                   </Button>
-                </div>
-              )}
-
-              {!debtsOnly && transaction.canCancel && transaction.invoice?.status === 'PAID' && (
-                <Button
-                  size="icon-sm"
-                  variant="ghost"
-                  className="text-destructive"
-                  title="Batalkan Value Pack"
-                  aria-label="Batalkan Value Pack"
-                  onClick={() => cancelTx(transaction.id)}
-                >
-                  <IconX />
-                </Button>
-              )}
+                )}
 
               {!debtsOnly && !transaction.isSuspended && canManageMembership(transaction) && (
                 <SuspendMembershipDialog
@@ -303,7 +310,16 @@ const MembershipTransactionTable = ({ debtsOnly = false }: { debtsOnly?: boolean
         size: 100
       })
     ],
-    [cancelTx, approveTx, rejectTx, suspendTx, suspending, unsuspendTx, debtsOnly]
+    [
+      canCancelMembership,
+      cancelTx,
+      approveTx,
+      rejectTx,
+      suspendTx,
+      suspending,
+      unsuspendTx,
+      debtsOnly
+    ]
   );
 
   if (query.isError)
