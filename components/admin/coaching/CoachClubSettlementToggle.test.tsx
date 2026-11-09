@@ -2,9 +2,11 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { CoachingBooking } from '@/api/admin/coaching';
-const mocks = vi.hoisted(() => ({ setClubSettlement: vi.fn(), canEdit: true }));
+const mocks = vi.hoisted(() => ({ setClubSettlement: vi.fn(), role: 'ADMIN' }));
 vi.mock('@/api/admin/coaching', () => ({ coachingApi: mocks }));
-vi.mock('@/hooks/useRoleAccess', () => ({ useHasRole: () => mocks.canEdit }));
+vi.mock('@/hooks/useRoleAccess', () => ({
+  useHasRole: (roles: string[]) => mocks.role === 'SUPER_ADMIN' || roles.includes(mocks.role)
+}));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 import CoachClubSettlementToggle from './CoachClubSettlementToggle';
 const booking = {
@@ -30,7 +32,7 @@ function mount(overrides: Partial<CoachingBooking> = {}) {
 }
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.canEdit = true;
+  mocks.role = 'ADMIN';
   mocks.setClubSettlement.mockResolvedValue({});
 });
 afterEach(cleanup);
@@ -54,7 +56,7 @@ it('supports undoing settlement', async () => {
   );
 });
 it('shows a read-only status for staff without edit access', () => {
-  mocks.canEdit = false;
+  mocks.role = 'ADMIN_VIEWER';
   mount({ isClubSettled: true });
   expect(screen.getByText('Lunas ke Club')).toBeInTheDocument();
   expect(screen.queryByRole('switch')).toBeNull();
@@ -73,4 +75,19 @@ it('blocks repeated clicks while saving', async () => {
   await waitFor(() => expect(screen.getByRole('switch')).toBeDisabled());
   fireEvent.click(screen.getByRole('switch'));
   expect(mocks.setClubSettlement).toHaveBeenCalledTimes(1);
+});
+
+it.each([false, true])('cashiers can view settlement=%s without a toggle', (isClubSettled) => {
+  mocks.role = 'CASHIER';
+  mount({ isClubSettled });
+  expect(
+    screen.getByText(isClubSettled ? 'Lunas ke Club' : 'Belum lunas ke Club')
+  ).toBeInTheDocument();
+  expect(screen.queryByRole('switch')).toBeNull();
+  expect(mocks.setClubSettlement).not.toHaveBeenCalled();
+});
+it.each(['ADMIN', 'SUPER_ADMIN'])('allows %s to use the settlement toggle', (role) => {
+  mocks.role = role;
+  mount();
+  expect(screen.getByRole('switch')).toBeEnabled();
 });
