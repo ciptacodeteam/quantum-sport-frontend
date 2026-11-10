@@ -82,6 +82,10 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
           url: '/admin/booking-lapangan?courtSport=TENNIS'
         },
         {
+          title: 'Coaching In-house',
+          url: '/admin/coaching-inhouse'
+        },
+        {
           title: 'Book Value Pack',
           url: '/admin/booking-membership'
         },
@@ -243,6 +247,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             {
               title: 'Book Tennis Courts',
               url: '/admin/booking-lapangan?courtSport=TENNIS'
+            },
+            {
+              title: 'Coaching In-house',
+              url: '/admin/coaching-inhouse'
             },
             {
               title: 'Book Value Pack',

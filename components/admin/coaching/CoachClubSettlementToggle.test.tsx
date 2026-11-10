@@ -91,3 +91,10 @@ it.each(['ADMIN', 'SUPER_ADMIN'])('allows %s to use the settlement toggle', (rol
   mount();
   expect(screen.getByRole('switch')).toBeEnabled();
 });
+
+it('labels in-house coaching without showing a club settlement action', () => {
+  mount({ isInHouse: true });
+  expect(screen.getByText('Paket In-house')).toBeInTheDocument();
+  expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+  expect(mocks.setClubSettlement).not.toHaveBeenCalled();
+});

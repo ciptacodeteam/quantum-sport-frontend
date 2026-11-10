@@ -1,4 +1,5 @@
 'use client';
+import type { InHouseChoice } from '@/api/admin/inhouseCoaching';
 import { coachSessionsTotal } from '@/lib/coach-session-pricing';
 
 import type { RecurringBookingRule } from '@/lib/recurring-booking';
@@ -117,6 +118,8 @@ export interface SelectedInventory {
 }
 
 interface BookingState {
+  selectedInHouse: InHouseChoice[];
+  setSelectedInHouse: (selections: InHouseChoice[]) => void;
   useMembership: boolean;
   setUseMembership: (enabled: boolean) => void;
   recurringBooking: RecurringBookingRule | null;
@@ -185,7 +188,10 @@ export const useBookingStore = create<BookingState>()(
         ),
       recurringBooking: null,
       setRecurringBooking: (recurringBooking) =>
-        set({ recurringBooking, ...(recurringBooking ? { useMembership: true } : {}) }),
+        set({
+          recurringBooking,
+          ...(recurringBooking ? { useMembership: true, selectedInHouse: [] } : {})
+        }),
       bookingItems: [],
       selectedDate: new Date(),
       selectedCustomerId: null,
@@ -194,6 +200,8 @@ export const useBookingStore = create<BookingState>()(
       walkInName: null,
       walkInPhone: null,
       bookingAdminNote: null,
+      selectedInHouse: [],
+      setSelectedInHouse: (selectedInHouse) => set({ selectedInHouse }),
       selectedCoaches: [],
       selectedBallboys: [],
       selectedInventories: [],
@@ -216,7 +224,16 @@ export const useBookingStore = create<BookingState>()(
         const rule = get().recurringBooking;
         const recurringBooking =
           rule && rule.sourceSlotIds.every((id) => validCourtSlotIds.has(id)) ? rule : null;
-        set({ bookingItems: items, selectedBallboys, courtTotal, ballboyTotal, recurringBooking });
+        set({
+          bookingItems: items,
+          selectedInHouse: get().selectedInHouse.filter((item) =>
+            validCourtSlotIds.has(item.courtSlotId)
+          ),
+          selectedBallboys,
+          courtTotal,
+          ballboyTotal,
+          recurringBooking
+        });
       },
 
       removeBookingItem: (courtId, timeSlot, date) => {
@@ -235,6 +252,9 @@ export const useBookingStore = create<BookingState>()(
           rule && rule.sourceSlotIds.every((id) => validCourtSlotIds.has(id)) ? rule : null;
         set({
           bookingItems: newItems,
+          selectedInHouse: state.selectedInHouse.filter((item) =>
+            validCourtSlotIds.has(item.courtSlotId)
+          ),
           selectedBallboys,
           courtTotal,
           ballboyTotal,
@@ -250,6 +270,7 @@ export const useBookingStore = create<BookingState>()(
             ? { selectedCustomerId: customerId }
             : {
                 selectedCustomerId: customerId,
+                selectedInHouse: [],
                 selectedCustomerName: null,
                 selectedCustomerPhone: null,
                 membershipDiscount: 0,
@@ -394,6 +415,7 @@ export const useBookingStore = create<BookingState>()(
           useMembership: true,
           recurringBooking: null,
           bookingItems: [],
+          selectedInHouse: [],
           selectedCoaches: [],
           selectedBallboys: [],
           selectedInventories: [],
@@ -438,6 +460,7 @@ export const useBookingStore = create<BookingState>()(
         walkInName: state.walkInName,
         walkInPhone: state.walkInPhone,
         bookingAdminNote: state.bookingAdminNote,
+        selectedInHouse: state.selectedInHouse,
         selectedCoaches: state.selectedCoaches,
         selectedBallboys: state.selectedBallboys,
         selectedInventories: state.selectedInventories,

@@ -31,6 +31,7 @@ export default function CoachClubSettlementToggle({ booking }: { booking: Coachi
       void client.invalidateQueries({ queryKey: ['admin', 'coaching'] });
     }
   });
+  if (booking.isInHouse) return <Badge variant="outline">Paket In-house</Badge>;
   const eligible = booking.status === 'CONFIRMED' && booking.invoice?.status === 'PAID';
   return (
     <div className="min-w-36 space-y-1.5">

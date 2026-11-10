@@ -110,7 +110,7 @@ export default function CoachingBookings({ kind }: { kind: 'COACH' | 'BALLBOY' }
           >
             <Eye aria-hidden="true" />
           </Button>
-          {kind === 'COACH' && canManageCoaches && (
+          {kind === 'COACH' && canManageCoaches && !row.original.isInHouse && (
             <>
               <ReplaceCoachDialog
                 iconOnly
@@ -121,7 +121,7 @@ export default function CoachingBookings({ kind }: { kind: 'COACH' | 'BALLBOY' }
               />
             </>
           )}
-          {canCancelServices && (
+          {canCancelServices && !row.original.isInHouse && (
             <CancelCoachDialog
               kind={kind}
               iconOnly

@@ -45,7 +45,11 @@ export default function CoachingBookingDetail({
               {kind === 'COACH' && (
                 <div>
                   <dt>Grup coaching</dt>
-                  <dd>{booking.coachingGroupName || 'Coach Independen'}</dd>
+                  <dd>
+                    {booking.isInHouse
+                      ? 'Coach In-house'
+                      : booking.coachingGroupName || 'Coach Independen'}
+                  </dd>
                 </div>
               )}
               <div>

@@ -24,6 +24,7 @@ type ScheduleRow = {
   price: number;
   normalPrice?: number;
   valuePack?: boolean;
+  inHouse?: boolean;
 };
 const money = (value: number | null | undefined) => formatCurrency(Number(value ?? 0));
 const timestamp = (value?: string | null) => {
@@ -34,7 +35,8 @@ const timestamp = (value?: string | null) => {
 const typeLabels: Record<string, string> = {
   BOOKING: 'Booking',
   CLASS_BOOKING: 'Kelas',
-  MEMBERSHIP: 'Value Pack'
+  MEMBERSHIP: 'Value Pack',
+  INHOUSE_PACKAGE: 'Paket Coach In-house'
 };
 const paymentLabels: Record<string, string> = {
   PAID: 'Lunas',
@@ -119,6 +121,11 @@ function ScheduleTable({ rows }: { rows: ScheduleRow[] }) {
                     </p>
                   )}
                   <p className="font-semibold">{money(row.price)}</p>
+                  {row.inHouse && (
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      Ditanggung paket coaching in-house
+                    </p>
+                  )}
                   {row.valuePack && (
                     <p className="text-muted-foreground mt-1 text-xs">Menggunakan Value Pack</p>
                   )}
@@ -173,7 +180,8 @@ export default function InvoiceDetailPage() {
       slot: item.slot,
       normalPrice,
       valuePack,
-      price: valuePack ? 0 : discounted > 0 ? discounted : normalPrice
+      inHouse: !!item.inHouseCovered,
+      price: item.inHouseCovered ? 0 : valuePack ? 0 : discounted > 0 ? discounted : normalPrice
     };
   });
   const coaches: ScheduleRow[] = (booking?.coaches ?? []).map((item: any, index: number) => ({
@@ -370,6 +378,34 @@ export default function InvoiceDetailPage() {
               ['Kelas', invoice.classBooking.class?.name ?? '—'],
               ['Status', bookingLabels[invoice.classBooking.status] ?? invoice.classBooking.status],
               ['Nilai kelas', money(invoice.classBooking.totalPrice)]
+            ].map(([label, value]) => (
+              <div key={label}>
+                <p className="text-muted-foreground mb-1 text-xs">{label}</p>
+                <p className="text-sm font-medium">{value}</p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+      {invoice.inHousePackage && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Detail paket coaching in-house</CardTitle>
+            <CardDescription>
+              Kuota khusus coach yang dipilih, dapat digunakan pada hari berbeda.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-3">
+            {[
+              ['Coach', invoice.inHousePackage.staff.name],
+              ['Paket', invoice.inHousePackage.packageName],
+              ['Kuota pembelian', `${invoice.inHousePackage.totalMinutes / 60} jam`],
+              ['Harga per jam', money(invoice.inHousePackage.hourlyPrice)],
+              ['Bagian lapangan per jam', money(invoice.inHousePackage.courtHourlyShare)],
+              [
+                'Tambahan peserta per orang/jam',
+                money(invoice.inHousePackage.extraParticipantHourlyPrice)
+              ]
             ].map(([label, value]) => (
               <div key={label}>
                 <p className="text-muted-foreground mb-1 text-xs">{label}</p>

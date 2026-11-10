@@ -50,6 +50,8 @@ import { IconChevronDown, IconX } from '@tabler/icons-react';
  * Props for the BookingSummary component
  */
 export interface BookingSummaryProps {
+  inHouseCoverage?: number;
+  inHouseExtras?: number;
   /** Array of booking items (court bookings) */
   bookingItems: BookingItem[];
 
@@ -224,6 +226,8 @@ export default function BookingSummary({
   inventoryTotal = 0,
   membershipDiscount: _membershipDiscountAmount = 0,
   totalAmount,
+  inHouseCoverage = 0,
+  inHouseExtras = 0,
   membershipDiscountDetails,
   useMembership = true,
   onUseMembershipChange,
@@ -922,6 +926,18 @@ export default function BookingSummary({
                   </div>
                 )}
               </>
+            )}
+            {inHouseCoverage > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <span>Lapangan ditanggung kuota in-house</span>
+                <span>− {formatCurrency(inHouseCoverage)}</span>
+              </div>
+            )}
+            {inHouseExtras > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <span>Tambahan peserta in-house</span>
+                <span>{formatCurrency(inHouseExtras)}</span>
+              </div>
             )}
             {bundleDiscount > 0 && (
               <div className="flex items-center justify-between text-xs text-blue-600">

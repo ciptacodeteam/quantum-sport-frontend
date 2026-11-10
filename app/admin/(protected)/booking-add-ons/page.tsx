@@ -1,4 +1,9 @@
 'use client';
+import BookingInHouseSelection, {
+  usableInHouseWallets
+} from '@/components/admin/booking/BookingInHouseSelection';
+import { inHouseApi } from '@/api/admin/inhouseCoaching';
+import { useAdminCourtSports } from '@/hooks/useAdminCourtSports';
 import { coachSessionsTotal } from '@/lib/coach-session-pricing';
 
 import OfflinePaymentSelection from '@/components/admin/booking/OfflinePaymentSelection';
@@ -32,6 +37,8 @@ import { toast } from 'sonner';
 export default function BookingAddOns() {
   const router = useRouter();
   const {
+    selectedInHouse: storedInHouse = [],
+    setSelectedInHouse,
     useMembership,
     setUseMembership,
     recurringBooking,
@@ -88,6 +95,36 @@ export default function BookingAddOns() {
     () => bookingItems.find((item) => item.sport)?.sport ?? 'PADEL',
     [bookingItems]
   );
+  const { branchId } = useAdminCourtSports();
+  const inHouseWallets = useQuery({
+    queryKey: ['admin', 'inhouse', 'wallets', branchId, selectedCustomerId, 'available'],
+    queryFn: () => inHouseApi.wallets(selectedCustomerId!, true),
+    enabled: !!selectedCustomerId && !!branchId && branchId !== 'all'
+  });
+  const usableWallets = usableInHouseWallets(inHouseWallets.data ?? [], courtSport);
+  const inHouseSelections = storedInHouse.filter((selection) =>
+    bookingItems.some((item) => item.slotId === selection.courtSlotId)
+  );
+  const inHouseCoverage = inHouseSelections.reduce((sum, selection) => {
+    const court = bookingItems.find((item) => item.slotId === selection.courtSlotId);
+    return (
+      sum +
+      (court
+        ? court.discountPrice && court.discountPrice > 0
+          ? court.discountPrice
+          : court.price
+        : 0)
+    );
+  }, 0);
+  const inHouseExtras = inHouseSelections.reduce(
+    (sum, selection) =>
+      sum +
+      Math.max(0, selection.participants - 1) *
+        (usableWallets.find((w) => w.id === selection.walletId)?.extraParticipantHourlyPrice ??
+          100000),
+    0
+  );
+
   // Customer selection is now handled by BookingSummary component
   // Keep selectedCustomer state for membership discount calculation
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerSearchResult | null>(null);
@@ -110,7 +147,12 @@ export default function BookingAddOns() {
     setMembershipDiscount(membershipDiscount.discountAmount);
   }, [membershipDiscount.discountAmount, setMembershipDiscount]);
 
-  const totalAmount = membershipDiscount.discountedTotal + coachTotal + ballboyTotal;
+  const totalAmount =
+    membershipDiscount.discountedTotal +
+    coachTotal +
+    ballboyTotal -
+    inHouseCoverage +
+    inHouseExtras;
 
   const { rules: tariffRules } = useTariffPeriods(true);
   const amountDue = Math.max(
@@ -215,7 +257,8 @@ export default function BookingAddOns() {
           ['admin', 'bookings'],
           ['admin', 'booking-coaches'],
           ['admin', 'booking-ballboys'],
-          ['admin', 'coaching']
+          ['admin', 'coaching'],
+          ['admin', 'inhouse']
         ])
           void queryClient.invalidateQueries({ queryKey });
         // Reset booking store after successful admin checkout
@@ -251,6 +294,22 @@ export default function BookingAddOns() {
       toast.error('Pilih metode pembayaran offline terlebih dahulu.');
       return;
     }
+    if (
+      inHouseSelections.length &&
+      (recurringBooking ||
+        useMembership ||
+        !selectedCustomerId ||
+        inHouseWallets.isFetching ||
+        inHouseWallets.isError ||
+        inHouseSelections.some(
+          (selection) => !usableWallets.some((wallet) => wallet.id === selection.walletId)
+        ))
+    ) {
+      toast.error(
+        'Periksa kembali kuota in-house dan nonaktifkan membership lapangan sebelum konfirmasi.'
+      );
+      return;
+    }
     const courtSlots = bookingItems.map((b) => b.slotId).filter(Boolean);
     const totalHours = bookingItems.reduce((sum, item) => {
       const start = dayjs(item.startAt ?? `${item.date} ${item.timeSlot.slice(0, 5)}`);
@@ -271,7 +330,8 @@ export default function BookingAddOns() {
       adminNote: bookingAdminNote || undefined,
       ...(amountDue > 0 ? { paymentMethodId: selectedPaymentMethod!.id } : {}),
       useMembership: recurringBooking ? true : useMembership,
-      ...(recurringBooking ? { recurringBooking } : {})
+      ...(recurringBooking ? { recurringBooking } : {}),
+      ...(inHouseSelections.length ? { inHouseSelections } : {})
     };
 
     if (selectedCustomerId) {
@@ -424,6 +484,52 @@ export default function BookingAddOns() {
             </p>
           )}
 
+          {selectedCustomerId && inHouseWallets.isError && (
+            <p role="alert" className="text-sm">
+              Kuota in-house belum dapat dimuat.{' '}
+              <button className="underline" onClick={() => void inHouseWallets.refetch()}>
+                Coba lagi
+              </button>
+            </p>
+          )}
+          {inHouseSelections.length > 0 &&
+            !inHouseWallets.isFetching &&
+            inHouseSelections.some(
+              (selection) => !usableWallets.some((wallet) => wallet.id === selection.walletId)
+            ) && (
+              <div role="alert" className="rounded border p-4 text-sm">
+                Pilihan paket sudah tidak tersedia untuk customer ini.{' '}
+                <button
+                  type="button"
+                  className="text-primary underline"
+                  onClick={() => setSelectedInHouse([])}
+                >
+                  Hapus pilihan paket
+                </button>
+              </div>
+            )}
+          {bookingItems.length > 0 && !recurringBooking && (
+            <BookingInHouseSelection
+              key={`${branchId}:${selectedCustomerId}`}
+              wallets={usableWallets}
+              sessions={bookingItems}
+              selected={inHouseSelections}
+              disabled={isConfirming || isCheckingCoaches}
+              onChange={(session, selection) => {
+                const next = inHouseSelections.filter(
+                  (item) => item.courtSlotId !== session.slotId
+                );
+                if (selection) {
+                  setUseMembership(false);
+                  storedCoaches
+                    .filter((coach) => coachSessionKey(coach) === coachSessionKey(session))
+                    .forEach((coach) => removeCoach(coach.coachId, coach.timeSlot, coach.slotId));
+                  next.push(selection);
+                }
+                setSelectedInHouse(next);
+              }}
+            />
+          )}
           {bookingItems.length > 0 && (
             <BookingCoachSelection
               sessions={bookingItems}
@@ -445,6 +551,14 @@ export default function BookingAddOns() {
                   removeCoach(existing.coachId, existing.timeSlot, existing.slotId);
                   if (existing.coachingGroupId === coach.coachingGroupId) return;
                 }
+                setSelectedInHouse(
+                  inHouseSelections.filter((selection) => {
+                    const court = bookingItems.find(
+                      (item) => item.slotId === selection.courtSlotId
+                    );
+                    return !court || coachSessionKey(court) !== coachSessionKey(session);
+                  })
+                );
                 addCoach(coach);
               }}
             />
@@ -475,17 +589,20 @@ export default function BookingAddOns() {
           walkInPhone={storeWalkInPhone}
           adminNote={bookingAdminNote}
           onCustomerSelect={(customerId, customer) => {
+            setSelectedInHouse([]);
             setSelectedCustomerId(customerId);
             setSelectedCustomer(customer);
             setSelectedCustomerDetails(customer.name, customer.phone);
             setWalkInCustomer(null, null);
           }}
           onCustomerClear={() => {
+            setSelectedInHouse([]);
             setSelectedCustomerId(null);
             setSelectedCustomer(null);
           }}
           onWalkInSet={(name, phone) => {
             setWalkInCustomer(name, phone);
+            setSelectedInHouse([]);
             setSelectedCustomerId(null);
             setSelectedCustomer(null);
           }}
@@ -511,7 +628,16 @@ export default function BookingAddOns() {
           totalAmount={totalAmount}
           membershipDiscountDetails={membershipDiscount}
           useMembership={recurringBooking ? true : useMembership}
-          onUseMembershipChange={recurringBooking ? undefined : setUseMembership}
+          onUseMembershipChange={
+            recurringBooking
+              ? undefined
+              : (enabled) => {
+                  if (enabled) setSelectedInHouse([]);
+                  setUseMembership(enabled);
+                }
+          }
+          inHouseCoverage={inHouseCoverage}
+          inHouseExtras={inHouseExtras}
           paymentControls={
             <OfflinePaymentSelection
               amountDue={amountDue}

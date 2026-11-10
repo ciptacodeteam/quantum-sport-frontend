@@ -35,6 +35,7 @@ const sourceLabels: Record<string, string> = {
   Online: 'Online Booking',
   Cashier: 'Cashier Booking',
   Membership: 'Membership',
+  InHouse: 'Paket Coach In-house',
   'Class Bookings': 'Transaksi kelas',
   Other: 'Belum terkelompok'
 };

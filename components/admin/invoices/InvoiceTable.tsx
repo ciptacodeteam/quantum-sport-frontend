@@ -15,7 +15,7 @@ import { IconEye } from '@tabler/icons-react';
 type InvoiceListItem = {
   id: string;
   number: string;
-  type: 'BOOKING' | 'CLASS_BOOKING' | 'MEMBERSHIP';
+  type: 'BOOKING' | 'CLASS_BOOKING' | 'MEMBERSHIP' | 'INHOUSE_PACKAGE';
   user: { id: string; name: string; email: string; phone?: string | null };
   subtotal: number;
   processingFee: number;
@@ -42,7 +42,8 @@ const statusVariant: Record<
 const typeLabel: Record<InvoiceListItem['type'], string> = {
   BOOKING: 'Booking',
   CLASS_BOOKING: 'Kelas',
-  MEMBERSHIP: 'Membership'
+  MEMBERSHIP: 'Membership',
+  INHOUSE_PACKAGE: 'Paket Coach In-house'
 };
 
 const InvoiceTable = () => {

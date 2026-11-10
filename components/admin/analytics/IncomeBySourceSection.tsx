@@ -64,7 +64,8 @@ export default function IncomeBySourceSection({ data, isLoading }: IncomeBySourc
     Online: Number(summary.onlineBookingIncome || 0),
     Cashier: Number(summary.cashierBookingIncome || 0),
     'Class Bookings': Number(summary.classBookingIncome || 0),
-    Membership: Number(summary.membershipIncome || 0)
+    Membership: Number(summary.membershipIncome || 0),
+    InHouse: Number(summary.inHouseIncome || 0)
   };
 
   const sourceConfigs = [
@@ -93,6 +94,16 @@ export default function IncomeBySourceSection({ data, isLoading }: IncomeBySourc
       barColor: 'bg-orange-500'
     }
   ];
+
+  if (bySource.InHouse || summary.inHouseIncome)
+    sourceConfigs.push({
+      key: 'InHouse',
+      title: 'Paket Coach In-house',
+      icon: IconCreditCard,
+      color: 'text-violet-500',
+      bgColor: 'bg-violet-500/10',
+      barColor: 'bg-violet-500'
+    });
 
   const totalRevenue = Number(summary.totalNetAmount ?? summary.totalIncome ?? 0);
   const totalFees = Number(summary.totalProcessingFees ?? 0);
