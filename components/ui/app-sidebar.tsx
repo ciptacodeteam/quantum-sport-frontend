@@ -82,10 +82,6 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
           url: '/admin/booking-lapangan?courtSport=TENNIS'
         },
         {
-          title: 'Coaching In-house',
-          url: '/admin/coaching-inhouse'
-        },
-        {
           title: 'Book Value Pack',
           url: '/admin/booking-membership'
         },
@@ -185,6 +181,10 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
           url: '/admin/coaching-groups'
         },
         {
+          title: 'Coaching In-house',
+          url: '/admin/coaching-inhouse'
+        },
+        {
           title: 'Ballboy',
           url: '/admin/coaching?kind=BALLBOY'
         },
@@ -249,10 +249,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               url: '/admin/booking-lapangan?courtSport=TENNIS'
             },
             {
-              title: 'Coaching In-house',
-              url: '/admin/coaching-inhouse'
-            },
-            {
               title: 'Book Value Pack',
               url: '/admin/booking-membership'
             },
@@ -285,6 +281,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           ]
         },
         {
+          title: 'Master Data',
+          icon: IconDatabase,
+          items: [{ title: 'Coaching In-house', url: '/admin/coaching-inhouse' }]
+        },
+        {
           title: 'Kustomer',
           icon: IconUsers,
           items: [
@@ -298,14 +299,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
 
     if (isAdminViewer) {
-      // ADMIN_VIEWER can view everything except Dashboard, Master Data, Kelola Karyawan, and Marketing
-      return data.navMain.filter(
-        (item) =>
-          item.title !== 'Dashboard' &&
-          item.title !== 'Master Data' &&
-          item.title !== 'Kelola Karyawan' &&
-          item.title !== 'Marketing'
-      );
+      // Preserve read-only access to coaching while keeping other master data hidden.
+      return data.navMain
+        .filter((item) => !['Dashboard', 'Kelola Karyawan', 'Marketing'].includes(item.title))
+        .map((item) =>
+          item.title === 'Master Data'
+            ? {
+                ...item,
+                items: item.items?.filter((child) => child.url === '/admin/coaching-inhouse')
+              }
+            : item
+        );
     }
 
     if (me.role !== ROLE.SUPER_ADMIN)
