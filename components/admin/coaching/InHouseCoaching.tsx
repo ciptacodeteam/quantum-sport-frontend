@@ -1,5 +1,6 @@
 'use client';
-import { useState } from 'react';
+import { useState, type ComponentProps } from 'react';
+import { ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { inHouseApi, type InHousePlan } from '@/api/admin/inhouseCoaching';
@@ -17,7 +18,20 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppSectionHeader from '@/components/ui/app-section-header';
 import { toast } from 'sonner';
-const selectClass = 'border-input bg-background h-10 w-full rounded-md border px-3 text-sm';
+function PackageSelect({ className = '', ...props }: ComponentProps<'select'>) {
+  return (
+    <div className="relative min-w-0">
+      <select
+        {...props}
+        className={`border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-12 w-full appearance-none rounded-lg border py-3 pr-12 pl-4 text-sm shadow-xs outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+      />
+      <ChevronDown
+        aria-hidden="true"
+        className="text-muted-foreground pointer-events-none absolute top-1/2 right-4 size-4 -translate-y-1/2"
+      />
+    </div>
+  );
+}
 const emptyPlan = (): Omit<InHousePlan, 'id' | 'staff'> => ({
   staffId: '',
   name: '',
@@ -136,33 +150,35 @@ export default function InHouseCoaching() {
             </div>
           )}
           {tab === 'plans' ? (
-            <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-              <Card>
-                <CardHeader>
+            <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_520px] 2xl:grid-cols-[minmax(0,1fr)_560px]">
+              <Card className="min-w-0 gap-6 py-6 sm:py-8">
+                <CardHeader className="gap-3 px-6 sm:px-8">
                   <CardTitle>Tarif per coach</CardTitle>
                   {canEdit && (
                     <Link
                       href="/admin/coaching-groups/independent"
-                      className="text-primary text-sm underline"
+                      className="text-primary w-fit text-sm leading-relaxed underline underline-offset-4"
                     >
                       Kelola profil & jadwal coach
                     </Link>
                   )}
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-5 px-6 sm:px-8">
                   {plans.isPending ? (
                     <p>Memuat paket…</p>
                   ) : !plans.data?.length ? (
-                    <p>Belum ada paket. Pilih coach dan buat tarif satuan atau paket.</p>
+                    <p className="text-muted-foreground bg-muted/20 rounded-lg border border-dashed p-5 text-sm leading-relaxed">
+                      Belum ada paket. Pilih coach dan buat tarif satuan atau paket.
+                    </p>
                   ) : (
                     plans.data.map((plan) => (
-                      <div key={plan.id} className="rounded-lg border p-4">
+                      <div key={plan.id} className="rounded-xl border p-5">
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div>
                             <p className="font-semibold">
                               {plan.staff.name} · {plan.name}
                             </p>
-                            <p className="text-muted-foreground text-sm">
+                            <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
                               {plan.hours} jam · {plan.isActive ? 'Aktif' : 'Nonaktif'}
                             </p>
                           </div>
@@ -187,7 +203,7 @@ export default function InHouseCoaching() {
                             </Button>
                           )}
                         </div>
-                        <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
+                        <dl className="mt-5 grid gap-5 text-sm sm:grid-cols-3 [&>div]:space-y-2">
                           <div>
                             <dt className="text-muted-foreground">Harga / jam</dt>
                             <dd>{formatCurrency(plan.hourlyPrice)}</dd>
@@ -201,7 +217,7 @@ export default function InHouseCoaching() {
                             <dd>{formatCurrency(plan.hourlyPrice - plan.courtHourlyShare)}</dd>
                           </div>
                         </dl>
-                        <p className="text-muted-foreground mt-3 text-xs">
+                        <p className="text-muted-foreground mt-5 border-t pt-4 text-xs leading-relaxed">
                           Total {formatCurrency(plan.hourlyPrice * plan.hours)} · Tambahan peserta
                           Rp100.000/orang/jam untuk coach.
                         </p>
@@ -211,25 +227,24 @@ export default function InHouseCoaching() {
                 </CardContent>
               </Card>
               {canEdit && (
-                <Card>
-                  <CardHeader>
+                <Card className="min-w-0 gap-6 py-6 sm:py-8">
+                  <CardHeader className="gap-3 px-6 sm:px-8">
                     <CardTitle>{editing ? 'Edit paket' : 'Tambah paket'}</CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="px-6 sm:px-8">
                     <form
-                      className="space-y-4"
+                      className="space-y-6"
                       onSubmit={(e) => {
                         e.preventDefault();
                         save.mutate();
                       }}
                     >
-                      <div className="space-y-2">
+                      <div className="grid min-w-0 gap-3">
                         <Label htmlFor="plan-coach">Coach in-house</Label>
-                        <select
+                        <PackageSelect
                           id="plan-coach"
                           required
                           disabled={!!editing}
-                          className={selectClass}
                           value={draft.staffId}
                           onChange={(e) => setDraft({ ...draft, staffId: e.target.value })}
                         >
@@ -241,12 +256,13 @@ export default function InHouseCoaching() {
                                 {p.name}
                               </option>
                             ))}
-                        </select>
+                        </PackageSelect>
                       </div>
-                      <div className="space-y-2">
+                      <div className="grid min-w-0 gap-3">
                         <Label htmlFor="plan-name">Nama paket</Label>
                         <Input
                           id="plan-name"
+                          className="h-12 rounded-lg px-4"
                           required
                           maxLength={100}
                           value={draft.name}
@@ -254,11 +270,10 @@ export default function InHouseCoaching() {
                           placeholder="Paket 5 jam"
                         />
                       </div>
-                      <div className="space-y-2">
+                      <div className="grid min-w-0 gap-3">
                         <Label htmlFor="plan-hours">Kuota jam</Label>
-                        <select
+                        <PackageSelect
                           id="plan-hours"
-                          className={selectClass}
                           value={draft.hours}
                           onChange={(e) =>
                             setDraft({ ...draft, hours: Number(e.target.value) as 1 | 5 | 10 })
@@ -269,12 +284,13 @@ export default function InHouseCoaching() {
                               {h} jam
                             </option>
                           ))}
-                        </select>
+                        </PackageSelect>
                       </div>
-                      <div className="space-y-2">
+                      <div className="grid min-w-0 gap-3">
                         <Label htmlFor="plan-price">Harga per jam (Rp)</Label>
                         <Input
                           id="plan-price"
+                          className="h-12 rounded-lg px-4"
                           required
                           type="number"
                           min={1}
@@ -285,10 +301,11 @@ export default function InHouseCoaching() {
                           }
                         />
                       </div>
-                      <div className="space-y-2">
+                      <div className="grid min-w-0 gap-3">
                         <Label htmlFor="plan-court">Bagian lapangan per jam (Rp)</Label>
                         <Input
                           id="plan-court"
+                          className="h-12 rounded-lg px-4"
                           required
                           type="number"
                           min={0}
@@ -299,33 +316,41 @@ export default function InHouseCoaching() {
                           }
                         />
                       </div>
-                      <p className="text-muted-foreground text-xs">
+                      <p className="text-muted-foreground bg-muted/30 rounded-lg p-4 text-sm leading-relaxed">
                         Kuota terikat pada coach. Perubahan tarif berlaku untuk pembelian
                         berikutnya.
                       </p>
-                      <label className="flex items-center gap-2 text-sm">
+                      <label className="flex items-center gap-3 py-1 text-sm leading-relaxed">
                         <input
                           type="checkbox"
+                          className="size-4 shrink-0"
                           checked={draft.isActive}
                           onChange={(e) => setDraft({ ...draft, isActive: e.target.checked })}
                         />{' '}
                         Paket aktif
                       </label>
-                      <Button type="submit" disabled={save.isPending || !draft.staffId}>
-                        Simpan paket
-                      </Button>
-                      {editing && (
+                      <div className="flex flex-wrap gap-3 border-t pt-5">
                         <Button
-                          type="button"
-                          variant="ghost"
-                          onClick={() => {
-                            setEditing(undefined);
-                            setDraft(emptyPlan());
-                          }}
+                          type="submit"
+                          className="h-12 w-full px-6 sm:w-auto"
+                          disabled={save.isPending || !draft.staffId}
                         >
-                          Batal
+                          Simpan paket
                         </Button>
-                      )}
+                        {editing && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            className="h-12 px-6"
+                            onClick={() => {
+                              setEditing(undefined);
+                              setDraft(emptyPlan());
+                            }}
+                          >
+                            Batal
+                          </Button>
+                        )}
+                      </div>
                     </form>
                   </CardContent>
                 </Card>
@@ -381,74 +406,77 @@ export default function InHouseCoaching() {
                 </CardContent>
               </Card>
               {tab === 'quota' && canSell && (
-                <Card>
-                  <CardHeader>
+                <Card className="gap-6 py-6">
+                  <CardHeader className="px-6 sm:px-8">
                     <CardTitle>Jual paket coaching</CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="px-6 sm:px-8">
                     <form
-                      className="grid items-end gap-4 md:grid-cols-3"
+                      className="space-y-6"
                       onSubmit={(e) => {
                         e.preventDefault();
                         sell.mutate();
                       }}
                     >
-                      <div className="space-y-2">
-                        <Label htmlFor="sale-package">Paket coach</Label>
-                        <select
-                          id="sale-package"
-                          required
-                          className={selectClass}
-                          value={packageId}
-                          onChange={(e) => {
-                            setPackageId(e.target.value);
-                            setRequestId(crypto.randomUUID());
-                          }}
-                        >
-                          <option value="">Pilih paket</option>
-                          {plans.data
-                            ?.filter((p) => p.isActive && p.staff.isActive)
-                            .map((p) => (
-                              <option key={p.id} value={p.id}>
-                                {p.staff.name} · {p.name} ·{' '}
-                                {formatCurrency(p.hours * p.hourlyPrice)}
+                      <div className="grid gap-6 md:grid-cols-2">
+                        <div className="grid min-w-0 gap-3">
+                          <Label htmlFor="sale-package">Paket coach</Label>
+                          <PackageSelect
+                            id="sale-package"
+                            required
+                            value={packageId}
+                            onChange={(e) => {
+                              setPackageId(e.target.value);
+                              setRequestId(crypto.randomUUID());
+                            }}
+                          >
+                            <option value="">Pilih paket</option>
+                            {plans.data
+                              ?.filter((p) => p.isActive && p.staff.isActive)
+                              .map((p) => (
+                                <option key={p.id} value={p.id}>
+                                  {p.staff.name} · {p.name} ·{' '}
+                                  {formatCurrency(p.hours * p.hourlyPrice)}
+                                </option>
+                              ))}
+                          </PackageSelect>
+                        </div>
+                        <div className="grid min-w-0 gap-3">
+                          <Label htmlFor="sale-method">Pembayaran diterima melalui</Label>
+                          <PackageSelect
+                            id="sale-method"
+                            required
+                            value={methodId}
+                            onChange={(e) => {
+                              setMethodId(e.target.value);
+                              setRequestId(crypto.randomUUID());
+                            }}
+                          >
+                            <option value="">Pilih metode offline</option>
+                            {methods.data?.filter(isOfflinePaymentMethod).map((m) => (
+                              <option key={m.id} value={m.id}>
+                                {m.name}
                               </option>
                             ))}
-                        </select>
+                          </PackageSelect>
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="sale-method">Pembayaran diterima melalui</Label>
-                        <select
-                          id="sale-method"
-                          required
-                          className={selectClass}
-                          value={methodId}
-                          onChange={(e) => {
-                            setMethodId(e.target.value);
-                            setRequestId(crypto.randomUUID());
-                          }}
+                      <div className="flex flex-col gap-4 border-t pt-5 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-muted-foreground text-sm leading-relaxed">
+                          {!userId
+                            ? 'Pilih customer dari hasil pencarian terlebih dahulu.'
+                            : selectedPlan
+                              ? `Total pembayaran ${formatCurrency(selectedPlan.hours * selectedPlan.hourlyPrice)} untuk ${selectedPlan.hours} jam bersama ${selectedPlan.staff.name}.`
+                              : 'Kuota dapat digunakan di hari berbeda, khusus coach yang dibeli.'}
+                        </p>
+                        <Button
+                          type="submit"
+                          className="h-12 w-full shrink-0 px-6 sm:w-auto"
+                          disabled={!userId || !packageId || !methodId || sell.isPending}
                         >
-                          <option value="">Pilih metode offline</option>
-                          {methods.data?.filter(isOfflinePaymentMethod).map((m) => (
-                            <option key={m.id} value={m.id}>
-                              {m.name}
-                            </option>
-                          ))}
-                        </select>
+                          Terima pembayaran & tambah kuota
+                        </Button>
                       </div>
-                      <Button
-                        type="submit"
-                        disabled={!userId || !packageId || !methodId || sell.isPending}
-                      >
-                        Terima pembayaran & tambah kuota
-                      </Button>
-                      <p className="text-muted-foreground text-sm md:col-span-3">
-                        {!userId
-                          ? 'Pilih customer dari hasil pencarian terlebih dahulu.'
-                          : selectedPlan
-                            ? `Total pembayaran ${formatCurrency(selectedPlan.hours * selectedPlan.hourlyPrice)} untuk ${selectedPlan.hours} jam bersama ${selectedPlan.staff.name}.`
-                            : 'Kuota dapat digunakan di hari berbeda, khusus coach yang dibeli.'}
-                      </p>
                     </form>
                   </CardContent>
                 </Card>
