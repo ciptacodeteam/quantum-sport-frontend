@@ -134,7 +134,13 @@ export default function IncomeTransactionTable({
     .map((invoices) => ({
       ...invoices[0],
       invoices,
-      playingSchedules: invoices.flatMap((invoice) => invoice.playingSchedules ?? []),
+      paidAt: invoices.reduce<string | null>(
+        (latest, invoice) =>
+          invoice.paidAt && (!latest || Date.parse(invoice.paidAt) > Date.parse(latest))
+            ? invoice.paidAt
+            : latest,
+        null
+      ),
       paymentMethod: Array.from(new Set(invoices.map((row) => row.paymentMethod ?? '—'))).join(
         ', '
       ),
@@ -222,7 +228,7 @@ export default function IncomeTransactionTable({
                   <tr className="text-muted-foreground border-b">
                     {[
                       'Customer / invoice',
-                      groupByBooking ? 'Jadwal bermain (WIB)' : 'Dibayar (WIB)',
+                      'Dibayar (WIB)',
                       'Cabang',
                       'Sumber',
                       'Metode bayar',
@@ -281,13 +287,12 @@ export default function IncomeTransactionTable({
                           )}
                         </th>
                         <td className="px-3 py-4 whitespace-nowrap">
-                          {groupByBooking ? (
-                            <PlayingSchedule schedules={row.playingSchedules} />
-                          ) : (
-                            <>
-                              {paymentTime(row.paidAt)}
-                              {row.paidAt ? ' WIB' : ''}
-                            </>
+                          {paymentTime(row.paidAt)}
+                          {row.paidAt ? ' WIB' : ''}
+                          {row.invoices.length > 1 && (
+                            <p className="text-muted-foreground mt-1 text-xs">
+                              Pembayaran terakhir
+                            </p>
                           )}
                         </td>
                         <td className="px-3 py-4">{row.branchName}</td>

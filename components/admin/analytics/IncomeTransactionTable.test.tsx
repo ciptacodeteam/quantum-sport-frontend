@@ -158,8 +158,9 @@ it('shows playing schedules and service cards without revenue or payment timesta
       ]}
     />
   );
-  expect(screen.getByRole('columnheader', { name: 'Jadwal bermain (WIB)' })).toBeInTheDocument();
-  expect(screen.queryByText(/00[.:]30 WIB/)).not.toBeInTheDocument();
+  expect(screen.getByRole('columnheader', { name: 'Dibayar (WIB)' })).toBeInTheDocument();
+  expect(screen.getByText(/00[.:]30 WIB/)).toBeInTheDocument();
+  expect(screen.queryByText(/09[.:]00–11[.:]00 WIB/)).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: '3 invoice · Lihat rincian' }));
   const details = screen.getByRole('list', { name: 'Rincian invoice booking' });
   expect(within(details).getByRole('heading', { name: 'Lapangan · Court A' })).toBeInTheDocument();
@@ -176,8 +177,22 @@ it('shows playing schedules and service cards without revenue or payment timesta
   expect(screen.queryByRole('list', { name: 'Rincian invoice booking' })).not.toBeInTheDocument();
 });
 
-it('does not substitute payment dates when playing schedules are unavailable', () => {
+it('shows payment time in the main row even when playing schedules are unavailable', () => {
   render(<IncomeTransactionTable groupByBooking transactions={[transaction(1)]} />);
-  expect(screen.getByText('Jadwal bermain belum tersedia')).toBeInTheDocument();
-  expect(screen.queryByText(/01 Okt 2026/)).not.toBeInTheDocument();
+  expect(screen.queryByText('Jadwal bermain belum tersedia')).not.toBeInTheDocument();
+  expect(screen.getByText(/01 Okt 2026.*00[.:]30 WIB/)).toBeInTheDocument();
+});
+
+it('uses the latest payment for a grouped booking regardless of invoice order', () => {
+  render(
+    <IncomeTransactionTable
+      groupByBooking
+      transactions={[
+        { ...transaction(1), bookingId: 'court', paidAt: '2026-11-03T09:41:00Z' },
+        { ...transaction(2), bookingId: 'court', paidAt: '2026-11-03T09:42:00Z' }
+      ]}
+    />
+  );
+  expect(screen.getByText(/03 Nov 2026.*16[.:]42 WIB/)).toBeInTheDocument();
+  expect(screen.getByText('Pembayaran terakhir')).toBeInTheDocument();
 });
