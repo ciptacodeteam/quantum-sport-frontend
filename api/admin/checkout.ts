@@ -1,9 +1,11 @@
+import type { InHouseChoice } from './inhouseCoaching';
 import type { RecurringBookingRule } from '@/lib/recurring-booking';
 import { adminApi } from '@/lib/adminApi';
 
 export type AdminCheckoutPayload = {
-  inHouseSelections?: import('./inhouseCoaching').InHouseChoice[];
+  inHouseSelections?: InHouseChoice[];
   paymentMethodId?: string;
+  expectedTotal?: number;
   recurringBooking?: RecurringBookingRule;
   userId?: string;
   name?: string;

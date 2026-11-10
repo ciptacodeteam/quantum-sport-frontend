@@ -37,8 +37,10 @@ export type InHouseUsage = {
   wallet: { packageName: string; staff: { name: string }; user: { name: string } };
   bookingCoach: { booking: { invoice: { id: string; number: string } | null } };
 };
-export type InHouseChoice = {
-  walletId: string;
+export type InHouseChoice = (
+  | { walletId: string; planId?: never }
+  | { planId: string; walletId?: never }
+) & {
   courtSlotId: string;
   coachSlotId: string;
   participants: number;

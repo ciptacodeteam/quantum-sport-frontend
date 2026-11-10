@@ -2,6 +2,7 @@
 import BookingInHouseSelection, {
   usableInHouseWallets
 } from '@/components/admin/booking/BookingInHouseSelection';
+import { adminInHousePricing } from '@/lib/admin-inhouse-pricing';
 import { inHouseApi } from '@/api/admin/inhouseCoaching';
 import { useAdminCourtSports } from '@/hooks/useAdminCourtSports';
 import { coachSessionsTotal } from '@/lib/coach-session-pricing';
@@ -101,29 +102,40 @@ export default function BookingAddOns() {
     queryFn: () => inHouseApi.wallets(selectedCustomerId!, true),
     enabled: !!selectedCustomerId && !!branchId && branchId !== 'all'
   });
+  const inHousePlans = useQuery({
+    queryKey: ['admin', 'inhouse', 'plans', branchId],
+    queryFn: inHouseApi.plans,
+    enabled: !!branchId && branchId !== 'all'
+  });
+  const singleHourPlans = (inHousePlans.data ?? []).filter(
+    (plan) =>
+      plan.hours === 1 &&
+      plan.isActive &&
+      plan.staff.isActive &&
+      (plan.staff.coachType === courtSport || plan.staff.coachType === 'PADEL_TENNIS')
+  );
+  const selectionAvailable = (selection: (typeof storedInHouse)[number]) =>
+    selection.planId
+      ? !inHousePlans.isFetching &&
+        !inHousePlans.isError &&
+        singleHourPlans.some((p) => p.id === selection.planId)
+      : !!selectedCustomerId &&
+        !inHouseWallets.isFetching &&
+        !inHouseWallets.isError &&
+        usableWallets.some((w) => w.id === selection.walletId);
   const usableWallets = usableInHouseWallets(inHouseWallets.data ?? [], courtSport);
   const inHouseSelections = storedInHouse.filter((selection) =>
     bookingItems.some((item) => item.slotId === selection.courtSlotId)
   );
-  const inHouseCoverage = inHouseSelections.reduce((sum, selection) => {
-    const court = bookingItems.find((item) => item.slotId === selection.courtSlotId);
-    return (
-      sum +
-      (court
-        ? court.discountPrice && court.discountPrice > 0
-          ? court.discountPrice
-          : court.price
-        : 0)
-    );
-  }, 0);
-  const inHouseExtras = inHouseSelections.reduce(
-    (sum, selection) =>
-      sum +
-      Math.max(0, selection.participants - 1) *
-        (usableWallets.find((w) => w.id === selection.walletId)?.extraParticipantHourlyPrice ??
-          100000),
-    0
+  const inHouseReady = inHouseSelections.every(selectionAvailable);
+  const inHouseLoading = inHouseSelections.some((selection) =>
+    selection.planId ? inHousePlans.isFetching : inHouseWallets.isFetching
   );
+  const {
+    coverage: inHouseCoverage,
+    extras: inHouseExtras,
+    singleTotal: inHouseSingleTotal
+  } = adminInHousePricing(bookingItems, inHouseSelections, singleHourPlans, usableWallets);
 
   // Customer selection is now handled by BookingSummary component
   // Keep selectedCustomer state for membership discount calculation
@@ -152,7 +164,8 @@ export default function BookingAddOns() {
     coachTotal +
     ballboyTotal -
     inHouseCoverage +
-    inHouseExtras;
+    inHouseExtras +
+    inHouseSingleTotal;
 
   const { rules: tariffRules } = useTariffPeriods(true);
   const amountDue = Math.max(
@@ -298,12 +311,7 @@ export default function BookingAddOns() {
       inHouseSelections.length &&
       (recurringBooking ||
         useMembership ||
-        !selectedCustomerId ||
-        inHouseWallets.isFetching ||
-        inHouseWallets.isError ||
-        inHouseSelections.some(
-          (selection) => !usableWallets.some((wallet) => wallet.id === selection.walletId)
-        ))
+        inHouseSelections.some((selection) => !selectionAvailable(selection)))
     ) {
       toast.error(
         'Periksa kembali kuota in-house dan nonaktifkan membership lapangan sebelum konfirmasi.'
@@ -325,6 +333,7 @@ export default function BookingAddOns() {
     }, 0);
 
     const payload: AdminCheckoutPayload = {
+      expectedTotal: amountDue,
       totalHours: Math.max(1, Math.round(totalHours * 100) / 100), // Round to 2 decimal places, minimum 1,
       courtSlots: courtSlots.length > 0 ? courtSlots : undefined,
       adminNote: bookingAdminNote || undefined,
@@ -484,6 +493,18 @@ export default function BookingAddOns() {
             </p>
           )}
 
+          {inHousePlans.isError && (
+            <p role="alert" className="text-sm">
+              Tarif coaching satuan belum dapat dimuat.{' '}
+              <button
+                type="button"
+                className="underline"
+                onClick={() => void inHousePlans.refetch()}
+              >
+                Coba lagi
+              </button>
+            </p>
+          )}
           {selectedCustomerId && inHouseWallets.isError && (
             <p role="alert" className="text-sm">
               Kuota in-house belum dapat dimuat.{' '}
@@ -493,12 +514,10 @@ export default function BookingAddOns() {
             </p>
           )}
           {inHouseSelections.length > 0 &&
-            !inHouseWallets.isFetching &&
-            inHouseSelections.some(
-              (selection) => !usableWallets.some((wallet) => wallet.id === selection.walletId)
-            ) && (
+            !inHouseLoading &&
+            inHouseSelections.some((selection) => !selectionAvailable(selection)) && (
               <div role="alert" className="rounded border p-4 text-sm">
-                Pilihan paket sudah tidak tersedia untuk customer ini.{' '}
+                Pilihan tarif atau kuota in-house sudah tidak tersedia.{' '}
                 <button
                   type="button"
                   className="text-primary underline"
@@ -512,6 +531,7 @@ export default function BookingAddOns() {
             <BookingInHouseSelection
               key={`${branchId}:${selectedCustomerId}`}
               wallets={usableWallets}
+              plans={singleHourPlans}
               sessions={bookingItems}
               selected={inHouseSelections}
               disabled={isConfirming || isCheckingCoaches}
@@ -638,6 +658,8 @@ export default function BookingAddOns() {
           }
           inHouseCoverage={inHouseCoverage}
           inHouseExtras={inHouseExtras}
+          inHouseSingleTotal={inHouseSingleTotal}
+          inHousePricingPending={inHouseLoading || !inHouseReady}
           paymentControls={
             <OfflinePaymentSelection
               amountDue={amountDue}
@@ -658,7 +680,11 @@ export default function BookingAddOns() {
               void handleConfirmBooking();
             },
             disabled:
-              isConfirming || isCheckingCoaches || bookingItems.length === 0 || !paymentReady,
+              isConfirming ||
+              isCheckingCoaches ||
+              bookingItems.length === 0 ||
+              !paymentReady ||
+              !inHouseReady,
             loading: isConfirming || isCheckingCoaches
           }}
           secondaryActions={[

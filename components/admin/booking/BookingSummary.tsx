@@ -52,6 +52,8 @@ import { IconChevronDown, IconX } from '@tabler/icons-react';
 export interface BookingSummaryProps {
   inHouseCoverage?: number;
   inHouseExtras?: number;
+  inHouseSingleTotal?: number;
+  inHousePricingPending?: boolean;
   /** Array of booking items (court bookings) */
   bookingItems: BookingItem[];
 
@@ -228,6 +230,8 @@ export default function BookingSummary({
   totalAmount,
   inHouseCoverage = 0,
   inHouseExtras = 0,
+  inHouseSingleTotal = 0,
+  inHousePricingPending = false,
   membershipDiscountDetails,
   useMembership = true,
   onUseMembershipChange,
@@ -929,8 +933,14 @@ export default function BookingSummary({
             )}
             {inHouseCoverage > 0 && (
               <div className="flex items-center justify-between text-sm">
-                <span>Lapangan ditanggung kuota in-house</span>
+                <span>Biaya lapangan diganti coaching in-house</span>
                 <span>− {formatCurrency(inHouseCoverage)}</span>
+              </div>
+            )}
+            {inHouseSingleTotal > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <span>Coaching satuan (termasuk lapangan)</span>
+                <span>{formatCurrency(inHouseSingleTotal)}</span>
               </div>
             )}
             {inHouseExtras > 0 && (
@@ -948,7 +958,9 @@ export default function BookingSummary({
             <Separator />
             <div className="flex items-center justify-between text-lg font-bold">
               <span>Total</span>
-              <span className="text-primary">{formatCurrency(finalTotal)}</span>
+              <span className="text-primary">
+                {inHousePricingPending ? 'Periksa tarif in-house…' : formatCurrency(finalTotal)}
+              </span>
             </div>
           </div>
 
