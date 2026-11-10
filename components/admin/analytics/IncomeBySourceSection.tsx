@@ -329,6 +329,7 @@ export default function IncomeBySourceSection({ data, isLoading }: IncomeBySourc
       </section>
       <IncomeTransactionTable
         key={`${data.dateRange?.startDate ?? ''}:${data.dateRange?.endDate ?? ''}`}
+        groupByBooking
         transactions={data.transactions}
       />
     </div>

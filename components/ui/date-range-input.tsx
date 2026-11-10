@@ -28,6 +28,7 @@ interface DateRangeInputProps {
   className?: string;
   placeholder?: string;
   referenceDate?: Date;
+  allowSingleDay?: boolean;
 }
 
 function rangeLabel(range: DateRange | undefined | null, placeholder: string) {
@@ -49,7 +50,8 @@ const DateRangeInput = ({
   numberOfMonths = 1,
   className,
   placeholder = 'Select date range',
-  referenceDate
+  referenceDate,
+  allowSingleDay = false
 }: DateRangeInputProps) => {
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
@@ -146,6 +148,18 @@ const DateRangeInput = ({
           endMonth={max ?? new Date(today.getFullYear() + 5, 11)}
           disabled={outOfBounds}
         />
+        {allowSingleDay && choosingEnd && draft?.from && (
+          <div className="border-t p-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => applyRange({ from: draft.from, to: draft.from })}
+            >
+              Gunakan tanggal ini
+            </Button>
+          </div>
+        )}
         <p role="status" className="text-muted-foreground border-t px-3 py-2 text-xs">
           {choosingEnd ? 'Select end date' : 'Select start date'}
         </p>

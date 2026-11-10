@@ -17,6 +17,8 @@ import { formatCurrency } from '@/lib/utils';
 export type IncomeTransaction = {
   id: string;
   invoiceNumber: string;
+  bookingId?: string | null;
+  branchId?: string;
   customerName: string;
   branchName: string;
   source: string;
@@ -49,26 +51,58 @@ const paymentTime = (value: string | null) =>
 export default function IncomeTransactionTable({
   transactions,
   embedded = false,
+  groupByBooking = false,
   title = 'Rincian transaksi customer',
   description = 'Invoice lunas yang membentuk angka revenue di atas, berdasarkan tanggal pembayaran (WIB) pada periode dan cabang pilihan. Satu baris untuk satu invoice.'
 }: {
   transactions?: IncomeTransaction[];
   embedded?: boolean;
+  groupByBooking?: boolean;
   title?: string;
   description?: string;
 }) {
   const [search, setSearch] = useState('');
   const [source, setSource] = useState('all');
   const [page, setPage] = useState(1);
-  const rows = transactions ?? [];
+  // Apply the source filter to invoices before grouping so all totals stay scoped.
+  const groups = new Map<string, IncomeTransaction[]>();
+  for (const row of transactions ?? []) {
+    if (source !== 'all' && row.source !== source) continue;
+    const key =
+      groupByBooking && row.bookingId
+        ? `booking:${row.branchId ?? row.branchName}:${row.bookingId}`
+        : `invoice:${row.id}`;
+    const group = groups.get(key) ?? [];
+    group.push(row);
+    groups.set(key, group);
+  }
   const term = search.trim().toLocaleLowerCase('id-ID');
-  const filtered = rows.filter(
-    (row) =>
-      (source === 'all' || row.source === source) &&
-      `${row.customerName} ${row.invoiceNumber} ${row.branchName} ${row.paymentMethod ?? ''}`
-        .toLocaleLowerCase('id-ID')
-        .includes(term)
-  );
+  const filtered = Array.from(groups.values())
+    .filter((invoices) =>
+      invoices.some((row) =>
+        `${row.customerName} ${row.invoiceNumber} ${row.branchName} ${row.paymentMethod ?? ''}`
+          .toLocaleLowerCase('id-ID')
+          .includes(term)
+      )
+    )
+    .map((invoices) => ({
+      ...invoices[0],
+      invoices,
+      paymentMethod: Array.from(new Set(invoices.map((row) => row.paymentMethod ?? '—'))).join(
+        ', '
+      ),
+      source: Array.from(
+        new Set(invoices.map((row) => sourceLabels[row.source] ?? row.source))
+      ).join(', '),
+      ...invoices.reduce(
+        (sum, row) => ({
+          amount: sum.amount + row.amount,
+          processingFee: sum.processingFee + row.processingFee,
+          netAmount: sum.netAmount + row.netAmount
+        }),
+        { amount: 0, processingFee: 0, netAmount: 0 }
+      )
+    }));
   const pages = Math.max(1, Math.ceil(filtered.length / 20));
   const currentPage = Math.min(page, pages);
   const visible = filtered.slice((currentPage - 1) * 20, currentPage * 20);
@@ -87,7 +121,11 @@ export default function IncomeTransactionTable({
     <Container className={embedded ? 'min-w-0 space-y-5' : 'gap-5 py-6'} id="income-transactions">
       <CardHeader className={embedded ? 'gap-3 px-0' : 'gap-3 px-6 sm:px-8'}>
         <CardTitle className="text-base">{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
+        <CardDescription>
+          {groupByBooking
+            ? 'Rekap invoice lunas per booking, termasuk ballboy dan coach yang terhubung. Total mengikuti tanggal pembayaran (WIB), periode, dan cabang pilihan. Buka rincian untuk melihat setiap invoice.'
+            : description}
+        </CardDescription>
         {transactions && (
           <div className="mt-2 grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px]">
             <SearchInput
@@ -160,21 +198,53 @@ export default function IncomeTransactionTable({
                     <tr key={row.id} className="border-b last:border-b-0">
                       <th scope="row" className="px-3 py-3 text-left font-normal">
                         <p className="font-medium">{row.customerName}</p>
-                        <Link
-                          href={`/admin/kelola-transaksi/${row.id}`}
-                          className="text-primary text-xs underline underline-offset-4"
-                        >
-                          {row.invoiceNumber}
-                        </Link>
+                        {row.invoices.length > 1 ? (
+                          <details className="mt-1">
+                            <summary className="text-primary cursor-pointer text-xs">
+                              {row.invoices.length} invoice · Lihat rincian
+                            </summary>
+                            <ul className="mt-2 space-y-2">
+                              {row.invoices.map((invoice) => (
+                                <li key={invoice.id}>
+                                  <Link
+                                    href={`/admin/kelola-transaksi/${invoice.id}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-primary text-xs underline underline-offset-4"
+                                  >
+                                    {invoice.invoiceNumber}
+                                  </Link>
+                                  <p className="text-muted-foreground text-xs">
+                                    {paymentTime(invoice.paidAt)} · {invoice.paymentMethod ?? '—'}
+                                    {' · '}
+                                    {formatCurrency(invoice.amount)}
+                                    {' · Revenue '}
+                                    {formatCurrency(invoice.netAmount)}
+                                  </p>
+                                </li>
+                              ))}
+                            </ul>
+                          </details>
+                        ) : (
+                          <Link
+                            href={`/admin/kelola-transaksi/${row.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary text-xs underline underline-offset-4"
+                          >
+                            {row.invoiceNumber}
+                          </Link>
+                        )}
                       </th>
                       <td className="px-3 py-3 whitespace-nowrap">
                         {paymentTime(row.paidAt)}
                         {row.paidAt ? ' WIB' : ''}
+                        {row.invoices.length > 1 && (
+                          <p className="text-muted-foreground text-xs">Pembayaran terakhir</p>
+                        )}
                       </td>
                       <td className="px-3 py-3">{row.branchName}</td>
-                      <td className="px-3 py-3 whitespace-nowrap">
-                        {sourceLabels[row.source] ?? row.source}
-                      </td>
+                      <td className="px-3 py-3 whitespace-nowrap">{row.source}</td>
                       <td className="px-3 py-3">{row.paymentMethod ?? '—'}</td>
                       <td className="px-3 py-3 text-right whitespace-nowrap tabular-nums">
                         {formatCurrency(row.amount)}

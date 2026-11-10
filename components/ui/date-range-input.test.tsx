@@ -93,3 +93,11 @@ describe('date range input', () => {
     expect(screen.getAllByRole('button', { name: /October 1st, 2026/ })).toHaveLength(1);
   });
 });
+
+it('applies one calendar date in Income without requiring a range', () => {
+  const onChange = show({ allowSingleDay: true });
+  fireEvent.click(day(/September 14th, 2026/));
+  fireEvent.click(screen.getByRole('button', { name: 'Gunakan tanggal ini' }));
+  expect(onChange).toHaveBeenCalledWith({ from: new Date(2026, 8, 14), to: new Date(2026, 8, 14) });
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+});

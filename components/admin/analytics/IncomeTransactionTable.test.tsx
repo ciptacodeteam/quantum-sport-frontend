@@ -22,6 +22,7 @@ it('shows the customer, invoice link, payment date in WIB, and amounts composing
     'href',
     '/admin/kelola-transaksi/invoice-1'
   );
+  expect(screen.getByRole('link', { name: 'INV-1' })).toHaveAttribute('target', '_blank');
   const row = screen.getByRole('row', { name: /Customer 1 INV-1/ });
   expect(row).toHaveTextContent(/01 Okt 2026.*00[.:]30 WIB/);
   expect(row).toHaveTextContent(/Cemara.*Online Booking.*QRIS/);
@@ -79,4 +80,49 @@ it('distinguishes an empty paid period from unavailable transaction details', ()
     screen.getByText('Rincian transaksi belum tersedia untuk periode ini.')
   ).toBeInTheDocument();
   expect(screen.queryByRole('table')).not.toBeInTheDocument();
+});
+
+it('groups linked court, coach and ballboy invoices while keeping another booking separate', () => {
+  const rows = [
+    {
+      ...transaction(1),
+      bookingId: 'court-1',
+      customerName: 'ELVI',
+      amount: 300000,
+      processingFee: 1000,
+      netAmount: 299000
+    },
+    {
+      ...transaction(2),
+      bookingId: 'court-1',
+      customerName: 'ELVI',
+      amount: 50000,
+      processingFee: 0,
+      netAmount: 50000
+    },
+    {
+      ...transaction(3),
+      bookingId: 'court-1',
+      customerName: 'ELVI',
+      amount: 0,
+      processingFee: 0,
+      netAmount: 0
+    },
+    { ...transaction(4), bookingId: 'court-2', customerName: 'ELVI' }
+  ];
+  render(<IncomeTransactionTable transactions={rows} groupByBooking />);
+  expect(screen.getAllByRole('row', { name: /ELVI/ })).toHaveLength(2);
+  expect(screen.getByText('3 invoice · Lihat rincian')).toBeInTheDocument();
+  const group = screen.getAllByRole('row', { name: /ELVI/ })[0];
+  expect(group).toHaveTextContent(/350\.000.*1\.000.*349\.000/);
+  fireEvent.click(screen.getByText('3 invoice · Lihat rincian'));
+  const link = screen.getByRole('link', { name: 'INV-2' });
+  expect(link).toHaveAttribute('target', '_blank');
+  expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  fireEvent.change(screen.getByLabelText('Cari transaksi customer'), {
+    target: { value: 'INV-2' }
+  });
+  expect(screen.getByRole('row', { name: /Total hasil filter/ })).toHaveTextContent(
+    /1 transaksi.*350\.000.*1\.000.*349\.000/
+  );
 });
