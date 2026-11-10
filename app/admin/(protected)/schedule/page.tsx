@@ -4,6 +4,7 @@ import { useAdminCourtSports } from '@/hooks/useAdminCourtSports';
 
 import CancelCoachDialog from '@/components/admin/coaching/CancelCoachDialog';
 import ReplaceCoachDialog from '@/components/admin/coaching/ReplaceCoachDialog';
+import RescheduleCourtSection from '@/components/admin/bookings/RescheduleCourtSection';
 import MoveCourtSection from '@/components/admin/bookings/MoveCourtSection';
 import AddBookingService from '@/components/admin/coaching/AddBookingService';
 import { BookingBallboySection } from '@/components/admin/bookings/BookingBallboySection';
@@ -13,6 +14,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -1120,10 +1122,18 @@ export default function SchedulePage() {
                                         <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col">
                                           <DialogHeader className="mb-4 shrink-0">
                                             <DialogTitle>Detail Pemesanan</DialogTitle>
+                                            <DialogDescription>
+                                              Kelola jadwal lapangan dan layanan pada pemesanan ini.
+                                            </DialogDescription>
                                           </DialogHeader>
                                           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
                                             <MoveCourtSection
                                               key={`${bookingCell.detail.id}-${bookingCell.detail.slotId}`}
+                                              detail={bookingCell.detail}
+                                              booking={bookingCell.booking}
+                                            />
+                                            <RescheduleCourtSection
+                                              key={`reschedule-${bookingCell.detail.id}-${bookingCell.detail.slotId}`}
                                               detail={bookingCell.detail}
                                               booking={bookingCell.booking}
                                             />

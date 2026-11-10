@@ -1,6 +1,6 @@
 'use client';
-import { useState, type ComponentProps } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { useState } from 'react';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { inHouseApi, type InHousePlan } from '@/api/admin/inhouseCoaching';
@@ -18,20 +18,6 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppSectionHeader from '@/components/ui/app-section-header';
 import { toast } from 'sonner';
-function PackageSelect({ className = '', ...props }: ComponentProps<'select'>) {
-  return (
-    <div className="relative min-w-0">
-      <select
-        {...props}
-        className={`border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-12 w-full appearance-none rounded-lg border py-3 pr-12 pl-4 text-sm shadow-xs outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
-      />
-      <ChevronDown
-        aria-hidden="true"
-        className="text-muted-foreground pointer-events-none absolute top-1/2 right-4 size-4 -translate-y-1/2"
-      />
-    </div>
-  );
-}
 const emptyPlan = (): Omit<InHousePlan, 'id' | 'staff'> => ({
   staffId: '',
   name: '',
@@ -52,6 +38,7 @@ export default function InHouseCoaching() {
   const client = useQueryClient();
   const [tab, setTab] = useState('quota');
   const [draft, setDraft] = useState(emptyPlan);
+  const [editingCourtAmount, setEditingCourtAmount] = useState(false);
   const [editing, setEditing] = useState<string>();
   const [q, setQ] = useState('');
   const [userId, setUserId] = useState('');
@@ -241,22 +228,19 @@ export default function InHouseCoaching() {
                     >
                       <div className="grid min-w-0 gap-3">
                         <Label htmlFor="plan-coach">Coach in-house</Label>
-                        <PackageSelect
+                        <SearchableSelect
                           id="plan-coach"
                           required
-                          disabled={!!editing}
+                          disabled={!!editing || people.isPending}
                           value={draft.staffId}
-                          onChange={(e) => setDraft({ ...draft, staffId: e.target.value })}
-                        >
-                          <option value="">Pilih coach</option>
-                          {people.data
-                            ?.filter((p) => p.role === 'COACH' && p.isActive)
-                            .map((p) => (
-                              <option key={p.id} value={p.id}>
-                                {p.name}
-                              </option>
-                            ))}
-                        </PackageSelect>
+                          onValueChange={(staffId) => setDraft({ ...draft, staffId })}
+                          placeholder={people.isPending ? 'Memuat coach...' : 'Pilih coach'}
+                          searchPlaceholder="Cari nama coach..."
+                          emptyMessage="Coach tidak ditemukan."
+                          options={(people.data ?? [])
+                            .filter((person) => person.role === 'COACH' && person.isActive)
+                            .map((person) => ({ value: person.id, label: person.name }))}
+                        />
                       </div>
                       <div className="grid min-w-0 gap-3">
                         <Label htmlFor="plan-name">Nama paket</Label>
@@ -272,19 +256,18 @@ export default function InHouseCoaching() {
                       </div>
                       <div className="grid min-w-0 gap-3">
                         <Label htmlFor="plan-hours">Kuota jam</Label>
-                        <PackageSelect
+                        <SearchableSelect
                           id="plan-hours"
-                          value={draft.hours}
-                          onChange={(e) =>
-                            setDraft({ ...draft, hours: Number(e.target.value) as 1 | 5 | 10 })
+                          searchable={false}
+                          value={String(draft.hours)}
+                          onValueChange={(hours) =>
+                            setDraft({ ...draft, hours: Number(hours) as 1 | 5 | 10 })
                           }
-                        >
-                          {[1, 5, 10].map((h) => (
-                            <option key={h} value={h}>
-                              {h} jam
-                            </option>
-                          ))}
-                        </PackageSelect>
+                          options={[1, 5, 10].map((hours) => ({
+                            value: String(hours),
+                            label: `${hours} jam`
+                          }))}
+                        />
                       </div>
                       <div className="grid min-w-0 gap-3">
                         <Label htmlFor="plan-price">Harga per jam (Rp)</Label>
@@ -293,6 +276,7 @@ export default function InHouseCoaching() {
                           className="h-12 rounded-lg px-4"
                           required
                           type="number"
+                          inputMode="numeric"
                           min={1}
                           max={100000000}
                           value={draft.hourlyPrice || ''}
@@ -308,9 +292,16 @@ export default function InHouseCoaching() {
                           className="h-12 rounded-lg px-4"
                           required
                           type="number"
+                          inputMode="numeric"
                           min={0}
                           max={draft.hourlyPrice}
-                          value={draft.courtHourlyShare}
+                          value={
+                            editingCourtAmount && draft.courtHourlyShare === 0
+                              ? ''
+                              : draft.courtHourlyShare
+                          }
+                          onFocus={() => setEditingCourtAmount(true)}
+                          onBlur={() => setEditingCourtAmount(false)}
                           onChange={(e) =>
                             setDraft({ ...draft, courtHourlyShare: Number(e.target.value) })
                           }
@@ -421,44 +412,43 @@ export default function InHouseCoaching() {
                       <div className="grid gap-6 md:grid-cols-2">
                         <div className="grid min-w-0 gap-3">
                           <Label htmlFor="sale-package">Paket coach</Label>
-                          <PackageSelect
+                          <SearchableSelect
                             id="sale-package"
                             required
                             value={packageId}
-                            onChange={(e) => {
-                              setPackageId(e.target.value);
+                            onValueChange={(id) => {
+                              setPackageId(id);
                               setRequestId(crypto.randomUUID());
                             }}
-                          >
-                            <option value="">Pilih paket</option>
-                            {plans.data
-                              ?.filter((p) => p.isActive && p.staff.isActive)
-                              .map((p) => (
-                                <option key={p.id} value={p.id}>
-                                  {p.staff.name} · {p.name} ·{' '}
-                                  {formatCurrency(p.hours * p.hourlyPrice)}
-                                </option>
-                              ))}
-                          </PackageSelect>
+                            placeholder="Pilih paket"
+                            searchPlaceholder="Cari coach atau paket..."
+                            emptyMessage="Paket tidak ditemukan."
+                            options={(plans.data ?? [])
+                              .filter((plan) => plan.isActive && plan.staff.isActive)
+                              .map((plan) => ({
+                                value: plan.id,
+                                label: `${plan.staff.name} · ${plan.name}`,
+                                description: `${plan.hours} jam · ${formatCurrency(plan.hours * plan.hourlyPrice)}`
+                              }))}
+                          />
                         </div>
                         <div className="grid min-w-0 gap-3">
                           <Label htmlFor="sale-method">Pembayaran diterima melalui</Label>
-                          <PackageSelect
+                          <SearchableSelect
                             id="sale-method"
                             required
                             value={methodId}
-                            onChange={(e) => {
-                              setMethodId(e.target.value);
+                            onValueChange={(id) => {
+                              setMethodId(id);
                               setRequestId(crypto.randomUUID());
                             }}
-                          >
-                            <option value="">Pilih metode offline</option>
-                            {methods.data?.filter(isOfflinePaymentMethod).map((m) => (
-                              <option key={m.id} value={m.id}>
-                                {m.name}
-                              </option>
-                            ))}
-                          </PackageSelect>
+                            placeholder="Pilih metode offline"
+                            searchPlaceholder="Cari metode pembayaran..."
+                            emptyMessage="Metode offline tidak ditemukan."
+                            options={(methods.data ?? [])
+                              .filter(isOfflinePaymentMethod)
+                              .map((method) => ({ value: method.id, label: method.name }))}
+                          />
                         </div>
                       </div>
                       <div className="flex flex-col gap-4 border-t pt-5 sm:flex-row sm:items-center sm:justify-between">

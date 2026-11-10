@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { RescheduleCourtDialog, type BookingDetailWithSlot } from './RescheduleCourtDialog';
 
 const mocks = vi.hoisted(() => ({
+  isSuperAdmin: false,
   mutate: vi.fn(),
   queries: vi.fn(),
   sourceSport: undefined as string | undefined,
@@ -42,6 +43,7 @@ const mocks = vi.hoisted(() => ({
     ]
   }
 }));
+vi.mock('@/hooks/useRoleAccess', () => ({ useIsSuperAdmin: () => mocks.isSuperAdmin }));
 vi.mock('@tanstack/react-query', async (importOriginal) => ({
   ...(await importOriginal<typeof ReactQuery>()),
   useQuery: (options: any) => {
@@ -73,6 +75,7 @@ function detail(sport?: 'PADEL' | 'TENNIS') {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.sourceSport = undefined;
+  mocks.isSuperAdmin = false;
 });
 afterEach(cleanup);
 it.each(['PADEL', 'TENNIS'] as const)(
@@ -144,5 +147,23 @@ it('prevents saving when the H-2 deadline passes while the dialog is open', () =
     expect(mocks.mutate).not.toHaveBeenCalled();
   } finally {
     time.mockRestore();
+  }
+});
+
+it('allows super admin to reschedule after the original deadline, including an ongoing session', () => {
+  mocks.isSuperAdmin = true;
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2040-01-05T02:30:00Z'));
+  try {
+    render(<RescheduleCourtDialog detail={detail('PADEL')} canReschedule />);
+    const trigger = screen.getByRole('button', { name: 'Reschedule' });
+    expect(trigger).toBeEnabled();
+    fireEvent.click(trigger);
+    expect(screen.getByText(/Super Admin dapat reschedule kapan saja/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /10:00–11:00/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Simpan jadwal' }));
+    expect(mocks.mutate).toHaveBeenCalledWith('new-padel');
+  } finally {
+    vi.useRealTimers();
   }
 });

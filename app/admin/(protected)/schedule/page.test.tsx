@@ -1,10 +1,11 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import SchedulePage from './page';
 import { DialogProvider } from '@/components/ui/dialog-context';
 
 const mocks = vi.hoisted(() => ({ slots: vi.fn(), schedule: vi.fn() }));
+vi.mock('@/hooks/useRoleAccess', () => ({ useHasRole: () => true, useIsSuperAdmin: () => false }));
 vi.mock('@/hooks/useAdminCourtSports', () => ({
   useAdminCourtSports: () => ({ branchId: 'cemara', canCreateTennis: true })
 }));
@@ -98,5 +99,10 @@ it('shows a court and coach from the same checkout in the schedule cell', async 
   });
   expect(cell).toHaveTextContent('Budi Booking');
   expect(cell).toHaveTextContent('Coach Andi');
+  fireEvent.click(cell);
+  expect(
+    await screen.findByRole('region', { name: 'Reschedule booking lapangan' })
+  ).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Reschedule' })).toBeInTheDocument();
   client.clear();
 });

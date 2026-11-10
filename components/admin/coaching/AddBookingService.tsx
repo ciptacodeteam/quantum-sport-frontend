@@ -3,6 +3,8 @@ import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { adminPaymentMethodsQueryOptions } from '@/queries/admin/paymentMethod';
+import { isOfflinePaymentMethod } from '@/lib/offline-payment';
 import { coachingApi } from '@/api/admin/coaching';
 import { useHasRole } from '@/hooks/useRoleAccess';
 import { useBookingClock } from '@/hooks/useBookingClock';
@@ -38,6 +40,12 @@ export default function AddBookingService({
   const now = useBookingClock();
   const canAdd = !!detailId && confirmed && isCourtWallSlotBookable(startAt, now);
   const client = useQueryClient();
+  const [paymentMethodId, setPaymentMethodId] = useState('');
+  const methods = useQuery({ ...adminPaymentMethodsQueryOptions, enabled: canWrite && canAdd });
+  const offlineMethods = (methods.data ?? []).filter(isOfflinePaymentMethod);
+  const paymentMethod = offlineMethods.find((method) => method.id === paymentMethodId);
+  const paymentReady =
+    !!paymentMethod && !methods.isPending && !methods.isError && !methods.isFetching;
   const [groupId, setGroupId] = useState('independent');
   const [slotIds, setSlotIds] = useState<string[]>([]);
   const [created, setCreated] = useState<{
@@ -45,6 +53,7 @@ export default function AddBookingService({
     invoiceNumber: string;
     total: number;
     status: string;
+    paymentMethodName: string;
   } | null>(null);
   const available = useQuery({
     queryKey: ['admin', 'coaching', 'availability', detailId, startAt, endAt],
@@ -74,16 +83,20 @@ export default function AddBookingService({
     selected.length === slotIds.length &&
     selected.every((o) => visibleOptions.some((v) => v.slotId === o.slotId));
   const attach = useMutation({
-    mutationFn: () =>
-      coachingApi.attach(
+    mutationFn: () => {
+      if (!paymentReady)
+        throw new Error('Pilih metode pembayaran offline yang aktif terlebih dahulu.');
+      return coachingApi.attach(
         detailId!,
         slotIds,
-        undefined,
+        paymentMethod!.id,
         undefined,
         ...(selectedCoach && groupId !== 'independent' ? [groupId] : [])
-      ),
+      );
+    },
     onSuccess: (result) => {
-      setCreated(result);
+      setCreated({ ...result, paymentMethodName: paymentMethod?.name ?? '' });
+      setPaymentMethodId('');
       setGroupId('independent');
       setSlotIds([]);
       for (const key of [
@@ -170,13 +183,18 @@ export default function AddBookingService({
                 }}
                 disabled={attach.isPending}
               >
-                <SelectTrigger id="schedule-coaching-group">
+                <SelectTrigger
+                  id="schedule-coaching-group"
+                  className="min-h-12 w-full rounded-lg px-4"
+                >
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="independent">Coach Independen</SelectItem>
+                <SelectContent className="rounded-xl p-1.5">
+                  <SelectItem value="independent" className="min-h-11 rounded-lg py-3 pl-3">
+                    Coach Independen
+                  </SelectItem>
                   {groups.map((g) => (
-                    <SelectItem key={g.id} value={g.id}>
+                    <SelectItem key={g.id} value={g.id} className="min-h-11 rounded-lg py-3 pl-3">
                       {g.name}
                     </SelectItem>
                   ))}
@@ -242,14 +260,71 @@ export default function AddBookingService({
               <strong>Rp {price.toLocaleString('id-ID')}</strong>
             </p>
           )}
+          <div className="bg-background grid gap-3 rounded-lg border p-4">
+            <Label htmlFor={`service-payment-${detailId}`}>Metode pembayaran offline</Label>
+            {methods.isError ? (
+              <div role="alert" className="space-y-2 text-sm">
+                <p>Metode pembayaran belum dapat dimuat.</p>
+                <Button variant="outline" onClick={() => void methods.refetch()}>
+                  Muat ulang metode pembayaran
+                </Button>
+              </div>
+            ) : (
+              <>
+                <Select
+                  value={paymentMethod?.id ?? ''}
+                  onValueChange={setPaymentMethodId}
+                  disabled={attach.isPending || methods.isPending || !offlineMethods.length}
+                >
+                  <SelectTrigger
+                    id={`service-payment-${detailId}`}
+                    className="min-h-12 w-full px-4"
+                  >
+                    <SelectValue
+                      placeholder={
+                        methods.isPending ? 'Memuat metode...' : 'Pilih metode pembayaran'
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl p-1.5">
+                    {offlineMethods.map((method) => (
+                      <SelectItem
+                        key={method.id}
+                        value={method.id}
+                        className="min-h-11 rounded-lg py-3 pl-3"
+                      >
+                        {method.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {!methods.isPending && !offlineMethods.length && (
+                  <p role="alert" className="text-destructive text-sm">
+                    Belum ada metode pembayaran offline yang aktif.
+                  </p>
+                )}
+              </>
+            )}
+            <p className="text-muted-foreground text-xs leading-relaxed">
+              Wajib dipilih untuk setiap pemesanan coach atau ballboy. Konfirmasi setelah pembayaran
+              diterima melalui metode tersebut.
+            </p>
+          </div>
           <Button
             onClick={() => attach.mutate()}
-            disabled={!selectionValid || attach.isPending || available.isFetching || !canAdd}
+            disabled={
+              !selectionValid ||
+              !paymentReady ||
+              attach.isPending ||
+              available.isFetching ||
+              !canAdd
+            }
           >
             {attach.isPending ? 'Mengonfirmasi...' : 'Tambah layanan & konfirmasi lunas'}
           </Button>
           <p className="text-muted-foreground text-xs">
-            Layanan langsung dikonfirmasi lunas sesuai tarif yang tertera.
+            Pembayaran dicatat menggunakan metode offline yang dipilih dan invoice dikonfirmasi
+            lunas.
           </p>
         </>
       )}
@@ -258,6 +333,9 @@ export default function AddBookingService({
           <p>
             Invoice {created.invoiceNumber} ·{' '}
             {created.status === 'PAID' ? 'Lunas' : 'Menunggu pembayaran'}
+          </p>
+          <p className="text-muted-foreground text-xs">
+            Metode pembayaran: {created.paymentMethodName}
           </p>
           <div className="flex flex-wrap gap-2">
             <Button asChild variant="outline" size="sm">

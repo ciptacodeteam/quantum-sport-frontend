@@ -1,11 +1,25 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import BookingInHouseSelection, { usableInHouseWallets } from './BookingInHouseSelection';
 import type { InHouseWallet } from '@/api/admin/inhouseCoaching';
 vi.mock('@tanstack/react-query', () => ({
   useQuery: () => ({ data: [{ slotId: 'coach-slot', coach: { id: 'andi' } }], isFetching: false })
 }));
-afterEach(cleanup);
+beforeEach(() => {
+  HTMLElement.prototype.scrollIntoView = vi.fn();
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+  );
+});
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 const wallet: InHouseWallet = {
   id: 'wallet',
   userId: 'customer',
@@ -45,7 +59,7 @@ it('hides package coaching when the customer has no eligible package', () => {
   );
   expect(screen.queryByRole('region', { name: 'Paket coach in-house' })).not.toBeInTheDocument();
 });
-it('does not automatically select a package and submits the coach tied to the explicit choice', () => {
+it('does not automatically select a package and submits the coach tied to the explicit choice', async () => {
   const change = vi.fn();
   render(
     <BookingInHouseSelection
@@ -56,8 +70,9 @@ it('does not automatically select a package and submits the coach tied to the ex
     />
   );
   expect(change).not.toHaveBeenCalled();
-  expect(screen.getByLabelText('Paket customer')).toHaveValue('');
-  fireEvent.change(screen.getByLabelText('Paket customer'), { target: { value: 'wallet' } });
+  expect(screen.getByLabelText('Paket customer')).toHaveTextContent('Tanpa paket in-house');
+  fireEvent.click(screen.getByRole('combobox', { name: 'Paket customer' }));
+  fireEvent.click(await screen.findByRole('option', { name: /Andi.*Andi 5 jam/ }));
   fireEvent.change(screen.getByLabelText('Peserta'), { target: { value: '3' } });
   expect(screen.getByText(/Tambahan peserta:.*200.000/)).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Gunakan paket' }));
@@ -68,7 +83,7 @@ it('does not automatically select a package and submits the coach tied to the ex
     participants: 3
   });
 });
-it('counts other selected hours so the same quota cannot be over-selected', () => {
+it('counts other selected hours so the same quota cannot be over-selected', async () => {
   render(
     <BookingInHouseSelection
       wallets={[{ ...wallet, remainingMinutes: 60 }]}
@@ -84,7 +99,8 @@ it('counts other selected hours so the same quota cannot be over-selected', () =
       onChange={vi.fn()}
     />
   );
-  fireEvent.change(screen.getByLabelText('Paket customer'), { target: { value: 'wallet' } });
+  fireEvent.click(screen.getByRole('combobox', { name: 'Paket customer' }));
+  fireEvent.click(await screen.findByRole('option', { name: /Andi.*Andi 5 jam/ }));
   expect(screen.getByRole('button', { name: 'Gunakan paket' })).toBeDisabled();
   expect(screen.getByText('Sisa kuota tidak cukup untuk pilihan jam ini.')).toBeInTheDocument();
 });

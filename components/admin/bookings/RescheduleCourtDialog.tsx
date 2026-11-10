@@ -9,7 +9,8 @@ import { toast } from 'sonner';
 import { rescheduleBookedCourtApi } from '@/api/admin/bookedCourt';
 import { formatBookingSlotDate } from '@/lib/booking-display';
 import { parseScheduleDatetime } from '@/lib/admin-schedule-time';
-import { canRescheduleAt, RESCHEDULE_NOTICE } from '@/lib/reschedule-policy';
+import { useIsSuperAdmin } from '@/hooks/useRoleAccess';
+import { canRescheduleAt, getRescheduleNotice } from '@/lib/reschedule-policy';
 import { cn } from '@/lib/utils';
 import { adminCourtQueryOptions, adminCourtsWithSlotsQueryOptions } from '@/queries/admin/court';
 import type { BookingDetail, Court, Slot } from '@/types/model';
@@ -43,6 +44,8 @@ export function RescheduleCourtDialog({
   membershipCovered = false,
   onSuccess
 }: Props) {
+  const role = useIsSuperAdmin() ? 'SUPER_ADMIN' : undefined;
+  const rescheduleNotice = getRescheduleNotice(role);
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [now, setNow] = useState(() => Date.now());
@@ -50,7 +53,7 @@ export function RescheduleCourtDialog({
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, []);
-  const withinDeadline = canRescheduleAt(detail.slot?.startAt, now);
+  const withinDeadline = canRescheduleAt(detail.slot?.startAt, now, role);
   const allowed = canReschedule && withinDeadline;
   const sourceCourtId =
     detail.court?.id ?? detail.slot?.court?.id ?? detail.slot?.courtId ?? detail.courtId;
@@ -148,7 +151,7 @@ export function RescheduleCourtDialog({
   });
   const canSave =
     allowed &&
-    canRescheduleAt(detail.slot?.startAt) &&
+    canRescheduleAt(detail.slot?.startAt, Date.now(), role) &&
     !!courtSport &&
     selectedCourt?.sport === courtSport &&
     !!selectedSlot &&
@@ -170,7 +173,7 @@ export function RescheduleCourtDialog({
         <TooltipTrigger asChild>{trigger}</TooltipTrigger>
         <TooltipContent>
           {canReschedule
-            ? RESCHEDULE_NOTICE
+            ? rescheduleNotice
             : 'Reschedule hanya untuk booking terkonfirmasi dengan pembayaran lunas.'}
         </TooltipContent>
       </Tooltip>
@@ -188,7 +191,7 @@ export function RescheduleCourtDialog({
       <DialogContent className="flex max-h-[90dvh] max-w-[calc(100vw-2rem)] flex-col gap-0 overflow-hidden rounded-xl p-0 sm:max-w-2xl">
         <DialogHeader className="shrink-0 gap-2 border-b px-5 py-5 pr-12 sm:px-6">
           <DialogTitle className="text-foreground text-lg">Reschedule lapangan</DialogTitle>
-          <p className="text-muted-foreground text-sm">{RESCHEDULE_NOTICE}</p>
+          <p className="text-muted-foreground text-sm">{rescheduleNotice}</p>
           <DialogDescription>
             {courtSport
               ? `Pilih lapangan ${sportLabel} dan jadwal pengganti.`
@@ -426,7 +429,11 @@ export function RescheduleCourtDialog({
               disabled={!canSave || mutation.isPending}
               loading={mutation.isPending}
               onClick={() => {
-                if (canSave && selectedSlot && canRescheduleAt(detail.slot?.startAt))
+                if (
+                  canSave &&
+                  selectedSlot &&
+                  canRescheduleAt(detail.slot?.startAt, Date.now(), role)
+                )
                   mutation.mutate(selectedSlot.id);
               }}
             >

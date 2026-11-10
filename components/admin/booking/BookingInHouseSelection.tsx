@@ -9,6 +9,7 @@ import type { BookingItem } from '@/stores/useBookingStore';
 import type { InHouseChoice, InHouseWallet } from '@/api/admin/inhouseCoaching';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Label } from '@/components/ui/label';
 export function usableInHouseWallets(wallets: InHouseWallet[], sport: string) {
   return wallets.filter(
@@ -97,27 +98,29 @@ function InHouseSession({
         {choice && <span className="text-primary text-xs font-medium">Kuota 1 jam dipilih</span>}
       </div>
       <div className="grid items-end gap-3 sm:grid-cols-[minmax(0,1fr)_100px_auto]">
-        <div className="space-y-1.5">
+        <div className="grid min-w-0 gap-3">
           <Label htmlFor={`wallet-${session.slotId}`}>Paket customer</Label>
-          <select
+          <SearchableSelect
             id={`wallet-${session.slotId}`}
             disabled={disabled}
-            className="bg-background h-10 w-full rounded-md border px-3 text-sm"
             value={walletId}
-            onChange={(e) => {
-              setWalletId(e.target.value);
+            onValueChange={(id) => {
+              setWalletId(id);
               if (choice) onChange(session, null);
             }}
-          >
-            <option value="">Tanpa paket in-house</option>
-            {wallets.map((w) => (
-              <option key={w.id} value={w.id}>
-                {w.staff.name} · {w.packageName} · sisa {w.remainingMinutes / 60} jam
-              </option>
-            ))}
-          </select>
+            placeholder="Tanpa paket in-house"
+            searchPlaceholder="Cari coach atau paket..."
+            options={[
+              { value: '', label: 'Tanpa paket in-house' },
+              ...wallets.map((wallet) => ({
+                value: wallet.id,
+                label: `${wallet.staff.name} · ${wallet.packageName}`,
+                description: `Sisa ${wallet.remainingMinutes / 60} jam`
+              }))
+            ]}
+          />
         </div>
-        <div className="space-y-1.5">
+        <div className="grid min-w-0 gap-3">
           <Label htmlFor={`participants-${session.slotId}`}>Peserta</Label>
           <Input
             id={`participants-${session.slotId}`}

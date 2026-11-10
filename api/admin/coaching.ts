@@ -139,7 +139,7 @@ export const coachingApi = {
   attach: async (
     detailId: string,
     slotIds: string[],
-    paymentMethodId?: string,
+    paymentMethodId: string,
     manualPayment?: { method?: 'EDC' | 'QRIS_STATIC' | 'BANK_TRANSFER_MANUAL'; received: boolean },
     coachingGroupId?: string
   ) =>

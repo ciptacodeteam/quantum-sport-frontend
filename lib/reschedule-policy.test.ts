@@ -12,3 +12,12 @@ it('interprets timezone-free API times as WIB and refuses missing dates', () => 
   expect(canRescheduleAt('2026-10-30 15:00:00', now)).toBe(true);
   expect(canRescheduleAt(undefined, now)).toBe(false);
 });
+
+it('exempts only super admin from the original deadline, including past source bookings', () => {
+  const now = Date.parse('2026-11-10T18:00:00+07:00');
+  for (const role of ['CASHIER', 'ADMIN', undefined])
+    expect(canRescheduleAt('2026-11-10 17:00:00', now, role)).toBe(false);
+  expect(canRescheduleAt('2026-11-10 17:00:00', now, 'SUPER_ADMIN')).toBe(true);
+  expect(canRescheduleAt(undefined, now, 'SUPER_ADMIN')).toBe(false);
+  expect(canRescheduleAt('invalid', now, 'SUPER_ADMIN')).toBe(false);
+});

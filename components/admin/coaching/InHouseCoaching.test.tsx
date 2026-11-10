@@ -57,14 +57,32 @@ import InHouseCoaching from './InHouseCoaching';
 beforeEach(() => {
   mocks.role = 'ADMIN';
   vi.clearAllMocks();
+  HTMLElement.prototype.scrollIntoView = vi.fn();
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+  );
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 it('lets an admin set different package prices and court shares for each selected coach', async () => {
   render(<InHouseCoaching />);
   fireEvent.click(screen.getByRole('button', { name: 'Paket & Tarif' }));
-  fireEvent.change(screen.getByLabelText('Coach in-house'), { target: { value: 'awam' } });
+  fireEvent.click(screen.getByRole('combobox', { name: 'Coach in-house' }));
+  fireEvent.change(await screen.findByPlaceholderText('Cari nama coach...'), {
+    target: { value: 'Awam' }
+  });
+  expect(screen.queryByRole('option', { name: 'Andi' })).not.toBeInTheDocument();
+  fireEvent.click(await screen.findByRole('option', { name: 'Awam' }));
   fireEvent.change(screen.getByLabelText('Nama paket'), { target: { value: 'Awam 10 jam' } });
-  fireEvent.change(screen.getByLabelText('Kuota jam'), { target: { value: '10' } });
+  fireEvent.click(screen.getByRole('combobox', { name: 'Kuota jam' }));
+  fireEvent.click(await screen.findByRole('option', { name: '10 jam' }));
   fireEvent.change(screen.getByLabelText('Harga per jam (Rp)'), { target: { value: '700000' } });
   fireEvent.change(screen.getByLabelText('Bagian lapangan per jam (Rp)'), {
     target: { value: '200000' }
@@ -119,4 +137,47 @@ it('edits only the allowed tariff fields rather than sending database metadata',
       isActive: true
     })
   );
+});
+
+it('searches a sale package by coach and submits the selected package and offline method', async () => {
+  render(<InHouseCoaching />);
+  fireEvent.change(screen.getByLabelText('Cari nama atau nomor WhatsApp'), {
+    target: { value: 'Budi' }
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Budi · 08123456789' }));
+  fireEvent.click(screen.getByRole('combobox', { name: 'Paket coach' }));
+  fireEvent.change(await screen.findByPlaceholderText('Cari coach atau paket...'), {
+    target: { value: 'Andi' }
+  });
+  fireEvent.click(await screen.findByRole('option', { name: /Andi.*5 jam/ }));
+  fireEvent.click(screen.getByRole('combobox', { name: 'Pembayaran diterima melalui' }));
+  fireEvent.click(await screen.findByRole('option', { name: 'Tunai' }));
+  const submit = screen.getByRole('button', { name: 'Terima pembayaran & tambah kuota' });
+  expect(submit).toBeEnabled();
+  fireEvent.click(submit);
+  await waitFor(() =>
+    expect(mocks.sell).toHaveBeenCalledWith({
+      packageId: 'plan',
+      userId: 'customer',
+      paymentMethodId: 'cash',
+      requestId: expect.any(String)
+    })
+  );
+});
+
+it('clears an initial zero while editing an amount and restores zero if left blank', () => {
+  render(<InHouseCoaching />);
+  fireEvent.click(screen.getByRole('button', { name: 'Paket & Tarif' }));
+  const amount = screen.getByLabelText('Bagian lapangan per jam (Rp)') as HTMLInputElement;
+  expect(amount).toHaveValue(0);
+  fireEvent.focus(amount);
+  expect(amount.value).toBe('');
+  fireEvent.blur(amount);
+  expect(amount).toHaveValue(0);
+  fireEvent.focus(amount);
+  fireEvent.change(amount, { target: { value: '250000' } });
+  expect(amount.value).toBe('250000');
+  fireEvent.blur(amount);
+  fireEvent.focus(amount);
+  expect(amount).toHaveValue(250000);
 });
