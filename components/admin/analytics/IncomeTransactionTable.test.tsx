@@ -126,3 +126,58 @@ it('groups linked court, coach and ballboy invoices while keeping another bookin
     /1 transaksi.*350\.000.*1\.000.*349\.000/
   );
 });
+
+it('shows playing schedules and service cards without revenue or payment timestamps in the details', () => {
+  const schedule = { startAt: '2026-11-03T09:00:00+07:00', endAt: '2026-11-03T11:00:00+07:00' };
+  render(
+    <IncomeTransactionTable
+      groupByBooking
+      transactions={[
+        {
+          ...transaction(1),
+          bookingId: 'court',
+          playingSchedules: [{ ...schedule, label: 'Lapangan · Court A' }]
+        },
+        {
+          ...transaction(2),
+          bookingId: 'court',
+          playingSchedules: [{ ...schedule, label: 'Coach' }]
+        },
+        {
+          ...transaction(3),
+          bookingId: 'court',
+          playingSchedules: [
+            {
+              ...schedule,
+              label: 'Ballboy',
+              startAt: '2026-11-03T23:00:00+07:00',
+              endAt: '2026-11-04T00:00:00+07:00'
+            }
+          ]
+        }
+      ]}
+    />
+  );
+  expect(screen.getByRole('columnheader', { name: 'Jadwal bermain (WIB)' })).toBeInTheDocument();
+  expect(screen.queryByText(/00[.:]30 WIB/)).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: '3 invoice · Lihat rincian' }));
+  const details = screen.getByRole('list', { name: 'Rincian invoice booking' });
+  expect(within(details).getByRole('heading', { name: 'Lapangan · Court A' })).toBeInTheDocument();
+  expect(within(details).getByRole('heading', { name: 'Coach' })).toBeInTheDocument();
+  expect(within(details).getByRole('heading', { name: 'Ballboy' })).toBeInTheDocument();
+  expect(details).not.toHaveTextContent(/revenue/i);
+  expect(details).not.toHaveTextContent(/01 Okt 2026/);
+  expect(details).toHaveTextContent(/03 Nov 2026/);
+  expect(details).toHaveTextContent(/09[.:]00–11[.:]00 WIB/);
+  expect(details).toHaveTextContent(/23[.:]00–04 Nov 2026, 00[.:]00 WIB/);
+  expect(within(details).getAllByText('Nominal invoice')).toHaveLength(3);
+  expect(within(details).getByRole('link', { name: 'INV-2' })).toHaveAttribute('target', '_blank');
+  fireEvent.click(screen.getByRole('button', { name: '3 invoice · Tutup rincian' }));
+  expect(screen.queryByRole('list', { name: 'Rincian invoice booking' })).not.toBeInTheDocument();
+});
+
+it('does not substitute payment dates when playing schedules are unavailable', () => {
+  render(<IncomeTransactionTable groupByBooking transactions={[transaction(1)]} />);
+  expect(screen.getByText('Jadwal bermain belum tersedia')).toBeInTheDocument();
+  expect(screen.queryByText(/01 Okt 2026/)).not.toBeInTheDocument();
+});

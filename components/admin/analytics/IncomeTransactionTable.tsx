@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import Link from 'next/link';
+import { ArrowUpRight, ChevronDown } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SearchInput } from '@/components/ui/search-input';
@@ -19,6 +20,7 @@ export type IncomeTransaction = {
   invoiceNumber: string;
   bookingId?: string | null;
   branchId?: string;
+  playingSchedules?: { label: string; startAt: string; endAt: string }[];
   customerName: string;
   branchName: string;
   source: string;
@@ -48,6 +50,49 @@ const paymentTime = (value: string | null) =>
       }).format(new Date(value))
     : '—';
 
+function PlayingSchedule({
+  schedules = []
+}: {
+  schedules?: IncomeTransaction['playingSchedules'];
+}) {
+  if (!schedules.length)
+    return <p className="text-muted-foreground text-xs">Jadwal bermain belum tersedia</p>;
+  const dateFormat = new Intl.DateTimeFormat('id-ID', {
+    timeZone: 'Asia/Jakarta',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  });
+  const timeFormat = new Intl.DateTimeFormat('id-ID', {
+    timeZone: 'Asia/Jakarta',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23'
+  });
+  // Court and service invoices may cover the same playing window.
+  const unique = Array.from(
+    new Map(schedules.map((slot) => [`${slot.startAt}:${slot.endAt}`, slot])).values()
+  ).sort((a, b) => Date.parse(a.startAt) - Date.parse(b.startAt));
+  return (
+    <div className="space-y-2">
+      {unique.map((slot) => {
+        const start = new Date(slot.startAt);
+        const end = new Date(slot.endAt);
+        const sameDay = dateFormat.format(start) === dateFormat.format(end);
+        return (
+          <div key={`${slot.startAt}:${slot.endAt}`}>
+            <p className="text-sm font-medium">{dateFormat.format(start)}</p>
+            <p className="text-muted-foreground mt-0.5 text-xs tabular-nums">
+              {timeFormat.format(start)}–{!sameDay && `${dateFormat.format(end)}, `}
+              {timeFormat.format(end)} WIB
+            </p>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function IncomeTransactionTable({
   transactions,
   embedded = false,
@@ -64,6 +109,7 @@ export default function IncomeTransactionTable({
   const [search, setSearch] = useState('');
   const [source, setSource] = useState('all');
   const [page, setPage] = useState(1);
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
   // Apply the source filter to invoices before grouping so all totals stay scoped.
   const groups = new Map<string, IncomeTransaction[]>();
   for (const row of transactions ?? []) {
@@ -88,6 +134,7 @@ export default function IncomeTransactionTable({
     .map((invoices) => ({
       ...invoices[0],
       invoices,
+      playingSchedules: invoices.flatMap((invoice) => invoice.playingSchedules ?? []),
       paymentMethod: Array.from(new Set(invoices.map((row) => row.paymentMethod ?? '—'))).join(
         ', '
       ),
@@ -175,7 +222,7 @@ export default function IncomeTransactionTable({
                   <tr className="text-muted-foreground border-b">
                     {[
                       'Customer / invoice',
-                      'Dibayar (WIB)',
+                      groupByBooking ? 'Jadwal bermain (WIB)' : 'Dibayar (WIB)',
                       'Cabang',
                       'Sumber',
                       'Metode bayar',
@@ -195,67 +242,140 @@ export default function IncomeTransactionTable({
                 </thead>
                 <tbody>
                   {visible.map((row) => (
-                    <tr key={row.id} className="border-b last:border-b-0">
-                      <th scope="row" className="px-3 py-3 text-left font-normal">
-                        <p className="font-medium">{row.customerName}</p>
-                        {row.invoices.length > 1 ? (
-                          <details className="mt-1">
-                            <summary className="text-primary cursor-pointer text-xs">
-                              {row.invoices.length} invoice · Lihat rincian
-                            </summary>
-                            <ul className="mt-2 space-y-2">
-                              {row.invoices.map((invoice) => (
-                                <li key={invoice.id}>
-                                  <Link
-                                    href={`/admin/kelola-transaksi/${invoice.id}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-primary text-xs underline underline-offset-4"
+                    <Fragment key={row.id}>
+                      <tr className="border-b align-top">
+                        <th scope="row" className="px-3 py-4 text-left font-normal">
+                          <p className="font-semibold">{row.customerName}</p>
+                          {row.invoices.length > 1 ? (
+                            <button
+                              type="button"
+                              aria-expanded={expanded.has(row.id)}
+                              aria-controls={`invoice-details-${row.id}`}
+                              className="text-primary mt-2 inline-flex cursor-pointer items-center gap-2 text-xs font-medium"
+                              onClick={() =>
+                                setExpanded((current) => {
+                                  const next = new Set(current);
+                                  if (next.has(row.id)) next.delete(row.id);
+                                  else next.add(row.id);
+                                  return next;
+                                })
+                              }
+                            >
+                              {row.invoices.length} invoice ·{' '}
+                              {expanded.has(row.id) ? 'Tutup rincian' : 'Lihat rincian'}
+                              <ChevronDown
+                                aria-hidden="true"
+                                className={`size-3.5 transition-transform ${expanded.has(row.id) ? 'rotate-180' : ''}`}
+                              />
+                            </button>
+                          ) : (
+                            <Link
+                              href={`/admin/kelola-transaksi/${row.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary mt-1 inline-flex items-center gap-1 text-xs underline underline-offset-4"
+                            >
+                              {row.invoiceNumber}
+                              <ArrowUpRight aria-hidden="true" className="size-3" />
+                            </Link>
+                          )}
+                        </th>
+                        <td className="px-3 py-4 whitespace-nowrap">
+                          {groupByBooking ? (
+                            <PlayingSchedule schedules={row.playingSchedules} />
+                          ) : (
+                            <>
+                              {paymentTime(row.paidAt)}
+                              {row.paidAt ? ' WIB' : ''}
+                            </>
+                          )}
+                        </td>
+                        <td className="px-3 py-4">{row.branchName}</td>
+                        <td className="px-3 py-4 whitespace-nowrap">{row.source}</td>
+                        <td className="px-3 py-4">{row.paymentMethod ?? '—'}</td>
+                        <td className="px-3 py-4 text-right whitespace-nowrap tabular-nums">
+                          {formatCurrency(row.amount)}
+                        </td>
+                        <td className="px-3 py-4 text-right whitespace-nowrap tabular-nums">
+                          {formatCurrency(row.processingFee)}
+                        </td>
+                        <td className="px-3 py-4 text-right font-medium whitespace-nowrap tabular-nums">
+                          {formatCurrency(row.netAmount)}
+                        </td>
+                      </tr>
+                      {row.invoices.length > 1 && expanded.has(row.id) && (
+                        <tr id={`invoice-details-${row.id}`} className="border-b">
+                          <td colSpan={8} className="bg-muted/20 px-4 py-5 sm:px-6">
+                            <div className="mb-3 flex items-center gap-2">
+                              <p className="text-sm font-semibold">Rincian invoice</p>
+                              <span className="text-muted-foreground bg-background rounded-full border px-2 py-0.5 text-xs">
+                                {row.invoices.length} invoice
+                              </span>
+                            </div>
+                            <ul
+                              aria-label="Rincian invoice booking"
+                              className="grid gap-3 lg:grid-cols-3"
+                            >
+                              {row.invoices.map((invoice) => {
+                                const labels = Array.from(
+                                  new Set(
+                                    (invoice.playingSchedules ?? []).map((slot) => slot.label)
+                                  )
+                                );
+                                return (
+                                  <li
+                                    key={invoice.id}
+                                    className="bg-background rounded-xl border p-4"
                                   >
-                                    {invoice.invoiceNumber}
-                                  </Link>
-                                  <p className="text-muted-foreground text-xs">
-                                    {paymentTime(invoice.paidAt)} · {invoice.paymentMethod ?? '—'}
-                                    {' · '}
-                                    {formatCurrency(invoice.amount)}
-                                    {' · Revenue '}
-                                    {formatCurrency(invoice.netAmount)}
-                                  </p>
-                                </li>
-                              ))}
+                                    <div className="flex items-start justify-between gap-6">
+                                      <div className="min-w-0">
+                                        <h4 className="text-sm font-semibold">
+                                          {labels.join(' · ') || 'Invoice booking'}
+                                        </h4>
+                                        <Link
+                                          href={`/admin/kelola-transaksi/${invoice.id}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-primary mt-1 inline-flex items-center gap-1 text-xs underline underline-offset-4"
+                                        >
+                                          {invoice.invoiceNumber}
+                                          <ArrowUpRight
+                                            aria-hidden="true"
+                                            className="size-3 shrink-0"
+                                          />
+                                        </Link>
+                                      </div>
+                                      <div className="shrink-0 text-right">
+                                        <p className="text-muted-foreground text-[11px]">
+                                          Nominal invoice
+                                        </p>
+                                        <p className="mt-1 text-base font-semibold tabular-nums">
+                                          {formatCurrency(invoice.amount)}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="mt-4 border-t pt-3">
+                                      <p className="text-muted-foreground mb-1.5 text-[11px]">
+                                        Jadwal bermain
+                                      </p>
+                                      <PlayingSchedule schedules={invoice.playingSchedules} />
+                                    </div>
+                                    {invoice.paymentMethod && (
+                                      <p className="text-muted-foreground mt-3 text-xs">
+                                        Metode bayar{' '}
+                                        <span className="text-foreground font-medium">
+                                          {invoice.paymentMethod}
+                                        </span>
+                                      </p>
+                                    )}
+                                  </li>
+                                );
+                              })}
                             </ul>
-                          </details>
-                        ) : (
-                          <Link
-                            href={`/admin/kelola-transaksi/${row.id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-primary text-xs underline underline-offset-4"
-                          >
-                            {row.invoiceNumber}
-                          </Link>
-                        )}
-                      </th>
-                      <td className="px-3 py-3 whitespace-nowrap">
-                        {paymentTime(row.paidAt)}
-                        {row.paidAt ? ' WIB' : ''}
-                        {row.invoices.length > 1 && (
-                          <p className="text-muted-foreground text-xs">Pembayaran terakhir</p>
-                        )}
-                      </td>
-                      <td className="px-3 py-3">{row.branchName}</td>
-                      <td className="px-3 py-3 whitespace-nowrap">{row.source}</td>
-                      <td className="px-3 py-3">{row.paymentMethod ?? '—'}</td>
-                      <td className="px-3 py-3 text-right whitespace-nowrap tabular-nums">
-                        {formatCurrency(row.amount)}
-                      </td>
-                      <td className="px-3 py-3 text-right whitespace-nowrap tabular-nums">
-                        {formatCurrency(row.processingFee)}
-                      </td>
-                      <td className="px-3 py-3 text-right font-medium whitespace-nowrap tabular-nums">
-                        {formatCurrency(row.netAmount)}
-                      </td>
-                    </tr>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   ))}
                   {visible.length === 0 && (
                     <tr>
