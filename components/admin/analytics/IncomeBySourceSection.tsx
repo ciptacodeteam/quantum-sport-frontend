@@ -319,9 +319,10 @@ export default function IncomeBySourceSection({ data, isLoading }: IncomeBySourc
           </div>
           <p className="text-muted-foreground mt-4 text-xs leading-relaxed">
             Online dan kasir mencakup nilai invoice booking setelah diskon/promo, termasuk layanan
-            tambahan yang ada di invoice. Membership menghitung pembelian paket; pemakaian kuota
-            Value Pack tidak dihitung sebagai pembayaran baru. Tanda — berarti biaya per sumber
-            belum tersedia.
+            tambahan yang ada di invoice. Harga lapangan memakai nilai akhir saat transaksi: setelah
+            potongan Coach Club atau tarif fixed in-house. Membership menghitung pembelian paket;
+            pemakaian kuota Value Pack tidak dihitung sebagai pembayaran baru. Tanda — berarti biaya
+            per sumber belum tersedia.
           </p>
         </CardContent>
       </Card>
