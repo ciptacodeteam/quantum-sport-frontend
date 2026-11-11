@@ -7,6 +7,7 @@ dayjs.extend(timezone);
 export const defaultTariffPeriod = { happyStart: 6, happyEnd: 15, peakStart: 15, peakEnd: 24 };
 export type TariffBands = typeof defaultTariffPeriod;
 export type CoachingDiscounts = {
+  inHouseCourtHourlyPrice?: number | null;
   happyCoachDiscount?: number;
   peakCoachDiscount?: number;
   happyInHouseCoachDiscount?: number | null;

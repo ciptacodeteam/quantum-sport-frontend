@@ -355,6 +355,7 @@ export function RescheduleCourtDialog({
                             <button
                               key={slot.id}
                               type="button"
+                              data-admin-slot
                               aria-pressed={selected}
                               disabled={!selectable || mutation.isPending}
                               onClick={() => setSelectedSlotId(selected ? null : slot.id)}

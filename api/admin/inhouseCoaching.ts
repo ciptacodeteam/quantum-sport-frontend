@@ -3,7 +3,7 @@ export type InHousePlan = {
   id: string;
   staffId: string;
   name: string;
-  hours: 1 | 5 | 10;
+  hours: number;
   hourlyPrice: number;
   courtHourlyShare: number;
   extraParticipantHourlyPrice: number;
@@ -39,9 +39,16 @@ export type InHouseUsage = {
   bookingCoach: { booking: { invoice: { id: string; number: string } | null } };
 };
 export type InHouseChoice = (
-  | { walletId: string; planId?: never }
-  | { planId: string; walletId?: never }
+  | { walletId: string; planId?: never; staffId?: never }
+  | { planId: string; walletId?: never; staffId?: never }
+  | {
+      staffId: string;
+      walletId?: never;
+      planId?: never;
+    }
 ) & {
+  hourlyPrice?: number;
+  additionalHourPrice?: number | null;
   courtSlotId: string;
   coachSlotId: string;
   participants: number;

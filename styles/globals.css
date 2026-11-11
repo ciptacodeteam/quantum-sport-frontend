@@ -325,25 +325,47 @@ body:has([data-slot='mobile-bottom-navigation']) .mobile-header-back {
 
 /* Booking choices remain white. Only the selected option receives an outline. */
 :where(.admin-theme, html[data-admin-theme='true'])
-  button[aria-pressed]:not([data-admin-tab]):not([role='tab']):not([data-slot='toggle']):not(
-    [data-slot='toggle-group-item']
-  ) {
+  button[aria-pressed]:not([data-admin-slot]):not([data-admin-tab]):not([role='tab']):not(
+    [data-slot='toggle']
+  ):not([data-slot='toggle-group-item']) {
   background-color: #fff;
   color: var(--foreground);
   box-shadow: none;
 }
 :where(.admin-theme, html[data-admin-theme='true'])
-  button[aria-pressed='true']:not([data-admin-tab]):not([role='tab']):not([data-slot='toggle']):not(
-    [data-slot='toggle-group-item']
-  ):not(:disabled) {
+  button[aria-pressed='true']:not([data-admin-slot]):not([data-admin-tab]):not([role='tab']):not(
+    [data-slot='toggle']
+  ):not([data-slot='toggle-group-item']):not(:disabled) {
   outline: 2px solid var(--admin-button-color);
   outline-offset: -2px;
 }
 :where(.admin-theme, html[data-admin-theme='true'])
-  button[aria-pressed='false']:not([data-admin-tab]):not([role='tab']):not(
+  button[aria-pressed='false']:not([data-admin-slot]):not([data-admin-tab]):not([role='tab']):not(
     [data-slot='toggle']
   ):not([data-slot='toggle-group-item']):hover:not(:disabled) {
   border-color: var(--ring);
+}
+
+/* Date and time selection uses a filled state, separate from white booking cards. */
+:where(.admin-theme, html[data-admin-theme='true']) button[data-admin-slot] {
+  background-color: #fff;
+  color: var(--foreground);
+  box-shadow: none;
+}
+:where(.admin-theme, html[data-admin-theme='true'])
+  button[data-admin-slot][aria-pressed='true']:not(:disabled) {
+  background-color: var(--admin-button-color);
+  color: #fff;
+  border-color: var(--admin-button-color);
+}
+:where(.admin-theme, html[data-admin-theme='true'])
+  button[data-admin-slot][aria-pressed='true']:hover:not(:disabled) {
+  background-color: var(--admin-button-hover);
+}
+:where(.admin-theme, html[data-admin-theme='true'])
+  button[data-admin-slot][aria-pressed='true']:not(:disabled)
+  .text-muted-foreground {
+  color: #ffffffcc;
 }
 
 /* All admin tab implementations share a distinct active and inactive state. */
@@ -392,6 +414,12 @@ body:has([data-slot='mobile-bottom-navigation']) .mobile-header-back {
   background-color: #fff;
   color: var(--muted-foreground);
 }
+:where(.admin-theme, html[data-admin-theme='true']) button[data-admin-slot][aria-pressed]:disabled {
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+  border-color: var(--border);
+  cursor: not-allowed;
+}
 :where(.admin-theme, html[data-admin-theme='true']) [data-admin-neutral] {
   color: var(--muted-foreground);
   background-color: transparent;
@@ -403,7 +431,8 @@ body:has([data-slot='mobile-bottom-navigation']) .mobile-header-back {
 }
 
 /* Give admin cards a consistent, subtle edge against the page background. */
-:where(.admin-theme, html[data-admin-theme='true']) :is([data-slot='card'], [data-admin-card]) {
+:where(.admin-theme, html[data-admin-theme='true'])
+  :is([data-slot='card'], [data-admin-card]):not([data-admin-borderless]) {
   border-width: 1px;
   border-style: solid;
   border-color: var(--border);

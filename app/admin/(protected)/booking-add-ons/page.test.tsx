@@ -5,6 +5,7 @@ import { useBookingStore } from '@/stores/useBookingStore';
 import BookingAddOns from './page';
 
 const mocks = vi.hoisted(() => ({
+  hourlyCoaches: [] as any[],
   payable: 300000,
   mutate: vi.fn(),
   push: vi.fn(),
@@ -99,7 +100,13 @@ vi.mock('@tanstack/react-query', async (importOriginal) => ({
   useQuery: (options: any) => {
     mocks.queries(options.queryKey);
     return {
-      data: options.queryKey.includes('payment-methods') ? mocks.methods : mocks.inventory,
+      data: options.queryKey.includes('booking-coaches')
+        ? []
+        : options.queryKey[1] === 'coaching'
+          ? mocks.hourlyCoaches
+          : options.queryKey.includes('payment-methods')
+            ? mocks.methods
+            : mocks.inventory,
       isPending: false,
       isError: false
     };
@@ -157,6 +164,7 @@ function confirmBooking() {
 }
 
 beforeEach(() => {
+  mocks.hourlyCoaches = [];
   vi.clearAllMocks();
   mocks.payable = 300000;
   HTMLElement.prototype.scrollIntoView = vi.fn();
@@ -474,4 +482,53 @@ it('preserves selected services when switching between service tabs', () => {
   expect(useBookingStore.getState().selectedBallboys).toHaveLength(1);
   expect(screen.getByRole('tab', { name: 'Coach Club' })).toHaveTextContent('1');
   expect(screen.getByRole('tab', { name: 'Ballboy' })).toHaveTextContent('1');
+});
+
+it('shows the in-house hourly catalog even when the customer owns no package', () => {
+  mocks.hourlyCoaches = [
+    {
+      id: 'inhouse',
+      name: 'Coach Inhouse',
+      role: 'COACH',
+      coachType: 'PADEL',
+      isInHouseCoach: true,
+      isActive: true
+    }
+  ];
+  render(<BookingAddOns />);
+  fireEvent.mouseDown(screen.getByRole('tab', { name: 'In-house' }), { button: 0, ctrlKey: false });
+  expect(screen.getByRole('region', { name: 'Paket coach in-house' })).toBeInTheDocument();
+  expect(screen.getByRole('combobox', { name: 'Coaching satuan / paket' })).toBeInTheDocument();
+  expect(screen.queryByText(/Belum ada coach in-house aktif/)).not.toBeInTheDocument();
+});
+it('sends the scheduled coach identity without trusting browser price fields', () => {
+  mocks.hourlyCoaches = [
+    {
+      id: 'inhouse',
+      name: 'Coach Inhouse',
+      role: 'COACH',
+      coachType: 'PADEL',
+      isInHouseCoach: true,
+      isActive: true
+    }
+  ];
+  const court = useBookingStore.getState().bookingItems[0];
+  useBookingStore.setState({
+    useMembership: false,
+    selectedInHouse: [
+      {
+        staffId: 'inhouse',
+        hourlyPrice: 400000,
+        additionalHourPrice: 300000,
+        courtSlotId: court.slotId,
+        coachSlotId: 'inhouse-slot',
+        participants: 1
+      }
+    ]
+  });
+  render(<BookingAddOns />);
+  confirmBooking();
+  expect(mocks.mutate.mock.calls[0][0].inHouseSelections).toEqual([
+    { staffId: 'inhouse', courtSlotId: court.slotId, coachSlotId: 'inhouse-slot', participants: 1 }
+  ]);
 });

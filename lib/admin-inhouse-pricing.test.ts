@@ -14,7 +14,7 @@ const courts = [300000, 300000].map((price, index) => ({
   slotId: `court-${index}`,
   price
 })) as BookingItem[];
-const direct = (participants = 1): InHouseChoice[] =>
+const direct = (participants = 1): Extract<InHouseChoice, { planId: string }>[] =>
   courts.map((court) => ({
     planId: 'single',
     courtSlotId: court.slotId,
@@ -116,4 +116,64 @@ it('uses Peak Hour and weekend overrides without applying future rules early', (
     adminInHousePricing(evening, choices, [plan], [], [{ ...rule, effectiveFrom: '2041-01-01' }])
       .singleTotal
   ).toBe(1000000);
+});
+
+it.each([
+  ['09:00 - 10:00', 150000],
+  ['18:00 - 19:00', 300000]
+])('uses the fixed court price for %s without a prepaid package', (timeSlot, price) => {
+  const session = {
+    slotId: 'court',
+    date: '2040-11-03',
+    sport: 'PADEL',
+    timeSlot,
+    price
+  } as BookingItem;
+  const choices: InHouseChoice[] = [
+    {
+      staffId: 'andi',
+      hourlyPrice: 400000,
+      courtSlotId: 'court',
+      coachSlotId: 'coach',
+      participants: 1
+    }
+  ];
+  const rules = [
+    {
+      id: 'fixed',
+      branchId: 'cemara',
+      sport: 'PADEL',
+      effectiveFrom: '2030-01-01',
+      happyStart: 6,
+      happyEnd: 15,
+      peakStart: 15,
+      peakEnd: 24,
+      inHouseCourtHourlyPrice: 250000
+    }
+  ] as TariffRule[];
+  const result = adminInHousePricing([session], choices, [], [], rules);
+  expect(price - result.coverage).toBe(250000);
+  expect(price - result.coverage + result.singleTotal + result.extras).toBe(650000);
+});
+it('keeps prepaid package coverage unchanged when a fixed court tariff is configured', () => {
+  const result = adminInHousePricing(
+    [{ ...courts[0], date: '2040-11-03', sport: 'PADEL', timeSlot: '18:00 - 19:00' }],
+    [{ walletId: 'wallet', courtSlotId: courts[0].slotId, coachSlotId: 'coach', participants: 1 }],
+    [],
+    [wallet],
+    [
+      {
+        id: 'fixed',
+        branchId: 'cemara',
+        sport: 'PADEL',
+        effectiveFrom: '2030-01-01',
+        happyStart: 6,
+        happyEnd: 15,
+        peakStart: 15,
+        peakEnd: 24,
+        inHouseCourtHourlyPrice: 999999
+      }
+    ]
+  );
+  expect(result).toEqual({ coverage: courts[0].price, singleTotal: 0, extras: 0 });
 });

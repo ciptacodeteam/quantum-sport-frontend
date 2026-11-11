@@ -7,7 +7,10 @@ vi.mock('@/hooks/useAdminCourtSports', () => ({
 }));
 vi.mock('@tanstack/react-query', () => ({
   queryOptions: (options: unknown) => options,
-  useQuery: () => ({ data: [{ slotId: 'coach-slot', coach: { id: 'andi' } }], isFetching: false })
+  useQuery: () => ({
+    data: [{ slotId: 'coach-slot', coach: { id: 'andi', isInHouseCoach: true }, price: 400000 }],
+    isFetching: false
+  })
 }));
 beforeEach(() => {
   HTMLElement.prototype.scrollIntoView = vi.fn();
@@ -147,4 +150,41 @@ it('offers direct coaching without a prepaid wallet and sends the single-hour ta
       participants: 1
     });
   }
+});
+
+it('offers an in-house coach without any customer package using the scheduled hourly price', async () => {
+  const change = vi.fn();
+  render(
+    <BookingInHouseSelection
+      wallets={[]}
+      coaches={[
+        {
+          id: 'andi',
+          name: 'Andi',
+          isInHouseCoach: true,
+          isActive: true,
+          role: 'COACH',
+          coachType: 'PADEL'
+        } as any
+      ]}
+      sessions={[session]}
+      selected={[]}
+      onChange={change}
+    />
+  );
+  fireEvent.click(screen.getByRole('combobox', { name: 'Coaching satuan / paket' }));
+  fireEvent.click(await screen.findByRole('option', { name: /Andi.*Coaching satuan/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Pilih coaching satuan' }));
+  expect(change).toHaveBeenCalledWith(
+    session,
+    expect.objectContaining({
+      staffId: 'andi',
+      coachSlotId: 'coach-slot',
+      courtSlotId: 'court-slot',
+      hourlyPrice: 400000,
+      participants: 1
+    })
+  );
+  expect(change.mock.calls[0][1]).not.toHaveProperty('walletId');
+  expect(change.mock.calls[0][1]).not.toHaveProperty('planId');
 });

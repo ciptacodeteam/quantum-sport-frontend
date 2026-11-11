@@ -3,6 +3,7 @@ import BookingInHouseSelection, {
   usableInHouseWallets
 } from '@/components/admin/booking/BookingInHouseSelection';
 import { adminInHousePricing } from '@/lib/admin-inhouse-pricing';
+import { coachingApi } from '@/api/admin/coaching';
 import { inHouseApi } from '@/api/admin/inhouseCoaching';
 import { useAdminCourtSports } from '@/hooks/useAdminCourtSports';
 import { coachSessionsTotal } from '@/lib/coach-session-pricing';
@@ -121,6 +122,20 @@ export default function BookingAddOns() {
     enabled:
       !!branchId && branchId !== 'all' && (serviceTab === 'inhouse' || storedInHouse.length > 0)
   });
+  const inHousePeople = useQuery({
+    queryKey: ['admin', 'coaching', branchId],
+    queryFn: coachingApi.list,
+    staleTime: 60000,
+    enabled:
+      !!branchId && branchId !== 'all' && (serviceTab === 'inhouse' || storedInHouse.length > 0)
+  });
+  const hourlyCoaches = (inHousePeople.data ?? []).filter(
+    (person) =>
+      person.role === 'COACH' &&
+      person.isInHouseCoach &&
+      person.isActive &&
+      (person.coachType === courtSport || person.coachType === 'PADEL_TENNIS')
+  );
   const singleHourPlans = (inHousePlans.data ?? []).filter(
     (plan) =>
       plan.hours === 1 &&
@@ -129,26 +144,36 @@ export default function BookingAddOns() {
       (plan.staff.coachType === courtSport || plan.staff.coachType === 'PADEL_TENNIS')
   );
   const selectionAvailable = (selection: (typeof storedInHouse)[number]) =>
-    selection.planId
-      ? !inHousePlans.isPending &&
-        !inHousePlans.isError &&
-        singleHourPlans.some((p) => p.id === selection.planId)
-      : !!selectedCustomerId &&
-        !inHouseWallets.isPending &&
-        !inHouseWallets.isError &&
-        usableWallets.some((w) => w.id === selection.walletId);
+    selection.staffId
+      ? !inHousePeople.isPending &&
+        !inHousePeople.isError &&
+        hourlyCoaches.some((coach) => coach.id === selection.staffId)
+      : selection.planId
+        ? !inHousePlans.isPending &&
+          !inHousePlans.isError &&
+          singleHourPlans.some((p) => p.id === selection.planId)
+        : !!selectedCustomerId &&
+          !inHouseWallets.isPending &&
+          !inHouseWallets.isError &&
+          usableWallets.some((w) => w.id === selection.walletId);
   const usableWallets = usableInHouseWallets(inHouseWallets.data ?? [], courtSport);
   const inHouseSelections = storedInHouse.filter((selection) =>
     bookingItems.some((item) => item.slotId === selection.courtSlotId)
   );
-  const hasDirectInHouse = inHouseSelections.some((selection) => !!selection.planId);
+  const hasDirectInHouse = inHouseSelections.some(
+    (selection) => !!selection.planId || !!selection.staffId
+  );
   const inHouseReady =
     (!hasDirectInHouse || (!tariffQuery.isPending && !tariffQuery.isError)) &&
     inHouseSelections.every(selectionAvailable);
   const inHouseLoading =
     (hasDirectInHouse && tariffQuery.isPending) ||
     inHouseSelections.some((selection) =>
-      selection.planId ? inHousePlans.isPending : inHouseWallets.isPending
+      selection.staffId
+        ? inHousePeople.isPending
+        : selection.planId
+          ? inHousePlans.isPending
+          : inHouseWallets.isPending
     );
   const {
     coverage: inHouseCoverage,
@@ -364,7 +389,20 @@ export default function BookingAddOns() {
       ...(amountDue > 0 ? { paymentMethodId: selectedPaymentMethod!.id } : {}),
       useMembership: recurringBooking ? true : useMembership,
       ...(recurringBooking ? { recurringBooking } : {}),
-      ...(inHouseSelections.length ? { inHouseSelections } : {})
+      ...(inHouseSelections.length
+        ? {
+            inHouseSelections: inHouseSelections.map((choice) =>
+              choice.staffId
+                ? {
+                    staffId: choice.staffId,
+                    courtSlotId: choice.courtSlotId,
+                    coachSlotId: choice.coachSlotId,
+                    participants: choice.participants
+                  }
+                : choice
+            )
+          }
+        : {})
     };
 
     if (selectedCustomerId) {
@@ -610,14 +648,32 @@ export default function BookingAddOns() {
                     </p>
                   ) : (
                     !inHousePlans.isPending &&
+                    !inHousePeople.isPending &&
                     !inHousePlans.isError &&
+                    !inHousePeople.isError &&
                     !singleHourPlans.length &&
+                    !hourlyCoaches.length &&
                     !usableWallets.length && (
                       <p className="text-muted-foreground rounded-xl border border-dashed p-5 text-sm">
-                        Belum ada tarif satuan atau kuota in-house untuk customer ini. Pilih
-                        customer di ringkasan booking untuk melihat kuotanya.
+                        Belum ada coach in-house aktif untuk olahraga ini. Paket milik customer
+                        tampil setelah customer dipilih.
                       </p>
                     )
+                  )}
+                  {inHousePeople.isPending && (
+                    <BookingServiceLoading label="Memuat coach in-house..." />
+                  )}
+                  {inHousePeople.isError && (
+                    <p role="alert" className="text-sm">
+                      Coach in-house belum dapat dimuat.{' '}
+                      <button
+                        type="button"
+                        className="underline"
+                        onClick={() => void inHousePeople.refetch()}
+                      >
+                        Coba lagi
+                      </button>
+                    </p>
                   )}
                   {inHousePlans.isError && (
                     <p role="alert" className="text-sm">
@@ -660,6 +716,8 @@ export default function BookingAddOns() {
                       key={`${branchId}:${selectedCustomerId}`}
                       wallets={usableWallets}
                       plans={singleHourPlans}
+                      coaches={hourlyCoaches}
+                      tariffRules={tariffRules}
                       sessions={bookingItems}
                       selected={inHouseSelections}
                       disabled={isConfirming || isCheckingCoaches}

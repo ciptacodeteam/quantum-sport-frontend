@@ -76,6 +76,7 @@ export type CoachAvailability = {
     phone?: string | null;
     image?: string | null;
     role?: string;
+    isInHouseCoach?: boolean;
     coachType?: 'PADEL' | 'PADEL_TENNIS' | 'TENNIS' | null;
   };
   price: number;

@@ -34,14 +34,13 @@ export default function BookingServiceSessionPicker({
             key={session.id}
             type="button"
             disabled={disabled}
+            data-admin-slot
             aria-pressed={value === session.id}
             onClick={() => onChange(session.id)}
             aria-label={`${session.courtName ? `${session.courtName} · ` : ''}${session.date} · ${session.timeSlot}`}
             className={cn(
-              'flex min-w-40 shrink-0 items-start gap-3 rounded-md border-0 px-3 py-2.5 text-left shadow-none transition-colors outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50',
-              value === session.id
-                ? 'bg-primary/10 text-primary'
-                : 'bg-muted/30 hover:bg-muted/60'
+              'focus-visible:outline-primary flex min-w-40 shrink-0 items-start gap-3 rounded-md border-0 px-3 py-2.5 text-left shadow-none transition-colors outline-none focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50',
+              value === session.id ? 'bg-primary/10 text-primary' : 'bg-muted/30 hover:bg-muted/60'
             )}
           >
             <span className="min-w-0">

@@ -9,7 +9,6 @@ import { useRoleAccess } from '@/hooks/useRoleAccess';
 import { useAdminCourtSports } from '@/hooks/useAdminCourtSports';
 import { getApiErrorMessage } from '@/lib/api-error';
 import { formatCurrency } from '@/lib/utils';
-import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,7 +30,7 @@ const panelClass = 'min-w-0 gap-5 rounded-md border-0 bg-muted/20 py-5 shadow-no
 const emptyPlan = (staffId: string): Omit<InHousePlan, 'id' | 'staff'> => ({
   staffId,
   name: '',
-  hours: 5,
+  hours: 0,
   hourlyPrice: 0,
   courtHourlyShare: 0,
   extraParticipantHourlyPrice: 100000,
@@ -286,7 +285,12 @@ export default function InHouseCoachPlans({
                 className="space-y-5"
                 onSubmit={(e) => {
                   e.preventDefault();
-                  save.mutate();
+                  if (
+                    e.currentTarget.reportValidity() &&
+                    Number.isInteger(draft.hours) &&
+                    draft.hours > 0
+                  )
+                    save.mutate();
                 }}
               >
                 <div className="grid min-w-0 gap-2">
@@ -303,18 +307,20 @@ export default function InHouseCoachPlans({
                 </div>
                 <div className="grid min-w-0 gap-2">
                   <Label htmlFor="plan-hours">Kuota jam</Label>
-                  <SearchableSelect
+                  <Input
                     className={fieldClass}
                     id="plan-hours"
-                    searchable={false}
-                    value={String(draft.hours)}
-                    onValueChange={(hours) =>
-                      setDraft({ ...draft, hours: Number(hours) as 1 | 5 | 10 })
-                    }
-                    options={[1, 5, 10].map((hours) => ({
-                      value: String(hours),
-                      label: `${hours} jam`
-                    }))}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*[1-9][0-9]*"
+                    required
+                    placeholder="Ketik jumlah jam"
+                    value={draft.hours || ''}
+                    onChange={(e) => {
+                      if (/^\d*$/.test(e.target.value)) {
+                        setDraft({ ...draft, hours: Number(e.target.value) });
+                      }
+                    }}
                   />
                 </div>
                 <div className="grid min-w-0 gap-2">
@@ -369,7 +375,12 @@ export default function InHouseCoachPlans({
                   <Button
                     type="submit"
                     className="h-10 w-full rounded-md border-0 px-4 shadow-none sm:w-auto"
-                    disabled={save.isPending || !draft.staffId}
+                    disabled={
+                      save.isPending ||
+                      !draft.staffId ||
+                      !Number.isInteger(draft.hours) ||
+                      draft.hours < 1
+                    }
                   >
                     Simpan paket
                   </Button>

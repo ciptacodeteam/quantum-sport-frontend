@@ -103,9 +103,9 @@ afterEach(() => {
 });
 it('creates a package bound to the opened coach profile', async () => {
   renderCoachPlans('awam');
-  fireEvent.change(screen.getByLabelText('Nama paket'), { target: { value: 'Awam 10 jam' } });
-  fireEvent.click(screen.getByRole('combobox', { name: 'Kuota jam' }));
-  fireEvent.click(await screen.findByRole('option', { name: '10 jam' }));
+  fireEvent.change(screen.getByLabelText('Nama paket'), { target: { value: 'Awam 12 jam' } });
+  expect(screen.getByRole('textbox', { name: 'Kuota jam' })).toHaveValue('');
+  fireEvent.change(screen.getByLabelText('Kuota jam'), { target: { value: '12' } });
   fireEvent.change(screen.getByLabelText('Harga per jam (Rp)'), { target: { value: '700000' } });
   fireEvent.change(screen.getByLabelText('Bagian lapangan per jam (Rp)'), {
     target: { value: '200000' }
@@ -114,8 +114,8 @@ it('creates a package bound to the opened coach profile', async () => {
   await waitFor(() =>
     expect(mocks.save).toHaveBeenCalledWith(undefined, {
       staffId: 'awam',
-      name: 'Awam 10 jam',
-      hours: 10,
+      name: 'Awam 12 jam',
+      hours: 12,
       hourlyPrice: 700000,
       courtHourlyShare: 200000,
       extraParticipantHourlyPrice: 100000,

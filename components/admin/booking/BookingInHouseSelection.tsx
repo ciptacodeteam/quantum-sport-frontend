@@ -1,4 +1,6 @@
 'use client';
+import { resolveTariffPeriod, type TariffRule } from '@/lib/tariff-period';
+import type { CoachingPerson } from '@/api/admin/coaching';
 import { useState } from 'react';
 import BookingServiceSessionPicker, { serviceSessionDate } from './BookingServiceSessionPicker';
 import { useAdminCourtSports } from '@/hooks/useAdminCourtSports';
@@ -23,6 +25,8 @@ export function usableInHouseWallets(wallets: InHouseWallet[], sport: string) {
 export default function BookingInHouseSelection({
   wallets,
   plans = [],
+  coaches = [],
+  tariffRules = [],
   sessions,
   selected,
   onChange,
@@ -32,6 +36,8 @@ export default function BookingInHouseSelection({
 }: {
   wallets: InHouseWallet[];
   plans?: InHousePlan[];
+  coaches?: CoachingPerson[];
+  tariffRules?: TariffRule[];
   sessions: BookingItem[];
   selected: InHouseChoice[];
   onChange: (session: BookingItem, choice: InHouseChoice | null) => void;
@@ -41,7 +47,7 @@ export default function BookingInHouseSelection({
 }) {
   const [sessionId, setSessionId] = useState('');
   const currentSession = sessions.find((session) => session.slotId === sessionId) ?? sessions[0];
-  if (!wallets.length && !plans.length) return null;
+  if (!wallets.length && !plans.length && !coaches.length) return null;
   return (
     <section
       aria-label="Paket coach in-house"
@@ -69,6 +75,8 @@ export default function BookingInHouseSelection({
           session={session}
           wallets={wallets}
           plans={plans}
+          coaches={coaches}
+          tariffRules={tariffRules}
           selected={selected}
           onChange={onChange}
           disabled={disabled}
@@ -82,6 +90,8 @@ function InHouseSession({
   session,
   wallets,
   plans,
+  coaches,
+  tariffRules,
   selected,
   onChange,
   disabled,
@@ -90,6 +100,8 @@ function InHouseSession({
   session: BookingItem;
   wallets: InHouseWallet[];
   plans: InHousePlan[];
+  coaches: CoachingPerson[];
+  tariffRules: TariffRule[];
   selected: InHouseChoice[];
   onChange: (session: BookingItem, choice: InHouseChoice | null) => void;
   disabled?: boolean;
@@ -97,23 +109,37 @@ function InHouseSession({
 }) {
   const choice = selected.find((s) => s.courtSlotId === session.slotId);
   const [walletId, setWalletId] = useState(
-    choice?.planId ? `plan:${choice.planId}` : (choice?.walletId ?? '')
+    choice?.staffId
+      ? `staff:${choice.staffId}`
+      : choice?.planId
+        ? `plan:${choice.planId}`
+        : (choice?.walletId ?? '')
   );
   const [participants, setParticipants] = useState(choice?.participants ?? 1);
   const plan = plans.find((p) => `plan:${p.id}` === walletId);
   const wallet = wallets.find((w) => w.id === walletId) ?? plan;
-  const prepaid = !plan;
+  const directCoach = coaches.find((coach) => `staff:${coach.id}` === walletId);
+  const fixedCourtPrice = resolveTariffPeriod(
+    tariffRules,
+    session.date,
+    session.sport
+  ).inHouseCourtHourlyPrice;
+  const prepaid = !plan && !directCoach;
   const { branchId } = useAdminCourtSports();
   const available = useQuery(
     coachAvailabilityOptions(
       branchId,
       session,
       session.sport ?? 'PADEL',
-      !!wallet && (active || !!choice) && !disabled
+      !!(wallet || directCoach) && (active || !!choice) && !disabled
     )
   );
   const coachSlot = !available.isError
-    ? available.data?.find((c) => c.coach.id === wallet?.staffId)
+    ? available.data?.find(
+        (c) =>
+          c.coach.id === (directCoach?.id ?? wallet?.staffId) &&
+          (!directCoach || c.coach.isInHouseCoach === true)
+      )
     : undefined;
   const coachAlreadySelected =
     !!coachSlot?.slotId &&
@@ -123,8 +149,9 @@ function InHouseSession({
   const usedMinutes =
     selected.filter((s) => s.walletId === walletId && s.courtSlotId !== session.slotId).length * 60;
   const hasQuota =
-    !!wallet &&
-    (!prepaid || ('remainingMinutes' in wallet && wallet.remainingMinutes - usedMinutes >= 60));
+    !!(wallet || directCoach) &&
+    (!prepaid ||
+      (wallet && 'remainingMinutes' in wallet && wallet.remainingMinutes - usedMinutes >= 60));
   return (
     <div className="rounded-md p-1 sm:p-2">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -133,14 +160,16 @@ function InHouseSession({
         </p>
         {choice && (
           <span className="text-primary text-xs font-medium">
-            {choice.planId ? 'Coaching satuan 1 jam dipilih' : 'Kuota 1 jam dipilih'}
+            {choice.planId || choice.staffId
+              ? 'Coaching satuan 1 jam dipilih'
+              : 'Kuota 1 jam dipilih'}
           </span>
         )}
       </div>
       <div className="grid items-end gap-3 sm:grid-cols-[minmax(0,1fr)_88px]">
         <div className="grid min-w-0 gap-2">
           <Label htmlFor={`wallet-${session.slotId}`}>
-            {plans.length ? 'Coaching satuan / paket' : 'Paket customer'}
+            {plans.length || coaches.length ? 'Coaching satuan / paket' : 'Paket customer'}
           </Label>
           <SearchableSelect
             className="bg-muted/30 h-11 rounded-md border-0 shadow-none"
@@ -151,15 +180,22 @@ function InHouseSession({
               setWalletId(id);
               if (choice) onChange(session, null);
             }}
-            placeholder="Tanpa paket in-house"
+            placeholder="Pilih coach satuan atau paket customer"
             searchPlaceholder="Cari coach atau paket..."
             options={[
               { value: '', label: 'Tanpa paket in-house' },
-              ...plans.map((plan) => ({
-                value: `plan:${plan.id}`,
-                label: `${plan.staff.name} · Coaching satuan`,
-                description: `${formatCurrency(plan.hourlyPrice)}/jam · tarif dasar`
+              ...coaches.map((coach) => ({
+                value: `staff:${coach.id}`,
+                label: `${coach.name} · Coaching satuan`,
+                description: 'Tanpa paket · tarif Jadwal & Harga'
               })),
+              ...plans
+                .filter((plan) => !coaches.some((coach) => coach.id === plan.staffId))
+                .map((plan) => ({
+                  value: `plan:${plan.id}`,
+                  label: `${plan.staff.name} · Coaching satuan`,
+                  description: `${formatCurrency(plan.hourlyPrice)}/jam · tarif dasar`
+                })),
               ...wallets.map((wallet) => ({
                 value: wallet.id,
                 label: `${wallet.staff.name} · ${wallet.packageName}`,
@@ -211,20 +247,52 @@ function InHouseSession({
                 available.isPending
               }
               onClick={() => {
-                if (wallet && coachSlot?.slotId)
+                if ((wallet || directCoach) && coachSlot?.slotId)
                   onChange(session, {
-                    ...(plan ? { planId: plan.id } : { walletId: wallet.id }),
+                    ...(directCoach
+                      ? {
+                          staffId: directCoach.id,
+                          hourlyPrice: coachSlot.price,
+                          additionalHourPrice: coachSlot.additionalHourPrice
+                        }
+                      : plan
+                        ? { planId: plan.id }
+                        : { walletId: wallet!.id }),
                     courtSlotId: session.slotId,
                     coachSlotId: coachSlot.slotId,
                     participants
                   });
               }}
             >
-              {plan ? 'Pilih coaching satuan' : 'Gunakan paket'}
+              {plan || directCoach ? 'Pilih coaching satuan' : 'Gunakan paket'}
             </Button>
           )}
         </div>
       </div>
+      {directCoach && (
+        <p className="text-muted-foreground mt-4 text-xs leading-relaxed">
+          Tanpa pembelian paket. Harga akhir lapangan mengikuti pengaturan Coaching Satuan; tarif
+          coach mengikuti Jadwal &amp; Harga.
+          {fixedCourtPrice != null && (
+            <> Lapangan {formatCurrency(fixedCourtPrice)}/jam pada Happy Hour maupun Peak Hour.</>
+          )}
+          {coachSlot && (
+            <>
+              {' '}
+              Tarif coach jam pertama {formatCurrency(coachSlot.price)}
+              {coachSlot.additionalHourPrice != null && (
+                <>; jam tambahan {formatCurrency(coachSlot.additionalHourPrice)}</>
+              )}
+              .
+            </>
+          )}
+          {available.isPending
+            ? ' Memeriksa jadwal coach…'
+            : !coachSlot
+              ? ' Coach tidak tersedia pada jam ini.'
+              : ''}
+        </p>
+      )}
       {wallet && (
         <div className="text-muted-foreground mt-4 space-y-2 border-t pt-3 text-xs leading-relaxed">
           <p>

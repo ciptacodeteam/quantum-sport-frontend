@@ -931,10 +931,12 @@ export default function BookingSummary({
                 )}
               </>
             )}
-            {inHouseCoverage > 0 && (
+            {inHouseCoverage !== 0 && (
               <div className="flex items-center justify-between text-sm">
-                <span>Potongan & pembayaran lapangan paket in-house</span>
-                <span>− {formatCurrency(inHouseCoverage)}</span>
+                <span>Penyesuaian lapangan coaching in-house</span>
+                <span>
+                  {inHouseCoverage > 0 ? '−' : '+'} {formatCurrency(Math.abs(inHouseCoverage))}
+                </span>
               </div>
             )}
             {inHouseSingleTotal > 0 && (

@@ -914,6 +914,7 @@ export default function BookingLapangan() {
                     'h-auto min-h-20 min-w-16 shrink-0 grow basis-16 snap-start flex-col gap-1.5 p-2 text-center',
                     dateInfo.isToday && 'border-primary border-2'
                   )}
+                  data-admin-slot
                   aria-pressed={isSameDay(localSelectedDate, dateInfo.date)}
                   onClick={() => {
                     setLocalSelectedDate(dateInfo.date);
@@ -933,8 +934,8 @@ export default function BookingLapangan() {
         <div className="grid min-w-0 grid-cols-1 items-start gap-6 2xl:grid-cols-[minmax(0,1fr)_420px]">
           {/* Main Content - Court Selection & Time Selection */}
           <div className="flex min-w-0 flex-col gap-6">
-            {/* Court Selection (Green Section) */}
-            <Card className="min-w-0 gap-5 py-5 sm:py-6">
+            {/* Court Selection */}
+            <Card data-admin-borderless className="min-w-0 gap-5 border-0 py-5 shadow-none sm:py-6">
               <CardHeader className="gap-2 px-5 sm:px-6">
                 <CardTitle className="text-base leading-snug font-semibold">Select Court</CardTitle>
                 <p className="text-muted-foreground text-xs lg:text-sm">
@@ -1247,12 +1248,13 @@ export default function BookingLapangan() {
                             <Button
                               type="button"
                               disabled={isBooked}
+                              data-admin-slot
                               aria-pressed={isSelected}
                               aria-label={`${timeSlot}${isBooked ? ' · Booked' : ''}`}
                               variant={isSelected ? 'default' : isBooked ? 'secondary' : 'outline'}
                               className={cn(
                                 'h-11 w-full justify-center px-3 text-sm font-medium',
-                                isSelected && 'bg-primary text-primary-foreground shadow-lg',
+                                isSelected && 'bg-primary text-primary-foreground shadow-none',
                                 isBooked &&
                                   'cursor-not-allowed bg-gray-100 text-gray-500 opacity-50',
                                 !isBooked &&
