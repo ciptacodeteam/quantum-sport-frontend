@@ -55,15 +55,18 @@ export function adminInHousePricing(
               : rules.length
                 ? 0
                 : null;
-      const courtDue = choice.staffId
-        ? Math.max(0, base - (discount ?? 0))
-        : discount === null
-          ? 0
-          : Math.max(0, base - discount);
+      const fixedCourtPrice = choice.walletId ? null : bands.inHouseCourtHourlyPrice;
+      const courtDue =
+        fixedCourtPrice ??
+        (choice.staffId
+          ? Math.max(0, base - (discount ?? 0))
+          : discount === null
+            ? 0
+            : Math.max(0, base - discount));
       totals.coverage += base - courtDue;
       totals.singleTotal +=
         choice.planId || choice.staffId
-          ? choice.staffId
+          ? fixedCourtPrice != null || choice.staffId
             ? terms.hourlyPrice - terms.courtHourlyShare
             : discount === null
               ? terms.hourlyPrice
