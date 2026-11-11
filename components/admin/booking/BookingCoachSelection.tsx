@@ -44,7 +44,11 @@ export default function BookingCoachSelection({
     ...new Map(sessions.map((session) => [coachSessionKey(session), session])).values()
   ];
   const coaches = (people.data ?? []).filter(
-    (person) => person.role === 'COACH' && !person.inHousePlans?.length && serviceMatchesSport('COACH', person.coachType, sport)
+    (person) =>
+      person.role === 'COACH' &&
+      !person.isInHouseCoach &&
+      !person.inHousePlans?.length &&
+      serviceMatchesSport('COACH', person.coachType, sport)
   );
   const eligibleGroups = (groups.data ?? []).filter(
     (group) =>

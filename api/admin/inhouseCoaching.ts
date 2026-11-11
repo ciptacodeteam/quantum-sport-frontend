@@ -17,6 +17,7 @@ export type InHouseWallet = {
   packageName: string;
   totalMinutes: number;
   remainingMinutes: number;
+  _count: { usages: number };
   hourlyPrice: number;
   courtHourlyShare: number;
   extraParticipantHourlyPrice: number;
@@ -59,6 +60,8 @@ export const inHouseApi = {
         params: { userId, availableOnly: availableOnly ? 'true' : undefined }
       })
     ).data.data as InHouseWallet[],
+  deleteWallet: async (id: string) =>
+    (await adminApi.delete(`/inhouse-coaching/wallets/${id}`)).data.data,
   sell: async (input: {
     packageId: string;
     userId: string;

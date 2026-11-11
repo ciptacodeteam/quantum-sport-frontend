@@ -193,13 +193,20 @@ export default function CoachingSchedule({
         <Link
           href={
             person.data.role === 'COACH'
-              ? groupId
-                ? `/admin/coaching-groups/${encodeURIComponent(groupId)}`
-                : '/admin/coaching-groups'
+              ? person.data.isInHouseCoach
+                ? '/admin/coach-inhouse'
+                : groupId
+                  ? `/admin/coaching-groups/${encodeURIComponent(groupId)}`
+                  : '/admin/coaching-groups'
               : '/admin/coaching?kind=BALLBOY'
           }
         >
-          ← Kembali ke {person.data.role === 'COACH' ? 'Grup Coaching' : 'Ballboy'}
+          ← Kembali ke{' '}
+          {person.data.isInHouseCoach
+            ? 'Coach In-house'
+            : person.data.role === 'COACH'
+              ? 'Grup Coaching'
+              : 'Ballboy'}
         </Link>
       </Button>
       <div>

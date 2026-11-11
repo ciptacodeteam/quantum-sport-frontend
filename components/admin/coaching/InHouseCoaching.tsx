@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { inHouseApi, type InHousePlan } from '@/api/admin/inhouseCoaching';
+import { inHouseApi, type InHousePlan, type InHouseWallet } from '@/api/admin/inhouseCoaching';
 import { coachingApi } from '@/api/admin/coaching';
 import { adminCustomerSearchQueryOptions } from '@/queries/admin/customer';
 import { adminPaymentMethodsQueryOptions } from '@/queries/admin/paymentMethod';
@@ -17,6 +17,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppSectionHeader from '@/components/ui/app-section-header';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from '@/components/ui/dialog';
 import { toast } from 'sonner';
 const emptyPlan = (): Omit<InHousePlan, 'id' | 'staff'> => ({
   staffId: '',
@@ -36,6 +44,7 @@ export default function InHouseCoaching() {
   const canSell = canEdit || userRole === 'CASHIER';
   const ready = hasAccess && !!branchId && branchId !== 'all';
   const client = useQueryClient();
+  const [deleting, setDeleting] = useState<InHouseWallet | null>(null);
   const [tab, setTab] = useState('quota');
   const [draft, setDraft] = useState(emptyPlan);
   const [editingCourtAmount, setEditingCourtAmount] = useState(false);
@@ -94,10 +103,49 @@ export default function InHouseCoaching() {
     },
     onError: (e) => toast.error(getApiErrorMessage(e, 'Pembelian belum berhasil.'))
   });
+  const remove = useMutation({
+    mutationFn: (id: string) => inHouseApi.deleteWallet(id),
+    onSuccess: () => {
+      refresh();
+      setDeleting(null);
+      toast.success('Paket coaching dihapus.');
+    },
+    onError: (e) => toast.error(getApiErrorMessage(e, 'Paket belum berhasil dihapus.'))
+  });
   const selectedPlan = plans.data?.find((p) => p.id === packageId);
   if (!hasAccess) return null;
   return (
     <div className="space-y-6">
+      <Dialog
+        open={!!deleting}
+        onOpenChange={(open) => {
+          if (!open && !remove.isPending) setDeleting(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Hapus paket coaching?</DialogTitle>
+            <DialogDescription>
+              Hapus {deleting?.packageName} milik {deleting?.user.name} ({deleting?.staff.name})
+              dengan kuota {deleting ? deleting.remainingMinutes / 60 : 0} jam? Paket akan dihapus
+              dari saldo kuota dan tidak bisa dipakai untuk booking. Invoice dan pembayaran tetap
+              tersimpan. Tindakan ini tidak mengembalikan pembayaran.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" disabled={remove.isPending} onClick={() => setDeleting(null)}>
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={remove.isPending}
+              onClick={() => deleting && remove.mutate(deleting.id)}
+            >
+              {remove.isPending ? 'Menghapus…' : 'Hapus paket'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <AppSectionHeader
         title="Coaching In-house"
         description="Paket per coach, kuota customer, dan pembagian pemakaian coaching."
@@ -143,7 +191,7 @@ export default function InHouseCoaching() {
                   <CardTitle>Tarif per coach</CardTitle>
                   {canEdit && (
                     <Link
-                      href="/admin/coaching-groups/independent"
+                      href="/admin/coach-inhouse"
                       className="text-primary w-fit text-sm leading-relaxed underline underline-offset-4"
                     >
                       Kelola profil & jadwal coach
@@ -238,7 +286,12 @@ export default function InHouseCoaching() {
                           searchPlaceholder="Cari nama coach..."
                           emptyMessage="Coach tidak ditemukan."
                           options={(people.data ?? [])
-                            .filter((person) => person.role === 'COACH' && person.isActive)
+                            .filter(
+                              (person) =>
+                                person.role === 'COACH' &&
+                                person.isActive &&
+                                person.isInHouseCoach === true
+                            )
                             .map((person) => ({ value: person.id, label: person.name }))}
                         />
                       </div>
@@ -483,7 +536,13 @@ export default function InHouseCoaching() {
                       <thead className="text-muted-foreground border-b">
                         <tr>
                           {(tab === 'quota'
-                            ? ['Customer', 'Coach / paket', 'Sisa / total jam', 'Invoice pembelian']
+                            ? [
+                                'Customer',
+                                'Coach / paket',
+                                'Sisa / total jam',
+                                'Invoice pembelian',
+                                ...(canSell ? ['Aksi'] : [])
+                              ]
                             : [
                                 'Customer / coach',
                                 'Jadwal bermain',
@@ -526,6 +585,25 @@ export default function InHouseCoaching() {
                                     </Link>
                                   )}
                                 </td>
+                                {canSell && (
+                                  <td className="p-3">
+                                    {wallet.remainingMinutes === wallet.totalMinutes &&
+                                    wallet._count?.usages === 0 ? (
+                                      <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        disabled={remove.isPending}
+                                        onClick={() => setDeleting(wallet)}
+                                      >
+                                        Hapus
+                                      </Button>
+                                    ) : (
+                                      <span className="text-muted-foreground text-xs">
+                                        Sudah pernah dipakai
+                                      </span>
+                                    )}
+                                  </td>
+                                )}
                               </tr>
                             ))
                           : usage.data?.map((row) => (

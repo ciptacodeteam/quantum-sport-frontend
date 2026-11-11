@@ -18,6 +18,7 @@ export type CoachingPerson = {
   coachType: 'PADEL' | 'TENNIS' | 'PADEL_TENNIS' | null;
   coachProfile: string | null;
   coachingGroups?: { group: CoachingGroupSummary }[];
+  isInHouseCoach?: boolean;
   inHousePlans?: { id: string }[];
   isActive: boolean;
   rollingServiceSchedule?: RollingServiceSchedule | null;
@@ -28,6 +29,7 @@ export type CoachingProfile = {
   coachType?: 'PADEL' | 'TENNIS' | 'PADEL_TENNIS';
   phone?: string;
   coachProfile?: string;
+  isInHouseCoach?: boolean;
   groupIds?: string[];
   isActive: boolean;
 };

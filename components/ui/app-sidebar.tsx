@@ -85,6 +85,7 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
           title: 'Book Value Pack',
           url: '/admin/booking-membership'
         },
+        { title: 'Coaching In-house', url: '/admin/coaching-inhouse' },
         {
           title: 'Schedule',
           url: '/admin/schedule'
@@ -181,8 +182,8 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
           url: '/admin/coaching-groups'
         },
         {
-          title: 'Coaching In-house',
-          url: '/admin/coaching-inhouse'
+          title: 'Coach In-house',
+          url: '/admin/coach-inhouse'
         },
         {
           title: 'Ballboy',
@@ -252,6 +253,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               title: 'Book Value Pack',
               url: '/admin/booking-membership'
             },
+            { title: 'Coaching In-house', url: '/admin/coaching-inhouse' },
             {
               title: 'Schedule',
               url: '/admin/schedule'
@@ -281,11 +283,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           ]
         },
         {
-          title: 'Master Data',
-          icon: IconDatabase,
-          items: [{ title: 'Coaching In-house', url: '/admin/coaching-inhouse' }]
-        },
-        {
           title: 'Kustomer',
           icon: IconUsers,
           items: [
@@ -299,17 +296,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
 
     if (isAdminViewer) {
-      // Preserve read-only access to coaching while keeping other master data hidden.
-      return data.navMain
-        .filter((item) => !['Dashboard', 'Kelola Karyawan', 'Marketing'].includes(item.title))
-        .map((item) =>
-          item.title === 'Master Data'
-            ? {
-                ...item,
-                items: item.items?.filter((child) => child.url === '/admin/coaching-inhouse')
-              }
-            : item
-        );
+      return data.navMain.filter(
+        (item) => !['Dashboard', 'Kelola Karyawan', 'Marketing', 'Master Data'].includes(item.title)
+      );
     }
 
     if (me.role !== ROLE.SUPER_ADMIN)

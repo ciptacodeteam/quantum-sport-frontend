@@ -22,6 +22,7 @@ afterEach(() => {
 });
 const wallet: InHouseWallet = {
   id: 'wallet',
+  _count: { usages: 2 },
   userId: 'customer',
   staffId: 'andi',
   packageName: 'Andi 5 jam',

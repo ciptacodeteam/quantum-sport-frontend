@@ -1,6 +1,12 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ role: 'ADMIN', save: vi.fn(), sell: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  role: 'ADMIN',
+  wallets: [] as any[],
+  remove: vi.fn(),
+  save: vi.fn(),
+  sell: vi.fn()
+}));
 vi.mock('@/hooks/useRoleAccess', () => ({
   useRoleAccess: () => ({ hasAccess: true, userRole: mocks.role })
 }));
@@ -13,14 +19,19 @@ vi.mock('@/api/admin/inhouseCoaching', () => ({
     wallets: vi.fn(),
     usage: vi.fn(),
     savePlan: mocks.save,
-    sell: mocks.sell
+    sell: mocks.sell,
+    deleteWallet: mocks.remove
   }
 }));
 vi.mock('@tanstack/react-query', () => ({
   queryOptions: (options: unknown) => options,
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
-  useMutation: (options: any) => ({ mutate: () => options.mutationFn(), isPending: false }),
+  useMutation: (options: any) => ({
+    mutate: (input: unknown) => options.mutationFn(input),
+    isPending: false
+  }),
   useQuery: ({ queryKey }: any) => {
+    if (queryKey.includes('wallets')) return { data: mocks.wallets };
     if (queryKey.includes('plans'))
       return {
         data: [
@@ -42,8 +53,16 @@ vi.mock('@tanstack/react-query', () => ({
     if (queryKey.includes('coaching'))
       return {
         data: [
-          { id: 'andi', name: 'Andi', role: 'COACH', isActive: true },
-          { id: 'awam', name: 'Awam', role: 'COACH', isActive: true }
+          { id: 'andi', name: 'Andi', role: 'COACH', isActive: true, isInHouseCoach: true },
+          { id: 'club', name: 'Coach Club', role: 'COACH', isActive: true, isInHouseCoach: false },
+          {
+            id: 'inactive',
+            name: 'Coach Nonaktif',
+            role: 'COACH',
+            isActive: false,
+            isInHouseCoach: true
+          },
+          { id: 'awam', name: 'Awam', role: 'COACH', isActive: true, isInHouseCoach: true }
         ]
       };
     if (queryKey.includes('search'))
@@ -56,6 +75,7 @@ vi.mock('@tanstack/react-query', () => ({
 import InHouseCoaching from './InHouseCoaching';
 beforeEach(() => {
   mocks.role = 'ADMIN';
+  mocks.wallets = [];
   vi.clearAllMocks();
   HTMLElement.prototype.scrollIntoView = vi.fn();
   vi.stubGlobal(
@@ -180,4 +200,56 @@ it('clears an initial zero while editing an amount and restores zero if left bla
   fireEvent.blur(amount);
   fireEvent.focus(amount);
   expect(amount).toHaveValue(250000);
+});
+
+const unusedWallet = {
+  id: 'wallet',
+  packageName: '5 jam',
+  totalMinutes: 300,
+  remainingMinutes: 300,
+  user: { name: 'Budi' },
+  staff: { name: 'Andi' },
+  _count: { usages: 0 }
+};
+it.each(['ADMIN', 'CASHIER'])('lets %s confirm deletion of an unused package', (role) => {
+  mocks.role = role;
+  mocks.wallets = [unusedWallet];
+  render(<InHouseCoaching />);
+  fireEvent.click(screen.getByRole('button', { name: 'Hapus' }));
+  expect(mocks.remove).not.toHaveBeenCalled();
+  expect(screen.getByRole('dialog')).toHaveTextContent('Invoice dan pembayaran tetap tersimpan');
+  fireEvent.click(screen.getByRole('button', { name: 'Hapus paket' }));
+  expect(mocks.remove).toHaveBeenCalledWith('wallet');
+});
+it('lets the user cancel deletion', () => {
+  mocks.wallets = [unusedWallet];
+  render(<InHouseCoaching />);
+  fireEvent.click(screen.getByRole('button', { name: 'Hapus' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Batal' }));
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  expect(mocks.remove).not.toHaveBeenCalled();
+});
+it('hides deletion for used and restored packages', () => {
+  mocks.wallets = [{ ...unusedWallet, _count: { usages: 1 } }];
+  render(<InHouseCoaching />);
+  expect(screen.queryByRole('button', { name: 'Hapus' })).not.toBeInTheDocument();
+});
+it('hides deletion from viewers', () => {
+  mocks.role = 'ADMIN_VIEWER';
+  mocks.wallets = [unusedWallet];
+  render(<InHouseCoaching />);
+  expect(screen.queryByRole('button', { name: 'Hapus' })).not.toBeInTheDocument();
+});
+
+it('only lists active in-house coaches for tariffs', async () => {
+  render(<InHouseCoaching />);
+  fireEvent.click(screen.getByRole('button', { name: 'Paket & Tarif' }));
+  expect(screen.getByRole('link', { name: 'Kelola profil & jadwal coach' })).toHaveAttribute(
+    'href',
+    '/admin/coach-inhouse'
+  );
+  fireEvent.click(screen.getByRole('combobox', { name: 'Coach in-house' }));
+  expect(await screen.findByRole('option', { name: 'Andi' })).toBeInTheDocument();
+  expect(screen.queryByRole('option', { name: 'Coach Club' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('option', { name: 'Coach Nonaktif' })).not.toBeInTheDocument();
 });

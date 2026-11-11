@@ -42,13 +42,13 @@ const people = [
     isActive: true
   }
 ];
-function mount(groupId?: string) {
+function mount(groupId?: string, inHouse = false) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } }
   });
   render(
     <QueryClientProvider client={client}>
-      <CoachingCatalog groupId={groupId} />
+      <CoachingCatalog groupId={groupId} inHouse={inHouse} />
     </QueryClientProvider>
   );
   return client;
@@ -194,6 +194,34 @@ it('keeps ballboys available to both sports without a restrictive sport selector
     expect(mocks.save).toHaveBeenCalledWith(
       'ballboy',
       expect.objectContaining({ kind: 'BALLBOY', coachType: 'PADEL_TENNIS' })
+    )
+  );
+});
+
+it('shows only in-house coaches in the dedicated catalog', async () => {
+  mocks.list.mockResolvedValue([{ ...people[0], isInHouseCoach: true }, people[1], people[2]]);
+  mount(undefined, true);
+  expect(await screen.findByText('Coach A')).toBeInTheDocument();
+  expect(screen.queryByText('Coach B')).not.toBeInTheDocument();
+  expect(screen.queryByText('Ballboy Ibnu')).not.toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Coach In-house' })).toBeInTheDocument();
+});
+it('creates in-house coaches without requiring groups or tariffs', async () => {
+  mocks.list.mockResolvedValue([]);
+  mount(undefined, true);
+  fireEvent.click(await screen.findByRole('button', { name: 'Tambah Coach In-house' }));
+  expect(screen.queryByRole('group', { name: 'Grup coaching' })).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Nama'), { target: { value: 'Coach Baru' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Simpan profil' }));
+  await waitFor(() =>
+    expect(mocks.save).toHaveBeenCalledWith(
+      undefined,
+      expect.objectContaining({
+        name: 'Coach Baru',
+        kind: 'COACH',
+        isInHouseCoach: true,
+        isActive: true
+      })
     )
   );
 });

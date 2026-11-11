@@ -38,11 +38,12 @@ const col = createColumnHelper<CoachingPerson>();
 
 type CoachingCatalogProps = {
   groupId?: string;
+  inHouse?: boolean;
 };
 
-export default function CoachingCatalog({ groupId }: CoachingCatalogProps = {}) {
+export default function CoachingCatalog({ groupId, inHouse = false }: CoachingCatalogProps = {}) {
   const params = useSearchParams();
-  const kind = !groupId && params.get('kind') === 'BALLBOY' ? 'BALLBOY' : 'COACH';
+  const kind = !inHouse && !groupId && params.get('kind') === 'BALLBOY' ? 'BALLBOY' : 'COACH';
   const { hasAccess, isLoading } = useRoleAccess({ allowedRoles: ['ADMIN'] });
   const { branchId, canCreateTennis } = useAdminCourtSports();
   const client = useQueryClient();
@@ -54,7 +55,7 @@ export default function CoachingCatalog({ groupId }: CoachingCatalogProps = {}) 
   const groups = useQuery({
     queryKey: ['admin', 'coaching-groups', branchId],
     queryFn: () => coachingGroupApi.list(branchId),
-    enabled: hasAccess && kind === 'COACH' && !!branchId && branchId !== 'all'
+    enabled: hasAccess && !inHouse && kind === 'COACH' && !!branchId && branchId !== 'all'
   });
   const [editing, setEditing] = useState<CoachingPerson | null>(null);
   const [open, setOpen] = useState(false);
@@ -66,7 +67,8 @@ export default function CoachingCatalog({ groupId }: CoachingCatalogProps = {}) 
     groupIds: []
   });
   const save = useMutation({
-    mutationFn: () => coachingApi.save(editing?.id, draft),
+    mutationFn: () =>
+      coachingApi.save(editing?.id, { ...draft, ...(inHouse ? { isInHouseCoach: true } : {}) }),
     onSuccess: () => {
       setOpen(false);
       void client.invalidateQueries({ queryKey: ['admin', 'coaching'] });
@@ -83,6 +85,7 @@ export default function CoachingCatalog({ groupId }: CoachingCatalogProps = {}) 
           ? {
               name: person.name,
               kind: person.role,
+              isInHouseCoach: person.isInHouseCoach,
               groupIds: (person.coachingGroups ?? []).map((m) => m.group.id),
               coachType:
                 person.role === 'BALLBOY' ? 'PADEL_TENNIS' : (person.coachType ?? undefined),
@@ -107,12 +110,13 @@ export default function CoachingCatalog({ groupId }: CoachingCatalogProps = {}) 
       (query.data ?? []).filter(
         (person) =>
           person.role === kind &&
+          (!inHouse || person.isInHouseCoach === true) &&
           (!groupId ||
             (groupId === 'independent'
               ? !person.coachingGroups?.length
               : person.coachingGroups?.some((membership) => membership.group.id === groupId)))
       ),
-    [query.data, kind, groupId]
+    [query.data, kind, groupId, inHouse]
   );
   const columns = useMemo(
     () => [
@@ -123,8 +127,10 @@ export default function CoachingCatalog({ groupId }: CoachingCatalogProps = {}) 
             <p className="font-medium">{getValue()}</p>
             {kind === 'COACH' && (
               <p className="text-muted-foreground mt-1 text-xs">
-                {row.original.coachingGroups?.map((m) => m.group.name).join(', ') ||
-                  'Coach Independen'}
+                {row.original.isInHouseCoach
+                  ? 'Coach In-house'
+                  : row.original.coachingGroups?.map((m) => m.group.name).join(', ') ||
+                    'Coach Independen'}
               </p>
             )}
           </div>
@@ -193,7 +199,13 @@ export default function CoachingCatalog({ groupId }: CoachingCatalogProps = {}) 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">
-            {groupId ? 'Member Coach' : kind === 'COACH' ? 'Coaching' : 'Ballboy'}
+            {inHouse
+              ? 'Coach In-house'
+              : groupId
+                ? 'Member Coach'
+                : kind === 'COACH'
+                  ? 'Coaching'
+                  : 'Ballboy'}
           </h1>
           <p className="text-muted-foreground mt-2 text-sm">
             Kelola profil, olahraga, jadwal, dan harga layanan per jam.
@@ -237,7 +249,7 @@ export default function CoachingCatalog({ groupId }: CoachingCatalogProps = {}) 
                 }
               >
                 <IconPlus />
-                Tambah {kind === 'COACH' ? 'Coach' : 'Ballboy'}
+                Tambah {inHouse ? 'Coach In-house' : kind === 'COACH' ? 'Coach' : 'Ballboy'}
               </Button>
             }
           />
@@ -252,7 +264,8 @@ export default function CoachingCatalog({ groupId }: CoachingCatalogProps = {}) 
         <DialogContent className="max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editing ? 'Edit' : 'Tambah'} {draft.kind === 'COACH' ? 'Coach' : 'Ballboy'}
+              {editing ? 'Edit' : 'Tambah'}{' '}
+              {inHouse ? 'Coach In-house' : draft.kind === 'COACH' ? 'Coach' : 'Ballboy'}
             </DialogTitle>
             <DialogDescription>Kelola nama, kontak, dan status profil layanan.</DialogDescription>
           </DialogHeader>
@@ -301,7 +314,7 @@ export default function CoachingCatalog({ groupId }: CoachingCatalogProps = {}) 
                 Ballboy tersedia untuk Padel & Tennis sesuai cabang dan jadwalnya.
               </p>
             )}
-            {draft.kind === 'COACH' && (
+            {draft.kind === 'COACH' && !inHouse && (
               <fieldset className="space-y-2">
                 <legend className="mb-2 text-sm font-medium">Grup coaching</legend>
                 <p className="text-muted-foreground text-xs">
@@ -373,7 +386,8 @@ export default function CoachingCatalog({ groupId }: CoachingCatalogProps = {}) 
             <Button
               className="w-full"
               disabled={
-                save.isPending || (draft.kind === 'COACH' && (groups.isPending || groups.isError))
+                save.isPending ||
+                (!inHouse && draft.kind === 'COACH' && (groups.isPending || groups.isError))
               }
             >
               {save.isPending ? 'Menyimpan...' : 'Simpan profil'}
