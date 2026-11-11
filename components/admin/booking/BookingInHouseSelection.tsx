@@ -1,5 +1,5 @@
 'use client';
-import { resolveTariffPeriod, type TariffRule } from '@/lib/tariff-period';
+import type { TariffRule } from '@/lib/tariff-period';
 import type { CoachingPerson } from '@/api/admin/coaching';
 import { useState } from 'react';
 import BookingServiceSessionPicker, { serviceSessionDate } from './BookingServiceSessionPicker';
@@ -119,11 +119,6 @@ function InHouseSession({
   const plan = plans.find((p) => `plan:${p.id}` === walletId);
   const wallet = wallets.find((w) => w.id === walletId) ?? plan;
   const directCoach = coaches.find((coach) => `staff:${coach.id}` === walletId);
-  const fixedCourtPrice = resolveTariffPeriod(
-    tariffRules,
-    session.date,
-    session.sport
-  ).inHouseCourtHourlyPrice;
   const prepaid = !plan && !directCoach;
   const { branchId } = useAdminCourtSports();
   const available = useQuery(
@@ -271,11 +266,8 @@ function InHouseSession({
       </div>
       {directCoach && (
         <p className="text-muted-foreground mt-4 text-xs leading-relaxed">
-          Tanpa pembelian paket. Harga akhir lapangan mengikuti pengaturan Coaching Satuan; tarif
+          Tanpa pembelian paket. Lapangan memakai harga normal sesuai jadwal; tarif
           coach mengikuti Jadwal &amp; Harga.
-          {fixedCourtPrice != null && (
-            <> Lapangan {formatCurrency(fixedCourtPrice)}/jam pada Happy Hour maupun Peak Hour.</>
-          )}
           {coachSlot && (
             <>
               {' '}

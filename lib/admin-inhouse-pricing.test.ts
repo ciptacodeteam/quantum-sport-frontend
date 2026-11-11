@@ -121,7 +121,7 @@ it('uses Peak Hour and weekend overrides without applying future rules early', (
 it.each([
   ['09:00 - 10:00', 150000],
   ['18:00 - 19:00', 300000]
-])('uses the fixed court price for %s without a prepaid package', (timeSlot, price) => {
+])('uses the normal court price for %s without the fixed-price schema', (timeSlot, price) => {
   const session = {
     slotId: 'court',
     date: '2040-11-03',
@@ -148,14 +148,15 @@ it.each([
       happyEnd: 15,
       peakStart: 15,
       peakEnd: 24,
-      inHouseCourtHourlyPrice: 250000
+      happyInHouseCoachDiscount: 50000,
+      peakInHouseCoachDiscount: 50000
     }
   ] as TariffRule[];
   const result = adminInHousePricing([session], choices, [], [], rules);
-  expect(price - result.coverage).toBe(250000);
-  expect(price - result.coverage + result.singleTotal + result.extras).toBe(650000);
+  expect(price - result.coverage).toBe(price);
+  expect(price - result.coverage + result.singleTotal + result.extras).toBe(price + 400000);
 });
-it('keeps prepaid package coverage unchanged when a fixed court tariff is configured', () => {
+it('keeps prepaid package coverage unchanged when court discounts are configured', () => {
   const result = adminInHousePricing(
     [{ ...courts[0], date: '2040-11-03', sport: 'PADEL', timeSlot: '18:00 - 19:00' }],
     [{ walletId: 'wallet', courtSlotId: courts[0].slotId, coachSlotId: 'coach', participants: 1 }],
@@ -171,7 +172,8 @@ it('keeps prepaid package coverage unchanged when a fixed court tariff is config
         happyEnd: 15,
         peakStart: 15,
         peakEnd: 24,
-        inHouseCourtHourlyPrice: 999999
+        happyInHouseCoachDiscount: 50000,
+        peakInHouseCoachDiscount: 50000
       }
     ]
   );

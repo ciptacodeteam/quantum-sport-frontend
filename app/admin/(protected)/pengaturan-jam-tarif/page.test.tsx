@@ -51,7 +51,6 @@ it('saves explicit whole-hour periods with a Jakarta effective date', () => {
     peakEnd: 24,
     happyCoachDiscount: 0,
     peakCoachDiscount: 0,
-    inHouseCourtHourlyPrice: null,
     happyInHouseCoachDiscount: null,
     peakInHouseCoachDiscount: null
   });
@@ -84,7 +83,6 @@ it('edits an upcoming rule without losing its effective date or hour boundaries'
     peakEnd: 23,
     happyCoachDiscount: 0,
     peakCoachDiscount: 0,
-    inHouseCourtHourlyPrice: null,
     happyInHouseCoachDiscount: null,
     peakInHouseCoachDiscount: null
   });
@@ -294,27 +292,27 @@ it('saves independent club and in-house amounts and can restore legacy package r
   fireEvent.change(screen.getByLabelText('Potongan Coach Club Happy Hour (Rp)'), {
     target: { value: '50000' }
   });
-  fireEvent.click(screen.getByRole('checkbox', { name: /Gunakan harga lapangan fixed/ }));
-  fireEvent.change(screen.getByLabelText('Harga akhir lapangan per jam (Rp)'), {
-    target: { value: '250000' }
+  fireEvent.click(screen.getByRole('checkbox', { name: /Gunakan potongan coaching satuan/ }));
+  fireEvent.change(screen.getByLabelText('Potongan Coaching Satuan Happy Hour (Rp)'), {
+    target: { value: '100000' }
   });
-
+  fireEvent.change(screen.getByLabelText('Potongan Coaching Satuan Peak Hour (Rp)'), {
+    target: { value: '75000' }
+  });
   fireEvent.click(screen.getByRole('button', { name: 'Simpan Aturan Jam Tarif' }));
   expect(mocks.save).toHaveBeenLastCalledWith(
     expect.objectContaining({
       happyCoachDiscount: 50000,
       peakCoachDiscount: 0,
-      inHouseCourtHourlyPrice: 250000,
-      happyInHouseCoachDiscount: null,
-      peakInHouseCoachDiscount: null
+      happyInHouseCoachDiscount: 100000,
+      peakInHouseCoachDiscount: 75000
     })
   );
-  fireEvent.click(screen.getByRole('checkbox', { name: /Gunakan harga lapangan fixed/ }));
+  fireEvent.click(screen.getByRole('checkbox', { name: /Gunakan potongan coaching satuan/ }));
   fireEvent.click(screen.getByRole('button', { name: 'Simpan Aturan Jam Tarif' }));
   expect(mocks.save).toHaveBeenLastCalledWith(
     expect.objectContaining({
       happyCoachDiscount: 50000,
-      inHouseCourtHourlyPrice: null,
       happyInHouseCoachDiscount: null,
       peakInHouseCoachDiscount: null
     })
@@ -332,19 +330,21 @@ it('restores independent in-house amounts from scheduled history', () => {
       peakStart: 15,
       peakEnd: 24,
       happyCoachDiscount: 10000,
-      inHouseCourtHourlyPrice: 250000
+      happyInHouseCoachDiscount: 90000,
+      peakInHouseCoachDiscount: 120000
     }
   ];
   render(<TariffPeriodPage />);
   fireEvent.click(screen.getByText('Riwayat & Aturan Terjadwal'));
   fireEvent.click(screen.getByRole('button', { name: 'Edit Aturan' }));
-  expect(screen.getByRole('checkbox', { name: /Gunakan harga lapangan fixed/ })).toBeChecked();
-  expect(screen.getByLabelText('Harga akhir lapangan per jam (Rp)')).toHaveValue(250000);
+  expect(screen.getByRole('checkbox', { name: /Gunakan potongan coaching satuan/ })).toBeChecked();
+  expect(screen.getByLabelText('Potongan Coaching Satuan Peak Hour (Rp)')).toHaveValue(120000);
   fireEvent.click(screen.getByRole('button', { name: 'Simpan Aturan Jam Tarif' }));
   expect(mocks.save).toHaveBeenLastCalledWith(
     expect.objectContaining({
       effectiveFrom: '2026-11-02',
-      inHouseCourtHourlyPrice: 250000
+      happyInHouseCoachDiscount: 90000,
+      peakInHouseCoachDiscount: 120000
     })
   );
 });
