@@ -87,6 +87,7 @@ function CopyButton({
   return (
     <motion.button
       data-slot="copy-button"
+      data-admin-neutral
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       className={cn(buttonVariants({ variant, size }), className)}

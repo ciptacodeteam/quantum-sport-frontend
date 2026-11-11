@@ -40,7 +40,7 @@ it('removes the class card and reconciles gross payments, fees and net revenue p
   const cashier = within(table).getByRole('row', { name: /Cashier Booking/ });
   expect(cashier).toHaveTextContent(/31.*2\.615\.000/);
   expect(screen.getByRole('region', { name: 'Ringkasan revenue' })).toHaveTextContent(
-    '36 transaksi lunas'
+    '36 transaksi pembayaran tercatat'
   );
   expect(screen.getByText(/01 Okt 2026.*01 Okt 2026 WIB/)).toBeInTheDocument();
 });
@@ -89,5 +89,40 @@ it('renders a successful empty period without invalid numeric values', () => {
   );
   expect(screen.getByRole('table', { name: 'Rincian revenue per sumber' })).not.toHaveTextContent(
     /NaN|Infinity/
+  );
+});
+
+it('reconciles cancelled paid amounts without including them in revenue', () => {
+  render(
+    <IncomeBySourceSection
+      isLoading={false}
+      data={{
+        summary: {
+          totalGrossAmount: 345000,
+          totalProcessingFees: 2000,
+          totalNetAmount: 0,
+          totalExcludedAmount: 343000,
+          totalTransactions: 2
+        },
+        bySource: {
+          Cashier: {
+            count: 2,
+            total: 0,
+            processingFee: 2000,
+            transactions: [
+              { amount: 300000, excludedAmount: 298000 },
+              { amount: 45000, excludedAmount: 45000 }
+            ]
+          }
+        }
+      }}
+    />
+  );
+  expect(screen.getByLabelText('Perhitungan total revenue')).toHaveTextContent(
+    /345\.000.*−.*2\.000.*−.*343\.000.*=.*Rp\s*0/
+  );
+  expect(screen.getByText('Dikeluarkan karena dibatalkan')).toBeInTheDocument();
+  expect(screen.getByRole('row', { name: /Cashier Booking/ })).toHaveTextContent(
+    /345\.000.*2\.000.*343\.000.*Rp\s*0/
   );
 });

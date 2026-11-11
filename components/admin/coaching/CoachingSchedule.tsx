@@ -234,6 +234,7 @@ export default function CoachingSchedule({
             <Button
               key={value}
               variant="ghost"
+              data-admin-tab
               aria-pressed={sectionTab === value}
               className={`h-9 rounded-sm border-0 px-3 shadow-none ${sectionTab === value ? 'bg-primary/5 text-primary' : 'text-muted-foreground'}`}
               onClick={() => setSectionTab(value)}

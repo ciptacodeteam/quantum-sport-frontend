@@ -997,13 +997,13 @@ export default function SchedulePage() {
                       >
                         <thead>
                           <tr>
-                            <th className="border-border bg-muted sticky top-0 left-0 z-30 w-32 min-w-32 border-r border-b px-3 py-2 text-left text-base font-semibold">
+                            <th className="bg-primary sticky top-0 left-0 z-30 w-32 min-w-32 border-r border-b border-white/20 px-3 py-2 text-left text-base font-semibold text-white">
                               Waktu
                             </th>
                             {courts.map((court) => (
                               <th
                                 key={court.id}
-                                className="border-border bg-muted sticky top-0 z-20 min-w-[240px] border-r border-b px-3 py-2 text-center text-sm font-medium last:border-r-0"
+                                className="bg-primary sticky top-0 z-20 min-w-[240px] border-r border-b border-white/20 px-3 py-2 text-center text-sm font-medium text-white last:border-r-0"
                               >
                                 {court.name}
                               </th>
@@ -1026,7 +1026,7 @@ export default function SchedulePage() {
                                   [BookingStatus.HOLD]:
                                     'bg-yellow-50 border-yellow-200 hover:bg-yellow-100',
                                   [BookingStatus.CONFIRMED]:
-                                    'bg-green-50 border-green-200 hover:bg-green-100',
+                                    'bg-primary text-white border-white/20 hover:bg-primary/90',
                                   [BookingStatus.CANCELLED]:
                                     'bg-red-50 border-red-200 hover:bg-red-100'
                                 };
@@ -1048,7 +1048,11 @@ export default function SchedulePage() {
                                         <DialogTrigger asChild>
                                           <button
                                             type="button"
-                                            className="focus-visible:ring-ring flex min-h-16 w-full flex-col items-center justify-center gap-0.5 px-3 py-2 text-center outline-none focus-visible:ring-2 focus-visible:ring-inset"
+                                            className={cn(
+                                              'focus-visible:ring-ring flex min-h-16 w-full flex-col items-center justify-center gap-0.5 px-3 py-2 text-center outline-none focus-visible:ring-2 focus-visible:ring-inset',
+                                              status === BookingStatus.CONFIRMED &&
+                                                '[&_.text-blue-700]:text-white/90 [&_.text-muted-foreground]:text-white/80'
+                                            )}
                                             aria-label={`Detail booking ${bookingCell.customerName}, ${court.name}, ${startTime}`}
                                           >
                                             <span

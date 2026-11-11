@@ -92,6 +92,8 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'bookings'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'schedule'] });
+      for (const key of ['coaching', 'booked-ballboys', 'booked-coaches', 'analytics', 'inhouse'])
+        void queryClient.invalidateQueries({ queryKey: ['admin', key] });
       toast.success('Status pemesanan berhasil diperbarui.');
     },
     onError: () => {
@@ -108,6 +110,8 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'bookings'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'schedule'] });
+      for (const key of ['coaching', 'booked-ballboys', 'booked-coaches', 'analytics', 'inhouse'])
+        void queryClient.invalidateQueries({ queryKey: ['admin', key] });
       toast.success('Pemesanan berhasil dikonfirmasi.');
     },
     onError: () => {
@@ -137,7 +141,8 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
         ['admin', 'coaching'],
         ['admin', 'analytics'],
         ['admin', 'booked-coaches'],
-        ['admin', 'booked-ballboys']
+        ['admin', 'booked-ballboys'],
+        ['admin', 'inhouse']
       ]
     }
   );

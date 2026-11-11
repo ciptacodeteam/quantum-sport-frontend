@@ -1,3 +1,4 @@
+import type { BookingDetail } from '@/types/model';
 import type { CoachingGroupSummary } from './coachingGroup';
 import { adminApi } from '@/lib/adminApi';
 
@@ -106,6 +107,9 @@ export type CoachCancellationPreview = {
   refundRequired: boolean;
 };
 export const coachingApi = {
+  rescheduleCourt: async (kind: 'COACH' | 'BALLBOY', id: string) =>
+    (await adminApi.get(`/coaching/bookings/${id}/reschedule-court`, { params: { kind } })).data
+      .data as { detail: BookingDetail; membershipCovered: boolean },
   setClubSettlement: async (id: string, isSettled: boolean, expectedIsSettled: boolean) =>
     (
       await adminApi.patch(`/coaching/bookings/${id}/club-settlement`, {

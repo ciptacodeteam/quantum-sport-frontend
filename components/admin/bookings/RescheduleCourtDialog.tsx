@@ -138,9 +138,11 @@ export function RescheduleCourtDialog({
   const mutation = useMutation({
     mutationFn: (slotId: string) => rescheduleBookedCourtApi(detail.id, slotId),
     onSuccess: () => {
-      toast.success('Slot berhasil dijadwalkan ulang');
+      toast.success('Lapangan dan layanan terkait berhasil dijadwalkan ulang.');
       void queryClient.invalidateQueries({ queryKey: ['admin', 'bookings'] });
       void queryClient.invalidateQueries({ queryKey: ['admin', 'schedule'] });
+      for (const key of ['coaching', 'booked-ballboys', 'booked-coaches', 'analytics', 'inhouse'])
+        void queryClient.invalidateQueries({ queryKey: ['admin', key] });
       void queryClient.invalidateQueries({ queryKey: ['admin', 'courts'] });
       void queryClient.invalidateQueries({ queryKey: ['courts', 'slots'] });
       setOpen(false);

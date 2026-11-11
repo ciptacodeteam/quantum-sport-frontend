@@ -267,6 +267,7 @@ export default function InHouseCoaching() {
               <Button
                 key={value}
                 variant="ghost"
+                data-admin-tab
                 aria-pressed={tab === value}
                 className={`h-9 rounded-sm border-0 px-3 text-xs shadow-none transition-colors duration-200 sm:text-sm ${tab === value ? 'bg-primary/5 text-primary hover:bg-primary/10' : 'text-muted-foreground hover:bg-muted/40'}`}
                 onClick={() => setTab(value)}

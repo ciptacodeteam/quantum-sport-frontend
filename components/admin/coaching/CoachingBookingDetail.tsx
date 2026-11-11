@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import ServiceRescheduleSection from './ServiceRescheduleSection';
 import CoachClubSettlementToggle from './CoachClubSettlementToggle';
 import { ExternalLink } from 'lucide-react';
 import type { CoachingBooking } from '@/api/admin/coaching';
@@ -101,6 +102,7 @@ export default function CoachingBookingDetail({
                 </p>
               </section>
             )}
+            <ServiceRescheduleSection booking={booking} kind={kind} onSuccess={onClose} />
             <section className="space-y-3 rounded-xl border p-4" aria-label="Invoice layanan">
               <h3 className="font-semibold">Invoice</h3>
               {booking.invoice ? (

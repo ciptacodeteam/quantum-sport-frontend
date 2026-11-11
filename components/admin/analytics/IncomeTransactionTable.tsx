@@ -40,6 +40,13 @@ export type IncomeTransaction = {
   amount: number;
   processingFee: number;
   netAmount: number;
+  excludedAmount?: number;
+  reschedule?: {
+    at: string;
+    bookingId: string;
+    from: { court: string; startAt: string; endAt: string };
+    to: { court: string; startAt: string; endAt: string };
+  } | null;
 };
 
 const sourceLabels: Record<string, string> = {
@@ -125,7 +132,14 @@ function CancellationStatus({
       <Badge variant={fullyCancelled ? 'lightDestructive' : 'lightWarning'}>
         {fullyCancelled ? 'Dibatalkan' : 'Sebagian dibatalkan'}
       </Badge>
-      <p className="text-muted-foreground text-xs font-normal">Invoice masih tercatat lunas.</p>
+      <p className="text-muted-foreground text-xs font-normal">
+        Nominal dibatalkan tidak masuk revenue.
+      </p>
+      <p className="text-muted-foreground text-xs font-normal">
+        {cancelled.every((invoice) => invoice.paymentStatus === 'CANCELLED')
+          ? 'Invoice dibatalkan; riwayat pembayaran dipertahankan.'
+          : 'Riwayat pembayaran lunas tetap tersimpan.'}
+      </p>
       {details &&
         cancelled
           .flatMap((invoice) => invoice.cancelledServices ?? [])
@@ -146,12 +160,60 @@ function CancellationStatus({
   );
 }
 
+function RescheduleStatus({
+  invoices,
+  details = false
+}: {
+  invoices: IncomeTransaction[];
+  details?: boolean;
+}) {
+  const events = [
+    ...new Map(
+      invoices.flatMap((invoice) =>
+        invoice.reschedule
+          ? [
+              [
+                `${invoice.reschedule.bookingId}:${invoice.reschedule.at}`,
+                invoice.reschedule
+              ] as const
+            ]
+          : []
+      )
+    ).values()
+  ];
+  if (!events.length) return null;
+  return (
+    <div className="mt-2 space-y-2">
+      {events.map((event) => (
+        <div key={`${event.bookingId}:${event.at}`} className="space-y-1">
+          <Badge variant="lightInfo">Dijadwalkan ulang</Badge>
+          <p className="text-muted-foreground text-xs font-normal">
+            Diubah {paymentTime(event.at)} WIB
+          </p>
+          {details && (
+            <div className="space-y-2 text-xs font-normal">
+              <p className="text-muted-foreground">Jadwal terbaru · {event.to.court}</p>
+              <PlayingSchedule schedules={[{ label: event.to.court, ...event.to }]} />
+              <details>
+                <summary className="text-muted-foreground cursor-pointer">
+                  Jadwal sebelumnya · {event.from.court}
+                </summary>
+                <PlayingSchedule schedules={[{ label: event.from.court, ...event.from }]} />
+              </details>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function IncomeTransactionTable({
   transactions,
   embedded = false,
   groupByBooking = false,
   title = 'Rincian transaksi customer',
-  description = 'Invoice lunas yang membentuk angka revenue di atas, berdasarkan tanggal pembayaran (WIB) pada periode dan cabang pilihan. Satu baris untuk satu invoice.'
+  description = 'Riwayat pembayaran dan revenue setelah pembatalan, berdasarkan tanggal pembayaran (WIB). Nominal booking atau layanan yang dibatalkan tidak dihitung sebagai revenue.'
 }: {
   transactions?: IncomeTransaction[];
   embedded?: boolean;
@@ -229,7 +291,7 @@ export default function IncomeTransactionTable({
         <CardTitle className="text-base">{title}</CardTitle>
         <CardDescription>
           {groupByBooking
-            ? 'Rekap invoice lunas per booking, termasuk ballboy dan coach yang terhubung. Total mengikuti tanggal pembayaran (WIB), periode, dan cabang pilihan. Buka rincian untuk melihat setiap invoice.'
+            ? 'Rekap riwayat pembayaran per booking, termasuk ballboy dan coach yang terhubung. Total mengikuti tanggal pembayaran (WIB), periode, dan cabang pilihan. Buka rincian untuk melihat setiap invoice.'
             : description}
         </CardDescription>
         {transactions && (
@@ -342,6 +404,10 @@ export default function IncomeTransactionTable({
                             invoices={row.invoices}
                             details={row.invoices.length === 1}
                           />
+                          <RescheduleStatus
+                            invoices={row.invoices}
+                            details={row.invoices.length === 1}
+                          />
                         </th>
                         <td className="px-3 py-4 whitespace-nowrap">
                           {paymentTime(row.paidAt)}
@@ -417,6 +483,7 @@ export default function IncomeTransactionTable({
                                       </div>
                                     </div>
                                     <CancellationStatus invoices={[invoice]} />
+                                    <RescheduleStatus invoices={[invoice]} details />
                                     <div className="mt-4 border-t pt-3">
                                       <p className="text-muted-foreground mb-1.5 text-[11px]">
                                         Jadwal bermain
@@ -445,7 +512,7 @@ export default function IncomeTransactionTable({
                       <td colSpan={8} className="text-muted-foreground py-10 text-center">
                         {hasFilters
                           ? 'Tidak ada transaksi yang sesuai filter.'
-                          : 'Tidak ada transaksi lunas pada periode ini.'}
+                          : 'Tidak ada riwayat pembayaran pada periode ini.'}
                       </td>
                     </tr>
                   )}
@@ -498,10 +565,10 @@ export default function IncomeTransactionTable({
               </div>
             </div>
             <p className="text-muted-foreground mt-3 text-xs">
-              Pembatalan layanan tidak otomatis berarti pembayaran sudah dikembalikan. Nominal
-              mengikuti invoice yang masih tercatat lunas. Baris total menjumlahkan seluruh hasil di
-              semua halaman. Pencarian dan filter di tabel ini tidak mengubah ringkasan revenue di
-              atas.
+              Nominal booking atau layanan yang dibatalkan dikeluarkan dari revenue. Riwayat
+              pembayaran tetap tersimpan dan bukan bukti refund. Baris total menjumlahkan seluruh
+              hasil di semua halaman. Pencarian dan filter di tabel ini tidak mengubah ringkasan
+              revenue di atas.
             </p>
           </>
         )}

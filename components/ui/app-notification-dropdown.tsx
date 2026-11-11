@@ -44,7 +44,12 @@ const AppNotificationDropdown = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative size-10 shrink-0 rounded-lg">
+        <Button
+          data-admin-neutral
+          variant="ghost"
+          size="icon"
+          className="relative size-10 shrink-0 rounded-lg"
+        >
           <IconBell className="size-5!" />
           <span className="sr-only">Open notifications</span>
           {hasUnread && (

@@ -74,7 +74,7 @@ it('shows an explicit empty state for search results', () => {
 
 it('distinguishes an empty paid period from unavailable transaction details', () => {
   const { rerender } = render(<IncomeTransactionTable transactions={[]} />);
-  expect(screen.getByText('Tidak ada transaksi lunas pada periode ini.')).toBeInTheDocument();
+  expect(screen.getByText('Tidak ada riwayat pembayaran pada periode ini.')).toBeInTheDocument();
   rerender(<IncomeTransactionTable />);
   expect(
     screen.getByText('Rincian transaksi belum tersedia untuk periode ini.')
@@ -204,7 +204,8 @@ it('marks a cancelled service alongside its recorded paid amount', () => {
         {
           ...transaction(1),
           amount: 45000,
-          netAmount: 45000,
+          netAmount: 0,
+          excludedAmount: 45000,
           processingFee: 0,
           cancellationStatus: 'CANCELLED',
           paymentStatus: 'PAID',
@@ -223,7 +224,7 @@ it('marks a cancelled service alongside its recorded paid amount', () => {
   );
   const row = screen.getByRole('row', { name: /Customer 1/ });
   expect(row).toHaveTextContent('Dibatalkan');
-  expect(row).toHaveTextContent('Invoice masih tercatat lunas.');
+  expect(row).toHaveTextContent('Nominal dibatalkan tidak masuk revenue.');
   expect(row).toHaveTextContent('Ballboy · Topan');
   expect(row).toHaveTextContent('Customer membatalkan');
   expect(screen.getByRole('row', { name: /Total periode/ })).toHaveTextContent('45.000');
@@ -241,4 +242,33 @@ it('shows partial cancellation when a grouped booking contains an active and a c
   expect(screen.getByText('Sebagian dibatalkan')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: /2 invoice/ }));
   expect(screen.getByText('Dibatalkan')).toBeInTheDocument();
+});
+
+it('marks rescheduling and shows the previous and latest court schedules', () => {
+  render(
+    <IncomeTransactionTable
+      transactions={[
+        {
+          ...transaction(1),
+          reschedule: {
+            at: '2026-11-11T03:00:00Z',
+            bookingId: 'court',
+            from: {
+              court: 'Court 1',
+              startAt: '2026-11-12T19:00:00+07:00',
+              endAt: '2026-11-12T20:00:00+07:00'
+            },
+            to: {
+              court: 'Court 2',
+              startAt: '2026-11-13T20:00:00+07:00',
+              endAt: '2026-11-13T21:00:00+07:00'
+            }
+          }
+        }
+      ]}
+    />
+  );
+  expect(screen.getByText('Dijadwalkan ulang')).toBeInTheDocument();
+  expect(screen.getByText('Jadwal terbaru · Court 2')).toBeInTheDocument();
+  expect(screen.getByText('Jadwal sebelumnya · Court 1')).toBeInTheDocument();
 });

@@ -300,132 +300,106 @@ body:has([data-slot='mobile-bottom-navigation']) .mobile-header-back {
   --sidebar-ring: #737373;
 }
 
-:where(.admin-theme, html[data-admin-theme='true']) :is(button, a)[data-variant]:not([data-day]) {
-  --admin-button-color: #ad422b;
-  --admin-button-hover: #8e3524;
-  --admin-button-muted: #f7ece8;
-}
-
+/* Action buttons keep the brand palette; tabs and choices use their own states. */
 :where(.admin-theme, html[data-admin-theme='true'])
-  :is(button, a)[data-variant]:not([data-day]):is(
+  :is(button, a)[data-variant]:not([data-admin-neutral]):not([aria-pressed]):not([role='tab']):not(
+    :disabled
+  ):not([aria-disabled='true']):is(
     [data-variant='default'],
     [data-variant='destructive'],
     [data-variant^='secondary']:not([data-variant='secondary'])
   ) {
-  border-color: transparent;
   background-color: var(--admin-button-color);
-  color: #ffffff;
+  color: white;
 }
-
 :where(.admin-theme, html[data-admin-theme='true'])
-  :is(button, a)[data-variant]:not([data-day]):is(
+  :is(button, a)[data-variant]:not([data-admin-neutral]):not([aria-pressed]):not([role='tab']):not(
+    :disabled
+  ):not([aria-disabled='true']):is(
     [data-variant='default'],
     [data-variant='destructive'],
     [data-variant^='secondary']:not([data-variant='secondary'])
-  ):hover:not(:disabled) {
-  border-color: transparent;
+  ):hover {
   background-color: var(--admin-button-hover);
 }
 
+/* Booking choices remain white. Only the selected option receives an outline. */
 :where(.admin-theme, html[data-admin-theme='true'])
-  :is(button, a)[data-variant]:not([data-day])[data-variant='outline'] {
-  border-color: var(--border);
-  color: var(--admin-button-color);
-}
-
-:where(.admin-theme, html[data-admin-theme='true'])
-  :is(button, a)[data-variant]:not([data-day]):is(
-    [data-variant='secondary'],
-    [data-variant^='light']
+  button[aria-pressed]:not([data-admin-tab]):not([role='tab']):not([data-slot='toggle']):not(
+    [data-slot='toggle-group-item']
   ) {
-  background-color: var(--admin-button-muted);
-  color: #803524;
+  background-color: #fff;
+  color: var(--foreground);
+  box-shadow: none;
 }
-
 :where(.admin-theme, html[data-admin-theme='true'])
-  :is(button, a)[data-variant]:not([data-day]):is([data-variant='ghost'], [data-variant='link']) {
-  color: var(--admin-button-color);
+  button[aria-pressed='true']:not([data-admin-tab]):not([role='tab']):not([data-slot='toggle']):not(
+    [data-slot='toggle-group-item']
+  ):not(:disabled) {
+  outline: 2px solid var(--admin-button-color);
+  outline-offset: -2px;
 }
-
 :where(.admin-theme, html[data-admin-theme='true'])
-  :is(button, a)[data-variant]:not([data-day]):is(
-    [data-variant='outline'],
-    [data-variant='secondary'],
-    [data-variant^='light'],
-    [data-variant='ghost']
-  ):hover:not(:disabled) {
-  background-color: var(--admin-button-muted);
-  color: #803524;
-}
-
-:where(.admin-theme, html[data-admin-theme='true'])
-  :is(button, a)[data-variant]:not([data-day]):focus-visible {
+  button[aria-pressed='false']:not([data-admin-tab]):not([role='tab']):not(
+    [data-slot='toggle']
+  ):not([data-slot='toggle-group-item']):hover:not(:disabled) {
   border-color: var(--ring);
-  --tw-ring-color: #73737366;
 }
 
-.dark
-  :where(.admin-theme, html[data-admin-theme='true'])
-  :is(button, a)[data-variant]:not([data-day]):is(
-    [data-variant='ghost'],
-    [data-variant='link'],
-    [data-variant='outline']
-  ),
-html.dark[data-admin-theme='true']
-  :is(button, a)[data-variant]:not([data-day]):is(
-    [data-variant='ghost'],
-    [data-variant='link'],
-    [data-variant='outline']
-  ) {
-  color: #e5b6a6;
-}
-
-/* Custom admin buttons share the brand palette with Button variants. Color only:
-   retain each control's existing dimensions, shape, spacing, and focus treatment. */
+/* All admin tab implementations share a distinct active and inactive state. */
 :where(.admin-theme, html[data-admin-theme='true'])
-  button:not([data-variant]):not([data-day]):not([data-sidebar]):not([role='combobox']):not(
-    [data-slot='dialog-close']
-  ):not([data-slot='sheet-close']) {
-  background-color: var(--admin-button-muted);
-  color: var(--admin-button-color);
+  :is([role='tab'], [data-admin-tab], [data-slot='toggle'], [data-slot='toggle-group-item']) {
+  background-color: transparent;
+  color: var(--muted-foreground);
+  box-shadow: none;
 }
-
 :where(.admin-theme, html[data-admin-theme='true'])
-  button:not([data-variant]):not([data-day]):not([data-sidebar]):not([role='combobox']):not(
-    [data-slot='dialog-close']
-  ):not([data-slot='sheet-close']):hover:not(:disabled):not([aria-disabled='true']) {
-  background-color: color-mix(in srgb, var(--admin-button-color) 15%, var(--background));
-  color: var(--admin-button-hover);
-}
-
-/* A selected option has a clear terracotta fill, including custom time and service cards. */
-:where(.admin-theme, html[data-admin-theme='true'])
-  button:not([data-day]):not([data-sidebar]):not([role='combobox']):is(
-    [aria-pressed='true'],
+  :is(
     [role='tab'][data-state='active'],
-    [role='switch'][data-state='checked']
-  ) {
+    [data-admin-tab][aria-pressed='true'],
+    [data-slot='toggle'][data-state='on'],
+    [data-slot='toggle-group-item'][data-state='on']
+  ):not(:disabled):not([aria-disabled='true']) {
   background-color: var(--admin-button-color);
-  color: #ffffff;
+  color: #fff;
 }
-
 :where(.admin-theme, html[data-admin-theme='true'])
-  button:not([data-day]):not([data-sidebar]):not([role='combobox']):is(
-    [aria-pressed='true'],
+  :is(
     [role='tab'][data-state='active'],
-    [role='switch'][data-state='checked']
-  ):hover:not(:disabled):not([aria-disabled='true']) {
+    [data-admin-tab][aria-pressed='true'],
+    [data-slot='toggle'][data-state='on'],
+    [data-slot='toggle-group-item'][data-state='on']
+  ):hover:not(:disabled) {
   background-color: var(--admin-button-hover);
-  color: #ffffff;
 }
-
 :where(.admin-theme, html[data-admin-theme='true'])
-  button:not([data-day]):not([data-sidebar]):not([role='combobox']):is(
-    [aria-pressed='true'],
-    [role='tab'][data-state='active']
-  )
-  :is(.text-muted-foreground, .text-primary) {
-  color: inherit;
+  :is(
+    [role='tab'][data-state='inactive'],
+    [data-admin-tab][aria-pressed='false'],
+    [data-slot='toggle'][data-state='off'],
+    [data-slot='toggle-group-item'][data-state='off']
+  ):hover:not(:disabled) {
+  background-color: var(--muted);
+  color: var(--foreground);
+}
+:where(.admin-theme, html[data-admin-theme='true'])
+  :is(button, a):not([data-day]):is(:disabled, [aria-disabled='true']) {
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+  border-color: var(--border);
+}
+:where(.admin-theme, html[data-admin-theme='true']) button[aria-pressed]:disabled {
+  background-color: #fff;
+  color: var(--muted-foreground);
+}
+:where(.admin-theme, html[data-admin-theme='true']) [data-admin-neutral] {
+  color: var(--muted-foreground);
+  background-color: transparent;
+  box-shadow: none;
+}
+:where(.admin-theme, html[data-admin-theme='true']) [data-admin-neutral]:hover:not(:disabled) {
+  color: var(--foreground);
+  background-color: var(--muted);
 }
 
 /* Give admin cards a consistent, subtle edge against the page background. */

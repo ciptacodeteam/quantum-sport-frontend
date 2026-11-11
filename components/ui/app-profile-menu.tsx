@@ -52,6 +52,7 @@ const AppProfileMenu = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
+        data-admin-neutral
         className="hover:bg-muted focus-visible:ring-ring flex min-w-0 shrink-0 items-center gap-2 rounded-lg px-2 outline-none focus-visible:ring-2"
         aria-label="Menu akun"
       >

@@ -106,6 +106,7 @@ export default function IncomeBySourceSection({ data, isLoading }: IncomeBySourc
     });
 
   const totalRevenue = Number(summary.totalNetAmount ?? summary.totalIncome ?? 0);
+  const totalExcluded = Number(summary.totalExcludedAmount ?? 0);
   const totalFees = Number(summary.totalProcessingFees ?? 0);
   const totalGross = Number(summary.totalGrossAmount ?? totalRevenue + totalFees);
   const totalTransactions = Number(summary.totalTransactions ?? 0);
@@ -127,7 +128,23 @@ export default function IncomeBySourceSection({ data, isLoading }: IncomeBySourc
       title,
       revenue,
       processingFee,
-      gross: processingFee === null ? null : revenue + processingFee,
+      gross:
+        Array.isArray(source?.transactions) &&
+        source.transactions.length > 0 &&
+        source.transactions.every((row: { amount?: number }) => row.amount != null)
+          ? source.transactions.reduce(
+              (sum: number, row: { amount?: number }) => sum + Number(row.amount ?? 0),
+              0
+            )
+          : processingFee === null
+            ? null
+            : revenue + processingFee,
+      excluded: Number(
+        source?.transactions?.reduce(
+          (sum: number, row: { excludedAmount?: number }) => sum + Number(row.excludedAmount ?? 0),
+          0
+        ) ?? 0
+      ),
       count: Number(source?.count ?? 0)
     };
   };
@@ -148,7 +165,10 @@ export default function IncomeBySourceSection({ data, isLoading }: IncomeBySourc
       title: remainder < 0 ? 'Selisih rincian' : 'Belum terkelompok',
       revenue: remainder,
       processingFee: fee,
-      gross: fee === null ? null : remainder + fee,
+      gross: details.every((row) => row.gross !== null)
+        ? totalGross - details.reduce((sum, row) => sum + (row.gross ?? 0), 0)
+        : null,
+      excluded: totalExcluded - details.reduce((sum, row) => sum + row.excluded, 0),
       count: remainingCount
     });
   }
@@ -158,6 +178,12 @@ export default function IncomeBySourceSection({ data, isLoading }: IncomeBySourc
     { label: 'Biaya proses', value: totalFees, note: 'Dikeluarkan dari revenue' },
     { label: 'Total revenue', value: totalRevenue, note: 'Belum dikurangi biaya operasional' }
   ];
+  if (totalExcluded > 0)
+    metrics.splice(2, 0, {
+      label: 'Dikeluarkan karena dibatalkan',
+      value: totalExcluded,
+      note: 'Tidak dihitung sebagai revenue'
+    });
 
   return (
     <div className="space-y-8">
@@ -178,10 +204,15 @@ export default function IncomeBySourceSection({ data, isLoading }: IncomeBySourc
             </p>
             <p className="text-muted-foreground text-sm">
               <span className="text-foreground font-medium tabular-nums">{totalTransactions}</span>{' '}
-              transaksi lunas dalam periode ini
+              transaksi pembayaran tercatat dalam periode ini
             </p>
           </div>
-          <dl className="grid gap-5 border-t pt-6 sm:grid-cols-3 xl:border-t-0 xl:border-l xl:pt-0 xl:pl-8">
+          <dl
+            className={cn(
+              'grid gap-5 border-t pt-6 xl:border-t-0 xl:border-l xl:pt-0 xl:pl-8',
+              totalExcluded > 0 ? 'sm:grid-cols-2' : 'sm:grid-cols-3'
+            )}
+          >
             {metrics.map((metric) => (
               <div key={metric.label} className="min-w-0 space-y-2">
                 <dt className="text-muted-foreground text-xs leading-relaxed font-medium sm:text-sm">
@@ -200,13 +231,14 @@ export default function IncomeBySourceSection({ data, isLoading }: IncomeBySourc
           aria-label="Perhitungan total revenue"
         >
           <p className="font-medium tabular-nums">
-            {formatCurrency(totalGross)} − {formatCurrency(totalFees)} ={' '}
+            {formatCurrency(totalGross)} − {formatCurrency(totalFees)}
+            {totalExcluded > 0 && <> − {formatCurrency(totalExcluded)}</>} ={' '}
             {formatCurrency(totalRevenue)}
           </p>
           <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
-            Pembayaran pelanggan dikurangi biaya proses. Hanya invoice lunas, berdasarkan tanggal
-            pembayaran dalam WIB; jadwal main dapat berada di hari lain. Angka ini belum dikurangi
-            biaya operasional.
+            Pembayaran pelanggan dikurangi biaya proses dan nominal layanan atau booking yang
+            dibatalkan. Riwayat pembayaran tetap terlihat berdasarkan tanggal pembayaran (WIB),
+            tetapi pembatalan tidak masuk revenue. Angka ini belum dikurangi biaya operasional.
           </p>
         </div>
       </Card>
@@ -221,17 +253,22 @@ export default function IncomeBySourceSection({ data, isLoading }: IncomeBySourc
             <table className="w-full min-w-[650px] text-sm" aria-label="Rincian revenue per sumber">
               <thead>
                 <tr className="text-muted-foreground border-b">
-                  {['Sumber', 'Transaksi', 'Pembayaran pelanggan', 'Biaya proses', 'Revenue'].map(
-                    (label, index) => (
-                      <th
-                        key={label}
-                        scope="col"
-                        className={`px-3 py-3 font-medium ${index === 0 ? 'text-left' : 'text-right'}`}
-                      >
-                        {label}
-                      </th>
-                    )
-                  )}
+                  {[
+                    'Sumber',
+                    'Transaksi',
+                    'Pembayaran pelanggan',
+                    'Biaya proses',
+                    ...(totalExcluded > 0 ? ['Dibatalkan'] : []),
+                    'Revenue'
+                  ].map((label, index) => (
+                    <th
+                      key={label}
+                      scope="col"
+                      className={`px-3 py-3 font-medium ${index === 0 ? 'text-left' : 'text-right'}`}
+                    >
+                      {label}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -247,6 +284,11 @@ export default function IncomeBySourceSection({ data, isLoading }: IncomeBySourc
                     <td className="px-3 py-3 text-right tabular-nums">
                       {row.processingFee === null ? '—' : formatCurrency(row.processingFee)}
                     </td>
+                    {totalExcluded > 0 && (
+                      <td className="px-3 py-3 text-right tabular-nums">
+                        {formatCurrency(row.excluded)}
+                      </td>
+                    )}
                     <td className="px-3 py-3 text-right font-medium tabular-nums">
                       {formatCurrency(row.revenue)}
                     </td>
@@ -263,6 +305,11 @@ export default function IncomeBySourceSection({ data, isLoading }: IncomeBySourc
                     {formatCurrency(totalGross)}
                   </td>
                   <td className="px-3 py-3 text-right tabular-nums">{formatCurrency(totalFees)}</td>
+                  {totalExcluded > 0 && (
+                    <td className="px-3 py-3 text-right tabular-nums">
+                      {formatCurrency(totalExcluded)}
+                    </td>
+                  )}
                   <td className="px-3 py-3 text-right tabular-nums">
                     {formatCurrency(totalRevenue)}
                   </td>
