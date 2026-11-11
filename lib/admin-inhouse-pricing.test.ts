@@ -208,3 +208,40 @@ it('keeps prepaid court sessions included in the customer package', () => {
     )
   ).toEqual({ 'court-0': 0, 'court-1': 0 });
 });
+
+it.each([1, 2, 3])(
+  'charges two full hourly coach rates and extra participants separately for %s participants',
+  (participants) => {
+    const sessions = [12, 13].map((hour) => ({
+      ...datedCourts[0],
+      slotId: `court-${hour}`,
+      price: 150000,
+      timeSlot: `${hour}:00 - ${hour + 1}:00`
+    }));
+    const choices: InHouseChoice[] = sessions.map((session) => ({
+      staffId: 'andi',
+      courtSlotId: session.slotId,
+      coachSlotId: `coach-${session.slotId}`,
+      hourlyPrice: 750000,
+      additionalHourPrice: 100000,
+      participants
+    }));
+    for (const selections of [choices, [...choices].reverse()]) {
+      const result = adminInHousePricing(
+        sessions,
+        selections,
+        [],
+        [],
+        [{ ...rule, inHouseCourtHourlyPrice: 250000 }]
+      );
+      expect(result).toEqual({
+        coverage: -200000,
+        singleTotal: 1500000,
+        extras: (participants - 1) * 100000 * 2
+      });
+      expect(300000 - result.coverage + result.singleTotal + result.extras).toBe(
+        2000000 + (participants - 1) * 200000
+      );
+    }
+  }
+);

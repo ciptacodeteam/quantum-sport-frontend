@@ -10,29 +10,13 @@ export function adminInHousePricing(
   wallets: InHouseWallet[],
   rules: TariffRule[] = []
 ) {
-  const schedulePrices = new Map<string, number>();
-  const ends = new Map<string, number>();
-  const start = (choice: InHouseChoice) => {
-    const court = sessions.find((item) => item.slotId === choice.courtSlotId);
-    return court ? Date.parse(`${court.date}T${court.timeSlot.slice(0, 5)}:00Z`) : 0;
-  };
-  for (const choice of choices.filter((c) => c.staffId).sort((a, b) => start(a) - start(b))) {
-    const from = start(choice);
-    schedulePrices.set(
-      choice.coachSlotId,
-      ends.get(choice.staffId!) === from
-        ? (choice.additionalHourPrice ?? choice.hourlyPrice ?? 0)
-        : (choice.hourlyPrice ?? 0)
-    );
-    ends.set(choice.staffId!, from + 3600000);
-  }
   return choices.reduce(
     (totals, choice) => {
       const court = sessions.find((item) => item.slotId === choice.courtSlotId);
       if (!court) return totals;
       const terms = choice.staffId
         ? {
-            hourlyPrice: schedulePrices.get(choice.coachSlotId) ?? 0,
+            hourlyPrice: choice.hourlyPrice ?? 0,
             courtHourlyShare: 0,
             extraParticipantHourlyPrice: 100000
           }

@@ -224,7 +224,7 @@ it('separates single coaches from prepaid packages without applying a choice on 
   expect(screen.getByRole('button', { name: /Andi.*Andi 5 jam/ })).toBeInTheDocument();
   expect(change).not.toHaveBeenCalled();
 });
-it('shows the continuation rate and total for the next consecutive hour', () => {
+it('keeps the full hourly coach rate for the next hour and charges extra only for additional participants', () => {
   const second = { ...session, slotId: 'next', timeSlot: '19:00 - 20:00' };
   render(
     <BookingInHouseSelection
@@ -248,7 +248,12 @@ it('shows the continuation rate and total for the next consecutive hour', () => 
   fireEvent.click(screen.getByRole('button', { name: 'Court A · 2040-11-03 · 19:00 - 20:00' }));
   fireEvent.click(screen.getByRole('button', { name: /Andi.*bayar per sesi/ }));
   const coachRow = screen.getByText('Coach · 1 jam').parentElement!;
-  expect(within(coachRow).getByText(/100.000/)).toBeInTheDocument();
+  expect(within(coachRow).getByText(/400.000/)).toBeInTheDocument();
   const totalRow = screen.getByText('Total sesi ini').parentElement!;
-  expect(within(totalRow).getByText(/400.000/)).toBeInTheDocument();
+  expect(within(totalRow).getByText(/700.000/)).toBeInTheDocument();
+  expect(screen.queryByText(/Jam lanjutan berurutan/)).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Jumlah peserta'), { target: { value: '2' } });
+  const extraRow = screen.getByText('Tambahan peserta').parentElement!;
+  expect(within(extraRow).getByText(/100.000/)).toBeInTheDocument();
+  expect(within(totalRow).getByText(/800.000/)).toBeInTheDocument();
 });

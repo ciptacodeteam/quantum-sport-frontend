@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { getAnalyticsDateRange } from '@/lib/analytics-date-range';
@@ -9,6 +9,11 @@ import type { DateRange } from 'react-day-picker';
 import AppSectionHeader from '@/components/ui/app-section-header';
 import DateRangeInput from '@/components/ui/date-range-input';
 import { incomeBySourceQueryOptions } from '@/queries/admin/analytics';
+import { exportIncomeBySourceApi } from '@/api/admin/analytics';
+import { Button } from '@/components/ui/button';
+import { IconFileExcel } from '@tabler/icons-react';
+import { toast } from 'sonner';
+import dayjs from '@/lib/dayjs';
 import IncomeBySourceSection from '@/components/admin/analytics/IncomeBySourceSection';
 
 export default function IncomeBySourcePage() {
@@ -53,6 +58,38 @@ export default function IncomeBySourcePage() {
     enabled: filtersReady
   });
 
+  const [exporting, setExporting] = useState(false);
+  const exportInFlight = useRef(false);
+  const exportExcel = async () => {
+    if (exportInFlight.current || !filtersReady) return;
+    exportInFlight.current = true;
+    setExporting(true);
+    let url: string | undefined;
+    try {
+      const blob = await exportIncomeBySourceApi({ startDate, endDate });
+      url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const period =
+        startDate && endDate
+          ? [startDate, endDate]
+              .map((value) => dayjs(value).tz('Asia/Jakarta').format('YYYY-MM-DD'))
+              .join('-')
+          : 'periode-default';
+      link.download = `income-by-source-${period}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success('Laporan Income by Source berhasil diekspor.');
+    } catch {
+      toast.error('Export Excel gagal. Silakan coba lagi.');
+    } finally {
+      if (url) URL.revokeObjectURL(url);
+      exportInFlight.current = false;
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <AppSectionHeader
@@ -60,7 +97,18 @@ export default function IncomeBySourcePage() {
         description="Revenue breakdown by booking channels and membership"
         className="mb-0 gap-4 pb-0 sm:items-center"
       >
-        <DateRangeInput value={date} onValueChange={changeDate} allowSingleDay />
+        <div className="flex flex-wrap items-center gap-2">
+          <DateRangeInput value={date} onValueChange={changeDate} allowSingleDay />
+          <Button
+            variant="outline"
+            disabled={!filtersReady || exporting}
+            onClick={() => void exportExcel()}
+            title="Export seluruh transaksi pada periode dan cabang yang dipilih"
+          >
+            <IconFileExcel className="size-4" />
+            {exporting ? 'Mengekspor…' : 'Export Excel'}
+          </Button>
+        </div>
       </AppSectionHeader>
 
       <IncomeBySourceSection data={incomeData} isLoading={isLoading} />

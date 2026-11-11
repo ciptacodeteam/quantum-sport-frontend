@@ -77,7 +77,6 @@ export default function BookingInHouseSelection({
         <InHouseSession
           key={session.slotId}
           session={session}
-          sessions={sessions}
           wallets={wallets}
           plans={plans}
           coaches={coaches}
@@ -93,7 +92,6 @@ export default function BookingInHouseSelection({
 }
 function InHouseSession({
   session,
-  sessions,
   wallets,
   plans,
   coaches,
@@ -104,7 +102,6 @@ function InHouseSession({
   active
 }: {
   session: BookingItem;
-  sessions: BookingItem[];
   wallets: InHouseWallet[];
   plans: InHousePlan[];
   coaches: CoachingPerson[];
@@ -168,8 +165,7 @@ function InHouseSession({
           ...(directCoach
             ? {
                 staffId: directCoach.id,
-                hourlyPrice: coachSlot.price,
-                additionalHourPrice: coachSlot.additionalHourPrice
+                hourlyPrice: coachSlot.price
               }
             : plan
               ? { planId: plan.id }
@@ -182,22 +178,11 @@ function InHouseSession({
               : 1
         }
       : null;
-  const previous = selected.filter((item) => {
-    const other = sessions.find((entry) => entry.slotId === item.courtSlotId);
-    return other && `${other.date} ${other.timeSlot}` < `${session.date} ${session.timeSlot}`;
-  });
-  const before = adminInHousePricing(sessions, previous, plans, wallets, tariffRules);
-  const after = adminInHousePricing(
-    sessions,
-    draft ? [...previous, draft] : previous,
-    plans,
-    wallets,
-    tariffRules
-  );
+  const pricing = adminInHousePricing([session], draft ? [draft] : [], plans, wallets, tariffRules);
   const courtBase = (session.discountPrice ?? 0) > 0 ? session.discountPrice! : session.price;
-  const courtDue = courtBase - (after.coverage - before.coverage);
-  const coachDue = after.singleTotal - before.singleTotal;
-  const extraDue = after.extras - before.extras;
+  const courtDue = courtBase - pricing.coverage;
+  const coachDue = pricing.singleTotal;
+  const extraDue = pricing.extras;
   const options =
     mode === 'single'
       ? [
@@ -412,13 +397,10 @@ function InHouseSession({
                     Kuota 1 jam dipotong dari paket customer.
                   </p>
                 )}
-                {directCoach && coachSlot.additionalHourPrice != null && (
-                  <p className="text-muted-foreground text-xs">
-                    Jam lanjutan berurutan dengan coach yang sama:{' '}
-                    {formatCurrency(coachSlot.additionalHourPrice)}/jam. Pilih juga coach pada jam
-                    berikutnya.
-                  </p>
-                )}
+                <p className="text-muted-foreground text-xs">
+                  Tarif coach dihitung per jam yang dipilih. Tambahan peserta mulai orang kedua:{' '}
+                  {formatCurrency(wallet?.extraParticipantHourlyPrice ?? 100000)}/orang/jam.
+                </p>
               </>
             )}
             {coachAlreadySelected && (

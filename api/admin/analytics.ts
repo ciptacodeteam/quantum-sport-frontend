@@ -72,3 +72,9 @@ export const exportBulkDataApi = async (
   });
   return res.data;
 };
+
+export const exportIncomeBySourceApi = async (queryParams: SearchParamsData = {}) => {
+  const url = mergedQueryParamUrl('/analytics/income-by-source/export', queryParams);
+  const response = await adminApi.get(url, { responseType: 'blob' });
+  return response.data as Blob;
+};

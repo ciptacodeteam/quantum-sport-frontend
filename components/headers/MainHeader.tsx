@@ -6,7 +6,7 @@ import LogoImage from '@/assets/img/logoblack.webp';
 import { cn } from '@/lib/utils';
 import { profileQueryOptions } from '@/queries/profile';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, UserRound } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -152,6 +152,21 @@ const MainHeader = ({ onBack, backHref, showBack = false, withBranchLabel = true
             )}
             {!isAuthenticated && (
               <span aria-hidden="true" className="mx-2 h-5 w-px bg-black/20 sm:mx-3" />
+            )}
+            {isAuthenticated && (
+              <Link
+                href="/profile"
+                aria-label="Profil saya"
+                title="Profil saya"
+                aria-current={isActive('/profile') ? 'page' : undefined}
+                className={cn(
+                  'hidden min-h-11 min-w-11 shrink-0 items-center justify-center gap-2 rounded-full border border-black/15 px-3 text-xs font-medium transition-colors hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ad422b] lg:inline-flex',
+                  isActive('/profile') ? 'bg-[#ad422b]/10 text-[#ad422b]' : 'text-[#171717]'
+                )}
+              >
+                <UserRound className="size-5" strokeWidth={1.5} aria-hidden="true" />
+                <span className="hidden xl:inline">Profil</span>
+              </Link>
             )}
             <CartSheet minimal />
           </div>
