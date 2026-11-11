@@ -28,7 +28,7 @@ export default function BookingServiceSessionPicker({
           {sessions.filter((session) => session.selected).length}/{sessions.length} jam dipilih
         </span>
       </div>
-      <div role="group" aria-label="Jam layanan" className="flex gap-2 overflow-x-auto pb-1">
+      <div role="group" aria-label="Jam layanan" className="flex gap-1.5 overflow-x-auto p-1">
         {sessions.map((session) => (
           <button
             key={session.id}
@@ -38,8 +38,10 @@ export default function BookingServiceSessionPicker({
             onClick={() => onChange(session.id)}
             aria-label={`${session.courtName ? `${session.courtName} · ` : ''}${session.date} · ${session.timeSlot}`}
             className={cn(
-              'bg-background hover:border-primary/50 flex min-w-40 shrink-0 items-start gap-3 rounded-xl border px-3.5 py-3 text-left transition-colors disabled:opacity-50',
-              value === session.id && 'border-primary bg-primary/5 ring-primary/10 ring-2'
+              'flex min-w-40 shrink-0 items-start gap-3 rounded-md border-0 px-3 py-2.5 text-left shadow-none transition-colors outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50',
+              value === session.id
+                ? 'bg-primary/10 text-primary'
+                : 'bg-muted/30 hover:bg-muted/60'
             )}
           >
             <span className="min-w-0">
