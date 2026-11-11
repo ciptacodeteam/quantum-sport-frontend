@@ -10,7 +10,10 @@ type SectionProps = {
 
 const Section = ({ children, className }: SectionProps) => {
   return (
-    <Card className={cn('w-full min-w-0 gap-4 border-none pt-2 shadow-none', className)}>
+    <Card
+      data-admin-borderless
+      className={cn('w-full min-w-0 gap-4 border-none pt-2 shadow-none', className)}
+    >
       {children}
     </Card>
   );
