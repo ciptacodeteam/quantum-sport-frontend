@@ -2,7 +2,7 @@
 import BookingInHouseSelection, {
   usableInHouseWallets
 } from '@/components/admin/booking/BookingInHouseSelection';
-import { adminInHousePricing } from '@/lib/admin-inhouse-pricing';
+import { adminInHouseCourtPrices, adminInHousePricing } from '@/lib/admin-inhouse-pricing';
 import { coachingApi } from '@/api/admin/coaching';
 import { inHouseApi } from '@/api/admin/inhouseCoaching';
 import { useAdminCourtSports } from '@/hooks/useAdminCourtSports';
@@ -180,6 +180,14 @@ export default function BookingAddOns() {
     extras: inHouseExtras,
     singleTotal: inHouseSingleTotal
   } = adminInHousePricing(
+    bookingItems,
+    inHouseSelections,
+    singleHourPlans,
+    usableWallets,
+    tariffRules
+  );
+
+  const inHouseCourtPrices = adminInHouseCourtPrices(
     bookingItems,
     inHouseSelections,
     singleHourPlans,
@@ -871,6 +879,7 @@ export default function BookingAddOns() {
                 }
           }
           inHouseCoverage={inHouseCoverage}
+          inHouseCourtPrices={inHouseCourtPrices}
           inHouseExtras={inHouseExtras}
           inHouseSingleTotal={inHouseSingleTotal}
           inHousePricingPending={inHouseLoading || !inHouseReady}

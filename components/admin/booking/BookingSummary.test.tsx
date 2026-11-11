@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import BookingSummary from './BookingSummary';
+import BookingSummary, { type BookingSummaryProps } from './BookingSummary';
 import { useBookingStore } from '@/stores/useBookingStore';
 
 vi.mock('@tanstack/react-query', async (importOriginal) => ({
@@ -243,4 +243,71 @@ it('keeps separate ranges when the court schedule has a gap', () => {
   expect(summary.getAllByText('Court 1')).toHaveLength(2);
   expect(summary.getByText('06:00 - 07:00')).toBeInTheDocument();
   expect(summary.getByText('08:00 - 09:00')).toBeInTheDocument();
+});
+
+it('replaces court prices per coached hour, updates the subtotal and restores prices after removal', () => {
+  const items = [12, 13].map((hour) => ({
+    courtId: 'court-2',
+    courtName: 'Court 2',
+    slotId: `slot-${hour}`,
+    date: '2040-01-02',
+    timeSlot: `${hour}:00 - ${hour + 1}:00`,
+    endTime: `${hour + 1}:00`,
+    price: 150000
+  }));
+  const props: BookingSummaryProps = {
+    bookingItems: items,
+    courtTotal: 300000,
+    totalAmount: 1150000,
+    selectedCustomerId: null,
+    showCustomerSelection: false,
+    showMembershipInfo: false,
+    onCustomerSelect: vi.fn(),
+    onCustomerClear: vi.fn(),
+    onWalkInSet: vi.fn(),
+    onWalkInClear: vi.fn(),
+    membershipDiscountDetails: {
+      canUseMembership: false,
+      discountAmount: 0,
+      slotsToDeduct: 0,
+      originalTotal: 300000,
+      activeMembership: null
+    },
+    inHouseCourtPrices: { 'slot-12': 250000 },
+    inHouseCoverage: -100000,
+    inHouseSingleTotal: 750000
+  };
+  const { rerender } = render(<BookingSummary {...props} />);
+  const courts = within(screen.getByRole('region', { name: 'Court bookings' }));
+  expect(courts.getByText('12:00 - 13:00')).toBeInTheDocument();
+  expect(courts.getByText('13:00 - 14:00')).toBeInTheDocument();
+  expect(courts.getByText('Rp 250.000')).toBeInTheDocument();
+  expect(courts.getByText('Rp 150.000')).toBeInTheDocument();
+  expect(courts.getByText('Tarif lapangan in-house')).toBeInTheDocument();
+  expect(courts.getByText('Tarif reguler')).toBeInTheDocument();
+  expect(screen.getByText('Rp 400.000')).toBeInTheDocument();
+  expect(screen.getByText('Rp 1.150.000')).toBeInTheDocument();
+  expect(screen.queryByText(/Penyesuaian lapangan/)).not.toBeInTheDocument();
+  expect(screen.queryByText('Rp 300.000')).not.toBeInTheDocument();
+  rerender(
+    <BookingSummary
+      {...props}
+      inHouseCourtPrices={{ 'slot-12': 250000, 'slot-13': 250000 }}
+      inHouseCoverage={-200000}
+      totalAmount={1250000}
+    />
+  );
+  expect(courts.getByText('12:00 - 14:00')).toBeInTheDocument();
+  expect(courts.getByText('Rp 500.000')).toBeInTheDocument();
+  rerender(
+    <BookingSummary
+      {...props}
+      inHouseCourtPrices={{}}
+      inHouseCoverage={0}
+      inHouseSingleTotal={0}
+      totalAmount={300000}
+    />
+  );
+  expect(courts.getByText('Rp 300.000')).toBeInTheDocument();
+  expect(courts.queryByText('Tarif lapangan in-house')).not.toBeInTheDocument();
 });

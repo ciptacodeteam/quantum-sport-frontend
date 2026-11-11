@@ -79,3 +79,22 @@ export function adminInHousePricing(
     { coverage: 0, singleTotal: 0, extras: 0 }
   );
 }
+
+/** Final court charges for applied in-house sessions, without changing the source cart prices. */
+export function adminInHouseCourtPrices(
+  sessions: BookingItem[],
+  choices: InHouseChoice[],
+  plans: InHousePlan[],
+  wallets: InHouseWallet[],
+  rules: TariffRule[] = []
+): Record<string, number> {
+  return Object.fromEntries(
+    choices.flatMap((choice) => {
+      const session = sessions.find((item) => item.slotId === choice.courtSlotId);
+      if (!session) return [];
+      const base = (session.discountPrice ?? 0) > 0 ? session.discountPrice! : session.price;
+      const { coverage } = adminInHousePricing([session], [choice], plans, wallets, rules);
+      return [[session.slotId, base - coverage]];
+    })
+  );
+}

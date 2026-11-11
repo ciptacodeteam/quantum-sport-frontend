@@ -2,7 +2,10 @@ import { parseScheduleDatetime } from './admin-schedule-time';
 import type { BookingItem } from '@/stores/useBookingStore';
 
 /** Display-only grouping: retain every source slot for checkout and removal. */
-export function groupCourtBookingRanges(items: BookingItem[]) {
+export function groupCourtBookingRanges(
+  items: BookingItem[],
+  groupKey: (item: BookingItem) => string = () => ''
+) {
   const slots = items
     .map((item) => {
       const [startTime, rangeEnd] = item.timeSlot.split(' - ');
@@ -36,7 +39,8 @@ export function groupCourtBookingRanges(items: BookingItem[]) {
       last &&
       last.courtId === slot.courtId &&
       last.date === slot.date &&
-      last.endAt === slot.startAt
+      last.endAt === slot.startAt &&
+      groupKey(last.items[0]) === groupKey(slot.items[0])
     ) {
       last.endAt = slot.endAt;
       last.endTime = slot.endTime;

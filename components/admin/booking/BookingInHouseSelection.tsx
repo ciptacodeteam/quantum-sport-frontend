@@ -63,6 +63,7 @@ export default function BookingInHouseSelection({
         </p>
       </div>
       <BookingServiceSessionPicker
+        serviceLabel="Coach"
         value={currentSession?.slotId ?? ''}
         onChange={setSessionId}
         disabled={disabled}

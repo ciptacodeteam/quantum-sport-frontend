@@ -94,6 +94,7 @@ export default function BookingCoachSelection({
         </p>
       </div>
       <BookingServiceSessionPicker
+        serviceLabel="Coach"
         value={currentSession ? coachSessionKey(currentSession) : ''}
         onChange={setSessionId}
         disabled={disabled}

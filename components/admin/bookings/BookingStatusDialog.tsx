@@ -1,5 +1,6 @@
 'use client';
 
+import { useHasRole } from '@/hooks/useRoleAccess';
 import { IconCheck, IconX } from '@tabler/icons-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ export default function BookingStatusDialog({
   onApprove: () => void;
   onCancel: () => void;
 }) {
+  const canCancel = useHasRole(['ADMIN', 'SUPER_ADMIN']);
   const schedules = bookingScheduleInJakarta(booking.details || []);
   const isHold = status === BookingStatus.HOLD;
   const isExpired =
@@ -149,15 +151,17 @@ export default function BookingStatusDialog({
           </Button>
         </DialogClose>
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            className="border-destructive/25 text-destructive hover:bg-destructive/5 hover:text-destructive rounded-lg shadow-none"
-            onClick={onCancel}
-            disabled={approving}
-          >
-            <IconX className="size-4" />
-            Batalkan
-          </Button>
+          {canCancel && (
+            <Button
+              variant="outline"
+              className="border-destructive/25 text-destructive hover:bg-destructive/5 hover:text-destructive rounded-lg shadow-none"
+              onClick={onCancel}
+              disabled={approving}
+            >
+              <IconX className="size-4" />
+              Batalkan
+            </Button>
+          )}
           {isHold && (
             <Button className="rounded-lg" onClick={onApprove} loading={approving}>
               <IconCheck className="size-4" />

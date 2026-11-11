@@ -2,6 +2,7 @@
 import { bookingPurposeLabel, isInternalBooking } from '@/lib/booking-purpose';
 import { useAdminCourtSports } from '@/hooks/useAdminCourtSports';
 
+import ScheduleBookingDialogLayout from '@/components/admin/bookings/ScheduleBookingDialogLayout';
 import CancelCoachDialog from '@/components/admin/coaching/CancelCoachDialog';
 import ReplaceCoachDialog from '@/components/admin/coaching/ReplaceCoachDialog';
 import RescheduleCourtSection from '@/components/admin/bookings/RescheduleCourtSection';
@@ -12,14 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  ManagedDialog
-} from '@/components/ui/dialog';
+import { DialogTrigger, ManagedDialog } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -1119,348 +1113,235 @@ export default function SchedulePage() {
                                             </Badge>
                                           </button>
                                         </DialogTrigger>
-                                        <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col">
-                                          <DialogHeader className="mb-4 shrink-0">
-                                            <DialogTitle>Detail Pemesanan</DialogTitle>
-                                            <DialogDescription>
-                                              Kelola jadwal lapangan dan layanan pada pemesanan ini.
-                                            </DialogDescription>
-                                          </DialogHeader>
-                                          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
-                                            <MoveCourtSection
-                                              key={`${bookingCell.detail.id}-${bookingCell.detail.slotId}`}
-                                              detail={bookingCell.detail}
-                                              booking={bookingCell.booking}
-                                            />
-                                            <RescheduleCourtSection
-                                              key={`reschedule-${bookingCell.detail.id}-${bookingCell.detail.slotId}`}
-                                              detail={bookingCell.detail}
-                                              booking={bookingCell.booking}
-                                            />
-                                            <AddBookingService
-                                              detailId={bookingCell.detail.id}
-                                              startAt={`${selectedDateString} ${startTime}:00`}
-                                              endAt={parseDatetime(
-                                                `${selectedDateString} ${startTime}:00`
-                                              )
-                                                .add(1, 'hour')
-                                                .format('YYYY-MM-DD HH:mm:ss')}
-                                              sport={courtSport}
-                                              confirmed={status === BookingStatus.CONFIRMED}
-                                            />
-                                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                              <div>
-                                                <p className="text-muted-foreground text-sm">INV</p>
-                                                <p className="text-sm font-medium break-all">
-                                                  {bookingCell.booking.invoice?.number || '—'}
-                                                </p>
-                                              </div>
-                                              <div>
-                                                <p className="text-muted-foreground text-sm">
-                                                  Status
-                                                </p>
-                                                <Badge
-                                                  variant={BOOKING_STATUS_BADGE_VARIANT[status]}
-                                                >
-                                                  {BOOKING_STATUS_MAP[status]}
-                                                </Badge>
-                                              </div>
-                                              <div>
-                                                <p className="text-muted-foreground text-sm">
-                                                  Membership
-                                                </p>
-                                                {bookingCell.booking.membershipUserId ? (
-                                                  <>
-                                                    <Badge variant="success">Ya</Badge>
-                                                    <p className="text-muted-foreground mt-1 text-xs">
-                                                      Sesi digunakan:{' '}
-                                                      {bookingCell.booking.membershipSessionsUsed ??
-                                                        0}
-                                                    </p>
-                                                  </>
-                                                ) : (
-                                                  <Badge variant="secondary">Tidak</Badge>
-                                                )}
-                                              </div>
-                                              <div>
-                                                <p className="text-muted-foreground text-sm">
-                                                  Pelanggan
-                                                </p>
-                                                <p className="font-medium">
-                                                  {bookingCell.customerName}
-                                                </p>
-                                                {bookingCell.customerPhone &&
-                                                  bookingCell.customerPhone !== '-' && (
-                                                    <p className="text-muted-foreground text-xs">
-                                                      {formatPhone(bookingCell.customerPhone)}
-                                                    </p>
-                                                  )}
-                                              </div>
-                                              <div>
-                                                <p className="text-muted-foreground text-sm">
-                                                  Total Tagihan
-                                                </p>
-                                                <p className="font-medium">
-                                                  Rp{' '}
-                                                  {new Intl.NumberFormat('id-ID').format(
-                                                    bookingCell.booking.totalPrice +
-                                                      (bookingCell.booking.processingFee || 0)
-                                                  )}
-                                                </p>
-                                              </div>
-                                              <div>
-                                                <p className="text-muted-foreground text-sm">
-                                                  Total Booking Lapangan
-                                                </p>
-                                                <p className="font-medium">
-                                                  Rp{' '}
-                                                  {new Intl.NumberFormat('id-ID').format(
-                                                    getBookingCourtTotal(bookingCell.booking)
-                                                  )}
-                                                </p>
-                                              </div>
-                                              <div>
-                                                <p className="text-muted-foreground text-sm">
-                                                  Dibuat Pada
-                                                </p>
-                                                <p className="text-sm">
-                                                  {formatDateTime(
-                                                    bookingCell.booking.createdAt,
-                                                    'DD/MM/YYYY HH:mm'
-                                                  )}
-                                                </p>
-                                              </div>
-                                              {bookingCell.booking.holdExpiresAt && (
+                                        <ScheduleBookingDialogLayout
+                                          booking={bookingCell.booking}
+                                          status={status}
+                                          dialogId={`schedule-booking-${bookingCell.booking.id}-${court.id}-${startTime}`}
+                                          summary={
+                                            <>
+                                              <div className="grid grid-cols-2 gap-x-3 gap-y-4">
                                                 <div>
                                                   <p className="text-muted-foreground text-sm">
-                                                    Kedaluwarsa
+                                                    INV
+                                                  </p>
+                                                  <p className="text-sm font-medium break-all">
+                                                    {bookingCell.booking.invoice?.number || '—'}
+                                                  </p>
+                                                </div>
+                                                <div>
+                                                  <p className="text-muted-foreground text-sm">
+                                                    Status
+                                                  </p>
+                                                  <Badge
+                                                    variant={BOOKING_STATUS_BADGE_VARIANT[status]}
+                                                  >
+                                                    {BOOKING_STATUS_MAP[status]}
+                                                  </Badge>
+                                                </div>
+                                                <div>
+                                                  <p className="text-muted-foreground text-sm">
+                                                    Membership
+                                                  </p>
+                                                  {bookingCell.booking.membershipUserId ? (
+                                                    <>
+                                                      <Badge variant="success">Ya</Badge>
+                                                      <p className="text-muted-foreground mt-1 text-xs">
+                                                        Sesi digunakan:{' '}
+                                                        {bookingCell.booking
+                                                          .membershipSessionsUsed ?? 0}
+                                                      </p>
+                                                    </>
+                                                  ) : (
+                                                    <Badge variant="secondary">Tidak</Badge>
+                                                  )}
+                                                </div>
+                                                <div>
+                                                  <p className="text-muted-foreground text-sm">
+                                                    Pelanggan
+                                                  </p>
+                                                  <p className="font-medium">
+                                                    {bookingCell.customerName}
+                                                  </p>
+                                                  {bookingCell.customerPhone &&
+                                                    bookingCell.customerPhone !== '-' && (
+                                                      <p className="text-muted-foreground text-xs">
+                                                        {formatPhone(bookingCell.customerPhone)}
+                                                      </p>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                  <p className="text-muted-foreground text-sm">
+                                                    Nilai lapangan
+                                                  </p>
+                                                  <p className="font-medium">
+                                                    Rp{' '}
+                                                    {new Intl.NumberFormat('id-ID').format(
+                                                      getBookingCourtTotal(bookingCell.booking)
+                                                    )}
+                                                  </p>
+                                                </div>
+                                                <div>
+                                                  <p className="text-muted-foreground text-sm">
+                                                    Dibuat Pada
                                                   </p>
                                                   <p className="text-sm">
                                                     {formatDateTime(
-                                                      bookingCell.booking.holdExpiresAt,
+                                                      bookingCell.booking.createdAt,
                                                       'DD/MM/YYYY HH:mm'
                                                     )}
                                                   </p>
                                                 </div>
-                                              )}
-                                              {bookingCell.booking.adminNote && (
-                                                <div className="col-span-2">
-                                                  <p className="text-muted-foreground text-sm">
-                                                    Note Admin
-                                                  </p>
-                                                  <p className="text-sm whitespace-pre-line">
-                                                    {bookingCell.booking.adminNote}
-                                                  </p>
-                                                </div>
-                                              )}
-                                            </div>
-                                            {bookingCell.booking.details &&
-                                              bookingCell.booking.details.length > 0 && (
-                                                <div className="border-t pt-4">
-                                                  <p className="mb-2 text-sm font-medium">
-                                                    Detail Slot
-                                                  </p>
-                                                  <div className="space-y-2">
-                                                    {bookingCell.booking.details.map((detail) => (
-                                                      <div
-                                                        key={detail.id}
-                                                        className="bg-muted/50 rounded-lg border p-3"
-                                                      >
-                                                        <div className="flex items-start justify-between">
-                                                          <div>
-                                                            <p className="text-sm font-medium">
-                                                              {detail.court?.name || '-'}
-                                                            </p>
-                                                            {detail.slot && (
-                                                              <p className="text-muted-foreground text-xs">
-                                                                {formatDate(
-                                                                  detail.slot.startAt,
-                                                                  'DD MMM YYYY'
-                                                                )}{' '}
-                                                                -{' '}
-                                                                {formatSlotTime(
-                                                                  detail.slot.startAt
-                                                                )}{' '}
-                                                                -{' '}
-                                                                {formatSlotTime(detail.slot.endAt)}
-                                                              </p>
-                                                            )}
-                                                          </div>
-                                                          <p className="text-base font-medium">
-                                                            Rp{' '}
-                                                            {new Intl.NumberFormat('id-ID').format(
-                                                              getBookingDetailChargedPrice(detail)
-                                                            )}
-                                                          </p>
-                                                        </div>
-                                                      </div>
-                                                    ))}
-                                                  </div>
-                                                </div>
-                                              )}
-                                            {/* Coaches Section */}
-                                            {(() => {
-                                              // Check if coaches is BookingCoach[] or Staff[]
-                                              const coachesArray =
-                                                bookingCell.booking.coaches || [];
-                                              const isBookingCoachArray =
-                                                coachesArray.length > 0 &&
-                                                'slot' in coachesArray[0];
-                                              const bookingCoaches = isBookingCoachArray
-                                                ? getCoachesForBookingCell(bookingCell)
-                                                : bookingCell.booking.bookingCoaches || [];
-                                              const staffCoaches = !isBookingCoachArray
-                                                ? (coachesArray as any[] as Staff[])
-                                                : [];
-
-                                              const totalCoaches =
-                                                bookingCoaches.length + staffCoaches.length;
-
-                                              if (totalCoaches === 0) return null;
-
-                                              return (
-                                                <div className="border-t pt-4">
-                                                  <div className="mb-3 flex items-center gap-2">
-                                                    <IconUser className="h-4 w-4 text-blue-600" />
-                                                    <p className="text-sm font-medium">
-                                                      Coaches ({totalCoaches})
+                                                {bookingCell.booking.holdExpiresAt && (
+                                                  <div>
+                                                    <p className="text-muted-foreground text-sm">
+                                                      Kedaluwarsa
+                                                    </p>
+                                                    <p className="text-sm">
+                                                      {formatDateTime(
+                                                        bookingCell.booking.holdExpiresAt,
+                                                        'DD/MM/YYYY HH:mm'
+                                                      )}
                                                     </p>
                                                   </div>
-                                                  <div className="space-y-2">
-                                                    {/* Display BookingCoach[] with slot details */}
-                                                    {bookingCoaches.map((bookingCoach) => {
-                                                      const coach = bookingCoach.slot?.staff;
-                                                      const coachDescription =
-                                                        (bookingCoach as any).description ??
-                                                        (bookingCoach as any).coachDescription ??
-                                                        null;
-                                                      return (
-                                                        <div
-                                                          key={bookingCoach.id}
-                                                          className="rounded-lg border border-blue-200 bg-blue-50 p-3"
-                                                        >
-                                                          <div className="space-y-3">
-                                                            <div className="min-w-0">
-                                                              <div className="mb-2 flex flex-wrap items-center gap-2">
-                                                                <p className="w-full text-sm font-semibold break-words">
-                                                                  {coach?.name || 'Unknown Coach'}
-                                                                </p>
-                                                                <Badge
-                                                                  variant="outline"
-                                                                  className="text-[10px]"
-                                                                >
-                                                                  {bookingCoach.coachingGroupName ||
-                                                                    'Coach Independen'}
-                                                                </Badge>
-                                                                {coach?.role && (
-                                                                  <Badge
-                                                                    variant="outline"
-                                                                    className="h-4 px-1.5 py-0 text-[10px]"
-                                                                  >
-                                                                    {coach.role}
-                                                                  </Badge>
-                                                                )}
-                                                                {bookingCoach.bookingCoachType && (
-                                                                  <Badge
-                                                                    variant="outline"
-                                                                    className="h-4 bg-blue-100 px-1.5 py-0 text-[10px]"
-                                                                  >
-                                                                    {
-                                                                      bookingCoach.bookingCoachType
-                                                                        .name
-                                                                    }
-                                                                  </Badge>
-                                                                )}
-                                                              </div>
-                                                              <div className="space-y-0.5">
-                                                                {bookingCoach.slot && (
-                                                                  <p className="mb-1 text-xs font-medium text-blue-700">
-                                                                    🕐{' '}
-                                                                    {formatSlotTime(
-                                                                      bookingCoach.slot.startAt
-                                                                    )}{' '}
-                                                                    -{' '}
-                                                                    {formatSlotTime(
-                                                                      bookingCoach.slot.endAt
-                                                                    )}
-                                                                  </p>
-                                                                )}
-                                                                {coach?.phone && (
-                                                                  <p className="text-muted-foreground text-xs break-words">
-                                                                    📞 {formatPhone(coach.phone)}
-                                                                  </p>
-                                                                )}
-                                                                {coach?.email &&
-                                                                  !coach.email.endsWith(
-                                                                    '@internal.invalid'
-                                                                  ) && (
-                                                                    <p className="text-muted-foreground text-xs break-words">
-                                                                      ✉️ {coach.email}
-                                                                    </p>
-                                                                  )}
-                                                                {coachDescription && (
-                                                                  <p className="text-muted-foreground mt-1 text-xs whitespace-pre-line">
-                                                                    📝 {coachDescription}
-                                                                  </p>
-                                                                )}
-                                                                {bookingCoach.price !==
-                                                                  undefined && (
-                                                                  <p className="mt-1 text-xs font-medium text-blue-700">
-                                                                    💰 Rp{' '}
-                                                                    {new Intl.NumberFormat(
-                                                                      'id-ID'
-                                                                    ).format(bookingCoach.price)}
-                                                                  </p>
-                                                                )}
-                                                              </div>
-                                                            </div>
-                                                            {bookingCoach.slot?.startAt && (
-                                                              <div className="grid grid-cols-1 gap-2 border-t border-blue-200/70 pt-3 empty:hidden sm:flex sm:justify-end [&>button]:w-full sm:[&>button]:w-40">
-                                                                <ReplaceCoachDialog
-                                                                  bookingCoachId={bookingCoach.id}
-                                                                  currentName={
-                                                                    coach?.name || 'Coach'
-                                                                  }
-                                                                  startAt={String(
-                                                                    bookingCoach.slot.startAt
-                                                                  )}
-                                                                  status={
-                                                                    bookingCoach.status ??
-                                                                    bookingCell.booking.status
-                                                                  }
-                                                                />
-                                                                <CancelCoachDialog
-                                                                  bookingCoachId={bookingCoach.id}
-                                                                  currentName={
-                                                                    coach?.name || 'Coach'
-                                                                  }
-                                                                  startAt={String(
-                                                                    bookingCoach.slot.startAt
-                                                                  )}
-                                                                  status={
-                                                                    bookingCoach.status ??
-                                                                    bookingCell.booking.status
-                                                                  }
-                                                                />
-                                                              </div>
-                                                            )}
-                                                          </div>
+                                                )}
+                                                {bookingCell.booking.adminNote && (
+                                                  <div className="col-span-2">
+                                                    <p className="text-muted-foreground text-sm">
+                                                      Catatan admin
+                                                    </p>
+                                                    <p className="text-sm whitespace-pre-line">
+                                                      {bookingCell.booking.adminNote}
+                                                    </p>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </>
+                                          }
+                                          manageSchedule={
+                                            <>
+                                              <MoveCourtSection
+                                                key={`${bookingCell.detail.id}-${bookingCell.detail.slotId}`}
+                                                detail={bookingCell.detail}
+                                                booking={bookingCell.booking}
+                                              />
+                                              <RescheduleCourtSection
+                                                key={`reschedule-${bookingCell.detail.id}-${bookingCell.detail.slotId}`}
+                                                detail={bookingCell.detail}
+                                                booking={bookingCell.booking}
+                                              />
+                                            </>
+                                          }
+                                          addServices={
+                                            <>
+                                              <AddBookingService
+                                                detailId={bookingCell.detail.id}
+                                                startAt={`${selectedDateString} ${startTime}:00`}
+                                                endAt={parseDatetime(
+                                                  `${selectedDateString} ${startTime}:00`
+                                                )
+                                                  .add(1, 'hour')
+                                                  .format('YYYY-MM-DD HH:mm:ss')}
+                                                sport={courtSport}
+                                                confirmed={status === BookingStatus.CONFIRMED}
+                                              />
+                                            </>
+                                          }
+                                        >
+                                          {' '}
+                                          {bookingCell.booking.details &&
+                                            bookingCell.booking.details.length > 0 && (
+                                              <div className="border-t pt-4">
+                                                <p className="mb-2 text-sm font-medium">
+                                                  Detail Slot
+                                                </p>
+                                                <div className="space-y-2">
+                                                  {bookingCell.booking.details.map((detail) => (
+                                                    <div
+                                                      key={detail.id}
+                                                      className="bg-muted/50 rounded-lg border p-3"
+                                                    >
+                                                      <div className="flex items-start justify-between">
+                                                        <div>
+                                                          <p className="text-sm font-medium">
+                                                            {detail.court?.name || '-'}
+                                                          </p>
+                                                          {detail.slot && (
+                                                            <p className="text-muted-foreground text-xs">
+                                                              {formatDate(
+                                                                detail.slot.startAt,
+                                                                'DD MMM YYYY'
+                                                              )}{' '}
+                                                              -{' '}
+                                                              {formatSlotTime(detail.slot.startAt)}{' '}
+                                                              - {formatSlotTime(detail.slot.endAt)}
+                                                            </p>
+                                                          )}
                                                         </div>
-                                                      );
-                                                    })}
-                                                    {/* Fallback: Display Staff[] without bookingCoach data */}
-                                                    {staffCoaches.map((coach) => (
+                                                        <p className="text-base font-medium">
+                                                          Rp{' '}
+                                                          {new Intl.NumberFormat('id-ID').format(
+                                                            getBookingDetailChargedPrice(detail)
+                                                          )}
+                                                        </p>
+                                                      </div>
+                                                    </div>
+                                                  ))}
+                                                </div>
+                                              </div>
+                                            )}
+                                          {/* Coaches Section */}
+                                          {(() => {
+                                            // Check if coaches is BookingCoach[] or Staff[]
+                                            const coachesArray = bookingCell.booking.coaches || [];
+                                            const isBookingCoachArray =
+                                              coachesArray.length > 0 && 'slot' in coachesArray[0];
+                                            const bookingCoaches = isBookingCoachArray
+                                              ? getCoachesForBookingCell(bookingCell)
+                                              : bookingCell.booking.bookingCoaches || [];
+                                            const staffCoaches = !isBookingCoachArray
+                                              ? (coachesArray as any[] as Staff[])
+                                              : [];
+
+                                            const totalCoaches =
+                                              bookingCoaches.length + staffCoaches.length;
+
+                                            if (totalCoaches === 0) return null;
+
+                                            return (
+                                              <div className="border-t pt-4">
+                                                <div className="mb-3 flex items-center gap-2">
+                                                  <IconUser className="h-4 w-4 text-blue-600" />
+                                                  <p className="text-sm font-medium">
+                                                    Coaches ({totalCoaches})
+                                                  </p>
+                                                </div>
+                                                <div className="space-y-2">
+                                                  {/* Display BookingCoach[] with slot details */}
+                                                  {bookingCoaches.map((bookingCoach) => {
+                                                    const coach = bookingCoach.slot?.staff;
+                                                    const coachDescription =
+                                                      (bookingCoach as any).description ??
+                                                      (bookingCoach as any).coachDescription ??
+                                                      null;
+                                                    return (
                                                       <div
-                                                        key={coach.id}
+                                                        key={bookingCoach.id}
                                                         className="rounded-lg border border-blue-200 bg-blue-50 p-3"
                                                       >
-                                                        <div className="flex items-start justify-between gap-3">
-                                                          <div className="flex-1">
-                                                            <div className="mb-1 flex items-center gap-2">
-                                                              <p className="text-sm font-semibold">
-                                                                {coach.name}
+                                                        <div className="space-y-3">
+                                                          <div className="min-w-0">
+                                                            <div className="mb-2 flex flex-wrap items-center gap-2">
+                                                              <p className="w-full text-sm font-semibold break-words">
+                                                                {coach?.name || 'Unknown Coach'}
                                                               </p>
-                                                              {coach.role && (
+                                                              <Badge
+                                                                variant="outline"
+                                                                className="text-[10px]"
+                                                              >
+                                                                {bookingCoach.coachingGroupName ||
+                                                                  'Coach Independen'}
+                                                              </Badge>
+                                                              {coach?.role && (
                                                                 <Badge
                                                                   variant="outline"
                                                                   className="h-4 px-1.5 py-0 text-[10px]"
@@ -1468,117 +1349,170 @@ export default function SchedulePage() {
                                                                   {coach.role}
                                                                 </Badge>
                                                               )}
+                                                              {bookingCoach.bookingCoachType && (
+                                                                <Badge
+                                                                  variant="outline"
+                                                                  className="h-4 bg-blue-100 px-1.5 py-0 text-[10px]"
+                                                                >
+                                                                  {
+                                                                    bookingCoach.bookingCoachType
+                                                                      .name
+                                                                  }
+                                                                </Badge>
+                                                              )}
                                                             </div>
                                                             <div className="space-y-0.5">
-                                                              {coach.phone && (
-                                                                <p className="text-muted-foreground text-xs">
+                                                              {bookingCoach.slot && (
+                                                                <p className="mb-1 text-xs font-medium text-blue-700">
+                                                                  🕐{' '}
+                                                                  {formatSlotTime(
+                                                                    bookingCoach.slot.startAt
+                                                                  )}{' '}
+                                                                  -{' '}
+                                                                  {formatSlotTime(
+                                                                    bookingCoach.slot.endAt
+                                                                  )}
+                                                                </p>
+                                                              )}
+                                                              {coach?.phone && (
+                                                                <p className="text-muted-foreground text-xs break-words">
                                                                   📞 {formatPhone(coach.phone)}
                                                                 </p>
                                                               )}
-                                                              {coach.email && (
-                                                                <p className="text-muted-foreground text-xs">
-                                                                  ✉️ {coach.email}
+                                                              {coach?.email &&
+                                                                !coach.email.endsWith(
+                                                                  '@internal.invalid'
+                                                                ) && (
+                                                                  <p className="text-muted-foreground text-xs break-words">
+                                                                    ✉️ {coach.email}
+                                                                  </p>
+                                                                )}
+                                                              {coachDescription && (
+                                                                <p className="text-muted-foreground mt-1 text-xs whitespace-pre-line">
+                                                                  📝 {coachDescription}
                                                                 </p>
                                                               )}
-                                                              {coach.coachType && (
-                                                                <p className="text-muted-foreground text-xs">
-                                                                  🎯 Type:{' '}
-                                                                  {getCoachTypeLabel(
-                                                                    coach.coachType
-                                                                  )}
+                                                              {bookingCoach.price !== undefined && (
+                                                                <p className="mt-1 text-xs font-medium text-blue-700">
+                                                                  💰 Rp{' '}
+                                                                  {new Intl.NumberFormat(
+                                                                    'id-ID'
+                                                                  ).format(bookingCoach.price)}
                                                                 </p>
                                                               )}
                                                             </div>
                                                           </div>
+                                                          {bookingCoach.slot?.startAt && (
+                                                            <div className="grid grid-cols-1 gap-2 border-t border-blue-200/70 pt-3 empty:hidden sm:flex sm:justify-end [&>button]:w-full sm:[&>button]:w-40">
+                                                              <ReplaceCoachDialog
+                                                                bookingCoachId={bookingCoach.id}
+                                                                currentName={coach?.name || 'Coach'}
+                                                                startAt={String(
+                                                                  bookingCoach.slot.startAt
+                                                                )}
+                                                                status={
+                                                                  bookingCoach.status ??
+                                                                  bookingCell.booking.status
+                                                                }
+                                                              />
+                                                              <CancelCoachDialog
+                                                                bookingCoachId={bookingCoach.id}
+                                                                currentName={coach?.name || 'Coach'}
+                                                                startAt={String(
+                                                                  bookingCoach.slot.startAt
+                                                                )}
+                                                                status={
+                                                                  bookingCoach.status ??
+                                                                  bookingCell.booking.status
+                                                                }
+                                                              />
+                                                            </div>
+                                                          )}
                                                         </div>
                                                       </div>
-                                                    ))}
-                                                  </div>
+                                                    );
+                                                  })}
+                                                  {/* Fallback: Display Staff[] without bookingCoach data */}
+                                                  {staffCoaches.map((coach) => (
+                                                    <div
+                                                      key={coach.id}
+                                                      className="rounded-lg border border-blue-200 bg-blue-50 p-3"
+                                                    >
+                                                      <div className="flex items-start justify-between gap-3">
+                                                        <div className="flex-1">
+                                                          <div className="mb-1 flex items-center gap-2">
+                                                            <p className="text-sm font-semibold">
+                                                              {coach.name}
+                                                            </p>
+                                                            {coach.role && (
+                                                              <Badge
+                                                                variant="outline"
+                                                                className="h-4 px-1.5 py-0 text-[10px]"
+                                                              >
+                                                                {coach.role}
+                                                              </Badge>
+                                                            )}
+                                                          </div>
+                                                          <div className="space-y-0.5">
+                                                            {coach.phone && (
+                                                              <p className="text-muted-foreground text-xs">
+                                                                📞 {formatPhone(coach.phone)}
+                                                              </p>
+                                                            )}
+                                                            {coach.email && (
+                                                              <p className="text-muted-foreground text-xs">
+                                                                ✉️ {coach.email}
+                                                              </p>
+                                                            )}
+                                                            {coach.coachType && (
+                                                              <p className="text-muted-foreground text-xs">
+                                                                🎯 Type:{' '}
+                                                                {getCoachTypeLabel(coach.coachType)}
+                                                              </p>
+                                                            )}
+                                                          </div>
+                                                        </div>
+                                                      </div>
+                                                    </div>
+                                                  ))}
                                                 </div>
-                                              );
-                                            })()}
+                                              </div>
+                                            );
+                                          })()}
+                                          <BookingBallboySection
+                                            ballboys={getBallboysForBookingCell(bookingCell)}
+                                            details={bookingCell.booking.details}
+                                          />
+                                          {/* Inventories Section */}
+                                          {(() => {
+                                            const inventoriesArray =
+                                              getInventoriesForBookingCell(bookingCell);
+                                            if (inventoriesArray.length === 0) return null;
 
-                                            <BookingBallboySection
-                                              ballboys={getBallboysForBookingCell(bookingCell)}
-                                              details={bookingCell.booking.details}
-                                            />
+                                            // Check if inventories is BookingInventory[] or Inventory[]
+                                            const isBookingInventoryArray =
+                                              'inventory' in inventoriesArray[0];
 
-                                            {/* Inventories Section */}
-                                            {(() => {
-                                              const inventoriesArray =
-                                                getInventoriesForBookingCell(bookingCell);
-                                              if (inventoriesArray.length === 0) return null;
+                                            return (
+                                              <div className="border-t pt-4">
+                                                <div className="mb-3 flex items-center gap-2">
+                                                  <IconShoppingCart className="h-4 w-4 text-green-600" />
+                                                  <p className="text-sm font-medium">
+                                                    Inventories ({inventoriesArray.length})
+                                                  </p>
+                                                </div>
+                                                <div className="space-y-2">
+                                                  {isBookingInventoryArray
+                                                    ? (
+                                                        inventoriesArray as any[] as BookingInventory[]
+                                                      ).map((bookingInventory) => {
+                                                        const inventory =
+                                                          bookingInventory.inventory;
+                                                        if (!inventory) return null;
 
-                                              // Check if inventories is BookingInventory[] or Inventory[]
-                                              const isBookingInventoryArray =
-                                                'inventory' in inventoriesArray[0];
-
-                                              return (
-                                                <div className="border-t pt-4">
-                                                  <div className="mb-3 flex items-center gap-2">
-                                                    <IconShoppingCart className="h-4 w-4 text-green-600" />
-                                                    <p className="text-sm font-medium">
-                                                      Inventories ({inventoriesArray.length})
-                                                    </p>
-                                                  </div>
-                                                  <div className="space-y-2">
-                                                    {isBookingInventoryArray
-                                                      ? (
-                                                          inventoriesArray as any[] as BookingInventory[]
-                                                        ).map((bookingInventory) => {
-                                                          const inventory =
-                                                            bookingInventory.inventory;
-                                                          if (!inventory) return null;
-
-                                                          return (
-                                                            <div
-                                                              key={bookingInventory.id}
-                                                              className="rounded-lg border border-green-200 bg-green-50 p-3"
-                                                            >
-                                                              <div className="flex items-start justify-between gap-3">
-                                                                <div className="flex-1">
-                                                                  <p className="mb-1 text-sm font-semibold">
-                                                                    {inventory.name}
-                                                                  </p>
-                                                                  <div className="space-y-0.5">
-                                                                    {inventory.description && (
-                                                                      <p className="text-muted-foreground text-xs">
-                                                                        {inventory.description}
-                                                                      </p>
-                                                                    )}
-                                                                    <div className="mt-1 flex items-center gap-3">
-                                                                      {bookingInventory.price !==
-                                                                        undefined && (
-                                                                        <p className="text-xs font-medium text-green-700">
-                                                                          💰 Rp{' '}
-                                                                          {new Intl.NumberFormat(
-                                                                            'id-ID'
-                                                                          ).format(
-                                                                            bookingInventory.price
-                                                                          )}
-                                                                        </p>
-                                                                      )}
-                                                                      {bookingInventory.quantity !==
-                                                                        undefined && (
-                                                                        <p className="text-muted-foreground text-xs">
-                                                                          📦 Qty:{' '}
-                                                                          {
-                                                                            bookingInventory.quantity
-                                                                          }
-                                                                        </p>
-                                                                      )}
-                                                                    </div>
-                                                                  </div>
-                                                                </div>
-                                                              </div>
-                                                            </div>
-                                                          );
-                                                        })
-                                                      : (
-                                                          inventoriesArray as any[] as Inventory[]
-                                                        ).map((inventory) => (
+                                                        return (
                                                           <div
-                                                            key={inventory.id}
+                                                            key={bookingInventory.id}
                                                             className="rounded-lg border border-green-200 bg-green-50 p-3"
                                                           >
                                                             <div className="flex items-start justify-between gap-3">
@@ -1593,20 +1527,22 @@ export default function SchedulePage() {
                                                                     </p>
                                                                   )}
                                                                   <div className="mt-1 flex items-center gap-3">
-                                                                    {inventory.price !==
+                                                                    {bookingInventory.price !==
                                                                       undefined && (
                                                                       <p className="text-xs font-medium text-green-700">
                                                                         💰 Rp{' '}
                                                                         {new Intl.NumberFormat(
                                                                           'id-ID'
-                                                                        ).format(inventory.price)}
-                                                                        /hr
+                                                                        ).format(
+                                                                          bookingInventory.price
+                                                                        )}
                                                                       </p>
                                                                     )}
-                                                                    {inventory.quantity !==
+                                                                    {bookingInventory.quantity !==
                                                                       undefined && (
                                                                       <p className="text-muted-foreground text-xs">
-                                                                        📦 Qty: {inventory.quantity}
+                                                                        📦 Qty:{' '}
+                                                                        {bookingInventory.quantity}
                                                                       </p>
                                                                     )}
                                                                   </div>
@@ -1614,24 +1550,64 @@ export default function SchedulePage() {
                                                               </div>
                                                             </div>
                                                           </div>
-                                                        ))}
-                                                  </div>
+                                                        );
+                                                      })
+                                                    : (
+                                                        inventoriesArray as any[] as Inventory[]
+                                                      ).map((inventory) => (
+                                                        <div
+                                                          key={inventory.id}
+                                                          className="rounded-lg border border-green-200 bg-green-50 p-3"
+                                                        >
+                                                          <div className="flex items-start justify-between gap-3">
+                                                            <div className="flex-1">
+                                                              <p className="mb-1 text-sm font-semibold">
+                                                                {inventory.name}
+                                                              </p>
+                                                              <div className="space-y-0.5">
+                                                                {inventory.description && (
+                                                                  <p className="text-muted-foreground text-xs">
+                                                                    {inventory.description}
+                                                                  </p>
+                                                                )}
+                                                                <div className="mt-1 flex items-center gap-3">
+                                                                  {inventory.price !==
+                                                                    undefined && (
+                                                                    <p className="text-xs font-medium text-green-700">
+                                                                      💰 Rp{' '}
+                                                                      {new Intl.NumberFormat(
+                                                                        'id-ID'
+                                                                      ).format(inventory.price)}
+                                                                      /hr
+                                                                    </p>
+                                                                  )}
+                                                                  {inventory.quantity !==
+                                                                    undefined && (
+                                                                    <p className="text-muted-foreground text-xs">
+                                                                      📦 Qty: {inventory.quantity}
+                                                                    </p>
+                                                                  )}
+                                                                </div>
+                                                              </div>
+                                                            </div>
+                                                          </div>
+                                                        </div>
+                                                      ))}
                                                 </div>
-                                              );
-                                            })()}
-
-                                            {bookingCell.booking.cancellationReason && (
-                                              <div className="border-t pt-4">
-                                                <p className="text-muted-foreground text-sm">
-                                                  Alasan Pembatalan
-                                                </p>
-                                                <p className="text-sm">
-                                                  {bookingCell.booking.cancellationReason}
-                                                </p>
                                               </div>
-                                            )}
-                                          </div>
-                                        </DialogContent>
+                                            );
+                                          })()}
+                                          {bookingCell.booking.cancellationReason && (
+                                            <div className="border-t pt-4">
+                                              <p className="text-muted-foreground text-sm">
+                                                Alasan Pembatalan
+                                              </p>
+                                              <p className="text-sm">
+                                                {bookingCell.booking.cancellationReason}
+                                              </p>
+                                            </div>
+                                          )}
+                                        </ScheduleBookingDialogLayout>
                                       </ManagedDialog>
                                     ) : (
                                       <span

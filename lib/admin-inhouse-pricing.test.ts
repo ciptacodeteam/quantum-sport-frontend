@@ -1,6 +1,6 @@
 import type { TariffRule } from './tariff-period';
 import { expect, it } from 'vitest';
-import { adminInHousePricing } from './admin-inhouse-pricing';
+import { adminInHouseCourtPrices, adminInHousePricing } from './admin-inhouse-pricing';
 import type { InHousePlan, InHouseWallet, InHouseChoice } from '@/api/admin/inhouseCoaching';
 import type { BookingItem } from '@/stores/useBookingStore';
 const plan = {
@@ -176,4 +176,35 @@ it('keeps prepaid package coverage unchanged when a fixed court tariff is config
     ]
   );
   expect(result).toEqual({ coverage: courts[0].price, singleTotal: 0, extras: 0 });
+});
+
+it('exposes final court prices only for applied sessions and restores regular pricing on removal', () => {
+  const fixed = { ...rule, inHouseCourtHourlyPrice: 250000 };
+  const choices: InHouseChoice[] = [
+    {
+      staffId: 'andi',
+      courtSlotId: datedCourts[0].slotId,
+      coachSlotId: 'coach-1',
+      hourlyPrice: 750000,
+      participants: 1
+    }
+  ];
+  expect(adminInHouseCourtPrices(datedCourts, choices, [], [], [fixed])).toEqual({
+    'court-0': 250000
+  });
+  expect(adminInHouseCourtPrices(datedCourts, [], [], [], [fixed])).toEqual({});
+  expect(adminInHouseCourtPrices([], choices, [], [], [fixed])).toEqual({});
+  expect(datedCourts[0].price).toBe(300000);
+});
+it('keeps prepaid court sessions included in the customer package', () => {
+  const choices = direct().map(({ planId: _, ...choice }) => ({ ...choice, walletId: 'wallet' }));
+  expect(
+    adminInHouseCourtPrices(
+      datedCourts,
+      choices,
+      [],
+      [wallet],
+      [{ ...rule, inHouseCourtHourlyPrice: 250000 }]
+    )
+  ).toEqual({ 'court-0': 0, 'court-1': 0 });
 });

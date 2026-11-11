@@ -13,7 +13,10 @@ vi.mock('@/api/admin/court', () => ({
   getCourtsApi: async () => ({ data: [{ id: 'court', name: 'Padel 1', sport: 'PADEL' }] }),
   getCourtsSlotsApi: mocks.slots
 }));
-vi.mock('@/api/admin/booking', () => ({ getScheduleApi: mocks.schedule }));
+vi.mock('@/api/admin/booking', () => ({
+  getScheduleApi: mocks.schedule,
+  cancelBookingApi: vi.fn()
+}));
 
 function mount() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -100,6 +103,14 @@ it('shows a court and coach from the same checkout in the schedule cell', async 
   expect(cell).toHaveTextContent('Budi Booking');
   expect(cell).toHaveTextContent('Coach Andi');
   fireEvent.click(cell);
+  expect(await screen.findByRole('tab', { name: 'Jadwal & layanan' })).toHaveAttribute(
+    'data-state',
+    'active'
+  );
+  fireEvent.mouseDown(screen.getByRole('tab', { name: 'Ubah jadwal' }), {
+    button: 0,
+    ctrlKey: false
+  });
   expect(
     await screen.findByRole('region', { name: 'Reschedule booking lapangan' })
   ).toBeInTheDocument();

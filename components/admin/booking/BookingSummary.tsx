@@ -51,6 +51,7 @@ import { IconChevronDown, IconX } from '@tabler/icons-react';
  */
 export interface BookingSummaryProps {
   inHouseCoverage?: number;
+  inHouseCourtPrices?: Record<string, number>;
   inHouseExtras?: number;
   inHouseSingleTotal?: number;
   inHousePricingPending?: boolean;
@@ -229,6 +230,7 @@ export default function BookingSummary({
   membershipDiscount: _membershipDiscountAmount = 0,
   totalAmount,
   inHouseCoverage = 0,
+  inHouseCourtPrices = {},
   inHouseExtras = 0,
   inHouseSingleTotal = 0,
   inHousePricingPending = false,
@@ -359,11 +361,21 @@ export default function BookingSummary({
   // Use provided membership discount details if available, otherwise use calculated
   const membershipDiscount = membershipDiscountDetails || calculatedMembershipDiscount;
 
+  const hasInHouseCourtPrices = Object.keys(inHouseCourtPrices).length > 0;
+  const courtTariff = (item: BookingItem) =>
+    inHouseCourtPrices[item.slotId] === undefined
+      ? 'regular'
+      : inHouseCourtPrices[item.slotId] === 0
+        ? 'package'
+        : 'inhouse';
+
   const getPricing = (booking: BookingItem) => {
     const normalPrice = booking.normalPrice ?? booking.price;
     const discountPrice = booking.discountPrice ?? 0;
     const effectivePrice = discountPrice > 0 ? discountPrice : booking.price;
-    const displayPrice = membershipDiscount.canUseMembership ? normalPrice : effectivePrice;
+    const displayPrice = membershipDiscount.canUseMembership
+      ? normalPrice
+      : (inHouseCourtPrices[booking.slotId] ?? effectivePrice);
     return { normalPrice, discountPrice, effectivePrice, displayPrice };
   };
 
@@ -373,7 +385,7 @@ export default function BookingSummary({
       ? calculateAdminCoachingDiscount(bookingItems, selectedCoaches, tariffRules)
       : 0;
 
-  const courtSubtotal = membershipDiscount.originalTotal ?? courtTotal;
+  const courtSubtotal = (membershipDiscount.originalTotal ?? courtTotal) - inHouseCoverage;
   const finalTotal = Math.max(0, totalAmount - bundleDiscount);
 
   const handleCustomerSelect = (customer: CustomerSearchResult) => {
@@ -649,14 +661,16 @@ export default function BookingSummary({
                         className={`flex min-h-10 items-center gap-2.5 rounded-lg border px-3 py-2.5 text-xs ${!useMembership ? 'border-primary/40 bg-background text-primary font-medium' : 'bg-background/70 text-muted-foreground'} ${onUseMembershipChange ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
                       >
                         <RadioGroupItem id={`${membershipChoiceId}-regular`} value="regular" />
-                        Bayar reguler
+                        {hasInHouseCourtPrices ? 'Bayar langsung' : 'Bayar reguler'}
                       </label>
                     </RadioGroup>
                     <p className="text-muted-foreground text-xs leading-relaxed">
                       {membershipDiscount.deferredUsage
                         ? 'Booking rutin wajib memakai membership. Hapus aturan rutin jika ingin bayar reguler.'
                         : !useMembership
-                          ? 'Harga reguler berlaku. Kuota membership tidak digunakan.'
+                          ? hasInHouseCourtPrices
+                            ? 'Tarif in-house berlaku pada jam yang memakai coach in-house; jam lainnya mengikuti tarif reguler. Kuota membership tidak digunakan.'
+                            : 'Harga reguler berlaku. Kuota membership tidak digunakan.'
                           : 'Kuota digunakan jika olahraga, jam, dan saldo memenuhi ketentuan paket.'}
                     </p>
                   </div>
@@ -689,8 +703,9 @@ export default function BookingSummary({
                     <div className="text-muted-foreground text-xs font-medium">
                       {dateInfo.shortDate}
                     </div>
-                    {groupCourtBookingRanges(dateInfo.items).map((booking) => {
+                    {groupCourtBookingRanges(dateInfo.items, courtTariff).map((booking) => {
                       const isFree = membershipDiscount.canUseMembership;
+                      const isInHouse = courtTariff(booking.items[0]) !== 'regular';
                       const displayPrice = booking.items.reduce(
                         (sum, item) => sum + getPricing(item).displayPrice,
                         0
@@ -719,6 +734,20 @@ export default function BookingSummary({
                             <p className="text-muted-foreground">
                               {booking.startTime} - {booking.endTime}
                             </p>
+                            {hasInHouseCourtPrices && (
+                              <p
+                                className={cn(
+                                  'mt-1 text-[10px] font-medium',
+                                  isInHouse ? 'text-primary' : 'text-muted-foreground'
+                                )}
+                              >
+                                {isInHouse
+                                  ? displayPrice === 0
+                                    ? 'Lapangan termasuk paket in-house'
+                                    : 'Tarif lapangan in-house'
+                                  : 'Tarif reguler'}
+                              </p>
+                            )}
                             {booking.items.length > 1 && (
                               <p className="text-muted-foreground mt-1 text-[10px]">
                                 {booking.items.length} slot
@@ -727,7 +756,11 @@ export default function BookingSummary({
                           </div>
                           <div className="flex shrink-0 items-center gap-2">
                             <span className="text-primary font-semibold tabular-nums">
-                              {isFree ? 'Gratis' : formatCurrency(displayPrice)}
+                              {isInHouse && inHousePricingPending
+                                ? 'Memuat tarif…'
+                                : isFree
+                                  ? 'Gratis'
+                                  : formatCurrency(displayPrice)}
                             </span>
                             {(onBookingGroupRemove ||
                               (booking.items.length === 1 && onBookingRemove)) && (
@@ -897,8 +930,10 @@ export default function BookingSummary({
           <div className="space-y-2">
             {showCourtBookings && (
               <div className="flex items-center justify-between text-sm">
-                <span>Courts</span>
-                <span>{formatCurrency(courtSubtotal)}</span>
+                <span>Lapangan</span>
+                <span>
+                  {inHousePricingPending ? 'Memuat tarif…' : formatCurrency(courtSubtotal)}
+                </span>
               </div>
             )}
             {membershipDiscount.canUseMembership && membershipDiscount.slotsToDeduct > 0 && (
@@ -930,14 +965,6 @@ export default function BookingSummary({
                   </div>
                 )}
               </>
-            )}
-            {inHouseCoverage !== 0 && (
-              <div className="flex items-center justify-between text-sm">
-                <span>Penyesuaian lapangan coaching in-house</span>
-                <span>
-                  {inHouseCoverage > 0 ? '−' : '+'} {formatCurrency(Math.abs(inHouseCoverage))}
-                </span>
-              </div>
             )}
             {inHouseSingleTotal > 0 && (
               <div className="flex items-center justify-between text-sm">
