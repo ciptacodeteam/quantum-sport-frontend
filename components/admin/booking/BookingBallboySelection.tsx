@@ -54,7 +54,7 @@ export default function BookingBallboySelection({
   return (
     <section
       aria-label="Pilihan ballboy"
-      className={embedded ? 'space-y-4' : 'space-y-4 rounded-2xl border p-4 sm:p-5'}
+      className={embedded ? 'space-y-4' : 'space-y-4 rounded-md p-4 sm:p-5'}
     >
       <div>
         <h3 className="font-semibold">Ballboy</h3>
@@ -142,7 +142,7 @@ function BallboySession({
         )
       : undefined;
   return (
-    <div className="bg-muted/10 space-y-3 rounded-xl border p-4">
+    <div className="space-y-3 rounded-md p-1 sm:p-2">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm font-semibold">
           {session.courtName} · {serviceSessionDate(session.date)} · {session.timeSlot}
@@ -150,6 +150,7 @@ function BallboySession({
         <Button
           type="button"
           size="sm"
+          className="rounded-md border-0 shadow-none"
           variant={current ? 'outline' : 'secondary'}
           disabled={disabled}
           onClick={() => onSelect(null)}
@@ -167,7 +168,7 @@ function BallboySession({
               aria-label={`Pilih ballboy ${person.name} untuk ${session.courtName} ${session.timeSlot}`}
               disabled={disabled || !option}
               aria-pressed={current?.ballboyId === person.id}
-              className="bg-background aria-pressed:border-primary aria-pressed:bg-primary/5 flex min-h-18 items-center justify-between gap-3 rounded-lg border p-3 text-left disabled:cursor-not-allowed disabled:opacity-50"
+              className="bg-muted/30 hover:bg-muted/60 aria-pressed:bg-primary/10 aria-pressed:text-primary focus-visible:outline-primary flex min-h-18 items-center justify-between gap-3 rounded-md border-0 p-3 text-left shadow-none transition-colors outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               onClick={() => {
                 if (option)
                   onSelect({
@@ -194,7 +195,10 @@ function BallboySession({
                   </span>
                 )}
               </span>
-              <Badge variant={option ? 'lightSuccess' : 'lightNeutral'}>
+              <Badge
+                className="rounded-sm border-0"
+                variant={option ? 'lightSuccess' : 'lightNeutral'}
+              >
                 {!person.isActive
                   ? 'Nonaktif'
                   : current?.ballboyId === person.id

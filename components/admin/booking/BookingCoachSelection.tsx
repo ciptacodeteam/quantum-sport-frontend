@@ -85,7 +85,7 @@ export default function BookingCoachSelection({
   return (
     <section
       aria-label="Pilihan coach"
-      className={embedded ? 'space-y-4' : 'space-y-4 rounded-2xl border p-4 sm:p-5'}
+      className={embedded ? 'space-y-4' : 'space-y-4 rounded-md p-4 sm:p-5'}
     >
       <div>
         <h3 className="font-semibold">Coach Club</h3>
@@ -205,7 +205,7 @@ function CoachSession({
         !coaches.some((coach) => coach.id === selection.coachId && coach.isActive)
     );
   return (
-    <div className="bg-muted/10 space-y-3 rounded-xl border p-4">
+    <div className="space-y-3 rounded-md p-1 sm:p-2">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm font-semibold">
           {serviceSessionDate(session.date)} · {session.timeSlot}
@@ -214,6 +214,7 @@ function CoachSession({
           type="button"
           variant={!selected.length ? 'secondary' : 'outline'}
           size="sm"
+          className="rounded-md border-0 shadow-none"
           aria-pressed={!selected.length}
           disabled={disabled}
           onClick={() => onSelect(null)}
@@ -237,13 +238,13 @@ function CoachSession({
         const expanded = openGroup === group.id;
         const availableCount = group.members.filter((coach) => optionFor(coach)).length;
         return (
-          <div key={group.id} className="bg-background overflow-hidden rounded-xl border">
+          <div key={group.id} className="bg-muted/20 overflow-hidden rounded-md">
             <button
               type="button"
               disabled={disabled}
               aria-expanded={expanded}
               onClick={() => setOpenGroup(expanded ? null : group.id)}
-              className="hover:bg-muted/40 flex w-full items-center justify-between gap-3 px-3.5 py-3 text-left disabled:opacity-50"
+              className="hover:bg-muted/50 focus-visible:outline-primary flex w-full items-center justify-between gap-3 rounded-md border-0 px-3.5 py-3 text-left shadow-none outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 disabled:opacity-50"
             >
               <span className="flex items-center gap-2 text-sm font-medium">
                 <Users className="text-muted-foreground size-4 shrink-0" />
@@ -262,7 +263,7 @@ function CoachSession({
               <div
                 role="group"
                 aria-label={`Coach ${group.name}`}
-                className="bg-muted/10 grid gap-2 border-t p-3 sm:grid-cols-2"
+                className="grid gap-2 p-2 pt-0 sm:grid-cols-2"
               >
                 {group.members.length === 0 && (
                   <p className="text-muted-foreground p-2 text-xs">
@@ -284,7 +285,7 @@ function CoachSession({
                       disabled={disabled || (!option && !chosen)}
                       aria-pressed={chosen}
                       aria-label={`Pilih ${coach.name}`}
-                      className={`bg-background flex min-h-18 items-center justify-between gap-3 rounded-lg border p-3 text-left disabled:cursor-not-allowed disabled:opacity-50 ${chosen ? 'border-primary ring-primary/20 ring-2' : ''}`}
+                      className={`focus-visible:outline-primary flex min-h-18 items-center justify-between gap-3 rounded-md border-0 p-3 text-left shadow-none transition-colors outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${chosen ? 'bg-primary/10 text-primary' : 'bg-background/70 hover:bg-muted/60'}`}
                       onClick={() => {
                         if (chosen && chosenCoach) {
                           onSelect(chosenCoach);
@@ -322,7 +323,10 @@ function CoachSession({
                           </span>
                         )}
                       </span>
-                      <Badge variant={option ? 'lightSuccess' : 'lightNeutral'}>
+                      <Badge
+                        className="rounded-sm border-0"
+                        variant={option ? 'lightSuccess' : 'lightNeutral'}
+                      >
                         {!coach.isActive
                           ? 'Nonaktif'
                           : option

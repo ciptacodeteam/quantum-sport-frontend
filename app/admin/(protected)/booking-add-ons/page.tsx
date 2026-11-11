@@ -532,7 +532,7 @@ export default function BookingAddOns() {
 
           {bookingItems.length > 0 && (
             <section
-              className="bg-background min-w-0 overflow-hidden rounded-2xl border shadow-sm"
+              className="bg-background min-w-0 overflow-hidden rounded-md border-0 shadow-none"
               aria-label="Layanan tambahan booking"
             >
               <header className="flex items-start gap-3 border-b p-5">
@@ -581,7 +581,7 @@ export default function BookingAddOns() {
                         key={value}
                         value={value}
                         aria-label={label}
-                        className="data-[state=active]:border-border h-auto min-w-0 flex-wrap gap-1.5 rounded-lg border border-transparent px-2 py-3 text-xs sm:text-sm"
+                        className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary h-auto min-w-0 flex-wrap gap-1.5 rounded-md border-0 px-2 py-3 text-xs shadow-none data-[state=active]:shadow-none sm:text-sm"
                       >
                         <Icon className="size-4 shrink-0" />
                         <span>{label}</span>

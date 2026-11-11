@@ -45,7 +45,7 @@ export default function BookingInHouseSelection({
   return (
     <section
       aria-label="Paket coach in-house"
-      className={embedded ? 'space-y-4' : 'space-y-4 rounded-2xl border p-4 sm:p-5'}
+      className={embedded ? 'space-y-4' : 'space-y-4 rounded-md p-4 sm:p-5'}
     >
       <div>
         <h3 className="font-semibold">Coach In-house</h3>
@@ -126,7 +126,7 @@ function InHouseSession({
     !!wallet &&
     (!prepaid || ('remainingMinutes' in wallet && wallet.remainingMinutes - usedMinutes >= 60));
   return (
-    <div className="bg-muted/10 rounded-xl border p-4">
+    <div className="rounded-md p-1 sm:p-2">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-medium">
           {session.courtName} · {serviceSessionDate(session.date)} · {session.timeSlot}
@@ -143,7 +143,7 @@ function InHouseSession({
             {plans.length ? 'Coaching satuan / paket' : 'Paket customer'}
           </Label>
           <SearchableSelect
-            className="bg-background h-11"
+            className="bg-muted/30 h-11 rounded-md border-0 shadow-none"
             id={`wallet-${session.slotId}`}
             disabled={disabled}
             value={walletId}
@@ -172,7 +172,7 @@ function InHouseSession({
           <Label htmlFor={`participants-${session.slotId}`}>Peserta</Label>
           <Input
             id={`participants-${session.slotId}`}
-            className="bg-background h-11"
+            className="bg-muted/30 h-11 rounded-md border-0 shadow-none"
             type="number"
             min={1}
             max={100}
@@ -189,11 +189,17 @@ function InHouseSession({
         </div>
         <div className="flex justify-end sm:col-span-2">
           {choice ? (
-            <Button variant="outline" disabled={disabled} onClick={() => onChange(session, null)}>
+            <Button
+              variant="secondary"
+              className="rounded-md border-0 shadow-none"
+              disabled={disabled}
+              onClick={() => onChange(session, null)}
+            >
               Batal gunakan
             </Button>
           ) : (
             <Button
+              className="rounded-md border-0 shadow-none"
               disabled={
                 disabled ||
                 !coachSlot?.slotId ||
