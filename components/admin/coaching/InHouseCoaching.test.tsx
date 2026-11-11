@@ -1,7 +1,8 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   role: 'ADMIN',
+  plans: null as any[] | null,
   wallets: [] as any[],
   remove: vi.fn(),
   save: vi.fn(),
@@ -34,7 +35,7 @@ vi.mock('@tanstack/react-query', () => ({
     if (queryKey.includes('wallets')) return { data: mocks.wallets };
     if (queryKey.includes('plans'))
       return {
-        data: [
+        data: mocks.plans ?? [
           {
             id: 'plan',
             branchId: 'cemara',
@@ -73,8 +74,17 @@ vi.mock('@tanstack/react-query', () => ({
   }
 }));
 import InHouseCoaching from './InHouseCoaching';
+import InHouseCoachPlans from './InHouseCoachPlans';
+function renderCoachPlans(id = 'andi') {
+  return render(
+    <InHouseCoachPlans
+      coach={{ id, name: id === 'andi' ? 'Andi' : 'Awam', isInHouseCoach: true }}
+    />
+  );
+}
 beforeEach(() => {
   mocks.role = 'ADMIN';
+  mocks.plans = null;
   mocks.wallets = [];
   vi.clearAllMocks();
   HTMLElement.prototype.scrollIntoView = vi.fn();
@@ -91,15 +101,8 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
-it('lets an admin set different package prices and court shares for each selected coach', async () => {
-  render(<InHouseCoaching />);
-  fireEvent.click(screen.getByRole('button', { name: 'Paket & Tarif' }));
-  fireEvent.click(screen.getByRole('combobox', { name: 'Coach in-house' }));
-  fireEvent.change(await screen.findByPlaceholderText('Cari nama coach...'), {
-    target: { value: 'Awam' }
-  });
-  expect(screen.queryByRole('option', { name: 'Andi' })).not.toBeInTheDocument();
-  fireEvent.click(await screen.findByRole('option', { name: 'Awam' }));
+it('creates a package bound to the opened coach profile', async () => {
+  renderCoachPlans('awam');
   fireEvent.change(screen.getByLabelText('Nama paket'), { target: { value: 'Awam 10 jam' } });
   fireEvent.click(screen.getByRole('combobox', { name: 'Kuota jam' }));
   fireEvent.click(await screen.findByRole('option', { name: '10 jam' }));
@@ -120,14 +123,18 @@ it('lets an admin set different package prices and court shares for each selecte
     })
   );
 });
-it('allows cashiers to see tariffs but hides tariff editing', () => {
-  mocks.role = 'CASHIER';
-  render(<InHouseCoaching />);
-  fireEvent.click(screen.getByRole('button', { name: 'Paket & Tarif' }));
-  expect(screen.getByText('Andi · 5 jam')).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Simpan paket' })).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
-});
+it.each(['ADMIN', 'SUPER_ADMIN', 'CASHIER'])(
+  'keeps package management out of the %s booking menu',
+  (role) => {
+    mocks.role = role;
+    render(<InHouseCoaching />);
+    expect(screen.queryByRole('button', { name: 'Paket & Tarif' })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Terima pembayaran & tambah kuota' })
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Simpan paket' })).not.toBeInTheDocument();
+  }
+);
 it('does not sell a package until a customer, package and payment method are selected', () => {
   render(<InHouseCoaching />);
   expect(screen.getByRole('button', { name: 'Terima pembayaran & tambah kuota' })).toBeDisabled();
@@ -141,8 +148,7 @@ it('does not sell a package until a customer, package and payment method are sel
 });
 
 it('edits only the allowed tariff fields rather than sending database metadata', async () => {
-  render(<InHouseCoaching />);
-  fireEvent.click(screen.getByRole('button', { name: 'Paket & Tarif' }));
+  renderCoachPlans();
   fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
   fireEvent.change(screen.getByLabelText('Harga per jam (Rp)'), { target: { value: '950000' } });
   fireEvent.submit(screen.getByRole('button', { name: 'Simpan paket' }).closest('form')!);
@@ -186,8 +192,7 @@ it('searches a sale package by coach and submits the selected package and offlin
 });
 
 it('clears an initial zero while editing an amount and restores zero if left blank', () => {
-  render(<InHouseCoaching />);
-  fireEvent.click(screen.getByRole('button', { name: 'Paket & Tarif' }));
+  renderCoachPlans();
   const amount = screen.getByLabelText('Bagian lapangan per jam (Rp)') as HTMLInputElement;
   expect(amount).toHaveValue(0);
   fireEvent.focus(amount);
@@ -241,15 +246,71 @@ it('hides deletion from viewers', () => {
   expect(screen.queryByRole('button', { name: 'Hapus' })).not.toBeInTheDocument();
 });
 
-it('only lists active in-house coaches for tariffs', async () => {
-  render(<InHouseCoaching />);
-  fireEvent.click(screen.getByRole('button', { name: 'Paket & Tarif' }));
-  expect(screen.getByRole('link', { name: 'Kelola profil & jadwal coach' })).toHaveAttribute(
-    'href',
-    '/admin/coach-inhouse'
-  );
-  fireEvent.click(screen.getByRole('combobox', { name: 'Coach in-house' }));
-  expect(await screen.findByRole('option', { name: 'Andi' })).toBeInTheDocument();
-  expect(screen.queryByRole('option', { name: 'Coach Club' })).not.toBeInTheDocument();
-  expect(screen.queryByRole('option', { name: 'Coach Nonaktif' })).not.toBeInTheDocument();
+it('does not allow selecting a different coach in the profile package editor', () => {
+  renderCoachPlans();
+  expect(screen.queryByRole('combobox', { name: 'Coach in-house' })).not.toBeInTheDocument();
+  expect(screen.getByRole('region', { name: 'Paket dan tarif Andi' })).toBeInTheDocument();
+});
+it('shows only the opened coach package cards and opens their details', () => {
+  const terms = {
+    hourlyPrice: 900000,
+    courtHourlyShare: 250000,
+    extraParticipantHourlyPrice: 100000,
+    isActive: true
+  };
+  mocks.plans = [
+    {
+      ...terms,
+      id: 'andi-5',
+      staffId: 'andi',
+      name: 'Paket Lima Jam',
+      hours: 5,
+      staff: { id: 'andi', name: 'Andi', isActive: true }
+    },
+    {
+      ...terms,
+      id: 'andi-10',
+      staffId: 'andi',
+      name: 'Paket Sepuluh Jam',
+      hours: 10,
+      staff: { id: 'andi', name: 'Andi', isActive: true }
+    },
+    {
+      ...terms,
+      id: 'awam-1',
+      staffId: 'awam',
+      name: 'Satuan Awam',
+      hours: 1,
+      staff: { id: 'awam', name: 'Awam', isActive: true }
+    }
+  ];
+  renderCoachPlans();
+  const andi = screen.getByRole('region', { name: 'Paket Andi' });
+  expect(within(andi).getAllByRole('article')).toHaveLength(2);
+  expect(within(andi).queryByText('Satuan Awam')).not.toBeInTheDocument();
+  expect(screen.queryByRole('region', { name: 'Paket Awam' })).not.toBeInTheDocument();
+  const card = screen.getByRole('article', { name: 'Andi · Paket Lima Jam' });
+  fireEvent.click(within(card).getByRole('button', { name: 'Detail' }));
+  const dialog = screen.getByRole('dialog');
+  expect(dialog).toHaveTextContent('Andi · Paket Lima Jam');
+  expect(dialog).toHaveTextContent('4.500.000');
+  expect(dialog).toHaveTextContent('250.000');
+  expect(dialog).toHaveTextContent('650.000');
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Tutup' }));
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+});
+it.each(['CASHIER', 'ADMIN_VIEWER', 'COACH'])(
+  'blocks %s from accessing package management',
+  (role) => {
+    mocks.role = role;
+    renderCoachPlans();
+    expect(screen.queryByRole('region', { name: 'Paket dan tarif Andi' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Simpan paket' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
+  }
+);
+it('allows super admins to manage packages in the coach profile', () => {
+  mocks.role = 'SUPER_ADMIN';
+  renderCoachPlans();
+  expect(screen.getByRole('button', { name: 'Simpan paket' })).toBeInTheDocument();
 });

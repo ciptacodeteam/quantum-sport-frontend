@@ -15,8 +15,11 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams()
 }));
 vi.mock('@/api/admin/coaching', () => ({ coachingApi: mocks }));
+vi.mock('@/api/admin/inhouseCoaching', () => ({
+  inHouseApi: { plans: async () => [], savePlan: vi.fn() }
+}));
 vi.mock('@/hooks/useRoleAccess', () => ({
-  useRoleAccess: () => ({ hasAccess: true, isLoading: false })
+  useRoleAccess: () => ({ hasAccess: true, isLoading: false, userRole: 'ADMIN' })
 }));
 vi.mock('@/hooks/useAdminCourtSports', () => ({
   useAdminCourtSports: () => ({ branchId: 'cemara' })
@@ -147,4 +150,31 @@ it('saves first and subsequent coach prices separately and previews three hours'
       expect.objectContaining({ additionalHourPrice: null })
     )
   );
+});
+
+it('places per-coach package management inside the in-house schedule page', async () => {
+  mocks.person.mockResolvedValue({
+    id: 'ballboy',
+    name: 'Andi',
+    role: 'COACH',
+    coachType: 'PADEL',
+    isInHouseCoach: true
+  });
+  mount();
+  const packages = await screen.findByRole('button', { name: 'Paket & Tarif' });
+  expect(screen.getByRole('link', { name: /Kembali ke Coach In-house/ })).toHaveAttribute(
+    'href',
+    '/admin/coach-inhouse'
+  );
+  fireEvent.click(packages);
+  expect(await screen.findByRole('region', { name: 'Paket dan tarif Andi' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Simpan jadwal & harga' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('combobox', { name: 'Coach in-house' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Jadwal & Harga' }));
+  expect(screen.getByRole('button', { name: 'Simpan jadwal & harga' })).toBeInTheDocument();
+});
+it('does not expose in-house package management on ordinary service profiles', async () => {
+  mount();
+  await screen.findByRole('button', { name: 'Simpan jadwal & harga' });
+  expect(screen.queryByRole('button', { name: 'Paket & Tarif' })).not.toBeInTheDocument();
 });
