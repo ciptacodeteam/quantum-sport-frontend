@@ -498,7 +498,7 @@ it('shows the in-house hourly catalog even when the customer owns no package', (
   render(<BookingAddOns />);
   fireEvent.mouseDown(screen.getByRole('tab', { name: 'In-house' }), { button: 0, ctrlKey: false });
   expect(screen.getByRole('region', { name: 'Paket coach in-house' })).toBeInTheDocument();
-  expect(screen.getByRole('combobox', { name: 'Coaching satuan / paket' })).toBeInTheDocument();
+  expect(screen.getByRole('group', { name: 'Daftar coach satuan' })).toBeInTheDocument();
   expect(screen.queryByText(/Belum ada coach in-house aktif/)).not.toBeInTheDocument();
 });
 it('sends the scheduled coach identity without trusting browser price fields', () => {

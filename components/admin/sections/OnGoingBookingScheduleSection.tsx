@@ -16,17 +16,18 @@ import {
   TableHead,
   TableCell
 } from '@/components/ui/table';
-import dayjs from '@/lib/dayjs';
+import type { Dayjs } from 'dayjs';
+import { parseScheduleDatetime } from '@/lib/admin-schedule-time';
 import { ongoingBookingsQueryOptions } from '@/queries/admin/booking';
 import type { OngoingBookingItem } from '@/types/model';
 
 const toScheduleDate = (value: string) => {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date;
+  const date = parseScheduleDatetime(value);
+  return date.isValid() ? date : null;
 };
-const formatScheduleTime = (value: string | Date, format = 'HH:mm') =>
-  dayjs(value).tz('Asia/Jakarta').format(format);
-const formatScheduleRange = (start: string | Date, end: string | Date) =>
+const formatScheduleTime = (value: string | Dayjs, format = 'HH:mm') =>
+  (typeof value === 'string' ? parseScheduleDatetime(value) : value).format(format);
+const formatScheduleRange = (start: string | Dayjs, end: string | Dayjs) =>
   `${formatScheduleTime(start)} - ${formatScheduleTime(end)}`;
 
 const getBookingTimeRange = (item: OngoingBookingItem) => {
@@ -36,7 +37,7 @@ const getBookingTimeRange = (item: OngoingBookingItem) => {
     ...item.ballboys.map((ballboy) => ballboy.slotStart)
   ]
     .map((value) => toScheduleDate(value))
-    .filter((date): date is Date => !!date);
+    .filter((date): date is Dayjs => !!date);
 
   const slotEnds = [
     ...item.courts.map((court) => court.slotEnd),
@@ -44,7 +45,7 @@ const getBookingTimeRange = (item: OngoingBookingItem) => {
     ...item.ballboys.map((ballboy) => ballboy.slotEnd)
   ]
     .map((value) => toScheduleDate(value))
-    .filter((date): date is Date => !!date);
+    .filter((date): date is Dayjs => !!date);
 
   const fallbackStart = toScheduleDate(item.schedule.startAt);
   const fallbackEnd = toScheduleDate(item.schedule.endAt);
@@ -52,14 +53,14 @@ const getBookingTimeRange = (item: OngoingBookingItem) => {
   const start =
     slotStarts.length > 0
       ? slotStarts.reduce((earliest, current) =>
-          current.getTime() < earliest.getTime() ? current : earliest
+          current.valueOf() < earliest.valueOf() ? current : earliest
         )
       : fallbackStart;
 
   const end =
     slotEnds.length > 0
       ? slotEnds.reduce((latest, current) =>
-          current.getTime() > latest.getTime() ? current : latest
+          current.valueOf() > latest.valueOf() ? current : latest
         )
       : fallbackEnd;
 
