@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import CoachingGroups from './CoachingGroups';
 const mocks = vi.hoisted(() => ({
+  remove: vi.fn(),
   list: vi.fn(),
   save: vi.fn(),
   branches: vi.fn(),
@@ -41,6 +42,7 @@ function mount() {
 }
 beforeEach(() => {
   mocks.canEdit = true;
+  mocks.remove.mockResolvedValue({});
   mocks.list.mockResolvedValue([group]);
   mocks.save.mockResolvedValue({});
   mocks.branches.mockResolvedValue([{ id: 'cemara', name: 'Cemara', isActive: true }]);
@@ -85,6 +87,7 @@ it('lets regular admins read groups without editing the shared catalog', async (
   await screen.findByText('Northwest');
   expect(screen.queryByRole('button', { name: 'Tambah grup' })).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Edit grup Northwest' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Hapus grup Northwest' })).not.toBeInTheDocument();
   expect(mocks.branches).not.toHaveBeenCalled();
   expect(screen.getByRole('link', { name: 'Detail grup Northwest' })).toHaveAttribute(
     'href',
@@ -141,4 +144,31 @@ it.each([
   expect(screen.getByRole('alert')).toHaveTextContent('maksimal 5 MB');
   expect(screen.getByRole('button', { name: 'Simpan grup' })).toBeDisabled();
   expect(mocks.save).not.toHaveBeenCalled();
+});
+
+it('requires confirmation and permits cancelling without deleting', async () => {
+  mount();
+  fireEvent.click(await screen.findByRole('button', { name: 'Hapus grup Northwest' }));
+  expect(screen.getByRole('dialog', { name: 'Hapus grup coaching?' })).toBeInTheDocument();
+  expect(mocks.remove).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Batal' }));
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  expect(mocks.remove).not.toHaveBeenCalled();
+});
+it('deletes the confirmed group and refreshes the table', async () => {
+  mount();
+  fireEvent.click(await screen.findByRole('button', { name: 'Hapus grup Northwest' }));
+  mocks.list.mockResolvedValue([]);
+  fireEvent.click(screen.getByRole('button', { name: 'Hapus grup' }));
+  await waitFor(() => expect(mocks.remove).toHaveBeenCalledExactlyOnceWith('northwest'));
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  await waitFor(() => expect(screen.queryByText('Northwest')).not.toBeInTheDocument());
+});
+it('keeps the confirmation available when deletion fails', async () => {
+  mocks.remove.mockRejectedValue(new Error('Gagal menghapus'));
+  mount();
+  fireEvent.click(await screen.findByRole('button', { name: 'Hapus grup Northwest' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Hapus grup' }));
+  await waitFor(() => expect(mocks.remove).toHaveBeenCalled());
+  expect(screen.getByRole('dialog', { name: 'Hapus grup coaching?' })).toBeInTheDocument();
 });

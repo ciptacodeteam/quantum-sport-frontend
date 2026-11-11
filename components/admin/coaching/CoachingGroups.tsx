@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
-import { IconPlus, IconPencil } from '@tabler/icons-react';
+import { IconPlus, IconPencil, IconTrash } from '@tabler/icons-react';
 import { toast } from 'sonner';
 import {
   coachingGroupApi,
@@ -50,6 +50,7 @@ export default function CoachingGroups() {
     queryFn: getAdminBranches,
     enabled: hasAccess && canEdit
   });
+  const [deleteTarget, setDeleteTarget] = useState<CoachingGroup | null>(null);
   const [open, setOpen] = useState(false);
   const [id, setId] = useState<string>();
   const [draft, setDraft] = useState(empty);
@@ -101,6 +102,23 @@ export default function CoachingGroups() {
     },
     onError: (error) =>
       toast.error(getApiErrorMessage(error, 'Grup coaching belum dapat disimpan.'))
+  });
+  const remove = useMutation({
+    mutationFn: (groupId: string) => coachingGroupApi.remove(groupId),
+    onSuccess: () => {
+      setDeleteTarget(null);
+      for (const queryKey of [
+        ['admin', 'coaching-groups'],
+        ['admin', 'coaching'],
+        ['admin', 'booking-coaches'],
+        ['admin', 'analytics'],
+        ['admin', 'coach'],
+        ['admin', 'inhouse', 'availability']
+      ])
+        void client.invalidateQueries({ queryKey });
+      toast.success('Grup coaching dihapus.');
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error, 'Grup coaching belum dapat dihapus.'))
   });
   const columns = useMemo(
     () => [
@@ -158,14 +176,25 @@ export default function CoachingGroups() {
               </Link>
             </Button>
             {canEdit && (
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={`Edit grup ${row.original.name}`}
-                onClick={() => begin(row.original)}
-              >
-                <IconPencil />
-              </Button>
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`Edit grup ${row.original.name}`}
+                  onClick={() => begin(row.original)}
+                >
+                  <IconPencil />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="text-destructive hover:text-destructive"
+                  aria-label={`Hapus grup ${row.original.name}`}
+                  onClick={() => setDeleteTarget(row.original)}
+                >
+                  <IconTrash />
+                </Button>
+              </>
             )}
           </div>
         )
@@ -215,6 +244,41 @@ export default function CoachingGroups() {
           }
         />
       )}
+      <Dialog
+        open={!!deleteTarget}
+        onOpenChange={(value) => {
+          if (!value && !remove.isPending) setDeleteTarget(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Hapus grup coaching?</DialogTitle>
+            <DialogDescription>
+              Grup “{deleteTarget?.name}” akan dihapus dari semua cabang. Keanggotaan coach pada
+              grup ini akan dilepas. Profil coach, paket in-house, serta riwayat booking dan
+              pembayaran tetap disimpan. Tindakan ini tidak dapat dibatalkan.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="outline"
+              disabled={remove.isPending}
+              onClick={() => setDeleteTarget(null)}
+            >
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={remove.isPending || !deleteTarget}
+              onClick={() => {
+                if (deleteTarget) remove.mutate(deleteTarget.id);
+              }}
+            >
+              {remove.isPending ? 'Menghapus...' : 'Hapus grup'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       <Dialog
         open={open}
         onOpenChange={(value) => {

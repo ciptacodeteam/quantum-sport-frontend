@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ post: vi.fn(), put: vi.fn() }));
+const mocks = vi.hoisted(() => ({ post: vi.fn(), put: vi.fn(), delete: vi.fn() }));
 vi.mock('@/lib/adminApi', () => ({ adminApi: mocks }));
 import { coachingGroupApi } from './coachingGroup';
 const input = {
@@ -26,4 +26,9 @@ it('does not send an empty logo during edits and sends removal only when request
   expect(mocks.put.mock.calls[0][1].has('removeLogo')).toBe(false);
   coachingGroupApi.save('group', { ...input, removeLogo: true });
   expect(mocks.put.mock.calls[1][1].get('removeLogo')).toBe('true');
+});
+
+it('deletes only the requested group', () => {
+  coachingGroupApi.remove('group-id');
+  expect(mocks.delete).toHaveBeenCalledExactlyOnceWith('/coaching-groups/group-id');
 });

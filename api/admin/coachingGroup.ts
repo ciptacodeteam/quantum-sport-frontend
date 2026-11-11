@@ -20,6 +20,7 @@ export type CoachingGroup = Omit<
   coaches: { staffId: string }[];
 };
 export const coachingGroupApi = {
+  remove: (id: string) => adminApi.delete(`/coaching-groups/${encodeURIComponent(id)}`),
   list: async (branchId?: string | null) =>
     (await adminApi.get('/coaching-groups', { params: { branchId: branchId || undefined } })).data
       .data as CoachingGroup[],
