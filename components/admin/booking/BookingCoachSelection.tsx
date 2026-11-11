@@ -238,7 +238,7 @@ function CoachSession({
         const expanded = openGroup === group.id;
         const availableCount = group.members.filter((coach) => optionFor(coach)).length;
         return (
-          <div key={group.id} className="bg-muted/20 overflow-hidden rounded-md">
+          <div key={group.id} data-admin-card className="bg-muted/20 overflow-hidden rounded-md">
             <button
               type="button"
               disabled={disabled}
@@ -281,6 +281,7 @@ function CoachSession({
                   return (
                     <button
                       key={coach.id}
+                      data-admin-card
                       type="button"
                       disabled={disabled || (!option && !chosen)}
                       aria-pressed={chosen}

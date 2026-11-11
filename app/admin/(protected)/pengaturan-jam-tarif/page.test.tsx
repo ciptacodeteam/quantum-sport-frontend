@@ -292,11 +292,11 @@ it('saves independent club and in-house amounts and can restore legacy package r
   fireEvent.change(screen.getByLabelText('Potongan Coach Club Happy Hour (Rp)'), {
     target: { value: '50000' }
   });
-  fireEvent.click(screen.getByRole('checkbox', { name: /Gunakan potongan in-house terpisah/ }));
-  fireEvent.change(screen.getByLabelText('Potongan Coach In-house Happy Hour (Rp)'), {
+  fireEvent.click(screen.getByRole('checkbox', { name: /Gunakan potongan coaching satuan/ }));
+  fireEvent.change(screen.getByLabelText('Potongan Coaching Satuan Happy Hour (Rp)'), {
     target: { value: '100000' }
   });
-  fireEvent.change(screen.getByLabelText('Potongan Coach In-house Peak Hour (Rp)'), {
+  fireEvent.change(screen.getByLabelText('Potongan Coaching Satuan Peak Hour (Rp)'), {
     target: { value: '75000' }
   });
   fireEvent.click(screen.getByRole('button', { name: 'Simpan Aturan Jam Tarif' }));
@@ -308,7 +308,7 @@ it('saves independent club and in-house amounts and can restore legacy package r
       peakInHouseCoachDiscount: 75000
     })
   );
-  fireEvent.click(screen.getByRole('checkbox', { name: /Gunakan potongan in-house terpisah/ }));
+  fireEvent.click(screen.getByRole('checkbox', { name: /Gunakan potongan coaching satuan/ }));
   fireEvent.click(screen.getByRole('button', { name: 'Simpan Aturan Jam Tarif' }));
   expect(mocks.save).toHaveBeenLastCalledWith(
     expect.objectContaining({
@@ -337,10 +337,8 @@ it('restores independent in-house amounts from scheduled history', () => {
   render(<TariffPeriodPage />);
   fireEvent.click(screen.getByText('Riwayat & Aturan Terjadwal'));
   fireEvent.click(screen.getByRole('button', { name: 'Edit Aturan' }));
-  expect(
-    screen.getByRole('checkbox', { name: /Gunakan potongan in-house terpisah/ })
-  ).toBeChecked();
-  expect(screen.getByLabelText('Potongan Coach In-house Peak Hour (Rp)')).toHaveValue(120000);
+  expect(screen.getByRole('checkbox', { name: /Gunakan potongan coaching satuan/ })).toBeChecked();
+  expect(screen.getByLabelText('Potongan Coaching Satuan Peak Hour (Rp)')).toHaveValue(120000);
   fireEvent.click(screen.getByRole('button', { name: 'Simpan Aturan Jam Tarif' }));
   expect(mocks.save).toHaveBeenLastCalledWith(
     expect.objectContaining({

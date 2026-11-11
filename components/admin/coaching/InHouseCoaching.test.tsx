@@ -47,7 +47,7 @@ vi.mock('@tanstack/react-query', () => ({
             courtHourlyShare: 250000,
             extraParticipantHourlyPrice: 100000,
             isActive: true,
-            staff: { id: 'andi', name: 'Andi', isActive: true }
+            staff: { id: 'andi', name: 'Andi', isActive: true, coachType: 'PADEL' }
           }
         ]
       };
@@ -135,15 +135,16 @@ it.each(['ADMIN', 'SUPER_ADMIN', 'CASHIER'])(
     expect(screen.queryByRole('button', { name: 'Simpan paket' })).not.toBeInTheDocument();
   }
 );
-it('does not sell a package until a customer, package and payment method are selected', () => {
+it('does not sell a package until a customer, package and payment method are selected', async () => {
   render(<InHouseCoaching />);
   expect(screen.getByRole('button', { name: 'Terima pembayaran & tambah kuota' })).toBeDisabled();
   expect(mocks.sell).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('combobox', { name: 'Pelanggan' }));
   fireEvent.change(screen.getByLabelText('Cari nama atau nomor WhatsApp'), {
     target: { value: 'Budi' }
   });
-  fireEvent.click(screen.getByRole('button', { name: 'Budi · 08123456789' }));
-  expect(screen.getByText('Customer terpilih: Budi · 08123456789')).toBeInTheDocument();
+  fireEvent.click(await screen.findByRole('option', { name: /Budi/ }));
+  expect(screen.getByRole('combobox', { name: 'Pelanggan' })).toHaveTextContent('Budi');
   expect(screen.getByRole('button', { name: 'Terima pembayaran & tambah kuota' })).toBeDisabled();
 });
 
@@ -165,18 +166,15 @@ it('edits only the allowed tariff fields rather than sending database metadata',
   );
 });
 
-it('searches a sale package by coach and submits the selected package and offline method', async () => {
+it('selects a package card and submits the customer and offline method', async () => {
   render(<InHouseCoaching />);
+  fireEvent.click(screen.getByRole('combobox', { name: 'Pelanggan' }));
   fireEvent.change(screen.getByLabelText('Cari nama atau nomor WhatsApp'), {
     target: { value: 'Budi' }
   });
-  fireEvent.click(screen.getByRole('button', { name: 'Budi · 08123456789' }));
-  fireEvent.click(screen.getByRole('combobox', { name: 'Paket coach' }));
-  fireEvent.change(await screen.findByPlaceholderText('Cari coach atau paket...'), {
-    target: { value: 'Andi' }
-  });
-  fireEvent.click(await screen.findByRole('option', { name: /Andi.*5 jam/ }));
-  fireEvent.click(screen.getByRole('combobox', { name: 'Pembayaran diterima melalui' }));
+  fireEvent.click(await screen.findByRole('option', { name: /Budi/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Pilih paket Andi · 5 jam' }));
+  fireEvent.click(screen.getByRole('combobox', { name: 'Metode pembayaran offline' }));
   fireEvent.click(await screen.findByRole('option', { name: 'Tunai' }));
   const submit = screen.getByRole('button', { name: 'Terima pembayaran & tambah kuota' });
   expect(submit).toBeEnabled();
@@ -265,7 +263,7 @@ it('shows only the opened coach package cards and opens their details', () => {
       staffId: 'andi',
       name: 'Paket Lima Jam',
       hours: 5,
-      staff: { id: 'andi', name: 'Andi', isActive: true }
+      staff: { id: 'andi', name: 'Andi', isActive: true, coachType: 'PADEL' }
     },
     {
       ...terms,
@@ -273,7 +271,7 @@ it('shows only the opened coach package cards and opens their details', () => {
       staffId: 'andi',
       name: 'Paket Sepuluh Jam',
       hours: 10,
-      staff: { id: 'andi', name: 'Andi', isActive: true }
+      staff: { id: 'andi', name: 'Andi', isActive: true, coachType: 'PADEL' }
     },
     {
       ...terms,
@@ -313,4 +311,49 @@ it('allows super admins to manage packages in the coach profile', () => {
   mocks.role = 'SUPER_ADMIN';
   renderCoachPlans();
   expect(screen.getByRole('button', { name: 'Simpan paket' })).toBeInTheDocument();
+});
+
+it('filters the package cards by sport and excludes inactive packages', () => {
+  const terms = {
+    hours: 5,
+    hourlyPrice: 900000,
+    courtHourlyShare: 250000,
+    extraParticipantHourlyPrice: 100000,
+    isActive: true
+  };
+  mocks.plans = [
+    {
+      ...terms,
+      id: 'padel',
+      staffId: 'padel-coach',
+      name: 'Padel Lima Jam',
+      staff: { name: 'Coach Padel', isActive: true, coachType: 'PADEL' }
+    },
+    {
+      ...terms,
+      id: 'tennis',
+      staffId: 'tennis-coach',
+      name: 'Tennis Lima Jam',
+      staff: { name: 'Coach Tennis', isActive: true, coachType: 'TENNIS' }
+    },
+    {
+      ...terms,
+      id: 'inactive',
+      staffId: 'padel-coach',
+      name: 'Paket Nonaktif',
+      isActive: false,
+      staff: { name: 'Coach Padel', isActive: true, coachType: 'PADEL' }
+    }
+  ];
+  render(<InHouseCoaching />);
+  const padel = screen.getByRole('button', { name: 'Pilih paket Coach Padel · Padel Lima Jam' });
+  expect(screen.queryByRole('button', { name: /Paket Nonaktif/ })).not.toBeInTheDocument();
+  fireEvent.click(padel);
+  expect(padel).toHaveAttribute('aria-pressed', 'true');
+  fireEvent.mouseDown(screen.getByRole('tab', { name: 'Tennis' }), { button: 0, ctrlKey: false });
+  expect(screen.queryByRole('button', { name: /Pilih paket Coach Padel/ })).not.toBeInTheDocument();
+  expect(
+    screen.getByRole('button', { name: 'Pilih paket Coach Tennis · Tennis Lima Jam' })
+  ).toHaveAttribute('aria-pressed', 'false');
+  expect(screen.getByRole('button', { name: 'Terima pembayaran & tambah kuota' })).toBeDisabled();
 });

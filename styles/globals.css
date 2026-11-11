@@ -290,6 +290,9 @@ body:has([data-slot='mobile-bottom-navigation']) .mobile-header-back {
   --accent-foreground: #803524;
   --secondary: #f7ece8;
   --secondary-foreground: #803524;
+  --admin-button-color: #ad422b;
+  --admin-button-hover: #8e3524;
+  --admin-button-muted: #f7ece8;
   --sidebar-primary: #ad422b;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #f7ece8;
@@ -375,6 +378,61 @@ html.dark[data-admin-theme='true']
     [data-variant='outline']
   ) {
   color: #e5b6a6;
+}
+
+/* Custom admin buttons share the brand palette with Button variants. Color only:
+   retain each control's existing dimensions, shape, spacing, and focus treatment. */
+:where(.admin-theme, html[data-admin-theme='true'])
+  button:not([data-variant]):not([data-day]):not([data-sidebar]):not([role='combobox']):not(
+    [data-slot='dialog-close']
+  ):not([data-slot='sheet-close']) {
+  background-color: var(--admin-button-muted);
+  color: var(--admin-button-color);
+}
+
+:where(.admin-theme, html[data-admin-theme='true'])
+  button:not([data-variant]):not([data-day]):not([data-sidebar]):not([role='combobox']):not(
+    [data-slot='dialog-close']
+  ):not([data-slot='sheet-close']):hover:not(:disabled):not([aria-disabled='true']) {
+  background-color: color-mix(in srgb, var(--admin-button-color) 15%, var(--background));
+  color: var(--admin-button-hover);
+}
+
+/* A selected option has a clear terracotta fill, including custom time and service cards. */
+:where(.admin-theme, html[data-admin-theme='true'])
+  button:not([data-day]):not([data-sidebar]):not([role='combobox']):is(
+    [aria-pressed='true'],
+    [role='tab'][data-state='active'],
+    [role='switch'][data-state='checked']
+  ) {
+  background-color: var(--admin-button-color);
+  color: #ffffff;
+}
+
+:where(.admin-theme, html[data-admin-theme='true'])
+  button:not([data-day]):not([data-sidebar]):not([role='combobox']):is(
+    [aria-pressed='true'],
+    [role='tab'][data-state='active'],
+    [role='switch'][data-state='checked']
+  ):hover:not(:disabled):not([aria-disabled='true']) {
+  background-color: var(--admin-button-hover);
+  color: #ffffff;
+}
+
+:where(.admin-theme, html[data-admin-theme='true'])
+  button:not([data-day]):not([data-sidebar]):not([role='combobox']):is(
+    [aria-pressed='true'],
+    [role='tab'][data-state='active']
+  )
+  :is(.text-muted-foreground, .text-primary) {
+  color: inherit;
+}
+
+/* Give admin cards a consistent, subtle edge against the page background. */
+:where(.admin-theme, html[data-admin-theme='true']) :is([data-slot='card'], [data-admin-card]) {
+  border-width: 1px;
+  border-style: solid;
+  border-color: var(--border);
 }
 
 /* Keep admin outlines neutral, including selected booking cards and hover states. */

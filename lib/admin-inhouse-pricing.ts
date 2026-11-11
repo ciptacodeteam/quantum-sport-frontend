@@ -22,7 +22,8 @@ export function adminInHousePricing(
       const bands = resolveTariffPeriod(rules, court.date, court.sport);
       const band = court.timeSlot ? tariffBand(court.timeSlot, bands) : null;
       const discount =
-        bands.happyInHouseCoachDiscount == null && bands.peakInHouseCoachDiscount == null
+        choice.walletId ||
+        (bands.happyInHouseCoachDiscount == null && bands.peakInHouseCoachDiscount == null)
           ? null
           : band === 'happyHour'
             ? (bands.happyInHouseCoachDiscount ?? null)
@@ -31,10 +32,7 @@ export function adminInHousePricing(
               : rules.length
                 ? 0
                 : null;
-      const courtDue =
-        discount === null
-          ? 0
-          : Math.max(0, base - discount - (choice.walletId ? terms.courtHourlyShare : 0));
+      const courtDue = discount === null ? 0 : Math.max(0, base - discount);
       totals.coverage += base - courtDue;
       totals.singleTotal += choice.planId
         ? discount === null

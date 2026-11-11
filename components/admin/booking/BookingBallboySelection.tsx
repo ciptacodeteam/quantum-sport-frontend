@@ -165,6 +165,7 @@ function BallboySession({
             <button
               type="button"
               key={person.id}
+              data-admin-card
               aria-label={`Pilih ballboy ${person.name} untuk ${session.courtName} ${session.timeSlot}`}
               disabled={disabled || !option}
               aria-pressed={current?.ballboyId === person.id}

@@ -161,7 +161,7 @@ export default function InHouseCoachPlans({
       </Dialog>
       <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_380px] 2xl:grid-cols-[minmax(0,1fr)_420px]">
         <Card className={panelClass}>
-          <CardHeader className="gap-2 px-5">
+          <CardHeader className="flex flex-wrap items-center justify-between gap-3 px-5">
             <CardTitle className="flex items-center gap-2 text-sm leading-snug font-semibold">
               Paket & Tarif
             </CardTitle>
@@ -200,12 +200,13 @@ export default function InHouseCoachPlans({
                         {group.plans.filter((plan) => plan.isActive).length} aktif
                       </span>
                     </div>
-                    <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,220px),1fr))] gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
                       {[...group.plans]
                         .sort((a, b) => a.hours - b.hours || a.name.localeCompare(b.name, 'id'))
                         .map((plan) => (
                           <article
                             key={plan.id}
+                            data-admin-card
                             aria-label={`${group.staff.name} · ${plan.name}`}
                             className="bg-background flex min-w-0 flex-col gap-4 rounded-md p-4"
                           >

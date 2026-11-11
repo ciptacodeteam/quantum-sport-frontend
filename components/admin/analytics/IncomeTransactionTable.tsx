@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowUpRight, ChevronDown } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { SearchInput } from '@/components/ui/search-input';
 import {
   Select,
@@ -19,6 +20,16 @@ export type IncomeTransaction = {
   id: string;
   invoiceNumber: string;
   bookingId?: string | null;
+  paymentStatus?: string;
+  bookingStatus?: string | null;
+  cancellationStatus?: 'NONE' | 'PARTIAL' | 'CANCELLED';
+  cancelledServices?: {
+    kind: 'COACH' | 'BALLBOY';
+    name: string;
+    amount: number;
+    cancelledAt: string | null;
+    reason: string | null;
+  }[];
   branchId?: string;
   playingSchedules?: { label: string; startAt: string; endAt: string }[];
   customerName: string;
@@ -90,6 +101,47 @@ function PlayingSchedule({
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function CancellationStatus({
+  invoices,
+  details = true
+}: {
+  invoices: IncomeTransaction[];
+  details?: boolean;
+}) {
+  const cancelled = invoices.filter(
+    (invoice) =>
+      invoice.cancellationStatus === 'CANCELLED' || invoice.cancellationStatus === 'PARTIAL'
+  );
+  if (!cancelled.length) return null;
+  const fullyCancelled =
+    cancelled.length === invoices.length &&
+    cancelled.every((invoice) => invoice.cancellationStatus === 'CANCELLED');
+  return (
+    <div className="mt-2 space-y-1.5">
+      <Badge variant={fullyCancelled ? 'lightDestructive' : 'lightWarning'}>
+        {fullyCancelled ? 'Dibatalkan' : 'Sebagian dibatalkan'}
+      </Badge>
+      <p className="text-muted-foreground text-xs font-normal">Invoice masih tercatat lunas.</p>
+      {details &&
+        cancelled
+          .flatMap((invoice) => invoice.cancelledServices ?? [])
+          .map((service, index) => (
+            <div
+              key={`${service.kind}-${index}`}
+              className="text-muted-foreground text-xs font-normal"
+            >
+              <p>
+                {service.kind === 'COACH' ? 'Coach' : 'Ballboy'} · {service.name} ·{' '}
+                {formatCurrency(service.amount)}
+              </p>
+              {service.cancelledAt && <p>Dibatalkan {paymentTime(service.cancelledAt)} WIB</p>}
+              {service.reason && <p>Alasan: {service.reason}</p>}
+            </div>
+          ))}
     </div>
   );
 }
@@ -286,6 +338,10 @@ export default function IncomeTransactionTable({
                               <ArrowUpRight aria-hidden="true" className="size-3" />
                             </Link>
                           )}
+                          <CancellationStatus
+                            invoices={row.invoices}
+                            details={row.invoices.length === 1}
+                          />
                         </th>
                         <td className="px-3 py-4 whitespace-nowrap">
                           {paymentTime(row.paidAt)}
@@ -360,6 +416,7 @@ export default function IncomeTransactionTable({
                                         </p>
                                       </div>
                                     </div>
+                                    <CancellationStatus invoices={[invoice]} />
                                     <div className="mt-4 border-t pt-3">
                                       <p className="text-muted-foreground mb-1.5 text-[11px]">
                                         Jadwal bermain
@@ -441,8 +498,10 @@ export default function IncomeTransactionTable({
               </div>
             </div>
             <p className="text-muted-foreground mt-3 text-xs">
-              Baris total menjumlahkan seluruh hasil di semua halaman. Pencarian dan filter di tabel
-              ini tidak mengubah ringkasan revenue di atas.
+              Pembatalan layanan tidak otomatis berarti pembayaran sudah dikembalikan. Nominal
+              mengikuti invoice yang masih tercatat lunas. Baris total menjumlahkan seluruh hasil di
+              semua halaman. Pencarian dan filter di tabel ini tidak mengubah ringkasan revenue di
+              atas.
             </p>
           </>
         )}

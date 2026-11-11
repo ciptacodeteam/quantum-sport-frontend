@@ -364,10 +364,10 @@ function TariffEditor({ rules, sport }: { rules: TariffRule[]; sport: 'PADEL' | 
                   </span>
                   <div>
                     <h3 id="inhouse-discount-title" className="font-semibold">
-                      Coach In-house
+                      Coach In-house · Satuan
                     </h3>
                     <p className="text-muted-foreground mt-1 text-sm">
-                      Potongan terpisah untuk paket dan coaching satuan.
+                      Potongan per jam untuk customer yang tidak memakai paket coaching in-house.
                     </p>
                   </div>
                 </div>
@@ -380,9 +380,9 @@ function TariffEditor({ rules, sport }: { rules: TariffRule[]; sport: 'PADEL' | 
                       onChange={(event) => setInHouseEnabled(event.target.checked)}
                     />
                     <span>
-                      <span className="font-medium">Gunakan potongan in-house terpisah</span>
+                      <span className="font-medium">Gunakan potongan coaching satuan</span>
                       <span className="text-muted-foreground mt-1 block text-xs leading-relaxed">
-                        Jika belum diaktifkan, lapangan mengikuti ketentuan paket sebelumnya.
+                        Jika belum diaktifkan, coaching satuan mengikuti tarif dasar 1 jam.
                       </span>
                     </span>
                   </label>
@@ -390,25 +390,25 @@ function TariffEditor({ rules, sport }: { rules: TariffRule[]; sport: 'PADEL' | 
                     <>
                       <DiscountField
                         id="happyInHouseCoachDiscount"
-                        label="Potongan Coach In-house Happy Hour (Rp)"
+                        label="Potongan Coaching Satuan Happy Hour (Rp)"
                         value={happyInHouseCoachDiscount}
                         onChange={setHappyInHouseCoachDiscount}
                       />
                       <DiscountField
                         id="peakInHouseCoachDiscount"
-                        label="Potongan Coach In-house Peak Hour (Rp)"
+                        label="Potongan Coaching Satuan Peak Hour (Rp)"
                         value={peakInHouseCoachDiscount}
                         onChange={setPeakInHouseCoachDiscount}
                       />
                       <p className="text-muted-foreground text-xs leading-relaxed">
-                        Isi 0 jika tidak ada potongan. Bagian lapangan yang sudah dibayar lewat
-                        paket diperhitungkan; customer hanya membayar selisih jika ada. Pembagian
-                        harga paket tetap mengikuti Paket & Tarif.
+                        Berlaku hanya pada jam coaching satuan. Isi 0 jika tidak ada potongan.
+                        Pemakaian kuota paket dan pembagian harga paket tidak dipengaruhi pengaturan
+                        ini.
                       </p>
                     </>
                   ) : (
                     <div className="bg-muted/20 rounded-lg p-4 text-sm">
-                      <p className="font-medium">Mengikuti ketentuan paket</p>
+                      <p className="font-medium">Mengikuti tarif satuan</p>
                       <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
                         Aktifkan untuk memakai nominal Happy Hour dan Peak Hour yang berbeda dari
                         Coach Club.
@@ -513,9 +513,9 @@ function TariffEditor({ rules, sport }: { rules: TariffRule[]; sport: 'PADEL' | 
                     {(rule.peakCoachDiscount ?? 0).toLocaleString('id-ID')}
                   </p>
                   <p className="text-muted-foreground text-sm">
-                    In-house:{' '}
+                    In-house satuan:{' '}
                     {rule.happyInHouseCoachDiscount == null && rule.peakInHouseCoachDiscount == null
-                      ? 'Mengikuti ketentuan paket'
+                      ? 'Mengikuti tarif satuan'
                       : `Happy Hour Rp ${(rule.happyInHouseCoachDiscount ?? 0).toLocaleString('id-ID')} / Peak Hour Rp ${(rule.peakInHouseCoachDiscount ?? 0).toLocaleString('id-ID')}`}
                   </p>
                   <p className="text-muted-foreground text-sm">
@@ -577,7 +577,7 @@ export default function TariffPeriodPage() {
       <Section className="gap-6">
         <SectionHeader>
           <SectionTitle title="Pengaturan Jam Tarif" />
-          <SectionDescription description="Kelola jam bermain dan potongan lapangan Coach Club serta Coach In-house per cabang dan olahraga." />
+          <SectionDescription description="Kelola jam bermain dan potongan lapangan Coach Club serta Coach In-house satuan per cabang dan olahraga." />
         </SectionHeader>
         <SectionContent>
           {access.isLoading ? (

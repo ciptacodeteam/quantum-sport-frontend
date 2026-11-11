@@ -76,19 +76,22 @@ const datedCourts = courts.map((court) => ({
   timeSlot: '10:00 - 11:00',
   sport: 'PADEL' as const
 }));
-it.each([0, 20000, 500000])('matches prepaid top-up pricing for discount %s', (discount) => {
-  const choices = direct(1)
-    .slice(0, 1)
-    .map(({ planId: _, ...choice }) => ({ ...choice, walletId: 'wallet' }));
-  const result = adminInHousePricing(
-    datedCourts,
-    choices,
-    [],
-    [wallet],
-    [{ ...rule, happyInHouseCoachDiscount: discount }]
-  );
-  expect(result.coverage).toBe(300000 - Math.max(0, 300000 - discount - 250000));
-});
+it.each([0, 20000, 500000])(
+  'ignores direct hourly discounts for prepaid package usage: %s',
+  (discount) => {
+    const choices = direct(1)
+      .slice(0, 1)
+      .map(({ planId: _, ...choice }) => ({ ...choice, walletId: 'wallet' }));
+    const result = adminInHousePricing(
+      datedCourts,
+      choices,
+      [],
+      [wallet],
+      [{ ...rule, happyInHouseCoachDiscount: discount }]
+    );
+    expect(result).toEqual({ coverage: 300000, singleTotal: 0, extras: 0 });
+  }
+);
 it('adds only the coach share for direct coaching and caps the court discount', () => {
   const result = adminInHousePricing(datedCourts, direct(1).slice(0, 1), [plan], [], [rule]);
   expect(result).toEqual({ coverage: 20000, singleTotal: 750000, extras: 0 });

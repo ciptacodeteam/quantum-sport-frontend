@@ -196,3 +196,49 @@ it('uses the latest payment for a grouped booking regardless of invoice order', 
   expect(screen.getByText(/03 Nov 2026.*16[.:]42 WIB/)).toBeInTheDocument();
   expect(screen.getByText('Pembayaran terakhir')).toBeInTheDocument();
 });
+
+it('marks a cancelled service alongside its recorded paid amount', () => {
+  render(
+    <IncomeTransactionTable
+      transactions={[
+        {
+          ...transaction(1),
+          amount: 45000,
+          netAmount: 45000,
+          processingFee: 0,
+          cancellationStatus: 'CANCELLED',
+          paymentStatus: 'PAID',
+          cancelledServices: [
+            {
+              kind: 'BALLBOY',
+              name: 'Topan',
+              amount: 45000,
+              cancelledAt: '2026-11-08T11:44:00Z',
+              reason: 'Customer membatalkan'
+            }
+          ]
+        }
+      ]}
+    />
+  );
+  const row = screen.getByRole('row', { name: /Customer 1/ });
+  expect(row).toHaveTextContent('Dibatalkan');
+  expect(row).toHaveTextContent('Invoice masih tercatat lunas.');
+  expect(row).toHaveTextContent('Ballboy · Topan');
+  expect(row).toHaveTextContent('Customer membatalkan');
+  expect(screen.getByRole('row', { name: /Total periode/ })).toHaveTextContent('45.000');
+});
+it('shows partial cancellation when a grouped booking contains an active and a cancelled invoice', () => {
+  render(
+    <IncomeTransactionTable
+      groupByBooking
+      transactions={[
+        { ...transaction(1), bookingId: 'shared', cancellationStatus: 'NONE' },
+        { ...transaction(2), bookingId: 'shared', cancellationStatus: 'CANCELLED' }
+      ]}
+    />
+  );
+  expect(screen.getByText('Sebagian dibatalkan')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /2 invoice/ }));
+  expect(screen.getByText('Dibatalkan')).toBeInTheDocument();
+});

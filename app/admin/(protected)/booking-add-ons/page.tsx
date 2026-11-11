@@ -141,11 +141,12 @@ export default function BookingAddOns() {
   const inHouseSelections = storedInHouse.filter((selection) =>
     bookingItems.some((item) => item.slotId === selection.courtSlotId)
   );
+  const hasDirectInHouse = inHouseSelections.some((selection) => !!selection.planId);
   const inHouseReady =
-    (!inHouseSelections.length || (!tariffQuery.isPending && !tariffQuery.isError)) &&
+    (!hasDirectInHouse || (!tariffQuery.isPending && !tariffQuery.isError)) &&
     inHouseSelections.every(selectionAvailable);
   const inHouseLoading =
-    (!!inHouseSelections.length && tariffQuery.isPending) ||
+    (hasDirectInHouse && tariffQuery.isPending) ||
     inHouseSelections.some((selection) =>
       selection.planId ? inHousePlans.isPending : inHouseWallets.isPending
     );
