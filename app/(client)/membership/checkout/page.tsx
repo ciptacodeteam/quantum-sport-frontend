@@ -226,7 +226,7 @@ export default function MembershipCheckoutPage() {
 
   const handleSelectPaymentMethod = (method: PaymentMethod) => {
     setSelectedPaymentMethod(method);
-    if (method.channel === 'CARDS') {
+    if (!useSnapCheckout && method.channel === 'CARDS') {
       setShowCardForm(true);
       return;
     }
