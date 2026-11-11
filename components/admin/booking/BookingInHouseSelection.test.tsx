@@ -2,7 +2,11 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import BookingInHouseSelection, { usableInHouseWallets } from './BookingInHouseSelection';
 import type { InHouseWallet, InHousePlan } from '@/api/admin/inhouseCoaching';
+vi.mock('@/hooks/useAdminCourtSports', () => ({
+  useAdminCourtSports: () => ({ branchId: 'cemara' })
+}));
 vi.mock('@tanstack/react-query', () => ({
+  queryOptions: (options: unknown) => options,
   useQuery: () => ({ data: [{ slotId: 'coach-slot', coach: { id: 'andi' } }], isFetching: false })
 }));
 beforeEach(() => {
@@ -130,11 +134,12 @@ it('offers direct coaching without a prepaid wallet and sends the single-hour ta
     />
   );
   expect(change).not.toHaveBeenCalled();
-  const dropdowns = screen.getAllByRole('combobox', { name: 'Coaching satuan / paket' });
   for (let index = 0; index < 2; index++) {
-    fireEvent.click(dropdowns[index]);
+    if (index)
+      fireEvent.click(screen.getByRole('button', { name: 'Court A · 2040-11-03 · 19:00 - 20:00' }));
+    fireEvent.click(screen.getByRole('combobox', { name: 'Coaching satuan / paket' }));
     fireEvent.click(await screen.findByRole('option', { name: /Andi.*Coaching satuan/ }));
-    fireEvent.click(screen.getAllByRole('button', { name: 'Pilih coaching satuan' })[index]);
+    fireEvent.click(screen.getByRole('button', { name: 'Pilih coaching satuan' }));
     expect(change).toHaveBeenLastCalledWith(sessions[index], {
       planId: 'single',
       courtSlotId: sessions[index].slotId,

@@ -144,9 +144,16 @@ it('uses the next calendar day for a midnight end when the stored end timestamp 
     }
   ]);
   await waitFor(() =>
-    expect(mocks.availability).toHaveBeenCalledWith('/coach/availability', {
-      params: { startAt: '2026-11-05T23:00:00Z', endAt: '2026-11-06T00:00:00', courtSport: 'PADEL' }
-    })
+    expect(mocks.availability).toHaveBeenCalledWith(
+      '/coach/availability',
+      expect.objectContaining({
+        params: {
+          startAt: '2026-11-05T23:00:00',
+          endAt: '2026-11-06T00:00:00',
+          courtSport: 'PADEL'
+        }
+      })
+    )
   );
   client.clear();
 });
@@ -199,5 +206,39 @@ it('selects multiple coaches across groups for one hour and toggles each indepen
     'aria-pressed',
     'true'
   );
+  client.clear();
+});
+
+it('starts availability in parallel while the coaching catalog is still loading', async () => {
+  let resolvePeople!: (value: unknown[]) => void;
+  mocks.people.mockReturnValue(
+    new Promise((resolve) => {
+      resolvePeople = resolve;
+    })
+  );
+  const client = mount();
+  await waitFor(() => expect(mocks.availability).toHaveBeenCalledTimes(1));
+  expect(screen.getByRole('status', { name: 'Memuat grup dan coach...' })).toBeInTheDocument();
+  resolvePeople([]);
+  await screen.findByRole('button', { name: 'Tanpa coach' });
+  expect(mocks.availability).toHaveBeenCalledTimes(1);
+  client.clear();
+});
+it('does not request a hidden, unselected service', async () => {
+  const client = new QueryClient();
+  render(
+    <QueryClientProvider client={client}>
+      <BookingCoachSelection
+        sessions={[session]}
+        sport="PADEL"
+        selected={[]}
+        onSelect={vi.fn()}
+        active={false}
+      />
+    </QueryClientProvider>
+  );
+  expect(mocks.people).not.toHaveBeenCalled();
+  expect(mocks.groups).not.toHaveBeenCalled();
+  expect(mocks.availability).not.toHaveBeenCalled();
   client.clear();
 });

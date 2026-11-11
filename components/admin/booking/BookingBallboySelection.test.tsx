@@ -104,11 +104,12 @@ it('prevents assigning the same ballboy to two courts at the same time', async (
   });
   await waitFor(() => expect(first).toBeEnabled());
   fireEvent.click(first);
+  fireEvent.click(screen.getByRole('button', { name: 'Court 2 · 2040-01-02 · 12:00 - 13:00' }));
   expect(
     screen.getByRole('button', { name: /Pilih ballboy Padel Staff untuk Court 2/ })
   ).toBeDisabled();
   expect(
-    screen.getByRole('button', { name: /Pilih ballboy Inactive Staff untuk Court 1/ })
+    screen.getByRole('button', { name: /Pilih ballboy Inactive Staff untuk Court 2/ })
   ).toBeDisabled();
   client.clear();
 });

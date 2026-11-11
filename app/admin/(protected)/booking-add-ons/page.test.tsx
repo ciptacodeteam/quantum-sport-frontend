@@ -190,6 +190,8 @@ afterEach(() => {
 it('shows coach and ballboy choices without equipment or inventory availability requests', () => {
   render(<BookingAddOns />);
   expect(screen.getByRole('region', { name: 'Pilihan coach' })).toBeInTheDocument();
+  expect(screen.queryByRole('region', { name: 'Pilihan ballboy' })).not.toBeInTheDocument();
+  fireEvent.mouseDown(screen.getByRole('tab', { name: 'Ballboy' }), { button: 0, ctrlKey: false });
   expect(screen.getByRole('region', { name: 'Pilihan ballboy' })).toBeInTheDocument();
   expect(screen.queryByRole('region', { name: 'Equipment' })).not.toBeInTheDocument();
   expect(screen.queryByText('Racket')).not.toBeInTheDocument();
@@ -347,6 +349,10 @@ it.each(['PADEL', 'TENNIS'] as const)(
       data: { data: [{ slotId: 'ballboy-slot', price: 45000 }] }
     });
     render(<BookingAddOns />);
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'Ballboy' }), {
+      button: 0,
+      ctrlKey: false
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Pilih Ballboy' }));
     expect(mocks.summary.ballboyTotal).toBe(45000);
     expect(mocks.summary.totalAmount).toBe(345000);
@@ -443,6 +449,7 @@ it('keeps multiple coaches for one hour, updates totals on toggle, and submits e
       coachGroups: [{ slotId: 'coach-slot', coachingGroupId: 'academy' }]
     })
   );
+  expect(mocks.availability).toHaveBeenCalledTimes(1);
 });
 it('clears every coach for the hour when selecting Tanpa coach', () => {
   render(<BookingAddOns />);
@@ -451,4 +458,20 @@ it('clears every coach for the hour when selecting Tanpa coach', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Tanpa coach' }));
   expect(useBookingStore.getState().selectedCoaches).toEqual([]);
   expect(mocks.summary.coachTotal).toBe(0);
+});
+
+it('preserves selected services when switching between service tabs', () => {
+  render(<BookingAddOns />);
+  fireEvent.click(screen.getByRole('button', { name: 'Pilih Coach A' }));
+  fireEvent.mouseDown(screen.getByRole('tab', { name: 'Ballboy' }), { button: 0, ctrlKey: false });
+  expect(screen.queryByRole('button', { name: 'Pilih Coach A' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Pilih Ballboy' }));
+  fireEvent.mouseDown(screen.getByRole('tab', { name: 'Coach Club' }), {
+    button: 0,
+    ctrlKey: false
+  });
+  expect(useBookingStore.getState().selectedCoaches).toHaveLength(1);
+  expect(useBookingStore.getState().selectedBallboys).toHaveLength(1);
+  expect(screen.getByRole('tab', { name: 'Coach Club' })).toHaveTextContent('1');
+  expect(screen.getByRole('tab', { name: 'Ballboy' })).toHaveTextContent('1');
 });

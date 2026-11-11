@@ -396,10 +396,10 @@ export default function BookingSummary({
   };
 
   return (
-    <div className={cn('min-w-0', width, className)}>
-      <Card className={cn('min-w-0 gap-5 py-5 sm:py-6', sticky && '2xl:sticky 2xl:top-6')}>
+    <div className={cn('min-w-0', width, className, sticky && 'xl:sticky xl:top-6 xl:self-start')}>
+      <Card className="min-w-0 gap-5 py-5 sm:py-6">
         <CardHeader className="px-5 sm:px-6">
-          <CardTitle className="text-base leading-snug">Booking Summary</CardTitle>
+          <CardTitle className="text-base leading-snug">Ringkasan booking</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5 px-5 sm:px-6">
           {/* Customer Selection */}
@@ -933,13 +933,13 @@ export default function BookingSummary({
             )}
             {inHouseCoverage > 0 && (
               <div className="flex items-center justify-between text-sm">
-                <span>Biaya lapangan diganti coaching in-house</span>
+                <span>Potongan & pembayaran lapangan paket in-house</span>
                 <span>− {formatCurrency(inHouseCoverage)}</span>
               </div>
             )}
             {inHouseSingleTotal > 0 && (
               <div className="flex items-center justify-between text-sm">
-                <span>Coaching satuan (termasuk lapangan)</span>
+                <span>Biaya coaching satuan</span>
                 <span>{formatCurrency(inHouseSingleTotal)}</span>
               </div>
             )}

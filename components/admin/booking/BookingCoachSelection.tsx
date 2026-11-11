@@ -1,17 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import dayjs from 'dayjs';
+import { ChevronDown, Users } from 'lucide-react';
+import BookingServiceSessionPicker, {
+  BookingServiceLoading,
+  serviceSessionDate
+} from './BookingServiceSessionPicker';
+import { coachAvailabilityOptions, serviceSessionRange } from '@/queries/admin/bookingService';
 import { serviceMatchesSport } from '@/lib/service-sport';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueries } from '@tanstack/react-query';
 import { coachingApi, type CoachingPerson } from '@/api/admin/coaching';
 import { coachingGroupApi, type CoachingGroup } from '@/api/admin/coachingGroup';
 import { useAdminCourtSports } from '@/hooks/useAdminCourtSports';
-import { adminApi } from '@/lib/adminApi';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { SelectedCoach } from '@/stores/useBookingStore';
-import type { CoachAvailability } from '@/types/model';
 
 type Session = { date: string; timeSlot: string; startAt?: string; endAt?: string };
 export const coachSessionKey = (session: Session) => `${session.date}|${session.timeSlot}`;
@@ -21,28 +24,44 @@ export default function BookingCoachSelection({
   sport,
   selected,
   onSelect,
-  disabled
+  disabled,
+  active = true,
+  embedded = false
 }: {
   sessions: Session[];
   sport: 'PADEL' | 'TENNIS';
   selected: SelectedCoach[];
   onSelect: (session: Session, coach: SelectedCoach | null) => void;
   disabled?: boolean;
+  active?: boolean;
+  embedded?: boolean;
 }) {
   const { branchId } = useAdminCourtSports();
   const people = useQuery({
     queryKey: ['admin', 'coaching', branchId, 'booking-catalog'],
     queryFn: coachingApi.list,
-    enabled: !!branchId
+    staleTime: 60000,
+    retry: 1,
+    enabled: !!branchId && branchId !== 'all' && (active || selected.length > 0)
   });
   const groups = useQuery({
     queryKey: ['admin', 'coaching-groups', branchId],
     queryFn: () => coachingGroupApi.list(branchId),
-    enabled: !!branchId
+    staleTime: 60000,
+    retry: 1,
+    enabled: !!branchId && branchId !== 'all' && (active || selected.length > 0)
   });
   const unique = [
     ...new Map(sessions.map((session) => [coachSessionKey(session), session])).values()
   ];
+  const [sessionId, setSessionId] = useState('');
+  const currentSession =
+    unique.find((session) => coachSessionKey(session) === sessionId) ?? unique[0];
+  useQueries({
+    queries: unique.map((session) =>
+      coachAvailabilityOptions(branchId, session, sport, active || selected.length > 0)
+    )
+  });
   const coaches = (people.data ?? []).filter(
     (person) =>
       person.role === 'COACH' &&
@@ -64,14 +83,26 @@ export default function BookingCoachSelection({
       )
   );
   return (
-    <section aria-label="Pilihan coach" className="space-y-5 rounded-xl border p-4 sm:p-5">
+    <section
+      aria-label="Pilihan coach"
+      className={embedded ? 'space-y-4' : 'space-y-4 rounded-2xl border p-4 sm:p-5'}
+    >
       <div>
-        <h3 className="font-semibold">Pilih coach (opsional)</h3>
+        <h3 className="font-semibold">Coach Club</h3>
         <p className="text-muted-foreground mt-1 text-sm">
-          Pilih beberapa coach untuk jam yang sama. Klik coach terpilih untuk membatalkan pilihan.
-          Coach yang tidak tersedia tetap ditampilkan dan tidak dapat dipilih.
+          Pilih jam bermain, lalu grup dan coach. Beberapa coach dapat dipilih untuk jam yang sama.
         </p>
       </div>
+      <BookingServiceSessionPicker
+        value={currentSession ? coachSessionKey(currentSession) : ''}
+        onChange={setSessionId}
+        disabled={disabled}
+        sessions={unique.map((session) => ({
+          ...session,
+          id: coachSessionKey(session),
+          selected: selected.some((coach) => coachSessionKey(coach) === coachSessionKey(session))
+        }))}
+      />
       {!branchId ? (
         <p className="text-muted-foreground text-sm">Pilih satu cabang terlebih dahulu.</p>
       ) : people.isError || groups.isError ? (
@@ -88,13 +119,13 @@ export default function BookingCoachSelection({
           </Button>
         </div>
       ) : people.isPending || groups.isPending ? (
-        <p className="text-muted-foreground text-sm">Memuat grup dan coach...</p>
+        <BookingServiceLoading label="Memuat grup dan coach..." />
       ) : unique.length === 0 ? (
         <p className="text-muted-foreground text-sm">
           Tambahkan lapangan dan jam bermain terlebih dahulu.
         </p>
       ) : (
-        unique.map((session) => (
+        (currentSession ? [currentSession] : []).map((session) => (
           <CoachSession
             key={`${sport}|${coachSessionKey(session)}`}
             branchId={branchId}
@@ -108,6 +139,7 @@ export default function BookingCoachSelection({
             )}
             onSelect={(coach) => onSelect(session, coach)}
             disabled={disabled}
+            active={active || selected.length > 0}
           />
         ))
       )}
@@ -124,7 +156,8 @@ function CoachSession({
   independent,
   selected,
   onSelect,
-  disabled
+  disabled,
+  active
 }: {
   session: Session;
   sport: 'PADEL' | 'TENNIS';
@@ -135,22 +168,13 @@ function CoachSession({
   selected: SelectedCoach[];
   onSelect: (coach: SelectedCoach | null) => void;
   disabled?: boolean;
+  active?: boolean;
 }) {
   const [openGroup, setOpenGroup] = useState<string | null>(
     selected[0]?.coachingGroupId ?? (selected.length ? 'independent' : null)
   );
-  const [start, end] = session.timeSlot.split(' - ');
-  const startAt = session.startAt ?? `${session.date}T${start}:00`;
-  const endDate =
-    end <= start ? dayjs(session.date).add(1, 'day').format('YYYY-MM-DD') : session.date;
-  const endAt = session.endAt ?? `${endDate}T${end}:00`;
-  const availability = useQuery({
-    queryKey: ['admin', 'booking-coaches', branchId, startAt, endAt, sport],
-    queryFn: async () =>
-      (await adminApi.get('/coach/availability', { params: { startAt, endAt, courtSport: sport } }))
-        .data.data as CoachAvailability[],
-    refetchInterval: 10000
-  });
+  const { startAt, endAt } = serviceSessionRange(session);
+  const availability = useQuery(coachAvailabilityOptions(branchId, session, sport, active));
   const wall = (value: string) => value.slice(0, 16).replace(' ', 'T');
   const options = (availability.data ?? []).filter(
     (option) => wall(option.startAt) === wall(startAt) && wall(option.endAt) === wall(endAt)
@@ -181,14 +205,14 @@ function CoachSession({
         !coaches.some((coach) => coach.id === selection.coachId && coach.isActive)
     );
   return (
-    <div className="space-y-3 border-t pt-4">
+    <div className="bg-muted/10 space-y-3 rounded-xl border p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm font-semibold">
-          {session.date} · {session.timeSlot}
+          {serviceSessionDate(session.date)} · {session.timeSlot}
         </p>
         <Button
           type="button"
-          variant={!selected.length ? 'default' : 'outline'}
+          variant={!selected.length ? 'secondary' : 'outline'}
           size="sm"
           aria-pressed={!selected.length}
           disabled={disabled}
@@ -213,27 +237,32 @@ function CoachSession({
         const expanded = openGroup === group.id;
         const availableCount = group.members.filter((coach) => optionFor(coach)).length;
         return (
-          <div key={group.id} className="overflow-hidden rounded-xl border">
+          <div key={group.id} className="bg-background overflow-hidden rounded-xl border">
             <button
               type="button"
               disabled={disabled}
               aria-expanded={expanded}
               onClick={() => setOpenGroup(expanded ? null : group.id)}
-              className="hover:bg-muted/40 flex w-full items-center justify-between gap-3 p-4 text-left disabled:opacity-50"
+              className="hover:bg-muted/40 flex w-full items-center justify-between gap-3 px-3.5 py-3 text-left disabled:opacity-50"
             >
-              <span className="text-sm font-medium">{group.name}</span>
-              <span className="text-muted-foreground text-xs">
+              <span className="flex items-center gap-2 text-sm font-medium">
+                <Users className="text-muted-foreground size-4 shrink-0" />
+                {group.name}
+              </span>
+              <span className="text-muted-foreground flex shrink-0 items-center gap-2 text-xs">
                 {availability.isPending
                   ? 'Memuat...'
                   : `${availableCount}/${group.members.length} tersedia`}{' '}
-                · {expanded ? 'Tutup' : 'Lihat coach'}
+                <ChevronDown
+                  className={`size-4 transition-transform ${expanded ? 'rotate-180' : ''}`}
+                />
               </span>
             </button>
             {expanded && (
               <div
                 role="group"
                 aria-label={`Coach ${group.name}`}
-                className="bg-muted/20 grid gap-2 border-t p-3 sm:grid-cols-2"
+                className="bg-muted/10 grid gap-2 border-t p-3 sm:grid-cols-2"
               >
                 {group.members.length === 0 && (
                   <p className="text-muted-foreground p-2 text-xs">
@@ -255,7 +284,7 @@ function CoachSession({
                       disabled={disabled || (!option && !chosen)}
                       aria-pressed={chosen}
                       aria-label={`Pilih ${coach.name}`}
-                      className={`bg-background flex min-h-20 items-center justify-between gap-3 rounded-lg border p-3 text-left disabled:cursor-not-allowed disabled:opacity-50 ${chosen ? 'border-primary ring-primary/20 ring-2' : ''}`}
+                      className={`bg-background flex min-h-18 items-center justify-between gap-3 rounded-lg border p-3 text-left disabled:cursor-not-allowed disabled:opacity-50 ${chosen ? 'border-primary ring-primary/20 ring-2' : ''}`}
                       onClick={() => {
                         if (chosen && chosenCoach) {
                           onSelect(chosenCoach);

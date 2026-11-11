@@ -28,6 +28,10 @@ import { useMembershipDiscount } from '@/hooks/useMembershipDiscount';
 import { adminCheckoutMutationOptions } from '@/mutations/admin/checkout';
 import { type CustomerSearchResult } from '@/queries/admin/customer';
 import { useBookingStore } from '@/stores/useBookingStore';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Users, UserRound, CircleUserRound, Sparkles } from 'lucide-react';
+import { BookingServiceLoading } from '@/components/admin/booking/BookingServiceSessionPicker';
 import { IconCalendar, IconChevronLeft, IconMapPin } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -66,6 +70,7 @@ export default function BookingAddOns() {
   } = useBookingStore();
 
   const queryClient = useQueryClient();
+  const [serviceTab, setServiceTab] = useState(storedInHouse.length ? 'inhouse' : 'club');
   const [paymentMethodId, setPaymentMethodId] = useState('');
   const [isCheckingCoaches, setIsCheckingCoaches] = useState(false);
   const selectedCoaches = storedCoaches.filter(
@@ -97,15 +102,24 @@ export default function BookingAddOns() {
     [bookingItems]
   );
   const { branchId } = useAdminCourtSports();
+  const tariffQuery = useTariffPeriods(true);
+  const tariffRules = tariffQuery.rules;
   const inHouseWallets = useQuery({
     queryKey: ['admin', 'inhouse', 'wallets', branchId, selectedCustomerId, 'available'],
     queryFn: () => inHouseApi.wallets(selectedCustomerId!, true),
-    enabled: !!selectedCustomerId && !!branchId && branchId !== 'all'
+    staleTime: 30000,
+    enabled:
+      !!selectedCustomerId &&
+      !!branchId &&
+      branchId !== 'all' &&
+      (serviceTab === 'inhouse' || storedInHouse.length > 0)
   });
   const inHousePlans = useQuery({
     queryKey: ['admin', 'inhouse', 'plans', branchId],
     queryFn: inHouseApi.plans,
-    enabled: !!branchId && branchId !== 'all'
+    staleTime: 60000,
+    enabled:
+      !!branchId && branchId !== 'all' && (serviceTab === 'inhouse' || storedInHouse.length > 0)
   });
   const singleHourPlans = (inHousePlans.data ?? []).filter(
     (plan) =>
@@ -116,26 +130,36 @@ export default function BookingAddOns() {
   );
   const selectionAvailable = (selection: (typeof storedInHouse)[number]) =>
     selection.planId
-      ? !inHousePlans.isFetching &&
+      ? !inHousePlans.isPending &&
         !inHousePlans.isError &&
         singleHourPlans.some((p) => p.id === selection.planId)
       : !!selectedCustomerId &&
-        !inHouseWallets.isFetching &&
+        !inHouseWallets.isPending &&
         !inHouseWallets.isError &&
         usableWallets.some((w) => w.id === selection.walletId);
   const usableWallets = usableInHouseWallets(inHouseWallets.data ?? [], courtSport);
   const inHouseSelections = storedInHouse.filter((selection) =>
     bookingItems.some((item) => item.slotId === selection.courtSlotId)
   );
-  const inHouseReady = inHouseSelections.every(selectionAvailable);
-  const inHouseLoading = inHouseSelections.some((selection) =>
-    selection.planId ? inHousePlans.isFetching : inHouseWallets.isFetching
-  );
+  const inHouseReady =
+    (!inHouseSelections.length || (!tariffQuery.isPending && !tariffQuery.isError)) &&
+    inHouseSelections.every(selectionAvailable);
+  const inHouseLoading =
+    (!!inHouseSelections.length && tariffQuery.isPending) ||
+    inHouseSelections.some((selection) =>
+      selection.planId ? inHousePlans.isPending : inHouseWallets.isPending
+    );
   const {
     coverage: inHouseCoverage,
     extras: inHouseExtras,
     singleTotal: inHouseSingleTotal
-  } = adminInHousePricing(bookingItems, inHouseSelections, singleHourPlans, usableWallets);
+  } = adminInHousePricing(
+    bookingItems,
+    inHouseSelections,
+    singleHourPlans,
+    usableWallets,
+    tariffRules
+  );
 
   // Customer selection is now handled by BookingSummary component
   // Keep selectedCustomer state for membership discount calculation
@@ -167,7 +191,6 @@ export default function BookingAddOns() {
     inHouseExtras +
     inHouseSingleTotal;
 
-  const { rules: tariffRules } = useTariffPeriods(true);
   const amountDue = Math.max(
     0,
     totalAmount -
@@ -356,11 +379,22 @@ export default function BookingAddOns() {
     if (selectedCoaches.length > 0 || selectedBallboys.length > 0) {
       setIsCheckingCoaches(true);
       try {
+        const requests = new Map<string, Promise<{ data: { data: unknown } }>>();
+        const checkAvailability = (kind: string, startAt?: string, endAt?: string) => {
+          const key = `${kind}|${startAt}|${endAt}|${courtSport}`;
+          let request = requests.get(key);
+          if (!request) {
+            request = adminApi.get(`/${kind}/availability`, {
+              params: { startAt, endAt, courtSport },
+              timeout: 15000
+            });
+            requests.set(key, request);
+          }
+          return request;
+        };
         const availability = await Promise.all([
           ...selectedCoaches.map(async (coach) => {
-            const response = await adminApi.get('/coach/availability', {
-              params: { startAt: coach.startAt, endAt: coach.endAt, courtSport }
-            });
+            const response = await checkAvailability('coach', coach.startAt, coach.endAt);
             return (response.data.data as CoachAvailability[]).some(
               (option) =>
                 option.slotId === coach.slotId &&
@@ -369,9 +403,7 @@ export default function BookingAddOns() {
             );
           }),
           ...selectedBallboys.map(async (item) => {
-            const response = await adminApi.get('/ballboy/availability', {
-              params: { startAt: item.startAt, endAt: item.endAt, courtSport }
-            });
+            const response = await checkAvailability('ballboy', item.startAt, item.endAt);
             return (response.data.data as BallboyAvailability[]).some(
               (option) => option.slotId === item.slotId && option.price === item.price
             );
@@ -411,7 +443,7 @@ export default function BookingAddOns() {
     <div className="flex w-full min-w-0 flex-col gap-6">
       <AppSectionHeader
         title="Tambah Layanan"
-        description="Pilih coach dan ballboy sesuai olahraga dan jam bermain, lalu konfirmasi booking. Layanan bersifat opsional."
+        description="Periksa jadwal bermain, tambah layanan bila diperlukan, lalu selesaikan booking."
         className="mb-0 pb-0"
       />
 
@@ -422,7 +454,7 @@ export default function BookingAddOns() {
         </div>
       )}
 
-      <div className="grid min-w-0 grid-cols-1 items-start gap-6 2xl:grid-cols-[minmax(0,1fr)_420px]">
+      <div className="grid min-w-0 grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_380px] 2xl:grid-cols-[minmax(0,1fr)_420px]">
         {/* Main Content */}
         <div className="flex min-w-0 flex-col gap-5">
           {/* Court Bookings Summary or Date/Time Selection */}
@@ -431,7 +463,12 @@ export default function BookingAddOns() {
               <CardHeader className="gap-2 px-5">
                 <CardTitle className="flex flex-wrap items-center gap-2 text-base leading-snug">
                   <IconCalendar className="text-primary h-5 w-5" />
-                  Your Court Bookings
+                  <span className="text-muted-foreground text-xs font-medium">01</span> Jadwal
+                  bermain
+                  <Badge variant="outline" className="ml-auto">
+                    {bookingItems.length} jam ·{' '}
+                    {new Set(bookingItems.map((item) => item.courtId)).size} lapangan
+                  </Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent className="px-5">
@@ -493,109 +530,227 @@ export default function BookingAddOns() {
             </p>
           )}
 
-          {inHousePlans.isError && (
-            <p role="alert" className="text-sm">
-              Tarif coaching satuan belum dapat dimuat.{' '}
-              <button
-                type="button"
-                className="underline"
-                onClick={() => void inHousePlans.refetch()}
-              >
-                Coba lagi
-              </button>
-            </p>
-          )}
-          {selectedCustomerId && inHouseWallets.isError && (
-            <p role="alert" className="text-sm">
-              Kuota in-house belum dapat dimuat.{' '}
-              <button className="underline" onClick={() => void inHouseWallets.refetch()}>
-                Coba lagi
-              </button>
-            </p>
-          )}
-          {inHouseSelections.length > 0 &&
-            !inHouseLoading &&
-            inHouseSelections.some((selection) => !selectionAvailable(selection)) && (
-              <div role="alert" className="rounded border p-4 text-sm">
-                Pilihan tarif atau kuota in-house sudah tidak tersedia.{' '}
-                <button
-                  type="button"
-                  className="text-primary underline"
-                  onClick={() => setSelectedInHouse([])}
+          {bookingItems.length > 0 && (
+            <section
+              className="bg-background min-w-0 overflow-hidden rounded-2xl border shadow-sm"
+              aria-label="Layanan tambahan booking"
+            >
+              <header className="flex items-start gap-3 border-b p-5">
+                <span className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-xl">
+                  <Sparkles className="size-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-muted-foreground text-xs font-medium">02</span>
+                    <h2 className="font-semibold">Layanan tambahan</h2>
+                    <Badge variant="outline">Opsional</Badge>
+                  </div>
+                  <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
+                    Pilih jenis layanan dan jam bermain. Pilihan yang sudah diterapkan tetap
+                    tersimpan saat berpindah tab.
+                  </p>
+                </div>
+              </header>
+              <Tabs value={serviceTab} onValueChange={setServiceTab} className="gap-0">
+                <div className="bg-muted/15 border-b px-4 py-3 sm:px-5">
+                  <TabsList
+                    aria-label="Jenis layanan"
+                    className="grid h-auto w-full grid-cols-3 gap-1 bg-transparent p-0"
+                  >
+                    {[
+                      {
+                        value: 'club',
+                        label: 'Coach Club',
+                        count: selectedCoaches.length,
+                        Icon: Users
+                      },
+                      {
+                        value: 'inhouse',
+                        label: 'In-house',
+                        count: inHouseSelections.length,
+                        Icon: UserRound
+                      },
+                      {
+                        value: 'ballboy',
+                        label: 'Ballboy',
+                        count: selectedBallboys.length,
+                        Icon: CircleUserRound
+                      }
+                    ].map(({ value, label, count, Icon }) => (
+                      <TabsTrigger
+                        key={value}
+                        value={value}
+                        aria-label={label}
+                        className="data-[state=active]:border-border h-auto min-w-0 flex-wrap gap-1.5 rounded-lg border border-transparent px-2 py-3 text-xs sm:text-sm"
+                      >
+                        <Icon className="size-4 shrink-0" />
+                        <span>{label}</span>
+                        {count > 0 && (
+                          <span className="bg-primary/10 text-primary rounded-full px-1.5 text-[10px] leading-4">
+                            {count}
+                          </span>
+                        )}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </div>
+                <TabsContent
+                  forceMount
+                  hidden={serviceTab !== 'inhouse'}
+                  value="inhouse"
+                  className="m-0 min-w-0 p-4 data-[state=inactive]:hidden sm:p-5"
                 >
-                  Hapus pilihan paket
-                </button>
-              </div>
-            )}
-          {bookingItems.length > 0 && !recurringBooking && (
-            <BookingInHouseSelection
-              key={`${branchId}:${selectedCustomerId}`}
-              wallets={usableWallets}
-              plans={singleHourPlans}
-              sessions={bookingItems}
-              selected={inHouseSelections}
-              disabled={isConfirming || isCheckingCoaches}
-              onChange={(session, selection) => {
-                const next = inHouseSelections.filter(
-                  (item) => item.courtSlotId !== session.slotId
-                );
-                if (selection) {
-                  setUseMembership(false);
-                  storedCoaches
-                    .filter((coach) => coachSessionKey(coach) === coachSessionKey(session))
-                    .forEach((coach) => removeCoach(coach.coachId, coach.timeSlot, coach.slotId));
-                  next.push(selection);
-                }
-                setSelectedInHouse(next);
-              }}
-            />
-          )}
-          {bookingItems.length > 0 && (
-            <BookingCoachSelection
-              sessions={bookingItems}
-              sport={courtSport}
-              selected={selectedCoaches}
-              disabled={isConfirming || isCheckingCoaches}
-              onSelect={(session, coach) => {
-                const sessionCoaches = storedCoaches.filter(
-                  (item) => coachSessionKey(item) === coachSessionKey(session)
-                );
-                if (!coach) {
-                  sessionCoaches.forEach((item) =>
-                    removeCoach(item.coachId, item.timeSlot, item.slotId)
-                  );
-                  return;
-                }
-                const existing = sessionCoaches.find((item) => item.coachId === coach.coachId);
-                if (existing) {
-                  removeCoach(existing.coachId, existing.timeSlot, existing.slotId);
-                  if (existing.coachingGroupId === coach.coachingGroupId) return;
-                }
-                setSelectedInHouse(
-                  inHouseSelections.filter((selection) => {
-                    const court = bookingItems.find(
-                      (item) => item.slotId === selection.courtSlotId
-                    );
-                    return !court || coachSessionKey(court) !== coachSessionKey(session);
-                  })
-                );
-                addCoach(coach);
-              }}
-            />
-          )}
-          {bookingItems.length > 0 && (
-            <BookingBallboySelection
-              sessions={bookingItems}
-              sport={courtSport}
-              selected={selectedBallboys}
-              disabled={isConfirming || isCheckingCoaches}
-              onSelect={(session, ballboy) => {
-                storedBallboys
-                  .filter((item) => item.courtSlotId === session.slotId)
-                  .forEach((item) => removeBallboy(item.ballboyId, item.timeSlot, item.slotId));
-                if (ballboy) addBallboy(ballboy);
-              }}
-            />
+                  {!recurringBooking && inHousePlans.isPending && (
+                    <BookingServiceLoading label="Memuat tarif coaching in-house..." />
+                  )}
+                  {recurringBooking ? (
+                    <p className="text-muted-foreground rounded-xl border border-dashed p-5 text-sm">
+                      Coaching in-house tidak tersedia untuk booking rutin Value Pack.
+                    </p>
+                  ) : (
+                    !inHousePlans.isPending &&
+                    !inHousePlans.isError &&
+                    !singleHourPlans.length &&
+                    !usableWallets.length && (
+                      <p className="text-muted-foreground rounded-xl border border-dashed p-5 text-sm">
+                        Belum ada tarif satuan atau kuota in-house untuk customer ini. Pilih
+                        customer di ringkasan booking untuk melihat kuotanya.
+                      </p>
+                    )
+                  )}
+                  {inHousePlans.isError && (
+                    <p role="alert" className="text-sm">
+                      Tarif coaching satuan belum dapat dimuat.{' '}
+                      <button
+                        type="button"
+                        className="underline"
+                        onClick={() => void inHousePlans.refetch()}
+                      >
+                        Coba lagi
+                      </button>
+                    </p>
+                  )}
+                  {selectedCustomerId && inHouseWallets.isError && (
+                    <p role="alert" className="text-sm">
+                      Kuota in-house belum dapat dimuat.{' '}
+                      <button className="underline" onClick={() => void inHouseWallets.refetch()}>
+                        Coba lagi
+                      </button>
+                    </p>
+                  )}
+                  {inHouseSelections.length > 0 &&
+                    !inHouseLoading &&
+                    inHouseSelections.some((selection) => !selectionAvailable(selection)) && (
+                      <div role="alert" className="rounded border p-4 text-sm">
+                        Pilihan tarif atau kuota in-house sudah tidak tersedia.{' '}
+                        <button
+                          type="button"
+                          className="text-primary underline"
+                          onClick={() => setSelectedInHouse([])}
+                        >
+                          Hapus pilihan paket
+                        </button>
+                      </div>
+                    )}
+                  {bookingItems.length > 0 && !recurringBooking && (
+                    <BookingInHouseSelection
+                      embedded
+                      active={serviceTab === 'inhouse'}
+                      key={`${branchId}:${selectedCustomerId}`}
+                      wallets={usableWallets}
+                      plans={singleHourPlans}
+                      sessions={bookingItems}
+                      selected={inHouseSelections}
+                      disabled={isConfirming || isCheckingCoaches}
+                      onChange={(session, selection) => {
+                        const next = inHouseSelections.filter(
+                          (item) => item.courtSlotId !== session.slotId
+                        );
+                        if (selection) {
+                          setUseMembership(false);
+                          storedCoaches
+                            .filter((coach) => coachSessionKey(coach) === coachSessionKey(session))
+                            .forEach((coach) =>
+                              removeCoach(coach.coachId, coach.timeSlot, coach.slotId)
+                            );
+                          next.push(selection);
+                        }
+                        setSelectedInHouse(next);
+                      }}
+                    />
+                  )}
+                </TabsContent>
+                <TabsContent
+                  forceMount
+                  hidden={serviceTab !== 'club'}
+                  value="club"
+                  className="m-0 min-w-0 p-4 data-[state=inactive]:hidden sm:p-5"
+                >
+                  {bookingItems.length > 0 && (
+                    <BookingCoachSelection
+                      embedded
+                      active={serviceTab === 'club'}
+                      sessions={bookingItems}
+                      sport={courtSport}
+                      selected={selectedCoaches}
+                      disabled={isConfirming || isCheckingCoaches}
+                      onSelect={(session, coach) => {
+                        const sessionCoaches = storedCoaches.filter(
+                          (item) => coachSessionKey(item) === coachSessionKey(session)
+                        );
+                        if (!coach) {
+                          sessionCoaches.forEach((item) =>
+                            removeCoach(item.coachId, item.timeSlot, item.slotId)
+                          );
+                          return;
+                        }
+                        const existing = sessionCoaches.find(
+                          (item) => item.coachId === coach.coachId
+                        );
+                        if (existing) {
+                          removeCoach(existing.coachId, existing.timeSlot, existing.slotId);
+                          if (existing.coachingGroupId === coach.coachingGroupId) return;
+                        }
+                        setSelectedInHouse(
+                          inHouseSelections.filter((selection) => {
+                            const court = bookingItems.find(
+                              (item) => item.slotId === selection.courtSlotId
+                            );
+                            return !court || coachSessionKey(court) !== coachSessionKey(session);
+                          })
+                        );
+                        addCoach(coach);
+                      }}
+                    />
+                  )}
+                </TabsContent>
+                <TabsContent
+                  forceMount
+                  hidden={serviceTab !== 'ballboy'}
+                  value="ballboy"
+                  className="m-0 min-w-0 p-4 data-[state=inactive]:hidden sm:p-5"
+                >
+                  {bookingItems.length > 0 && (
+                    <BookingBallboySelection
+                      embedded
+                      active={serviceTab === 'ballboy'}
+                      sessions={bookingItems}
+                      sport={courtSport}
+                      selected={selectedBallboys}
+                      disabled={isConfirming || isCheckingCoaches}
+                      onSelect={(session, ballboy) => {
+                        storedBallboys
+                          .filter((item) => item.courtSlotId === session.slotId)
+                          .forEach((item) =>
+                            removeBallboy(item.ballboyId, item.timeSlot, item.slotId)
+                          );
+                        if (ballboy) addBallboy(ballboy);
+                      }}
+                    />
+                  )}{' '}
+                </TabsContent>
+              </Tabs>
+            </section>
           )}
         </div>
 

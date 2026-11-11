@@ -1,12 +1,15 @@
 'use client';
-import { useQuery } from '@tanstack/react-query';
-import dayjs from 'dayjs';
+import { useState } from 'react';
+import { useQuery, useQueries } from '@tanstack/react-query';
+import BookingServiceSessionPicker, {
+  BookingServiceLoading,
+  serviceSessionDate
+} from './BookingServiceSessionPicker';
+import { ballboyAvailabilityOptions, serviceSessionRange } from '@/queries/admin/bookingService';
 import { coachingApi, type CoachingPerson } from '@/api/admin/coaching';
 import { useAdminCourtSports } from '@/hooks/useAdminCourtSports';
-import { adminApi } from '@/lib/adminApi';
 import { serviceMatchesSport } from '@/lib/service-sport';
 import type { BookingItem, SelectedBallboy } from '@/stores/useBookingStore';
-import type { BallboyAvailability } from '@/types/model';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -15,32 +18,60 @@ export default function BookingBallboySelection({
   sport,
   selected,
   onSelect,
-  disabled
+  disabled,
+  active = true,
+  embedded = false
 }: {
   sessions: BookingItem[];
   sport: 'PADEL' | 'TENNIS';
   selected: SelectedBallboy[];
   onSelect: (session: BookingItem, ballboy: SelectedBallboy | null) => void;
   disabled?: boolean;
+  active?: boolean;
+  embedded?: boolean;
 }) {
   const { branchId } = useAdminCourtSports();
   const people = useQuery({
     queryKey: ['admin', 'coaching', branchId, 'booking-catalog'],
     queryFn: coachingApi.list,
-    enabled: !!branchId
+    staleTime: 60000,
+    retry: 1,
+    enabled: !!branchId && branchId !== 'all' && (active || selected.length > 0)
+  });
+  const [sessionId, setSessionId] = useState('');
+  const currentSession = sessions.find((session) => session.slotId === sessionId) ?? sessions[0];
+  const ranges = [
+    ...new Map(sessions.map((session) => [`${session.date}|${session.timeSlot}`, session])).values()
+  ];
+  useQueries({
+    queries: ranges.map((session) =>
+      ballboyAvailabilityOptions(branchId, session, sport, active || selected.length > 0)
+    )
   });
   const ballboys = (people.data ?? []).filter(
     (person) => person.role === 'BALLBOY' && serviceMatchesSport('BALLBOY', person.coachType, sport)
   );
   return (
-    <section aria-label="Pilihan ballboy" className="space-y-4 rounded-xl border p-4 sm:p-5">
+    <section
+      aria-label="Pilihan ballboy"
+      className={embedded ? 'space-y-4' : 'space-y-4 rounded-2xl border p-4 sm:p-5'}
+    >
       <div>
-        <h3 className="font-semibold">Pilih ballboy (opsional)</h3>
+        <h3 className="font-semibold">Ballboy</h3>
         <p className="text-muted-foreground mt-1 text-sm">
-          Pilih ballboy sesuai olahraga, lapangan, dan jam bermain. Ballboy yang tidak tersedia
-          tidak dapat dipilih.
+          Pilih satu ballboy untuk setiap lapangan dan jam bermain. Harga ditampilkan per jam.
         </p>
       </div>
+      <BookingServiceSessionPicker
+        value={currentSession?.slotId ?? ''}
+        onChange={setSessionId}
+        disabled={disabled}
+        sessions={sessions.map((session) => ({
+          ...session,
+          id: session.slotId,
+          selected: selected.some((ballboy) => ballboy.courtSlotId === session.slotId)
+        }))}
+      />
       {!branchId ? (
         <p className="text-sm">Pilih satu cabang terlebih dahulu.</p>
       ) : people.isError ? (
@@ -51,9 +82,9 @@ export default function BookingBallboySelection({
           </button>
         </p>
       ) : people.isPending ? (
-        <p>Memuat ballboy...</p>
+        <BookingServiceLoading label="Memuat ballboy..." />
       ) : (
-        sessions.map((session) => (
+        (currentSession ? [currentSession] : []).map((session) => (
           <BallboySession
             key={session.slotId}
             session={session}
@@ -63,6 +94,7 @@ export default function BookingBallboySelection({
             selected={selected}
             onSelect={(ballboy) => onSelect(session, ballboy)}
             disabled={disabled}
+            active={active || selected.length > 0}
           />
         ))
       )}
@@ -76,7 +108,8 @@ function BallboySession({
   people,
   selected,
   onSelect,
-  disabled
+  disabled,
+  active
 }: {
   session: BookingItem;
   sport: 'PADEL' | 'TENNIS';
@@ -85,22 +118,10 @@ function BallboySession({
   selected: SelectedBallboy[];
   onSelect: (ballboy: SelectedBallboy | null) => void;
   disabled?: boolean;
+  active?: boolean;
 }) {
-  const [start, end] = session.timeSlot.split(' - ');
-  const startAt = session.startAt ?? `${session.date}T${start}:00`;
-  const endDate =
-    end <= start ? dayjs(session.date).add(1, 'day').format('YYYY-MM-DD') : session.date;
-  const endAt = session.endAt ?? `${endDate}T${end}:00`;
-  const availability = useQuery({
-    queryKey: ['admin', 'booking-ballboys', branchId, startAt, endAt, sport],
-    queryFn: async () =>
-      (
-        await adminApi.get('/ballboy/availability', {
-          params: { startAt, endAt, courtSport: sport }
-        })
-      ).data.data as BallboyAvailability[],
-    refetchInterval: 10000
-  });
+  const { startAt, endAt } = serviceSessionRange(session);
+  const availability = useQuery(ballboyAvailabilityOptions(branchId, session, sport, active));
   const wall = (value: string) => value.slice(0, 16).replace(' ', 'T');
   const options = (availability.data ?? []).filter(
     (option) => wall(option.startAt) === wall(startAt) && wall(option.endAt) === wall(endAt)
@@ -121,15 +142,15 @@ function BallboySession({
         )
       : undefined;
   return (
-    <div className="space-y-3 border-t pt-4">
+    <div className="bg-muted/10 space-y-3 rounded-xl border p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm font-semibold">
-          {session.courtName} · {session.date} · {session.timeSlot}
+          {session.courtName} · {serviceSessionDate(session.date)} · {session.timeSlot}
         </p>
         <Button
           type="button"
           size="sm"
-          variant={current ? 'outline' : 'default'}
+          variant={current ? 'outline' : 'secondary'}
           disabled={disabled}
           onClick={() => onSelect(null)}
         >
@@ -146,7 +167,7 @@ function BallboySession({
               aria-label={`Pilih ballboy ${person.name} untuk ${session.courtName} ${session.timeSlot}`}
               disabled={disabled || !option}
               aria-pressed={current?.ballboyId === person.id}
-              className="aria-pressed:border-primary flex min-h-20 items-center justify-between gap-3 rounded-lg border p-3 text-left disabled:cursor-not-allowed disabled:opacity-50"
+              className="bg-background aria-pressed:border-primary aria-pressed:bg-primary/5 flex min-h-18 items-center justify-between gap-3 rounded-lg border p-3 text-left disabled:cursor-not-allowed disabled:opacity-50"
               onClick={() => {
                 if (option)
                   onSelect({
@@ -174,7 +195,13 @@ function BallboySession({
                 )}
               </span>
               <Badge variant={option ? 'lightSuccess' : 'lightNeutral'}>
-                {!person.isActive ? 'Nonaktif' : option ? 'Tersedia' : 'Tidak tersedia'}
+                {!person.isActive
+                  ? 'Nonaktif'
+                  : current?.ballboyId === person.id
+                    ? 'Dipilih'
+                    : option
+                      ? 'Tersedia'
+                      : 'Tidak tersedia'}
               </Badge>
             </button>
           );

@@ -1,10 +1,10 @@
 'use client';
 import { useState } from 'react';
-import dayjs from 'dayjs';
+import BookingServiceSessionPicker, { serviceSessionDate } from './BookingServiceSessionPicker';
+import { useAdminCourtSports } from '@/hooks/useAdminCourtSports';
+import { coachAvailabilityOptions } from '@/queries/admin/bookingService';
 import { useQuery } from '@tanstack/react-query';
-import { adminApi } from '@/lib/adminApi';
 import { formatCurrency } from '@/lib/utils';
-import type { CoachAvailability } from '@/types/model';
 import type { BookingItem } from '@/stores/useBookingStore';
 import type { InHouseChoice, InHouseWallet, InHousePlan } from '@/api/admin/inhouseCoaching';
 import { Button } from '@/components/ui/button';
@@ -26,7 +26,9 @@ export default function BookingInHouseSelection({
   sessions,
   selected,
   onChange,
-  disabled
+  disabled,
+  active = true,
+  embedded = false
 }: {
   wallets: InHouseWallet[];
   plans?: InHousePlan[];
@@ -34,18 +36,34 @@ export default function BookingInHouseSelection({
   selected: InHouseChoice[];
   onChange: (session: BookingItem, choice: InHouseChoice | null) => void;
   disabled?: boolean;
+  active?: boolean;
+  embedded?: boolean;
 }) {
+  const [sessionId, setSessionId] = useState('');
+  const currentSession = sessions.find((session) => session.slotId === sessionId) ?? sessions[0];
   if (!wallets.length && !plans.length) return null;
   return (
-    <section aria-label="Paket coach in-house" className="space-y-4 rounded-xl border p-4 sm:p-5">
+    <section
+      aria-label="Paket coach in-house"
+      className={embedded ? 'space-y-4' : 'space-y-4 rounded-2xl border p-4 sm:p-5'}
+    >
       <div>
-        <h3 className="font-semibold">Coach in-house (opsional)</h3>
+        <h3 className="font-semibold">Coach In-house</h3>
         <p className="text-muted-foreground mt-1 text-sm">
-          Pilih coaching satuan atau kuota paket customer untuk setiap jam. Tarif satuan 1 jam
-          dikalikan jumlah jam yang dipilih dan sudah mencakup lapangan.
+          Pilih coaching satuan atau gunakan kuota customer untuk jam bermain yang dipilih.
         </p>
       </div>
-      {sessions.map((session) => (
+      <BookingServiceSessionPicker
+        value={currentSession?.slotId ?? ''}
+        onChange={setSessionId}
+        disabled={disabled}
+        sessions={sessions.map((session) => ({
+          ...session,
+          id: session.slotId,
+          selected: selected.some((choice) => choice.courtSlotId === session.slotId)
+        }))}
+      />
+      {(currentSession ? [currentSession] : []).map((session) => (
         <InHouseSession
           key={session.slotId}
           session={session}
@@ -54,6 +72,7 @@ export default function BookingInHouseSelection({
           selected={selected}
           onChange={onChange}
           disabled={disabled}
+          active={active}
         />
       ))}
     </section>
@@ -65,7 +84,8 @@ function InHouseSession({
   plans,
   selected,
   onChange,
-  disabled
+  disabled,
+  active
 }: {
   session: BookingItem;
   wallets: InHouseWallet[];
@@ -73,6 +93,7 @@ function InHouseSession({
   selected: InHouseChoice[];
   onChange: (session: BookingItem, choice: InHouseChoice | null) => void;
   disabled?: boolean;
+  active?: boolean;
 }) {
   const choice = selected.find((s) => s.courtSlotId === session.slotId);
   const [walletId, setWalletId] = useState(
@@ -82,19 +103,18 @@ function InHouseSession({
   const plan = plans.find((p) => `plan:${p.id}` === walletId);
   const wallet = wallets.find((w) => w.id === walletId) ?? plan;
   const prepaid = !plan;
-  const start = session.startAt ?? `${session.date} ${session.timeSlot.slice(0, 5)}:00`;
-  const end = session.endAt ?? dayjs(start).add(1, 'hour').format('YYYY-MM-DD HH:mm:ss');
-  const available = useQuery({
-    queryKey: ['admin', 'inhouse', 'availability', wallet?.staffId, session.slotId, start, end],
-    queryFn: async () =>
-      (
-        await adminApi.get('/coach/availability', {
-          params: { startAt: start, endAt: end, courtSport: session.sport ?? 'PADEL' }
-        })
-      ).data.data as CoachAvailability[],
-    enabled: !!wallet && !disabled
-  });
-  const coachSlot = available.data?.find((c) => c.coach.id === wallet?.staffId);
+  const { branchId } = useAdminCourtSports();
+  const available = useQuery(
+    coachAvailabilityOptions(
+      branchId,
+      session,
+      session.sport ?? 'PADEL',
+      !!wallet && (active || !!choice) && !disabled
+    )
+  );
+  const coachSlot = !available.isError
+    ? available.data?.find((c) => c.coach.id === wallet?.staffId)
+    : undefined;
   const coachAlreadySelected =
     !!coachSlot?.slotId &&
     selected.some(
@@ -106,10 +126,10 @@ function InHouseSession({
     !!wallet &&
     (!prepaid || ('remainingMinutes' in wallet && wallet.remainingMinutes - usedMinutes >= 60));
   return (
-    <div className="rounded-lg border p-4">
+    <div className="bg-muted/10 rounded-xl border p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-medium">
-          {session.courtName} · {session.date} · {session.timeSlot}
+          {session.courtName} · {serviceSessionDate(session.date)} · {session.timeSlot}
         </p>
         {choice && (
           <span className="text-primary text-xs font-medium">
@@ -117,12 +137,13 @@ function InHouseSession({
           </span>
         )}
       </div>
-      <div className="grid items-end gap-3 sm:grid-cols-[minmax(0,1fr)_100px_auto]">
-        <div className="grid min-w-0 gap-3">
+      <div className="grid items-end gap-3 sm:grid-cols-[minmax(0,1fr)_88px]">
+        <div className="grid min-w-0 gap-2">
           <Label htmlFor={`wallet-${session.slotId}`}>
             {plans.length ? 'Coaching satuan / paket' : 'Paket customer'}
           </Label>
           <SearchableSelect
+            className="bg-background h-11"
             id={`wallet-${session.slotId}`}
             disabled={disabled}
             value={walletId}
@@ -137,7 +158,7 @@ function InHouseSession({
               ...plans.map((plan) => ({
                 value: `plan:${plan.id}`,
                 label: `${plan.staff.name} · Coaching satuan`,
-                description: `${formatCurrency(plan.hourlyPrice)}/jam · termasuk lapangan`
+                description: `${formatCurrency(plan.hourlyPrice)}/jam · tarif dasar`
               })),
               ...wallets.map((wallet) => ({
                 value: wallet.id,
@@ -147,10 +168,11 @@ function InHouseSession({
             ]}
           />
         </div>
-        <div className="grid min-w-0 gap-3">
+        <div className="grid min-w-0 gap-2">
           <Label htmlFor={`participants-${session.slotId}`}>Peserta</Label>
           <Input
             id={`participants-${session.slotId}`}
+            className="bg-background h-11"
             type="number"
             min={1}
             max={100}
@@ -165,42 +187,45 @@ function InHouseSession({
             }}
           />
         </div>
-        {choice ? (
-          <Button variant="outline" disabled={disabled} onClick={() => onChange(session, null)}>
-            Batal gunakan
-          </Button>
-        ) : (
-          <Button
-            disabled={
-              disabled ||
-              !coachSlot?.slotId ||
-              coachAlreadySelected ||
-              !hasQuota ||
-              participants < 1 ||
-              participants > 100 ||
-              !Number.isInteger(participants) ||
-              available.isFetching
-            }
-            onClick={() => {
-              if (wallet && coachSlot?.slotId)
-                onChange(session, {
-                  ...(plan ? { planId: plan.id } : { walletId: wallet.id }),
-                  courtSlotId: session.slotId,
-                  coachSlotId: coachSlot.slotId,
-                  participants
-                });
-            }}
-          >
-            {plan ? 'Pilih coaching satuan' : 'Gunakan paket'}
-          </Button>
-        )}
+        <div className="flex justify-end sm:col-span-2">
+          {choice ? (
+            <Button variant="outline" disabled={disabled} onClick={() => onChange(session, null)}>
+              Batal gunakan
+            </Button>
+          ) : (
+            <Button
+              disabled={
+                disabled ||
+                !coachSlot?.slotId ||
+                coachAlreadySelected ||
+                !hasQuota ||
+                participants < 1 ||
+                participants > 100 ||
+                !Number.isInteger(participants) ||
+                available.isPending
+              }
+              onClick={() => {
+                if (wallet && coachSlot?.slotId)
+                  onChange(session, {
+                    ...(plan ? { planId: plan.id } : { walletId: wallet.id }),
+                    courtSlotId: session.slotId,
+                    coachSlotId: coachSlot.slotId,
+                    participants
+                  });
+              }}
+            >
+              {plan ? 'Pilih coaching satuan' : 'Gunakan paket'}
+            </Button>
+          )}
+        </div>
       </div>
       {wallet && (
-        <div className="text-muted-foreground mt-3 space-y-1 text-xs">
+        <div className="text-muted-foreground mt-4 space-y-2 border-t pt-3 text-xs leading-relaxed">
           <p>
             {plan
               ? `Coaching satuan ${formatCurrency(plan.hourlyPrice)}/jam, termasuk lapangan ${formatCurrency(plan.courtHourlyShare)}. `
               : `Harga lapangan paket ${formatCurrency(wallet.courtHourlyShare)}/jam · sudah dibayar. `}
+            Biaya lapangan akhir mengikuti aturan tarif pada tanggal bermain dan ringkasan booking.
             Tambahan peserta:{' '}
             {formatCurrency(Math.max(0, participants - 1) * wallet.extraParticipantHourlyPrice)}.
           </p>
@@ -216,7 +241,7 @@ function InHouseSession({
                   Coba lagi
                 </button>
               </p>
-            ) : available.isFetching ? (
+            ) : available.isPending ? (
               <p>Memeriksa jadwal coach…</p>
             ) : !coachSlot ? (
               <p>Coach paket tidak tersedia pada jam ini.</p>

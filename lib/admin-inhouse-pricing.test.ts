@@ -1,3 +1,4 @@
+import type { TariffRule } from './tariff-period';
 import { expect, it } from 'vitest';
 import { adminInHousePricing } from './admin-inhouse-pricing';
 import type { InHousePlan, InHouseWallet, InHouseChoice } from '@/api/admin/inhouseCoaching';
@@ -54,4 +55,62 @@ it('ignores choices for removed court slots', () => {
     singleTotal: 0,
     extras: 0
   });
+});
+
+const rule = {
+  id: 'rule',
+  branchId: 'cemara',
+  sport: 'PADEL',
+  effectiveFrom: '2030-01-01',
+  happyStart: 6,
+  happyEnd: 15,
+  peakStart: 15,
+  peakEnd: 24,
+  happyInHouseCoachDiscount: 20000,
+  peakInHouseCoachDiscount: 10000,
+  happyCoachDiscount: 999999
+} as TariffRule;
+const datedCourts = courts.map((court) => ({
+  ...court,
+  date: '2040-11-03',
+  timeSlot: '10:00 - 11:00',
+  sport: 'PADEL' as const
+}));
+it.each([0, 20000, 500000])('matches prepaid top-up pricing for discount %s', (discount) => {
+  const choices = direct(1)
+    .slice(0, 1)
+    .map(({ planId: _, ...choice }) => ({ ...choice, walletId: 'wallet' }));
+  const result = adminInHousePricing(
+    datedCourts,
+    choices,
+    [],
+    [wallet],
+    [{ ...rule, happyInHouseCoachDiscount: discount }]
+  );
+  expect(result.coverage).toBe(300000 - Math.max(0, 300000 - discount - 250000));
+});
+it('adds only the coach share for direct coaching and caps the court discount', () => {
+  const result = adminInHousePricing(datedCourts, direct(1).slice(0, 1), [plan], [], [rule]);
+  expect(result).toEqual({ coverage: 20000, singleTotal: 750000, extras: 0 });
+  expect(
+    adminInHousePricing(
+      datedCourts,
+      direct(1).slice(0, 1),
+      [plan],
+      [],
+      [{ ...rule, happyInHouseCoachDiscount: 500000 }]
+    ).coverage
+  ).toBe(300000);
+});
+it('uses Peak Hour and weekend overrides without applying future rules early', () => {
+  const choices = direct(1).slice(0, 1);
+  const evening = [{ ...datedCourts[0], timeSlot: '18:00 - 19:00' }];
+  expect(adminInHousePricing(evening, choices, [plan], [], [rule]).coverage).toBe(10000);
+  expect(
+    adminInHousePricing(evening, choices, [plan], [], [{ ...rule, happyAllDayDays: [6] }]).coverage
+  ).toBe(20000);
+  expect(
+    adminInHousePricing(evening, choices, [plan], [], [{ ...rule, effectiveFrom: '2041-01-01' }])
+      .singleTotal
+  ).toBe(1000000);
 });
