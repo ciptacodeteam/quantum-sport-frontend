@@ -1,4 +1,6 @@
 'use client';
+import { Search, UserRound, WalletCards, Package, History, CreditCard } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { useState } from 'react';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import Link from 'next/link';
@@ -26,6 +28,9 @@ import {
   DialogFooter
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+const fieldClass = 'h-11 rounded-md border-0 bg-background px-3 shadow-none';
+const buttonClass = 'rounded-md border-0 shadow-none';
+const panelClass = 'min-w-0 gap-5 rounded-md border-0 bg-muted/20 py-5 shadow-none';
 const emptyPlan = (): Omit<InHousePlan, 'id' | 'staff'> => ({
   staffId: '',
   name: '',
@@ -115,14 +120,14 @@ export default function InHouseCoaching() {
   const selectedPlan = plans.data?.find((p) => p.id === packageId);
   if (!hasAccess) return null;
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       <Dialog
         open={!!deleting}
         onOpenChange={(open) => {
           if (!open && !remove.isPending) setDeleting(null);
         }}
       >
-        <DialogContent>
+        <DialogContent className="rounded-md">
           <DialogHeader>
             <DialogTitle>Hapus paket coaching?</DialogTitle>
             <DialogDescription>
@@ -133,10 +138,16 @@ export default function InHouseCoaching() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" disabled={remove.isPending} onClick={() => setDeleting(null)}>
+            <Button
+              className={buttonClass}
+              variant="secondary"
+              disabled={remove.isPending}
+              onClick={() => setDeleting(null)}
+            >
               Batal
             </Button>
             <Button
+              className={buttonClass}
               variant="destructive"
               disabled={remove.isPending}
               onClick={() => deleting && remove.mutate(deleting.id)}
@@ -147,6 +158,7 @@ export default function InHouseCoaching() {
         </DialogContent>
       </Dialog>
       <AppSectionHeader
+        className="mb-0 pb-0"
         title="Coaching In-house"
         description="Paket per coach, kuota customer, dan pembagian pemakaian coaching."
       />
@@ -154,17 +166,25 @@ export default function InHouseCoaching() {
         <p>Pilih satu cabang terlebih dahulu.</p>
       ) : (
         <>
-          <nav aria-label="Menu coaching in-house" className="flex flex-wrap gap-2">
-            {[
-              ['quota', 'Kuota Customer'],
-              ['plans', 'Paket & Tarif'],
-              ['usage', 'Riwayat & Pembagian']
-            ].map(([value, label]) => (
+          <nav
+            aria-label="Menu coaching in-house"
+            className="bg-muted/35 flex w-fit max-w-full flex-wrap gap-1 rounded-md p-1"
+          >
+            {(
+              [
+                ['quota', 'Kuota Customer', WalletCards],
+                ['plans', 'Paket & Tarif', Package],
+                ['usage', 'Riwayat & Pembagian', History]
+              ] as const
+            ).map(([value, label, Icon]) => (
               <Button
                 key={value}
-                variant={tab === value ? 'default' : 'outline'}
+                variant="ghost"
+                aria-pressed={tab === value}
+                className={`h-9 rounded-sm border-0 px-3 text-xs shadow-none transition-colors duration-200 sm:text-sm ${tab === value ? 'bg-primary/5 text-primary hover:bg-primary/10' : 'text-muted-foreground hover:bg-muted/40'}`}
                 onClick={() => setTab(value)}
               >
+                <Icon className="size-4 shrink-0" />
                 {label}
               </Button>
             ))}
@@ -173,6 +193,7 @@ export default function InHouseCoaching() {
             <div role="alert" className="rounded border p-4">
               Data coaching belum dapat dimuat.{' '}
               <Button
+                className={buttonClass}
                 variant="outline"
                 onClick={() => {
                   void plans.refetch();
@@ -185,10 +206,12 @@ export default function InHouseCoaching() {
             </div>
           )}
           {tab === 'plans' ? (
-            <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_520px] 2xl:grid-cols-[minmax(0,1fr)_560px]">
-              <Card className="min-w-0 gap-6 py-6 sm:py-8">
-                <CardHeader className="gap-3 px-6 sm:px-8">
-                  <CardTitle>Tarif per coach</CardTitle>
+            <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_380px] 2xl:grid-cols-[minmax(0,1fr)_420px]">
+              <Card className={panelClass}>
+                <CardHeader className="gap-2 px-5">
+                  <CardTitle className="flex items-center gap-2 text-sm leading-snug font-semibold">
+                    Tarif per coach
+                  </CardTitle>
                   {canEdit && (
                     <Link
                       href="/admin/coach-inhouse"
@@ -198,7 +221,7 @@ export default function InHouseCoaching() {
                     </Link>
                   )}
                 </CardHeader>
-                <CardContent className="space-y-5 px-6 sm:px-8">
+                <CardContent className="space-y-3 px-5">
                   {plans.isPending ? (
                     <p>Memuat paket…</p>
                   ) : !plans.data?.length ? (
@@ -207,7 +230,7 @@ export default function InHouseCoaching() {
                     </p>
                   ) : (
                     plans.data.map((plan) => (
-                      <div key={plan.id} className="rounded-xl border p-5">
+                      <div key={plan.id} className="bg-background space-y-1 rounded-md p-4">
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div>
                             <p className="font-semibold">
@@ -219,6 +242,7 @@ export default function InHouseCoaching() {
                           </div>
                           {canEdit && (
                             <Button
+                              className={buttonClass}
                               variant="outline"
                               size="sm"
                               onClick={() => {
@@ -238,7 +262,7 @@ export default function InHouseCoaching() {
                             </Button>
                           )}
                         </div>
-                        <dl className="mt-5 grid gap-5 text-sm sm:grid-cols-3 [&>div]:space-y-2">
+                        <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-3 [&>div]:space-y-1">
                           <div>
                             <dt className="text-muted-foreground">Harga / jam</dt>
                             <dd>{formatCurrency(plan.hourlyPrice)}</dd>
@@ -252,7 +276,7 @@ export default function InHouseCoaching() {
                             <dd>{formatCurrency(plan.hourlyPrice - plan.courtHourlyShare)}</dd>
                           </div>
                         </dl>
-                        <p className="text-muted-foreground mt-5 border-t pt-4 text-xs leading-relaxed">
+                        <p className="text-muted-foreground mt-4 text-xs leading-relaxed">
                           Total {formatCurrency(plan.hourlyPrice * plan.hours)} · Tambahan peserta
                           Rp100.000/orang/jam untuk coach.
                         </p>
@@ -262,21 +286,24 @@ export default function InHouseCoaching() {
                 </CardContent>
               </Card>
               {canEdit && (
-                <Card className="min-w-0 gap-6 py-6 sm:py-8">
-                  <CardHeader className="gap-3 px-6 sm:px-8">
-                    <CardTitle>{editing ? 'Edit paket' : 'Tambah paket'}</CardTitle>
+                <Card className={`${panelClass} xl:sticky xl:top-6`}>
+                  <CardHeader className="gap-2 px-5">
+                    <CardTitle className="flex items-center gap-2 text-sm leading-snug font-semibold">
+                      {editing ? 'Edit paket' : 'Tambah paket'}
+                    </CardTitle>
                   </CardHeader>
-                  <CardContent className="px-6 sm:px-8">
+                  <CardContent className="px-5">
                     <form
-                      className="space-y-6"
+                      className="space-y-5"
                       onSubmit={(e) => {
                         e.preventDefault();
                         save.mutate();
                       }}
                     >
-                      <div className="grid min-w-0 gap-3">
+                      <div className="grid min-w-0 gap-2">
                         <Label htmlFor="plan-coach">Coach in-house</Label>
                         <SearchableSelect
+                          className={fieldClass}
                           id="plan-coach"
                           required
                           disabled={!!editing || people.isPending}
@@ -295,11 +322,11 @@ export default function InHouseCoaching() {
                             .map((person) => ({ value: person.id, label: person.name }))}
                         />
                       </div>
-                      <div className="grid min-w-0 gap-3">
+                      <div className="grid min-w-0 gap-2">
                         <Label htmlFor="plan-name">Nama paket</Label>
                         <Input
                           id="plan-name"
-                          className="h-12 rounded-lg px-4"
+                          className={fieldClass}
                           required
                           maxLength={100}
                           value={draft.name}
@@ -307,9 +334,10 @@ export default function InHouseCoaching() {
                           placeholder="Paket 5 jam"
                         />
                       </div>
-                      <div className="grid min-w-0 gap-3">
+                      <div className="grid min-w-0 gap-2">
                         <Label htmlFor="plan-hours">Kuota jam</Label>
                         <SearchableSelect
+                          className={fieldClass}
                           id="plan-hours"
                           searchable={false}
                           value={String(draft.hours)}
@@ -322,11 +350,11 @@ export default function InHouseCoaching() {
                           }))}
                         />
                       </div>
-                      <div className="grid min-w-0 gap-3">
+                      <div className="grid min-w-0 gap-2">
                         <Label htmlFor="plan-price">Harga per jam (Rp)</Label>
                         <Input
                           id="plan-price"
-                          className="h-12 rounded-lg px-4"
+                          className={fieldClass}
                           required
                           type="number"
                           inputMode="numeric"
@@ -338,11 +366,11 @@ export default function InHouseCoaching() {
                           }
                         />
                       </div>
-                      <div className="grid min-w-0 gap-3">
+                      <div className="grid min-w-0 gap-2">
                         <Label htmlFor="plan-court">Bagian lapangan per jam (Rp)</Label>
                         <Input
                           id="plan-court"
-                          className="h-12 rounded-lg px-4"
+                          className={fieldClass}
                           required
                           type="number"
                           inputMode="numeric"
@@ -360,7 +388,7 @@ export default function InHouseCoaching() {
                           }
                         />
                       </div>
-                      <p className="text-muted-foreground bg-muted/30 rounded-lg p-4 text-sm leading-relaxed">
+                      <p className="text-muted-foreground bg-background/60 rounded-md p-3 text-xs leading-relaxed">
                         Kuota terikat pada coach. Perubahan tarif berlaku untuk pembelian
                         berikutnya.
                       </p>
@@ -376,7 +404,7 @@ export default function InHouseCoaching() {
                       <div className="flex flex-wrap gap-3 border-t pt-5">
                         <Button
                           type="submit"
-                          className="h-12 w-full px-6 sm:w-auto"
+                          className="h-10 w-full rounded-md border-0 px-4 shadow-none sm:w-auto"
                           disabled={save.isPending || !draft.staffId}
                         >
                           Simpan paket
@@ -385,7 +413,7 @@ export default function InHouseCoaching() {
                           <Button
                             type="button"
                             variant="ghost"
-                            className="h-12 px-6"
+                            className="h-10 rounded-md border-0 px-4 shadow-none"
                             onClick={() => {
                               setEditing(undefined);
                               setDraft(emptyPlan());
@@ -402,138 +430,178 @@ export default function InHouseCoaching() {
             </div>
           ) : (
             <>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Customer</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Label htmlFor="inhouse-search">Cari nama atau nomor WhatsApp</Label>
-                  <Input
-                    id="inhouse-search"
-                    value={q}
-                    onChange={(e) => setQ(e.target.value)}
-                    placeholder="Ketik minimal 2 karakter"
-                  />
-                  {customers.isError && <p role="alert">Pencarian customer belum berhasil.</p>}
-                  {q.length >= 2 && (
-                    <div className="flex flex-wrap gap-2">
-                      {customers.data?.map((c) => (
-                        <Button
-                          key={c.id}
-                          variant={c.id === userId ? 'default' : 'outline'}
-                          onClick={() => {
-                            setUserId(c.id);
-                            setCustomerLabel(`${c.name} · ${c.phone}`);
-                            setRequestId(crypto.randomUUID());
-                          }}
-                        >
-                          {c.name} · {c.phone}
-                        </Button>
-                      ))}
-                    </div>
-                  )}
-                  {userId && (
-                    <p className="text-sm font-medium">Customer terpilih: {customerLabel}</p>
-                  )}
-                  {userId && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setUserId('');
-                        setRequestId(crypto.randomUUID());
-                      }}
-                    >
-                      Tampilkan semua customer
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-              {tab === 'quota' && canSell && (
-                <Card className="gap-6 py-6">
-                  <CardHeader className="px-6 sm:px-8">
-                    <CardTitle>Jual paket coaching</CardTitle>
+              <div
+                className={
+                  tab === 'quota' && canSell
+                    ? 'grid min-w-0 items-stretch gap-5 xl:grid-cols-[320px_minmax(0,1fr)]'
+                    : 'max-w-2xl'
+                }
+              >
+                <Card className={panelClass}>
+                  <CardHeader className="gap-2 px-5">
+                    <CardTitle className="flex items-center gap-2 text-sm leading-snug font-semibold">
+                      <UserRound className="text-muted-foreground size-4" />
+                      Customer
+                    </CardTitle>
+                    <p className="text-muted-foreground text-xs leading-relaxed">
+                      Pilih customer untuk melihat kuota atau menambahkan paket.
+                    </p>
                   </CardHeader>
-                  <CardContent className="px-6 sm:px-8">
-                    <form
-                      className="space-y-6"
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        sell.mutate();
-                      }}
-                    >
-                      <div className="grid gap-6 md:grid-cols-2">
-                        <div className="grid min-w-0 gap-3">
-                          <Label htmlFor="sale-package">Paket coach</Label>
-                          <SearchableSelect
-                            id="sale-package"
-                            required
-                            value={packageId}
-                            onValueChange={(id) => {
-                              setPackageId(id);
+                  <CardContent className="space-y-3 px-5">
+                    <Label htmlFor="inhouse-search">Cari nama atau nomor WhatsApp</Label>
+                    <div className="relative">
+                      <Search className="text-muted-foreground pointer-events-none absolute top-3.5 left-3 size-4" />
+                      <Input
+                        className={`${fieldClass} pl-10`}
+                        id="inhouse-search"
+                        value={q}
+                        onChange={(e) => setQ(e.target.value)}
+                        placeholder="Ketik minimal 2 karakter"
+                      />
+                    </div>
+                    {customers.isError && <p role="alert">Pencarian customer belum berhasil.</p>}
+                    {q.length >= 2 && (
+                      <div className="flex max-h-56 flex-col gap-1 overflow-y-auto">
+                        {customers.data?.map((c) => (
+                          <Button
+                            key={c.id}
+                            variant="ghost"
+                            aria-pressed={c.id === userId}
+                            className={`h-auto justify-start rounded-md border-0 p-3 text-left text-sm whitespace-normal shadow-none ${c.id === userId ? 'bg-primary/5 text-primary' : 'bg-background/60'}`}
+                            onClick={() => {
+                              setUserId(c.id);
+                              setCustomerLabel(`${c.name} · ${c.phone}`);
                               setRequestId(crypto.randomUUID());
                             }}
-                            placeholder="Pilih paket"
-                            searchPlaceholder="Cari coach atau paket..."
-                            emptyMessage="Paket tidak ditemukan."
-                            options={(plans.data ?? [])
-                              .filter((plan) => plan.isActive && plan.staff.isActive)
-                              .map((plan) => ({
-                                value: plan.id,
-                                label: `${plan.staff.name} · ${plan.name}`,
-                                description: `${plan.hours} jam · ${formatCurrency(plan.hours * plan.hourlyPrice)}`
-                              }))}
-                          />
-                        </div>
-                        <div className="grid min-w-0 gap-3">
-                          <Label htmlFor="sale-method">Pembayaran diterima melalui</Label>
-                          <SearchableSelect
-                            id="sale-method"
-                            required
-                            value={methodId}
-                            onValueChange={(id) => {
-                              setMethodId(id);
-                              setRequestId(crypto.randomUUID());
-                            }}
-                            placeholder="Pilih metode offline"
-                            searchPlaceholder="Cari metode pembayaran..."
-                            emptyMessage="Metode offline tidak ditemukan."
-                            options={(methods.data ?? [])
-                              .filter(isOfflinePaymentMethod)
-                              .map((method) => ({ value: method.id, label: method.name }))}
-                          />
-                        </div>
+                          >
+                            {c.name} · {c.phone}
+                          </Button>
+                        ))}
                       </div>
-                      <div className="flex flex-col gap-4 border-t pt-5 sm:flex-row sm:items-center sm:justify-between">
-                        <p className="text-muted-foreground text-sm leading-relaxed">
-                          {!userId
-                            ? 'Pilih customer dari hasil pencarian terlebih dahulu.'
-                            : selectedPlan
-                              ? `Total pembayaran ${formatCurrency(selectedPlan.hours * selectedPlan.hourlyPrice)} untuk ${selectedPlan.hours} jam bersama ${selectedPlan.staff.name}.`
-                              : 'Kuota dapat digunakan di hari berbeda, khusus coach yang dibeli.'}
-                        </p>
-                        <Button
-                          type="submit"
-                          className="h-12 w-full shrink-0 px-6 sm:w-auto"
-                          disabled={!userId || !packageId || !methodId || sell.isPending}
-                        >
-                          Terima pembayaran & tambah kuota
-                        </Button>
-                      </div>
-                    </form>
+                    )}
+                    {userId && (
+                      <p className="text-primary bg-primary/5 rounded-md p-3 text-xs leading-relaxed font-medium">
+                        Customer terpilih: {customerLabel}
+                      </p>
+                    )}
+                    {userId && (
+                      <Button
+                        className={buttonClass}
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setUserId('');
+                          setRequestId(crypto.randomUUID());
+                        }}
+                      >
+                        Tampilkan semua customer
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
-              )}
-              <Card>
-                <CardHeader>
-                  <CardTitle>
+                {tab === 'quota' && canSell && (
+                  <Card className={panelClass}>
+                    <CardHeader className="gap-2 px-5">
+                      <CardTitle className="flex items-center gap-2 text-sm leading-snug font-semibold">
+                        <CreditCard className="text-muted-foreground size-4" />
+                        Jual paket coaching
+                      </CardTitle>
+                      <p className="text-muted-foreground text-xs leading-relaxed">
+                        Pilih paket dan metode pembayaran yang sudah diterima.
+                      </p>
+                    </CardHeader>
+                    <CardContent className="px-5">
+                      <form
+                        className="space-y-5"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          sell.mutate();
+                        }}
+                      >
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <div className="grid min-w-0 gap-2">
+                            <Label htmlFor="sale-package">Paket coach</Label>
+                            <SearchableSelect
+                              className={fieldClass}
+                              id="sale-package"
+                              required
+                              value={packageId}
+                              onValueChange={(id) => {
+                                setPackageId(id);
+                                setRequestId(crypto.randomUUID());
+                              }}
+                              placeholder="Pilih paket"
+                              searchPlaceholder="Cari coach atau paket..."
+                              emptyMessage="Paket tidak ditemukan."
+                              options={(plans.data ?? [])
+                                .filter((plan) => plan.isActive && plan.staff.isActive)
+                                .map((plan) => ({
+                                  value: plan.id,
+                                  label: `${plan.staff.name} · ${plan.name}`,
+                                  description: `${plan.hours} jam · ${formatCurrency(plan.hours * plan.hourlyPrice)}`
+                                }))}
+                            />
+                          </div>
+                          <div className="grid min-w-0 gap-2">
+                            <Label htmlFor="sale-method">Pembayaran diterima melalui</Label>
+                            <SearchableSelect
+                              className={fieldClass}
+                              id="sale-method"
+                              required
+                              value={methodId}
+                              onValueChange={(id) => {
+                                setMethodId(id);
+                                setRequestId(crypto.randomUUID());
+                              }}
+                              placeholder="Pilih metode offline"
+                              searchPlaceholder="Cari metode pembayaran..."
+                              emptyMessage="Metode offline tidak ditemukan."
+                              options={(methods.data ?? [])
+                                .filter(isOfflinePaymentMethod)
+                                .map((method) => ({ value: method.id, label: method.name }))}
+                            />
+                          </div>
+                        </div>
+                        <div className="bg-background/60 flex flex-col gap-4 rounded-md p-4 sm:flex-row sm:items-center sm:justify-between">
+                          <p className="text-muted-foreground text-sm leading-relaxed">
+                            {!userId
+                              ? 'Pilih customer dari hasil pencarian terlebih dahulu.'
+                              : selectedPlan
+                                ? `Total pembayaran ${formatCurrency(selectedPlan.hours * selectedPlan.hourlyPrice)} untuk ${selectedPlan.hours} jam bersama ${selectedPlan.staff.name}.`
+                                : 'Kuota dapat digunakan di hari berbeda, khusus coach yang dibeli.'}
+                          </p>
+                          <Button
+                            type="submit"
+                            className="h-10 w-full shrink-0 rounded-md border-0 px-4 text-xs shadow-none sm:w-auto sm:text-sm"
+                            disabled={!userId || !packageId || !methodId || sell.isPending}
+                          >
+                            Terima pembayaran & tambah kuota
+                          </Button>
+                        </div>
+                      </form>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+              <Card className="min-w-0 gap-4 rounded-md border-0 py-2 shadow-none">
+                <CardHeader className="gap-2 px-0 sm:px-1">
+                  <CardTitle className="flex items-center gap-2 text-sm leading-snug font-semibold">
+                    <WalletCards className="text-muted-foreground size-4" />
                     {tab === 'quota' ? 'Saldo kuota coaching' : 'Riwayat pemakaian & pembagian'}
                   </CardTitle>
+                  <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
+                    <span>{userId ? customerLabel : 'Semua customer'}</span>
+                    <span aria-hidden="true">·</span>
+                    <span>
+                      {(tab === 'quota' ? wallets.data?.length : usage.data?.length) ?? 0}{' '}
+                      {tab === 'quota' ? 'paket' : 'pemakaian'} ditampilkan
+                    </span>
+                  </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="overflow-x-auto">
+                <CardContent className="px-0 sm:px-1">
+                  <div className="overflow-x-auto rounded-md">
                     <table className="w-full text-left text-sm">
-                      <thead className="text-muted-foreground border-b">
+                      <thead className="bg-muted/35 text-muted-foreground text-xs">
                         <tr>
                           {(tab === 'quota'
                             ? [
@@ -553,7 +621,7 @@ export default function InHouseCoaching() {
                                 'Status'
                               ]
                           ).map((label) => (
-                            <th key={label} className="p-3 font-medium">
+                            <th key={label} className="px-4 py-3 font-medium whitespace-nowrap">
                               {label}
                             </th>
                           ))}
@@ -562,21 +630,24 @@ export default function InHouseCoaching() {
                       <tbody>
                         {tab === 'quota'
                           ? wallets.data?.map((wallet) => (
-                              <tr key={wallet.id} className="border-b">
-                                <td className="p-3">{wallet.user.name}</td>
-                                <td className="p-3">
+                              <tr
+                                key={wallet.id}
+                                className="border-border/50 hover:bg-muted/15 border-b last:border-0"
+                              >
+                                <td className="px-4 py-4 align-middle">{wallet.user.name}</td>
+                                <td className="px-4 py-4 align-middle">
                                   {wallet.staff.name}
                                   <p className="text-muted-foreground text-xs">
                                     {wallet.packageName}
                                   </p>
                                 </td>
-                                <td className="p-3 font-semibold">
+                                <td className="px-4 py-4 font-semibold whitespace-nowrap tabular-nums">
                                   {wallet.remainingMinutes / 60} / {wallet.totalMinutes / 60} jam
                                 </td>
-                                <td className="p-3">
+                                <td className="px-4 py-4 align-middle">
                                   {wallet.invoice && (
                                     <Link
-                                      className="text-primary underline"
+                                      className="text-primary text-xs underline-offset-4 hover:underline"
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       href={`/admin/kelola-transaksi/${wallet.invoice.id}`}
@@ -586,11 +657,12 @@ export default function InHouseCoaching() {
                                   )}
                                 </td>
                                 {canSell && (
-                                  <td className="p-3">
+                                  <td className="px-4 py-4 align-middle">
                                     {wallet.remainingMinutes === wallet.totalMinutes &&
                                     wallet._count?.usages === 0 ? (
                                       <Button
-                                        variant="destructive"
+                                        variant="ghost"
+                                        className="text-destructive hover:bg-destructive/5 hover:text-destructive rounded-md border-0 shadow-none"
                                         size="sm"
                                         disabled={remove.isPending}
                                         onClick={() => setDeleting(wallet)}
@@ -598,9 +670,12 @@ export default function InHouseCoaching() {
                                         Hapus
                                       </Button>
                                     ) : (
-                                      <span className="text-muted-foreground text-xs">
+                                      <Badge
+                                        variant="lightNeutral"
+                                        className="rounded-sm border-0 text-[11px] font-normal"
+                                      >
                                         Sudah pernah dipakai
-                                      </span>
+                                      </Badge>
                                     )}
                                   </td>
                                 )}
@@ -609,25 +684,31 @@ export default function InHouseCoaching() {
                           : usage.data?.map((row) => (
                               <tr
                                 key={row.id}
-                                className={`border-b ${row.restoredAt ? 'text-muted-foreground' : ''}`}
+                                className={`border-border/50 hover:bg-muted/15 border-b last:border-0 ${row.restoredAt ? 'text-muted-foreground' : ''}`}
                               >
-                                <td className="p-3">
+                                <td className="px-4 py-4 align-middle">
                                   {row.wallet.user.name}
                                   <p className="text-muted-foreground text-xs">
                                     {row.wallet.staff.name} · {row.wallet.packageName}
                                   </p>
                                 </td>
-                                <td className="p-3 whitespace-nowrap">
+                                <td className="px-4 py-4 whitespace-nowrap tabular-nums">
                                   {row.startAt}
                                   <p className="text-muted-foreground text-xs">
                                     s.d. {row.endAt} WIB
                                   </p>
                                 </td>
-                                <td className="p-3">{row.participants}</td>
-                                <td className="p-3">{formatCurrency(row.courtAmount)}</td>
-                                <td className="p-3">{formatCurrency(row.coachAmount)}</td>
-                                <td className="p-3">{formatCurrency(row.extraAmount)}</td>
-                                <td className="p-3">
+                                <td className="px-4 py-4 align-middle">{row.participants}</td>
+                                <td className="px-4 py-4 align-middle">
+                                  {formatCurrency(row.courtAmount)}
+                                </td>
+                                <td className="px-4 py-4 align-middle">
+                                  {formatCurrency(row.coachAmount)}
+                                </td>
+                                <td className="px-4 py-4 align-middle">
+                                  {formatCurrency(row.extraAmount)}
+                                </td>
+                                <td className="px-4 py-4 align-middle">
                                   {row.restoredAt ? 'Dibatalkan · kuota kembali' : 'Kuota terpakai'}
                                 </td>
                               </tr>
