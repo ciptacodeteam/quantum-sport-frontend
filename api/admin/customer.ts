@@ -64,3 +64,19 @@ export async function searchCustomersApi(params: { q: string; limit?: string }) 
   const res = await adminApi.get(mergedUrl);
   return res.data;
 }
+
+export type ManagementCustomerInput = {
+  isManagement: boolean;
+  managementValidFrom: string | null;
+  managementValidUntil: string | null;
+};
+export async function updateManagementCustomerApi(id: string, input: ManagementCustomerInput) {
+  const { data } = await adminApi.put(`/customers/${id}/management`, input);
+  return data;
+}
+export async function createManagementCustomerApi(
+  input: Omit<ManagementCustomerInput, 'isManagement'> & { name: string; phone: string }
+) {
+  const { data } = await adminApi.post('/customers/management', input);
+  return data;
+}

@@ -24,6 +24,9 @@ export type AdminProfile = {
 };
 
 export type UserProfile = {
+  isManagement?: boolean;
+  managementValidFrom?: string | null;
+  managementValidUntil?: string | null;
   id: string;
   name: string;
   email: string;

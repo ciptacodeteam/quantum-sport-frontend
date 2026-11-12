@@ -532,3 +532,21 @@ it('sends the scheduled coach identity without trusting browser price fields', (
     { staffId: 'inhouse', courtSlotId: court.slotId, coachSlotId: 'inhouse-slot', participants: 1 }
   ]);
 });
+
+it('sends the edited club member count at checkout without changing the coach total', async () => {
+  useBookingStore.setState({ useMembership: false });
+  render(<BookingAddOns />);
+  fireEvent.click(screen.getByRole('button', { name: 'Pilih Coach A' }));
+  act(() => useBookingStore.getState().updateCoachParticipants('coach-slot', 4));
+  expect(useBookingStore.getState().selectedCoaches[0].participants).toBe(4);
+  expect(mocks.summary.coachTotal).toBe(200000);
+  choosePayment();
+  await act(async () =>
+    fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }))
+  );
+  expect(mocks.mutate).toHaveBeenCalledWith(
+    expect.objectContaining({
+      coachGroups: [{ slotId: 'coach-slot', coachingGroupId: 'academy', participants: 4 }]
+    })
+  );
+});

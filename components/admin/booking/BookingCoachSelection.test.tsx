@@ -29,6 +29,11 @@ function Harness({ sessions = [session] }: { sessions?: (typeof session)[] }) {
       sessions={sessions}
       sport="PADEL"
       selected={selected}
+      onParticipantsChange={(slotId, participants) => {
+        setSelected((current) =>
+          current.map((coach) => (coach.slotId === slotId ? { ...coach, participants } : coach))
+        );
+      }}
       onSelect={(_, coach) => {
         setSelected((current) => {
           if (!coach) return [];
@@ -240,5 +245,25 @@ it('does not request a hidden, unselected service', async () => {
   expect(mocks.people).not.toHaveBeenCalled();
   expect(mocks.groups).not.toHaveBeenCalled();
   expect(mocks.availability).not.toHaveBeenCalled();
+  client.clear();
+});
+
+it('edits club member counts without deselecting the coach and keeps them per session', async () => {
+  const client = mount();
+  fireEvent.click(await screen.findByRole('button', { name: /SR Academy/ }));
+  const coach = screen.getByRole('button', { name: 'Pilih Coach Andi' });
+  await waitFor(() => expect(coach).toBeEnabled());
+  fireEvent.click(coach);
+  const count = screen.getByRole('spinbutton', { name: /Jumlah member.*Coach Andi/ });
+  expect(count).toHaveValue(1);
+  fireEvent.change(count, { target: { value: '4' } });
+  expect(count).toHaveValue(4);
+  expect(coach).toHaveAttribute('aria-pressed', 'true');
+  for (const invalid of ['0', '-1', '1.5', '101']) {
+    fireEvent.change(count, { target: { value: invalid } });
+    expect(count).toHaveValue(4);
+  }
+  fireEvent.click(screen.getByRole('button', { name: 'Tanpa coach' }));
+  expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
   client.clear();
 });

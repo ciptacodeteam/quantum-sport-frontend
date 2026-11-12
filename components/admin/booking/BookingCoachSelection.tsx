@@ -14,6 +14,8 @@ import { coachingGroupApi, type CoachingGroup } from '@/api/admin/coachingGroup'
 import { useAdminCourtSports } from '@/hooks/useAdminCourtSports';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import type { SelectedCoach } from '@/stores/useBookingStore';
 
 type Session = { date: string; timeSlot: string; startAt?: string; endAt?: string };
@@ -24,6 +26,7 @@ export default function BookingCoachSelection({
   sport,
   selected,
   onSelect,
+  onParticipantsChange,
   disabled,
   active = true,
   embedded = false
@@ -32,6 +35,7 @@ export default function BookingCoachSelection({
   sport: 'PADEL' | 'TENNIS';
   selected: SelectedCoach[];
   onSelect: (session: Session, coach: SelectedCoach | null) => void;
+  onParticipantsChange?: (slotId: string, participants: number) => void;
   disabled?: boolean;
   active?: boolean;
   embedded?: boolean;
@@ -139,6 +143,7 @@ export default function BookingCoachSelection({
               (coach) => coachSessionKey(coach) === coachSessionKey(session)
             )}
             onSelect={(coach) => onSelect(session, coach)}
+            onParticipantsChange={onParticipantsChange}
             disabled={disabled}
             active={active || selected.length > 0}
           />
@@ -157,6 +162,7 @@ function CoachSession({
   independent,
   selected,
   onSelect,
+  onParticipantsChange,
   disabled,
   active
 }: {
@@ -168,6 +174,7 @@ function CoachSession({
   independent: CoachingPerson[];
   selected: SelectedCoach[];
   onSelect: (coach: SelectedCoach | null) => void;
+  onParticipantsChange?: (slotId: string, participants: number) => void;
   disabled?: boolean;
   active?: boolean;
 }) {
@@ -235,6 +242,32 @@ function CoachSession({
             .join('; ')}
         </p>
       )}
+      {selected
+        .filter((coach) => coach.coachingGroupId)
+        .map((coach) => (
+          <div key={coach.slotId} className="bg-muted/20 space-y-2 rounded-md p-3">
+            <Label htmlFor={`club-participants-${coach.slotId}`}>
+              Jumlah member · {coach.coachName} · {coach.coachingGroupName}
+            </Label>
+            <Input
+              id={`club-participants-${coach.slotId}`}
+              type="number"
+              min={1}
+              max={100}
+              step={1}
+              value={coach.participants ?? 1}
+              disabled={disabled || !onParticipantsChange}
+              onChange={(event) => {
+                const count = Number(event.target.value);
+                if (coach.slotId && Number.isInteger(count) && count >= 1 && count <= 100)
+                  onParticipantsChange?.(coach.slotId, count);
+              }}
+            />
+            <p className="text-muted-foreground text-xs">
+              1–100 member per sesi. Tarif mengikuti harga coach yang dipilih.
+            </p>
+          </div>
+        ))}
       {entries.map((group) => {
         const expanded = openGroup === group.id;
         const availableCount = group.members.filter((coach) => optionFor(coach)).length;
@@ -306,7 +339,11 @@ function CoachSession({
                           endAt: option.endAt,
                           courtSport: sport,
                           ...(group.id !== 'independent'
-                            ? { coachingGroupId: group.id, coachingGroupName: group.name }
+                            ? {
+                                coachingGroupId: group.id,
+                                coachingGroupName: group.name,
+                                participants: 1
+                              }
                             : {})
                         });
                       }}

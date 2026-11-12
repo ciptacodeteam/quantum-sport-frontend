@@ -4,6 +4,7 @@ import { use } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { IconArrowLeft } from '@tabler/icons-react';
+import { ManagementCustomerForm } from '@/components/admin/customers/ManagementCustomerForm';
 import BanCustomerAccess from '@/components/admin/customers/BanCustomerAccess';
 import CustomerSettingsCard from '@/components/admin/customers/CustomerSettingsCard';
 import EditCustomerForm from '@/components/admin/customers/EditCustomerForm';
@@ -131,6 +132,17 @@ export default function EditCustomerPage({ params }: { params: Promise<IdParams>
                   <div className="min-w-0 space-y-5">
                     <VerifyCustomerWhatsApp customerId={id} />
                     <ResetCustomerPassword customerId={id} />
+                    {canManage && (
+                      <CustomerSettingsCard
+                        title="Kategori Management"
+                        description="Fasilitas harga coaching in-house untuk booking dari dashboard."
+                      >
+                        <ManagementCustomerForm
+                          key={`${id}-${customer.updatedAt}`}
+                          customer={customer}
+                        />
+                      </CustomerSettingsCard>
+                    )}
                     {canManage && <BanCustomerAccess customerId={id} />}
                   </div>
                 )}

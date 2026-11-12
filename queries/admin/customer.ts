@@ -49,6 +49,9 @@ export const adminCustomerMembershipQueryOptions = (id: string) =>
   });
 
 export type CustomerSearchResult = {
+  isManagement?: boolean;
+  managementValidFrom?: string | null;
+  managementValidUntil?: string | null;
   id: string;
   name: string;
   email: string;

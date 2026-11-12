@@ -1,5 +1,6 @@
 'use client';
-import { type TariffRule } from '@/lib/tariff-period';
+import { managementInHouseRate, type ManagementCustomer } from '@/lib/management-pricing';
+import { resolveTariffPeriod, type TariffRule } from '@/lib/tariff-period';
 import type { CoachingPerson } from '@/api/admin/coaching';
 import { useState } from 'react';
 import BookingServiceSessionPicker, { serviceSessionDate } from './BookingServiceSessionPicker';
@@ -29,6 +30,7 @@ export default function BookingInHouseSelection({
   plans = [],
   coaches = [],
   tariffRules = [],
+  managementCustomer,
   sessions,
   selected,
   onChange,
@@ -40,6 +42,7 @@ export default function BookingInHouseSelection({
   plans?: InHousePlan[];
   coaches?: CoachingPerson[];
   tariffRules?: TariffRule[];
+  managementCustomer?: ManagementCustomer | null;
   sessions: BookingItem[];
   selected: InHouseChoice[];
   onChange: (session: BookingItem, choice: InHouseChoice | null) => void;
@@ -81,6 +84,7 @@ export default function BookingInHouseSelection({
           plans={plans}
           coaches={coaches}
           tariffRules={tariffRules}
+          managementCustomer={managementCustomer}
           selected={selected}
           onChange={onChange}
           disabled={disabled}
@@ -96,6 +100,7 @@ function InHouseSession({
   plans,
   coaches,
   tariffRules,
+  managementCustomer,
   selected,
   onChange,
   disabled,
@@ -106,6 +111,7 @@ function InHouseSession({
   plans: InHousePlan[];
   coaches: CoachingPerson[];
   tariffRules: TariffRule[];
+  managementCustomer?: ManagementCustomer | null;
   selected: InHouseChoice[];
   onChange: (session: BookingItem, choice: InHouseChoice | null) => void;
   disabled?: boolean;
@@ -178,7 +184,21 @@ function InHouseSession({
               : 1
         }
       : null;
-  const pricing = adminInHousePricing([session], draft ? [draft] : [], plans, wallets, tariffRules);
+  const pricing = adminInHousePricing(
+    [session],
+    draft ? [draft] : [],
+    plans,
+    wallets,
+    tariffRules,
+    managementCustomer
+  );
+  const managementRate = prepaid
+    ? null
+    : managementInHouseRate(
+        managementCustomer,
+        session.date,
+        resolveTariffPeriod(tariffRules, session.date, session.sport)
+      );
   const courtBase = (session.discountPrice ?? 0) > 0 ? session.discountPrice! : session.price;
   const courtDue = courtBase - pricing.coverage;
   const coachDue = pricing.singleTotal;
@@ -344,7 +364,15 @@ function InHouseSession({
             )}
           </div>
           <div className="space-y-2 text-sm">
-            <p className="font-semibold">Biaya untuk jam ini</p>
+            <p className="font-semibold">
+              Biaya untuk jam ini{' '}
+              {managementRate && <span className="text-primary text-xs">· Tarif Management</span>}
+            </p>
+            {managementCustomer?.isManagement && !prepaid && !managementRate && (
+              <p className="text-muted-foreground text-xs">
+                Tarif Management belum tersedia atau di luar masa berlaku. Tarif reguler digunakan.
+              </p>
+            )}
             {available.isError ? (
               <p role="alert">
                 Ketersediaan coach belum dapat dimuat.{' '}

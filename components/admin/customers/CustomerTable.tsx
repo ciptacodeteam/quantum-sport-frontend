@@ -1,5 +1,6 @@
 'use client';
 
+import CreateManagementCustomer from './ManagementCustomerForm';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -62,6 +63,15 @@ export default function CustomerTable() {
           </div>
         )
       }),
+      helper.accessor((item) => (item.isManagement ? 'Management' : 'Reguler'), {
+        id: 'category',
+        header: 'Kategori',
+        cell: ({ getValue }) => (
+          <Badge variant={getValue() === 'Management' ? 'lightInfo' : 'secondary'}>
+            {getValue()}
+          </Badge>
+        )
+      }),
       helper.accessor('banned', {
         header: 'Status',
         cell: ({ getValue }) => (
@@ -113,6 +123,9 @@ export default function CustomerTable() {
     );
   return (
     <div className="[&_thead]:bg-muted/50 min-w-0">
+      <div className="mb-4 flex justify-end">
+        <CreateManagementCustomer />
+      </div>
       <DataTable
         loading={query.isPending}
         data={query.data || []}

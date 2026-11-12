@@ -72,6 +72,7 @@ export interface InventoryItem {
 }
 
 export interface SelectedCoach {
+  participants?: number;
   additionalHourPrice?: number | null;
   coachingGroupId?: string;
   coachingGroupName?: string;
@@ -161,6 +162,7 @@ interface BookingState {
   setWalkInCustomer: (name: string | null, phone: string | null) => void;
   setBookingAdminNote: (note: string | null) => void;
   addCoach: (coach: SelectedCoach) => void;
+  updateCoachParticipants: (slotId: string, participants: number) => void;
   removeCoach: (coachId: string, timeSlot: string, slotId?: string) => void;
   addBallboy: (ballboy: SelectedBallboy) => void;
   removeBallboy: (ballboyId: string, timeSlot: string, slotId?: string) => void;
@@ -302,6 +304,15 @@ export const useBookingStore = create<BookingState>()(
           const coachTotal = coachSessionsTotal(newCoaches);
           set({ selectedCoaches: newCoaches, coachTotal });
         }
+      },
+
+      updateCoachParticipants: (slotId, participants) => {
+        if (!Number.isInteger(participants) || participants < 1 || participants > 100) return;
+        set((state) => ({
+          selectedCoaches: state.selectedCoaches.map((coach) =>
+            coach.slotId === slotId && coach.coachingGroupId ? { ...coach, participants } : coach
+          )
+        }));
       },
 
       removeCoach: (coachId, timeSlot, slotId) => {

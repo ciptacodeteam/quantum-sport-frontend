@@ -1,3 +1,4 @@
+import { managementInHouseRate, type ManagementCustomer } from './management-pricing';
 import type { InHouseChoice, InHousePlan, InHouseWallet } from '@/api/admin/inhouseCoaching';
 import { resolveTariffPeriod, tariffBand, type TariffRule } from './tariff-period';
 import type { BookingItem } from '@/stores/useBookingStore';
@@ -8,7 +9,8 @@ export function adminInHousePricing(
   choices: InHouseChoice[],
   plans: InHousePlan[],
   wallets: InHouseWallet[],
-  rules: TariffRule[] = []
+  rules: TariffRule[] = [],
+  managementCustomer?: ManagementCustomer | null
 ) {
   return choices.reduce(
     (totals, choice) => {
@@ -26,6 +28,11 @@ export function adminInHousePricing(
       if (!terms) return totals;
       const base = (court.discountPrice ?? 0) > 0 ? court.discountPrice! : court.price;
       const bands = resolveTariffPeriod(rules, court.date, court.sport);
+      const managementRate = choice.walletId
+        ? null
+        : managementInHouseRate(managementCustomer, court.date, bands);
+      const coachHourlyPrice = managementRate?.coach ?? terms.hourlyPrice;
+      const courtShare = managementRate ? 0 : terms.courtHourlyShare;
       const band = court.timeSlot ? tariffBand(court.timeSlot, bands) : null;
       const discount =
         choice.walletId ||
@@ -39,7 +46,9 @@ export function adminInHousePricing(
               : rules.length
                 ? 0
                 : null;
-      const fixedCourtPrice = choice.walletId ? null : bands.inHouseCourtHourlyPrice;
+      const fixedCourtPrice = choice.walletId
+        ? null
+        : (managementRate?.court ?? bands.inHouseCourtHourlyPrice);
       const courtDue =
         fixedCourtPrice ??
         (choice.staffId
@@ -51,10 +60,10 @@ export function adminInHousePricing(
       totals.singleTotal +=
         choice.planId || choice.staffId
           ? fixedCourtPrice != null || choice.staffId
-            ? terms.hourlyPrice - terms.courtHourlyShare
+            ? coachHourlyPrice - courtShare
             : discount === null
-              ? terms.hourlyPrice
-              : terms.hourlyPrice - terms.courtHourlyShare
+              ? coachHourlyPrice
+              : coachHourlyPrice - courtShare
           : 0;
       totals.extras +=
         Math.max(0, choice.participants - 1) * (terms?.extraParticipantHourlyPrice ?? 100000);
@@ -70,14 +79,22 @@ export function adminInHouseCourtPrices(
   choices: InHouseChoice[],
   plans: InHousePlan[],
   wallets: InHouseWallet[],
-  rules: TariffRule[] = []
+  rules: TariffRule[] = [],
+  managementCustomer?: ManagementCustomer | null
 ): Record<string, number> {
   return Object.fromEntries(
     choices.flatMap((choice) => {
       const session = sessions.find((item) => item.slotId === choice.courtSlotId);
       if (!session) return [];
       const base = (session.discountPrice ?? 0) > 0 ? session.discountPrice! : session.price;
-      const { coverage } = adminInHousePricing([session], [choice], plans, wallets, rules);
+      const { coverage } = adminInHousePricing(
+        [session],
+        [choice],
+        plans,
+        wallets,
+        rules,
+        managementCustomer
+      );
       return [[session.slotId, base - coverage]];
     })
   );

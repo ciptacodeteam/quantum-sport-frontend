@@ -27,7 +27,7 @@ import AppSectionHeader from '@/components/ui/app-section-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useMembershipDiscount } from '@/hooks/useMembershipDiscount';
 import { adminCheckoutMutationOptions } from '@/mutations/admin/checkout';
-import { type CustomerSearchResult } from '@/queries/admin/customer';
+import { adminCustomerQueryOptions, type CustomerSearchResult } from '@/queries/admin/customer';
 import { useBookingStore } from '@/stores/useBookingStore';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -64,6 +64,7 @@ export default function BookingAddOns() {
     addBallboy,
     removeBallboy,
     addCoach,
+    updateCoachParticipants,
     removeCoach,
     removeBookingItem,
     setMembershipDiscount,
@@ -105,6 +106,12 @@ export default function BookingAddOns() {
   const { branchId } = useAdminCourtSports();
   const tariffQuery = useTariffPeriods(true);
   const tariffRules = tariffQuery.rules;
+  const managementCustomerQuery = useQuery({
+    ...adminCustomerQueryOptions(selectedCustomerId ?? ''),
+    enabled: !!selectedCustomerId,
+    staleTime: 0
+  });
+  const managementCustomer = managementCustomerQuery.data;
   const inHouseWallets = useQuery({
     queryKey: ['admin', 'inhouse', 'wallets', branchId, selectedCustomerId, 'available'],
     queryFn: () => inHouseApi.wallets(selectedCustomerId!, true),
@@ -164,9 +171,15 @@ export default function BookingAddOns() {
     (selection) => !!selection.planId || !!selection.staffId
   );
   const inHouseReady =
+    (!inHouseSelections.length ||
+      !selectedCustomerId ||
+      (!managementCustomerQuery.isPending &&
+        !managementCustomerQuery.isError &&
+        !!managementCustomer)) &&
     (!hasDirectInHouse || (!tariffQuery.isPending && !tariffQuery.isError)) &&
     inHouseSelections.every(selectionAvailable);
   const inHouseLoading =
+    (!!inHouseSelections.length && !!selectedCustomerId && managementCustomerQuery.isPending) ||
     (hasDirectInHouse && tariffQuery.isPending) ||
     inHouseSelections.some((selection) =>
       selection.staffId
@@ -184,7 +197,8 @@ export default function BookingAddOns() {
     inHouseSelections,
     singleHourPlans,
     usableWallets,
-    tariffRules
+    tariffRules,
+    managementCustomer
   );
 
   const inHouseCourtPrices = adminInHouseCourtPrices(
@@ -192,7 +206,8 @@ export default function BookingAddOns() {
     inHouseSelections,
     singleHourPlans,
     usableWallets,
-    tariffRules
+    tariffRules,
+    managementCustomer
   );
 
   // Customer selection is now handled by BookingSummary component
@@ -473,7 +488,11 @@ export default function BookingAddOns() {
           }));
         const coachGroups = selectedCoaches
           .filter((coach) => coach.coachingGroupId)
-          .map((coach) => ({ slotId: coach.slotId!, coachingGroupId: coach.coachingGroupId! }));
+          .map((coach) => ({
+            slotId: coach.slotId!,
+            coachingGroupId: coach.coachingGroupId!,
+            ...(coach.participants != null ? { participants: coach.participants } : {})
+          }));
         if (coachGroups.length) payload.coachGroups = coachGroups;
         confirmCheckout(payload);
       } catch {
@@ -717,6 +736,21 @@ export default function BookingAddOns() {
                         </button>
                       </div>
                     )}
+                  {selectedCustomerId && managementCustomerQuery.isPending && (
+                    <BookingServiceLoading label="Memuat tarif pelanggan..." />
+                  )}
+                  {selectedCustomerId && managementCustomerQuery.isError && (
+                    <div role="alert" className="text-destructive text-sm">
+                      Tarif pelanggan belum dapat dimuat.{' '}
+                      <button
+                        type="button"
+                        className="underline"
+                        onClick={() => void managementCustomerQuery.refetch()}
+                      >
+                        Coba lagi
+                      </button>
+                    </div>
+                  )}
                   {bookingItems.length > 0 && !recurringBooking && (
                     <BookingInHouseSelection
                       embedded
@@ -726,9 +760,15 @@ export default function BookingAddOns() {
                       plans={singleHourPlans}
                       coaches={hourlyCoaches}
                       tariffRules={tariffRules}
+                      managementCustomer={managementCustomer}
                       sessions={bookingItems}
                       selected={inHouseSelections}
-                      disabled={isConfirming || isCheckingCoaches}
+                      disabled={
+                        isConfirming ||
+                        isCheckingCoaches ||
+                        (!!selectedCustomerId &&
+                          (managementCustomerQuery.isPending || managementCustomerQuery.isError))
+                      }
                       onChange={(session, selection) => {
                         const next = inHouseSelections.filter(
                           (item) => item.courtSlotId !== session.slotId
@@ -760,7 +800,13 @@ export default function BookingAddOns() {
                       sessions={bookingItems}
                       sport={courtSport}
                       selected={selectedCoaches}
-                      disabled={isConfirming || isCheckingCoaches}
+                      onParticipantsChange={updateCoachParticipants}
+                      disabled={
+                        isConfirming ||
+                        isCheckingCoaches ||
+                        (!!selectedCustomerId &&
+                          (managementCustomerQuery.isPending || managementCustomerQuery.isError))
+                      }
                       onSelect={(session, coach) => {
                         const sessionCoaches = storedCoaches.filter(
                           (item) => coachSessionKey(item) === coachSessionKey(session)
@@ -804,7 +850,12 @@ export default function BookingAddOns() {
                       sessions={bookingItems}
                       sport={courtSport}
                       selected={selectedBallboys}
-                      disabled={isConfirming || isCheckingCoaches}
+                      disabled={
+                        isConfirming ||
+                        isCheckingCoaches ||
+                        (!!selectedCustomerId &&
+                          (managementCustomerQuery.isPending || managementCustomerQuery.isError))
+                      }
                       onSelect={(session, ballboy) => {
                         storedBallboys
                           .filter((item) => item.courtSlotId === session.slotId)

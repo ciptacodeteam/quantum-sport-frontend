@@ -120,6 +120,11 @@ function TariffEditor({ rules, sport }: { rules: TariffRule[]; sport: 'PADEL' | 
   const [inHouseCourtHourlyPrice, setInHouseCourtHourlyPrice] = useState(
     active.inHouseCourtHourlyPrice ?? 0
   );
+  const [managementEnabled, setManagementEnabled] = useState(
+    active.managementCourtHourlyPrice != null && active.managementCoachHourlyPrice != null
+  );
+  const [managementCourt, setManagementCourt] = useState(active.managementCourtHourlyPrice ?? 0);
+  const [managementCoach, setManagementCoach] = useState(active.managementCoachHourlyPrice ?? 0);
   const [effectiveFrom, setEffectiveFrom] = useState(today);
   const client = useQueryClient();
   const mutation = useMutation({
@@ -140,7 +145,8 @@ function TariffEditor({ rules, sport }: { rules: TariffRule[]; sport: 'PADEL' | 
   const validDiscounts = [
     happyCoachDiscount,
     peakCoachDiscount,
-    ...(inHouseEnabled ? [inHouseCourtHourlyPrice] : [])
+    ...(inHouseEnabled ? [inHouseCourtHourlyPrice] : []),
+    ...(managementEnabled ? [managementCourt, managementCoach] : [])
   ].every((value) => Number.isInteger(value) && value >= 0 && value <= 2147483647);
   const validHours =
     bands.happyEnd > bands.happyStart &&
@@ -204,6 +210,8 @@ function TariffEditor({ rules, sport }: { rules: TariffRule[]; sport: 'PADEL' | 
               happyCoachDiscount,
               peakCoachDiscount,
               inHouseCourtHourlyPrice: inHouseEnabled ? inHouseCourtHourlyPrice : null,
+              managementCourtHourlyPrice: managementEnabled ? managementCourt : null,
+              managementCoachHourlyPrice: managementEnabled ? managementCoach : null,
               happyInHouseCoachDiscount: null,
               peakInHouseCoachDiscount: null,
               effectiveFrom,
@@ -416,6 +424,53 @@ function TariffEditor({ rules, sport }: { rules: TariffRule[]; sport: 'PADEL' | 
               jam lapangan hanya memakai satu jenis potongan coaching.
             </div>
           </section>
+          <section
+            aria-label="Tarif Management"
+            className="bg-background space-y-4 rounded-2xl border p-5 sm:p-7"
+          >
+            <div>
+              <h3 className="font-semibold">Tarif Management · Coach In-house</h3>
+              <p className="text-muted-foreground mt-1 text-sm">
+                Harga khusus pelanggan Management untuk booking dashboard admin/kasir. Berlaku per
+                jam sesuai cabang, olahraga, dan tanggal efektif aturan ini.
+              </p>
+            </div>
+            <label className="flex items-center gap-3 text-sm">
+              <input
+                type="checkbox"
+                checked={managementEnabled}
+                onChange={(event) => setManagementEnabled(event.target.checked)}
+                className="accent-primary size-4"
+              />
+              Aktifkan tarif Management
+            </label>
+            {managementEnabled ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <DiscountField
+                  id="management-court-price"
+                  label="Lapangan Management per jam (Rp)"
+                  value={managementCourt}
+                  onChange={setManagementCourt}
+                />
+                <DiscountField
+                  id="management-coach-price"
+                  label="Coach Management per jam (Rp)"
+                  value={managementCoach}
+                  onChange={setManagementCoach}
+                />
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-xs">
+                Belum aktif. Pelanggan Management tetap memakai tarif reguler sampai tarif khusus
+                diisi dan diaktifkan.
+              </p>
+            )}
+            <p className="text-muted-foreground text-xs">
+              Peserta tambahan tetap Rp100.000/orang/jam. Tidak berlaku untuk paket prabayar,
+              membership lapangan, atau booking website. Nilai Rp0 berarti gratis untuk komponen
+              tersebut.
+            </p>
+          </section>
           <section className="bg-background space-y-5 rounded-2xl border p-5 sm:p-7">
             <EditorHeading
               step="03"
@@ -510,6 +565,14 @@ function TariffEditor({ rules, sport }: { rules: TariffRule[]; sport: 'PADEL' | 
                       ? 'Mengikuti harga lapangan normal'
                       : `Lapangan fixed Rp ${rule.inHouseCourtHourlyPrice.toLocaleString('id-ID')}/jam`}
                   </p>
+                  {rule.managementCourtHourlyPrice != null &&
+                    rule.managementCoachHourlyPrice != null && (
+                      <p className="text-muted-foreground text-sm">
+                        Management: lapangan Rp{' '}
+                        {rule.managementCourtHourlyPrice.toLocaleString('id-ID')}/jam · coach Rp{' '}
+                        {rule.managementCoachHourlyPrice.toLocaleString('id-ID')}/jam
+                      </p>
+                    )}
                   <p className="text-muted-foreground text-sm">
                     Happy Hour sepanjang hari:{' '}
                     {(rule.happyAllDayDays ?? [])
@@ -531,6 +594,12 @@ function TariffEditor({ rules, sport }: { rules: TariffRule[]; sport: 'PADEL' | 
                     setPeakCoachDiscount(rule.peakCoachDiscount ?? 0);
                     setInHouseEnabled(rule.inHouseCourtHourlyPrice != null);
                     setInHouseCourtHourlyPrice(rule.inHouseCourtHourlyPrice ?? 0);
+                    setManagementEnabled(
+                      rule.managementCourtHourlyPrice != null &&
+                        rule.managementCoachHourlyPrice != null
+                    );
+                    setManagementCourt(rule.managementCourtHourlyPrice ?? 0);
+                    setManagementCoach(rule.managementCoachHourlyPrice ?? 0);
                     setEffectiveFrom(
                       rule.effectiveFrom.slice(0, 10) < today
                         ? today

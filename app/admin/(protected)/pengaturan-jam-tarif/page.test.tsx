@@ -52,6 +52,8 @@ it('saves explicit whole-hour periods with a Jakarta effective date', () => {
     happyCoachDiscount: 0,
     peakCoachDiscount: 0,
     inHouseCourtHourlyPrice: null,
+    managementCourtHourlyPrice: null,
+    managementCoachHourlyPrice: null,
     happyInHouseCoachDiscount: null,
     peakInHouseCoachDiscount: null
   });
@@ -85,6 +87,8 @@ it('edits an upcoming rule without losing its effective date or hour boundaries'
     happyCoachDiscount: 0,
     peakCoachDiscount: 0,
     inHouseCourtHourlyPrice: null,
+    managementCourtHourlyPrice: null,
+    managementCoachHourlyPrice: null,
     happyInHouseCoachDiscount: null,
     peakInHouseCoachDiscount: null
   });
@@ -315,6 +319,8 @@ it('saves independent club and in-house amounts and can restore legacy package r
     expect.objectContaining({
       happyCoachDiscount: 50000,
       inHouseCourtHourlyPrice: null,
+      managementCourtHourlyPrice: null,
+      managementCoachHourlyPrice: null,
       happyInHouseCoachDiscount: null,
       peakInHouseCoachDiscount: null
     })
@@ -346,5 +352,29 @@ it('restores independent in-house amounts from scheduled history', () => {
       effectiveFrom: '2026-11-02',
       inHouseCourtHourlyPrice: 250000
     })
+  );
+});
+
+it('saves and disables both Management prices together without changing regular rates', () => {
+  render(<TariffPeriodPage />);
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Aktifkan tarif Management' }));
+  fireEvent.change(screen.getByLabelText('Lapangan Management per jam (Rp)'), {
+    target: { value: '200000' }
+  });
+  fireEvent.change(screen.getByLabelText('Coach Management per jam (Rp)'), {
+    target: { value: '600000' }
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Simpan Aturan Jam Tarif' }));
+  expect(mocks.save).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      managementCourtHourlyPrice: 200000,
+      managementCoachHourlyPrice: 600000,
+      inHouseCourtHourlyPrice: null
+    })
+  );
+  fireEvent.click(screen.getByRole('checkbox', { name: 'Aktifkan tarif Management' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Simpan Aturan Jam Tarif' }));
+  expect(mocks.save).toHaveBeenLastCalledWith(
+    expect.objectContaining({ managementCourtHourlyPrice: null, managementCoachHourlyPrice: null })
   );
 });

@@ -245,3 +245,40 @@ it.each([1, 2, 3])(
     }
   }
 );
+
+it('applies approved Management prices per hour only to direct dashboard selections', () => {
+  const session = { ...datedCourts[0], slotId: 'court', timeSlot: '12:00 - 13:00' };
+  const choice: InHouseChoice = {
+    staffId: 'andi',
+    hourlyPrice: 750000,
+    courtSlotId: 'court',
+    coachSlotId: 'coach',
+    participants: 2
+  };
+  const rules = [
+    {
+      ...rule,
+      inHouseCourtHourlyPrice: 250000,
+      managementCourtHourlyPrice: 200000,
+      managementCoachHourlyPrice: 600000
+    }
+  ];
+  expect(adminInHousePricing([session], [choice], [], [], rules, { isManagement: true })).toEqual({
+    coverage: 100000,
+    singleTotal: 600000,
+    extras: 100000
+  });
+  expect(
+    adminInHouseCourtPrices([session], [choice], [], [], rules, { isManagement: true })
+  ).toEqual({ court: 200000 });
+  for (const customer of [
+    undefined,
+    { isManagement: false },
+    { isManagement: true, managementValidUntil: '2030-01-01' }
+  ])
+    expect(adminInHousePricing([session], [choice], [], [], rules, customer)).toEqual({
+      coverage: 50000,
+      singleTotal: 750000,
+      extras: 100000
+    });
+});
