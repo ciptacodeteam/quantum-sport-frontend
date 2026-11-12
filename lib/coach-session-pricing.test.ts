@@ -32,3 +32,22 @@ it('continues across midnight and allows flat or zero additional prices', () => 
     100000, 200000
   ]);
 });
+
+it('adds the configured 50k for each extra club member and preserves consecutive hourly rates', () => {
+  const club = { ...coach(10), coachingGroupId: 'club', price: 150000, additionalHourPrice: 50000 };
+  expect(coachSessionsTotal([{ ...club, participants: 2 }])).toBe(200000);
+  expect(coachSessionsTotal([{ ...club, participants: 3 }])).toBe(250000);
+  expect(
+    coachSessionsTotal([
+      { ...club, participants: 2 },
+      { ...club, timeSlot: '11:00 - 12:00', participants: 3 }
+    ])
+  ).toBe(350000);
+  expect(coachSessionsTotal([{ ...club, participants: 2, additionalHourPrice: 0 }])).toBe(150000);
+  expect(coachSessionsTotal([{ ...club, participants: 2, additionalHourPrice: null }])).toBe(
+    300000
+  );
+  expect(coachSessionsTotal([{ ...club, coachingGroupId: undefined, participants: 2 }])).toBe(
+    150000
+  );
+});

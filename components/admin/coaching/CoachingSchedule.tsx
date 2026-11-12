@@ -396,8 +396,9 @@ export default function CoachingSchedule({
                       />
                     </div>
                     <p className="text-muted-foreground text-xs">
-                      Berlaku mulai jam kedua untuk coach yang sama dan jam berurutan. Kosongkan
-                      untuk memakai harga normal. Isi 0 untuk jam tambahan gratis.
+                      Berlaku mulai jam kedua untuk coach yang sama dan jam berurutan. Untuk booking
+                      Coach Club, tarif ini juga berlaku per member tambahan per jam. Kosongkan
+                      untuk memakai harga normal. Isi 0 untuk tambahan gratis.
                     </p>
                     <p className="text-sm font-medium">
                       Contoh 3 jam: Rp{' '}

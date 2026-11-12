@@ -475,7 +475,7 @@ function ClubMemberCount({
       <p id={`${id}-hint`} className="text-muted-foreground text-xs leading-relaxed">
         {value !== '' && !valid
           ? 'Masukkan angka bulat 1–100.'
-          : '1–100 member per sesi · Tarif coach tetap.'}
+          : `Tambahan member Rp ${(coach.additionalHourPrice ?? coach.price).toLocaleString('id-ID')}/orang/jam · Maks. 100 member.`}
       </p>
     </div>
   );

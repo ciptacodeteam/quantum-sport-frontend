@@ -820,7 +820,13 @@ export default function BookingSummary({
                     <div className="flex shrink-0 items-center gap-2">
                       <span className="text-primary font-semibold">
                         {formatCurrency(coach.chargedPrice)}
-                        {coach.chargedPrice !== coach.price && (
+                        {coach.coachingGroupId && (coach.participants ?? 1) > 1 && (
+                          <span className="text-muted-foreground block text-right text-[10px] font-normal">
+                            {formatCurrency(coach.hourlyPrice)} + {(coach.participants ?? 1) - 1} ×{' '}
+                            {formatCurrency(coach.additionalHourPrice ?? coach.price)}
+                          </span>
+                        )}
+                        {coach.isAdditionalHour && (
                           <span className="block text-right text-[10px] font-normal">
                             Jam berikutnya
                           </span>

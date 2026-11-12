@@ -533,13 +533,15 @@ it('sends the scheduled coach identity without trusting browser price fields', (
   ]);
 });
 
-it('sends the edited club member count at checkout without changing the coach total', async () => {
+it('recalculates the club coach total and sends the edited member count at checkout', async () => {
   useBookingStore.setState({ useMembership: false });
   render(<BookingAddOns />);
   fireEvent.click(screen.getByRole('button', { name: 'Pilih Coach A' }));
   act(() => useBookingStore.getState().updateCoachParticipants('coach-slot', 4));
   expect(useBookingStore.getState().selectedCoaches[0].participants).toBe(4);
-  expect(mocks.summary.coachTotal).toBe(200000);
+  expect(mocks.summary.coachTotal).toBe(800000);
+  expect(useBookingStore.getState().coachTotal).toBe(800000);
+  expect(mocks.summary.totalAmount).toBe(1100000);
   choosePayment();
   await act(async () =>
     fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }))

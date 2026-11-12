@@ -308,11 +308,12 @@ export const useBookingStore = create<BookingState>()(
 
       updateCoachParticipants: (slotId, participants) => {
         if (!Number.isInteger(participants) || participants < 1 || participants > 100) return;
-        set((state) => ({
-          selectedCoaches: state.selectedCoaches.map((coach) =>
+        set((state) => {
+          const selectedCoaches = state.selectedCoaches.map((coach) =>
             coach.slotId === slotId && coach.coachingGroupId ? { ...coach, participants } : coach
-          )
-        }));
+          );
+          return { selectedCoaches, coachTotal: coachSessionsTotal(selectedCoaches) };
+        });
       },
 
       removeCoach: (coachId, timeSlot, slotId) => {
