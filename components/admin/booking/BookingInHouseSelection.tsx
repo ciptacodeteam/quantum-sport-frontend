@@ -11,7 +11,7 @@ import { formatCurrency } from '@/lib/utils';
 import type { BookingItem } from '@/stores/useBookingStore';
 import type { InHouseChoice, InHouseWallet, InHousePlan } from '@/api/admin/inhouseCoaching';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import ParticipantCountInput from './ParticipantCountInput';
 import { Check, CheckCircle2, UserRound, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { adminInHousePricing } from '@/lib/admin-inhouse-pricing';
@@ -342,26 +342,15 @@ function InHouseSession({
         <div className="bg-muted/30 grid gap-4 rounded-lg p-4 sm:grid-cols-[120px_minmax(0,1fr)]">
           <div className="space-y-2">
             <Label htmlFor={`participants-${session.slotId}`}>Jumlah peserta</Label>
-            <Input
+            <ParticipantCountInput
               id={`participants-${session.slotId}`}
-              type="number"
-              min={1}
-              max={100}
-              disabled={disabled}
               value={participants}
-              onChange={(e) => {
-                const count = Number(e.target.value);
+              disabled={disabled}
+              onChange={(count) => {
                 setParticipants(count);
-                if (choice && Number.isInteger(count) && count >= 1 && count <= 100)
-                  onChange(session, { ...choice, participants: count });
-                else if (choice) onChange(session, null);
+                if (choice) onChange(session, { ...choice, participants: count });
               }}
             />
-            {(!Number.isInteger(participants) || participants < 1 || participants > 100) && (
-              <p role="alert" className="text-destructive text-xs">
-                Isi 1–100 peserta.
-              </p>
-            )}
           </div>
           <div className="space-y-2 text-sm">
             <p className="font-semibold">

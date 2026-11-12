@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, Minus, Plus, Users } from 'lucide-react';
+import { ChevronDown, Users } from 'lucide-react';
 import BookingServiceSessionPicker, {
   BookingServiceLoading,
   serviceSessionDate
@@ -14,7 +14,7 @@ import { coachingGroupApi, type CoachingGroup } from '@/api/admin/coachingGroup'
 import { useAdminCourtSports } from '@/hooks/useAdminCourtSports';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
+import ParticipantCountInput from './ParticipantCountInput';
 import { Label } from '@/components/ui/label';
 import type { SelectedCoach } from '@/stores/useBookingStore';
 
@@ -405,10 +405,6 @@ function ClubMemberCount({
   onChange: (count: number) => void;
 }) {
   const count = coach.participants ?? 1;
-  const [draft, setDraft] = useState<string | null>(null);
-  const value = draft ?? String(count);
-  const valid =
-    value !== '' && Number.isInteger(Number(value)) && Number(value) >= 1 && Number(value) <= 100;
   const id = `club-participants-${coach.slotId}`;
   return (
     <div className="border-primary/10 space-y-2 border-t px-3 py-3">
@@ -421,63 +417,19 @@ function ClubMemberCount({
             · {coach.coachName} · {coach.coachingGroupName}
           </span>
         </Label>
-        <div className="border-border bg-background flex items-center rounded-md border p-0.5">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-8 shrink-0"
-            aria-label={`Kurangi member ${coach.coachName}`}
-            disabled={disabled || count <= 1}
-            onClick={() => {
-              setDraft(null);
-              onChange(count - 1);
-            }}
-          >
-            <Minus className="size-3.5" />
-          </Button>
-          <Input
-            id={id}
-            type="number"
-            inputMode="numeric"
-            min={1}
-            max={100}
-            step={1}
-            value={value}
-            disabled={disabled}
-            aria-invalid={value !== '' && !valid}
-            aria-describedby={`${id}-hint`}
-            className="h-8 w-14 [appearance:textfield] rounded-none border-0 px-1 text-center font-semibold shadow-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-            onFocus={(event) => event.currentTarget.select()}
-            onChange={(event) => {
-              const next = event.target.value;
-              setDraft(next);
-              const number = Number(next);
-              if (next !== '' && Number.isInteger(number) && number >= 1 && number <= 100)
-                onChange(number);
-            }}
-            onBlur={() => setDraft(null)}
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-8 shrink-0"
-            aria-label={`Tambah member ${coach.coachName}`}
-            disabled={disabled || count >= 100}
-            onClick={() => {
-              setDraft(null);
-              onChange(count + 1);
-            }}
-          >
-            <Plus className="size-3.5" />
-          </Button>
-        </div>
+        <ParticipantCountInput
+          id={id}
+          value={count}
+          disabled={disabled}
+          onChange={onChange}
+          decrementLabel={`Kurangi member ${coach.coachName}`}
+          incrementLabel={`Tambah member ${coach.coachName}`}
+          describedBy={`${id}-hint`}
+        />
       </div>
       <p id={`${id}-hint`} className="text-muted-foreground text-xs leading-relaxed">
-        {value !== '' && !valid
-          ? 'Masukkan angka bulat 1–100.'
-          : `Tambahan member Rp ${(coach.additionalHourPrice ?? coach.price).toLocaleString('id-ID')}/orang/jam · Maks. 100 member.`}
+        Tambahan member Rp {(coach.additionalHourPrice ?? coach.price).toLocaleString('id-ID')}
+        /orang/jam · Maks. 100 member.
       </p>
     </div>
   );

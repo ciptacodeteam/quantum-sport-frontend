@@ -257,3 +257,39 @@ it('keeps the full hourly coach rate for the next hour and charges extra only fo
   expect(within(extraRow).getByText(/100.000/)).toBeInTheDocument();
   expect(within(totalRow).getByText(/800.000/)).toBeInTheDocument();
 });
+
+it('uses the same participant stepper as Coach Club and allows clearing and replacing the number', () => {
+  const change = vi.fn();
+  render(
+    <BookingInHouseSelection
+      wallets={[wallet]}
+      sessions={[session]}
+      selected={[]}
+      onChange={change}
+    />
+  );
+  fireEvent.click(screen.getByRole('button', { name: /Andi.*Andi 5 jam/ }));
+  const count = screen.getByLabelText('Jumlah peserta');
+  const minus = screen.getByRole('button', { name: 'Kurangi peserta' });
+  const plus = screen.getByRole('button', { name: 'Tambah peserta' });
+  expect(count).toHaveValue(1);
+  expect(minus).toBeDisabled();
+  fireEvent.focus(count);
+  fireEvent.change(count, { target: { value: '' } });
+  expect(count).toHaveValue(null);
+  fireEvent.change(count, { target: { value: '02' } });
+  fireEvent.blur(count);
+  expect((count as HTMLInputElement).value).toBe('2');
+  fireEvent.click(plus);
+  expect(count).toHaveValue(3);
+  fireEvent.click(minus);
+  expect(count).toHaveValue(2);
+  fireEvent.change(count, { target: { value: '0' } });
+  expect(count).toHaveAttribute('aria-invalid', 'true');
+  fireEvent.blur(count);
+  expect(count).toHaveValue(2);
+  fireEvent.click(screen.getByRole('button', { name: 'Gunakan paket untuk jam ini' }));
+  expect(change).toHaveBeenLastCalledWith(session, expect.objectContaining({ participants: 2 }));
+  fireEvent.change(count, { target: { value: '100' } });
+  expect(plus).toBeDisabled();
+});
