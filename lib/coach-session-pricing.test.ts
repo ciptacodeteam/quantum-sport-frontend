@@ -33,7 +33,7 @@ it('continues across midnight and allows flat or zero additional prices', () => 
   ]);
 });
 
-it('adds the configured 50k for each extra club member and preserves consecutive hourly rates', () => {
+it('adds the configured 50k for each extra club member and charges the full club hourly rate', () => {
   const club = { ...coach(10), coachingGroupId: 'club', price: 150000, additionalHourPrice: 50000 };
   expect(coachSessionsTotal([{ ...club, participants: 2 }])).toBe(200000);
   expect(coachSessionsTotal([{ ...club, participants: 3 }])).toBe(250000);
@@ -42,7 +42,7 @@ it('adds the configured 50k for each extra club member and preserves consecutive
       { ...club, participants: 2 },
       { ...club, timeSlot: '11:00 - 12:00', participants: 3 }
     ])
-  ).toBe(350000);
+  ).toBe(450000);
   expect(coachSessionsTotal([{ ...club, participants: 2, additionalHourPrice: 0 }])).toBe(150000);
   expect(coachSessionsTotal([{ ...club, participants: 2, additionalHourPrice: null }])).toBe(
     300000
@@ -51,3 +51,25 @@ it('adds the configured 50k for each extra club member and preserves consecutive
     150000
   );
 });
+
+it.each([1, 2, 3, 4, 5])(
+  'charges full club rates for %i hours and recalculates per-session member changes',
+  (hours) => {
+    const sessions = Array.from({ length: hours }, (_, index) => ({
+      ...coach(10 + index),
+      coachingGroupId: 'club',
+      price: 150000,
+      additionalHourPrice: 50000,
+      participants: 1
+    })).reverse();
+    expect(coachSessionsTotal(sessions)).toBe(150000 * hours);
+    expect(coachSessionsTotal(sessions.map((session) => ({ ...session, participants: 2 })))).toBe(
+      200000 * hours
+    );
+    expect(
+      coachSessionsTotal(
+        sessions.map((session, index) => ({ ...session, participants: index === 0 ? 2 : 1 }))
+      )
+    ).toBe(150000 * hours + 50000);
+  }
+);

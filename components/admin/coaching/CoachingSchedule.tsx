@@ -128,11 +128,11 @@ export default function CoachingSchedule({
         <div>
           <span>
             Rp {row.original.price.toLocaleString('id-ID')}
-            {person.data?.role === 'COACH' ? ' / jam pertama' : ''}
+            {person.data?.role === 'COACH' ? ' / jam' : ''}
           </span>
           {person.data?.role === 'COACH' && row.original.additionalHourPrice != null && (
             <p className="text-muted-foreground text-xs">
-              Berikutnya Rp {row.original.additionalHourPrice.toLocaleString('id-ID')}/jam
+              Tambahan Rp {row.original.additionalHourPrice.toLocaleString('id-ID')}/jam
             </p>
           )}
         </div>
@@ -368,13 +368,13 @@ export default function CoachingSchedule({
                   </div>
                   <p className="text-muted-foreground text-xs">
                     {person.data.role === 'COACH'
-                      ? 'Harga normal untuk satu jam pertama pada setiap rangkaian sesi.'
+                      ? 'Coach Club: harga per jam untuk 1 member. Coach independen: harga jam pertama.'
                       : 'Tarif berlaku untuk setiap slot satu jam. Isi 0 untuk layanan gratis.'}
                   </p>
                 </div>
                 {person.data.role === 'COACH' && (
                   <div className="space-y-2">
-                    <Label htmlFor="coaching-additional-price">Harga per jam berikutnya</Label>
+                    <Label htmlFor="coaching-additional-price">Tarif tambahan</Label>
                     <div className="relative">
                       <span className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm">
                         Rp
@@ -401,8 +401,11 @@ export default function CoachingSchedule({
                       untuk memakai harga normal. Isi 0 untuk tambahan gratis.
                     </p>
                     <p className="text-sm font-medium">
-                      Contoh 3 jam: Rp{' '}
-                      {(price + 2 * (additionalHourPrice ?? price)).toLocaleString('id-ID')}
+                      Coach Club · 1 member × 2 jam: Rp {(price * 2).toLocaleString('id-ID')}
+                      <span className="block">
+                        Coach Club · 2 member × 2 jam: Rp{' '}
+                        {((price + (additionalHourPrice ?? price)) * 2).toLocaleString('id-ID')}
+                      </span>
                     </p>
                   </div>
                 )}

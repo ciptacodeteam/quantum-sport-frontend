@@ -332,7 +332,9 @@ function CoachSession({
                               Rp {option.price.toLocaleString('id-ID')}
                               {option.additionalHourPrice != null && (
                                 <span className="block text-xs">
-                                  Jam berikutnya Rp{' '}
+                                  {group.id !== 'independent'
+                                    ? 'Member tambahan Rp '
+                                    : 'Jam berikutnya Rp '}
                                   {option.additionalHourPrice.toLocaleString('id-ID')}/jam
                                 </span>
                               )}

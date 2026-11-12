@@ -15,7 +15,8 @@ export function pricedCoaches(coaches: SelectedCoach[]) {
   };
   for (const coach of [...coaches].sort((a, b) => range(a)[0] - range(b)[0])) {
     const [start, end] = range(coach);
-    const consecutive = ends.get(coach.coachId) === start && end - start === 3600000;
+    const consecutive =
+      !coach.coachingGroupId && ends.get(coach.coachId) === start && end - start === 3600000;
     const hourlyPrice = consecutive ? (coach.additionalHourPrice ?? coach.price) : coach.price;
     const extraMemberPrice = coach.coachingGroupId
       ? ((coach.participants ?? 1) - 1) * (coach.additionalHourPrice ?? coach.price)

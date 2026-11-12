@@ -133,8 +133,8 @@ it('saves first and subsequent coach prices separately and previews three hours'
   });
   mount();
   await waitFor(() => expect(screen.getByLabelText('Harga jam pertama')).toHaveValue(200000));
-  expect(screen.getByLabelText('Harga per jam berikutnya')).toHaveValue(100000);
-  expect(screen.getByText('Contoh 3 jam: Rp 400.000')).toBeInTheDocument();
+  expect(screen.getByLabelText('Tarif tambahan')).toHaveValue(100000);
+  expect(screen.getByText('Coach Club · 1 member × 2 jam: Rp 400.000')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Simpan jadwal & harga' }));
   await waitFor(() =>
     expect(mocks.saveSchedule).toHaveBeenCalledWith(
@@ -142,7 +142,7 @@ it('saves first and subsequent coach prices separately and previews three hours'
       expect.objectContaining({ price: 200000, additionalHourPrice: 100000 })
     )
   );
-  fireEvent.change(screen.getByLabelText('Harga per jam berikutnya'), { target: { value: '' } });
+  fireEvent.change(screen.getByLabelText('Tarif tambahan'), { target: { value: '' } });
   fireEvent.click(screen.getByRole('button', { name: 'Simpan jadwal & harga' }));
   await waitFor(() =>
     expect(mocks.saveSchedule).toHaveBeenLastCalledWith(
