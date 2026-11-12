@@ -20,6 +20,7 @@ export type ServiceIncomeRow = {
   startAt: string;
   endAt: string;
   hours: number;
+  description?: string | null;
   servicePrice: number;
   discount: number;
   amount: number;

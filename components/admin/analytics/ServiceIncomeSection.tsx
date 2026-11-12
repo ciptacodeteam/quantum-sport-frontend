@@ -349,6 +349,11 @@ export default function ServiceIncomeSection({
                   <td className="min-w-40 px-4 py-4 text-xs tabular-nums">{time(row.paidAt)}</td>
                   <td className="min-w-44 px-4 py-4">
                     <p className="font-medium">{row.staffName}</p>
+                    {row.description && (
+                      <p className="text-muted-foreground mt-1 text-xs whitespace-pre-line">
+                        {row.description}
+                      </p>
+                    )}
                     <p className="text-muted-foreground mt-1 text-xs">
                       {row.service === 'COACH' ? 'Coach' : 'Ballboy'} · {row.clubName}
                     </p>

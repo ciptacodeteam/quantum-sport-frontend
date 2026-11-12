@@ -272,3 +272,15 @@ it('marks rescheduling and shows the previous and latest court schedules', () =>
   expect(screen.getByText('Jadwal terbaru · Court 2')).toBeInTheDocument();
   expect(screen.getByText('Jadwal sebelumnya · Court 1')).toBeInTheDocument();
 });
+
+it('sums the recorded court and service breakdown across invoices grouped by booking', () => {
+  const rows = [transaction(1), transaction(2)].map((row) => ({
+    ...row,
+    bookingId: 'booking',
+    netAmount: 305000,
+    revenueBreakdown: { court: 105000, coach: 200000, ballboy: 0, other: 0 }
+  }));
+  render(<IncomeTransactionTable transactions={rows} groupByBooking />);
+  expect(screen.getByText('210.000', { exact: false })).toBeInTheDocument();
+  expect(screen.getByText('400.000', { exact: false })).toBeInTheDocument();
+});

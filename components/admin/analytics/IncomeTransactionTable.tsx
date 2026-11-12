@@ -40,6 +40,7 @@ export type IncomeTransaction = {
   amount: number;
   processingFee: number;
   netAmount: number;
+  revenueBreakdown?: { court: number; coach: number; ballboy: number; other: number };
   excludedAmount?: number;
   reschedule?: {
     at: string;
@@ -249,6 +250,17 @@ export default function IncomeTransactionTable({
     .map((invoices) => ({
       ...invoices[0],
       invoices,
+      revenueBreakdown: invoices.some((invoice) => invoice.revenueBreakdown)
+        ? invoices.reduce(
+            (sum, invoice) => ({
+              court: sum.court + (invoice.revenueBreakdown?.court ?? 0),
+              coach: sum.coach + (invoice.revenueBreakdown?.coach ?? 0),
+              ballboy: sum.ballboy + (invoice.revenueBreakdown?.ballboy ?? 0),
+              other: sum.other + (invoice.revenueBreakdown?.other ?? invoice.netAmount)
+            }),
+            { court: 0, coach: 0, ballboy: 0, other: 0 }
+          )
+        : undefined,
       paidAt: invoices.reduce<string | null>(
         (latest, invoice) =>
           invoice.paidAt && (!latest || Date.parse(invoice.paidAt) > Date.parse(latest))
@@ -429,6 +441,25 @@ export default function IncomeTransactionTable({
                         </td>
                         <td className="px-3 py-4 text-right font-medium whitespace-nowrap tabular-nums">
                           {formatCurrency(row.netAmount)}
+                          {row.revenueBreakdown && (
+                            <dl className="text-muted-foreground mt-2 space-y-1 text-xs font-normal">
+                              {(
+                                [
+                                  ['court', 'Lapangan'],
+                                  ['coach', 'Coach'],
+                                  ['ballboy', 'Ballboy'],
+                                  ['other', 'Lainnya']
+                                ] as const
+                              )
+                                .filter(([key]) => row.revenueBreakdown![key] !== 0)
+                                .map(([key, label]) => (
+                                  <div key={key} className="flex justify-between gap-3">
+                                    <dt>{label}</dt>
+                                    <dd>{formatCurrency(row.revenueBreakdown![key])}</dd>
+                                  </div>
+                                ))}
+                            </dl>
+                          )}
                         </td>
                       </tr>
                       {row.invoices.length > 1 && expanded.has(row.id) && (

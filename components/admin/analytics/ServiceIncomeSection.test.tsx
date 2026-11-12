@@ -193,3 +193,15 @@ it('distinguishes a loading state from an empty period and no search matches', (
   expect(screen.getByText('Tidak ada transaksi yang cocok dengan pencarian.')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Berikutnya' })).toBeDisabled();
 });
+
+it('shows the booked member count alongside the recorded coach income', () => {
+  const data = {
+    ...serviceIncomeFixture,
+    rows: serviceIncomeFixture.rows.map((row, index) => ({
+      ...row,
+      description: index === 0 ? 'Jumlah member: 2' : null
+    }))
+  };
+  render(<ServiceIncomeSection data={data} isLoading={false} />);
+  expect(screen.getByText('Jumlah member: 2')).toBeInTheDocument();
+});

@@ -126,3 +126,19 @@ it('reconciles cancelled paid amounts without including them in revenue', () => 
     /345\.000.*2\.000.*343\.000.*Rp\s*0/
   );
 });
+
+it('shows recorded court and coach revenues separately from total source revenue', () => {
+  const data = report();
+  (data.summary as any).revenueBreakdown = {
+    court: 210000,
+    coach: 400000,
+    ballboy: 50000,
+    other: 0
+  };
+  render(<IncomeBySourceSection data={data} isLoading={false} />);
+  const breakdown = screen.getByLabelText('Rincian revenue per layanan');
+  expect(breakdown).toHaveTextContent('Lapangan');
+  expect(breakdown).toHaveTextContent('210.000');
+  expect(breakdown).toHaveTextContent('Coach');
+  expect(breakdown).toHaveTextContent('400.000');
+});

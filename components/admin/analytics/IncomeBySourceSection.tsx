@@ -327,6 +327,34 @@ export default function IncomeBySourceSection({ data, isLoading }: IncomeBySourc
         </CardContent>
       </Card>
 
+      {summary.revenueBreakdown && (
+        <Card className="gap-4 py-6" aria-label="Rincian revenue per layanan">
+          <CardHeader>
+            <CardTitle className="text-base">Revenue lapangan & layanan</CardTitle>
+            <CardDescription>
+              Lapangan memakai harga final setelah aturan coaching. Nominal mengikuti transaksi,
+              termasuk alokasi promo dan pembatalan.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+            {(
+              [
+                ['court', 'Lapangan'],
+                ['coach', 'Coach'],
+                ['ballboy', 'Ballboy'],
+                ['other', 'Lainnya']
+              ] as const
+            ).map(([key, label]) => (
+              <div key={key} className="space-y-2">
+                <p className="text-muted-foreground text-sm">{label}</p>
+                <p className="text-xl font-semibold tabular-nums">
+                  {formatCurrency(Number(summary.revenueBreakdown[key] ?? 0))}
+                </p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
       <section aria-labelledby="income-sources-title" className="space-y-4">
         <div className="space-y-1.5">
           <h3 id="income-sources-title" className="text-base font-semibold">
