@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, Users } from 'lucide-react';
+import { ChevronDown, Minus, Plus, Users } from 'lucide-react';
 import BookingServiceSessionPicker, {
   BookingServiceLoading,
   serviceSessionDate
@@ -242,32 +242,6 @@ function CoachSession({
             .join('; ')}
         </p>
       )}
-      {selected
-        .filter((coach) => coach.coachingGroupId)
-        .map((coach) => (
-          <div key={coach.slotId} className="bg-muted/20 space-y-2 rounded-md p-3">
-            <Label htmlFor={`club-participants-${coach.slotId}`}>
-              Jumlah member · {coach.coachName} · {coach.coachingGroupName}
-            </Label>
-            <Input
-              id={`club-participants-${coach.slotId}`}
-              type="number"
-              min={1}
-              max={100}
-              step={1}
-              value={coach.participants ?? 1}
-              disabled={disabled || !onParticipantsChange}
-              onChange={(event) => {
-                const count = Number(event.target.value);
-                if (coach.slotId && Number.isInteger(count) && count >= 1 && count <= 100)
-                  onParticipantsChange?.(coach.slotId, count);
-              }}
-            />
-            <p className="text-muted-foreground text-xs">
-              1–100 member per sesi. Tarif mengikuti harga coach yang dipilih.
-            </p>
-          </div>
-        ))}
       {entries.map((group) => {
         const expanded = openGroup === group.id;
         const availableCount = group.members.filter((coach) => optionFor(coach)).length;
@@ -297,7 +271,7 @@ function CoachSession({
               <div
                 role="group"
                 aria-label={`Coach ${group.name}`}
-                className="grid gap-2 p-2 pt-0 sm:grid-cols-2"
+                className="grid items-start gap-3 p-3 pt-0 sm:grid-cols-2"
               >
                 {group.members.length === 0 && (
                   <p className="text-muted-foreground p-2 text-xs">
@@ -313,68 +287,82 @@ function CoachSession({
                   );
                   const chosenCoach = selected.find((selection) => selection.coachId === coach.id);
                   return (
-                    <button
+                    <div
                       key={coach.id}
                       data-admin-card
-                      type="button"
-                      disabled={disabled || (!option && !chosen)}
-                      aria-pressed={chosen}
-                      aria-label={`Pilih ${coach.name}`}
-                      className={`focus-visible:outline-primary flex min-h-18 items-center justify-between gap-3 rounded-md border-0 p-3 text-left shadow-none transition-colors outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${chosen ? 'bg-primary/10 text-primary' : 'bg-background/70 hover:bg-muted/60'}`}
-                      onClick={() => {
-                        if (chosen && chosenCoach) {
-                          onSelect(chosenCoach);
-                          return;
-                        }
-                        if (!option) return;
-                        onSelect({
-                          coachId: coach.id,
-                          coachName: coach.name,
-                          slotId: option.slotId,
-                          date: session.date,
-                          timeSlot: session.timeSlot,
-                          price: option.price,
-                          additionalHourPrice: option.additionalHourPrice,
-                          startAt: option.startAt,
-                          endAt: option.endAt,
-                          courtSport: sport,
-                          ...(group.id !== 'independent'
-                            ? {
-                                coachingGroupId: group.id,
-                                coachingGroupName: group.name,
-                                participants: 1
-                              }
-                            : {})
-                        });
-                      }}
+                      className={`overflow-hidden rounded-lg border ${chosen ? 'border-primary/40 bg-primary/5' : 'border-border/70 bg-background'}`}
                     >
-                      <span className="min-w-0 space-y-1">
-                        <span className="block text-sm font-medium">{coach.name}</span>
-                        {option && (
-                          <span className="text-muted-foreground block text-xs">
-                            Rp {option.price.toLocaleString('id-ID')}
-                            {option.additionalHourPrice != null && (
-                              <span className="block text-xs">
-                                Jam berikutnya Rp{' '}
-                                {option.additionalHourPrice.toLocaleString('id-ID')}/jam
-                              </span>
-                            )}
-                          </span>
-                        )}
-                      </span>
-                      <Badge
-                        className="rounded-sm border-0"
-                        variant={option ? 'lightSuccess' : 'lightNeutral'}
+                      <button
+                        type="button"
+                        disabled={disabled || (!option && !chosen)}
+                        aria-pressed={chosen}
+                        aria-label={`Pilih ${coach.name}`}
+                        className={`focus-visible:outline-primary flex min-h-18 items-center justify-between gap-3 rounded-md border-0 p-3 text-left shadow-none transition-colors outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${chosen ? 'text-primary hover:bg-primary/5' : 'hover:bg-muted/60'} w-full`}
+                        onClick={() => {
+                          if (chosen && chosenCoach) {
+                            onSelect(chosenCoach);
+                            return;
+                          }
+                          if (!option) return;
+                          onSelect({
+                            coachId: coach.id,
+                            coachName: coach.name,
+                            slotId: option.slotId,
+                            date: session.date,
+                            timeSlot: session.timeSlot,
+                            price: option.price,
+                            additionalHourPrice: option.additionalHourPrice,
+                            startAt: option.startAt,
+                            endAt: option.endAt,
+                            courtSport: sport,
+                            ...(group.id !== 'independent'
+                              ? {
+                                  coachingGroupId: group.id,
+                                  coachingGroupName: group.name,
+                                  participants: 1
+                                }
+                              : {})
+                          });
+                        }}
                       >
-                        {!coach.isActive
-                          ? 'Nonaktif'
-                          : option
-                            ? chosen
-                              ? 'Dipilih'
-                              : 'Tersedia'
-                            : 'Tidak tersedia'}
-                      </Badge>
-                    </button>
+                        <span className="min-w-0 space-y-1">
+                          <span className="block text-sm font-medium">{coach.name}</span>
+                          {option && (
+                            <span className="text-muted-foreground block text-xs">
+                              Rp {option.price.toLocaleString('id-ID')}
+                              {option.additionalHourPrice != null && (
+                                <span className="block text-xs">
+                                  Jam berikutnya Rp{' '}
+                                  {option.additionalHourPrice.toLocaleString('id-ID')}/jam
+                                </span>
+                              )}
+                            </span>
+                          )}
+                        </span>
+                        <Badge
+                          className="rounded-sm border-0"
+                          variant={option ? 'lightSuccess' : 'lightNeutral'}
+                        >
+                          {!coach.isActive
+                            ? 'Nonaktif'
+                            : option
+                              ? chosen
+                                ? 'Dipilih'
+                                : 'Tersedia'
+                              : 'Tidak tersedia'}
+                        </Badge>
+                      </button>
+                      {chosen && chosenCoach?.coachingGroupId && (
+                        <ClubMemberCount
+                          coach={chosenCoach}
+                          disabled={disabled || !onParticipantsChange}
+                          onChange={(count) => {
+                            if (chosenCoach.slotId)
+                              onParticipantsChange?.(chosenCoach.slotId, count);
+                          }}
+                        />
+                      )}
+                    </div>
                   );
                 })}
               </div>
@@ -401,6 +389,94 @@ function CoachSession({
           Coach atau grup terpilih sudah tidak tersedia. Pilih ulang atau lanjutkan tanpa coach.
         </p>
       )}
+    </div>
+  );
+}
+
+function ClubMemberCount({
+  coach,
+  disabled,
+  onChange
+}: {
+  coach: SelectedCoach;
+  disabled?: boolean;
+  onChange: (count: number) => void;
+}) {
+  const count = coach.participants ?? 1;
+  const [draft, setDraft] = useState<string | null>(null);
+  const value = draft ?? String(count);
+  const valid =
+    value !== '' && Number.isInteger(Number(value)) && Number(value) >= 1 && Number(value) <= 100;
+  const id = `club-participants-${coach.slotId}`;
+  return (
+    <div className="border-primary/10 space-y-2 border-t px-3 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Label htmlFor={id} className="flex items-center gap-2 text-sm font-medium">
+          <Users className="text-muted-foreground size-4" aria-hidden="true" />
+          Jumlah member
+          <span className="sr-only">
+            {' '}
+            · {coach.coachName} · {coach.coachingGroupName}
+          </span>
+        </Label>
+        <div className="border-border bg-background flex items-center rounded-md border p-0.5">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-8 shrink-0"
+            aria-label={`Kurangi member ${coach.coachName}`}
+            disabled={disabled || count <= 1}
+            onClick={() => {
+              setDraft(null);
+              onChange(count - 1);
+            }}
+          >
+            <Minus className="size-3.5" />
+          </Button>
+          <Input
+            id={id}
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={100}
+            step={1}
+            value={value}
+            disabled={disabled}
+            aria-invalid={value !== '' && !valid}
+            aria-describedby={`${id}-hint`}
+            className="h-8 w-14 [appearance:textfield] rounded-none border-0 px-1 text-center font-semibold shadow-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            onFocus={(event) => event.currentTarget.select()}
+            onChange={(event) => {
+              const next = event.target.value;
+              setDraft(next);
+              const number = Number(next);
+              if (next !== '' && Number.isInteger(number) && number >= 1 && number <= 100)
+                onChange(number);
+            }}
+            onBlur={() => setDraft(null)}
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-8 shrink-0"
+            aria-label={`Tambah member ${coach.coachName}`}
+            disabled={disabled || count >= 100}
+            onClick={() => {
+              setDraft(null);
+              onChange(count + 1);
+            }}
+          >
+            <Plus className="size-3.5" />
+          </Button>
+        </div>
+      </div>
+      <p id={`${id}-hint`} className="text-muted-foreground text-xs leading-relaxed">
+        {value !== '' && !valid
+          ? 'Masukkan angka bulat 1–100.'
+          : '1–100 member per sesi · Tarif coach tetap.'}
+      </p>
     </div>
   );
 }

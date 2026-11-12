@@ -248,7 +248,7 @@ it('does not request a hidden, unselected service', async () => {
   client.clear();
 });
 
-it('edits club member counts without deselecting the coach and keeps them per session', async () => {
+it('replaces club member counts after clearing, validates on blur and supports increment controls', async () => {
   const client = mount();
   fireEvent.click(await screen.findByRole('button', { name: /SR Academy/ }));
   const coach = screen.getByRole('button', { name: 'Pilih Coach Andi' });
@@ -256,13 +256,30 @@ it('edits club member counts without deselecting the coach and keeps them per se
   fireEvent.click(coach);
   const count = screen.getByRole('spinbutton', { name: /Jumlah member.*Coach Andi/ });
   expect(count).toHaveValue(1);
+  fireEvent.focus(count);
+  expect((count as HTMLInputElement).value).toBe('1');
+  fireEvent.change(count, { target: { value: '' } });
+  expect(count).toHaveValue(null);
   fireEvent.change(count, { target: { value: '4' } });
   expect(count).toHaveValue(4);
   expect(coach).toHaveAttribute('aria-pressed', 'true');
   for (const invalid of ['0', '-1', '1.5', '101']) {
     fireEvent.change(count, { target: { value: invalid } });
+    expect(count).toHaveAttribute('aria-invalid', 'true');
+    fireEvent.blur(count);
     expect(count).toHaveValue(4);
   }
+  fireEvent.change(count, { target: { value: '' } });
+  fireEvent.blur(count);
+  expect(count).toHaveValue(4);
+  fireEvent.click(screen.getByRole('button', { name: 'Tambah member Coach Andi' }));
+  expect(count).toHaveValue(5);
+  fireEvent.click(screen.getByRole('button', { name: 'Kurangi member Coach Andi' }));
+  expect(count).toHaveValue(4);
+  fireEvent.change(count, { target: { value: '1' } });
+  expect(screen.getByRole('button', { name: 'Kurangi member Coach Andi' })).toBeDisabled();
+  fireEvent.change(count, { target: { value: '100' } });
+  expect(screen.getByRole('button', { name: 'Tambah member Coach Andi' })).toBeDisabled();
   fireEvent.click(screen.getByRole('button', { name: 'Tanpa coach' }));
   expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
   client.clear();
