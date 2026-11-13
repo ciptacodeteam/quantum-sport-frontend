@@ -1,4 +1,5 @@
 'use client';
+import BookingAdminNotes from './BookingAdminNotes';
 import { bookingPurposeLabel, isInternalBooking } from '@/lib/booking-purpose';
 
 import { Badge } from '@/components/ui/badge';
@@ -273,12 +274,7 @@ export default function BookingDetailsDialog({
           </section>
         )}
         {booking.adminNote && (
-          <section className="space-y-1.5">
-            <h3 className="text-muted-foreground text-xs font-medium">Catatan admin</h3>
-            <p className="bg-muted/40 rounded-lg px-3 py-2.5 text-sm leading-relaxed break-words whitespace-pre-wrap">
-              {booking.adminNote}
-            </p>
-          </section>
+          <BookingAdminNotes note={booking.adminNote} />
         )}
         {booking.cancellationReason && (
           <section className="border-destructive/20 bg-destructive/5 space-y-1.5 rounded-lg border p-3">

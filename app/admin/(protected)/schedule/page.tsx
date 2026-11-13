@@ -1,4 +1,5 @@
 'use client';
+import BookingAdminNotes from '@/components/admin/bookings/BookingAdminNotes';
 import { bookingPurposeLabel, isInternalBooking } from '@/lib/booking-purpose';
 import { useAdminCourtSports } from '@/hooks/useAdminCourtSports';
 
@@ -1045,11 +1046,18 @@ export default function SchedulePage() {
                                             className="focus-visible:ring-ring flex min-h-16 w-full flex-col items-center justify-center gap-0.5 px-3 py-2 text-center outline-none focus-visible:ring-2 focus-visible:ring-inset"
                                             aria-label={`Detail booking ${bookingCell.customerName}, ${court.name}, ${startTime}`}
                                           >
-                                            <span
-                                              className="max-w-full truncate text-xs font-medium"
-                                              title={bookingCell.customerName}
-                                            >
-                                              {bookingCell.customerName}
+                                            <span className="flex max-w-full flex-wrap items-center justify-center gap-1.5">
+                                              <span
+                                                className="min-w-0 truncate text-xs font-medium"
+                                                title={bookingCell.customerName}
+                                              >
+                                                {bookingCell.customerName}
+                                              </span>
+                                              {bookingCell.booking.membershipUserId && (
+                                                <Badge variant="outline" className="shrink-0 text-[10px]">
+                                                  Membership
+                                                </Badge>
+                                              )}
                                             </span>
                                             {bookingCell.customerPhone &&
                                               bookingCell.customerPhone !== '-' && (
@@ -1159,9 +1167,14 @@ export default function SchedulePage() {
                                                   <p className="text-muted-foreground text-sm">
                                                     Pelanggan
                                                   </p>
-                                                  <p className="font-medium">
-                                                    {bookingCell.customerName}
-                                                  </p>
+                                                  <div className="flex flex-wrap items-center gap-1.5">
+                                                    <p className="font-medium">
+                                                      {bookingCell.customerName}
+                                                    </p>
+                                                    {bookingCell.booking.membershipUserId && (
+                                                      <Badge variant="outline">Membership</Badge>
+                                                    )}
+                                                  </div>
                                                   {bookingCell.customerPhone &&
                                                     bookingCell.customerPhone !== '-' && (
                                                       <p className="text-muted-foreground text-xs">
@@ -1206,12 +1219,7 @@ export default function SchedulePage() {
                                                 )}
                                                 {bookingCell.booking.adminNote && (
                                                   <div className="col-span-2">
-                                                    <p className="text-muted-foreground text-sm">
-                                                      Catatan admin
-                                                    </p>
-                                                    <p className="text-sm whitespace-pre-line">
-                                                      {bookingCell.booking.adminNote}
-                                                    </p>
+                                                    <BookingAdminNotes note={bookingCell.booking.adminNote} />
                                                   </div>
                                                 )}
                                               </div>
