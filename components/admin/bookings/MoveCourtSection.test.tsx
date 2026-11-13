@@ -3,10 +3,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import MoveCourtSection from './MoveCourtSection';
 import type { Booking, BookingDetail } from '@/types/model';
-const mocks = vi.hoisted(() => ({ canWrite: true, options: vi.fn(), move: vi.fn() }));
+const mocks = vi.hoisted(() => ({ canWrite: true, now: Date.parse('2030-01-02T09:00:00+07:00'), options: vi.fn(), move: vi.fn() }));
 vi.mock('@/hooks/useRoleAccess', () => ({ useHasRole: () => mocks.canWrite }));
 vi.mock('@/hooks/useBookingClock', () => ({
-  useBookingClock: () => Date.parse('2030-01-02T09:00:00+07:00')
+  useBookingClock: () => mocks.now
 }));
 vi.mock('@/api/admin/bookedCourt', () => ({
   getAdminCourtChangeOptionsApi: mocks.options,
@@ -31,6 +31,7 @@ function mount(source = booking) {
 beforeEach(() => {
   vi.resetAllMocks();
   mocks.canWrite = true;
+  mocks.now = Date.parse('2030-01-02T09:00:00+07:00');
   mocks.options.mockResolvedValue([{ slotId: 'new', courtId: 'b', courtName: 'Court B' }]);
   mocks.move.mockResolvedValue({ slotId: 'new' });
 });
@@ -68,7 +69,7 @@ it('hides the move action for read-only roles', () => {
 it('explains why unpaid bookings cannot be moved', () => {
   const client = mount({ ...booking, invoice: { status: 'PENDING' } } as Booking);
   expect(screen.getByRole('button', { name: 'Pindah court' })).toBeDisabled();
-  expect(screen.getByText(/terkonfirmasi, lunas, dan belum mulai/)).toBeInTheDocument();
+  expect(screen.getByText(/sebelum 30 menit setelah jam mulai/)).toBeInTheDocument();
   client.clear();
 });
 it('blocks confirmation when no eligible court is empty', async () => {
@@ -88,5 +89,24 @@ it('keeps the original booking when another request takes the chosen court', asy
   fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi pindah court' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('Court baru saja dipesan');
   expect(screen.getByRole('button', { name: 'Konfirmasi pindah court' })).toBeDisabled();
+  client.clear();
+});
+
+it.each(['10:00:00', '10:15:00', '10:29:59'])('allows court changes during the grace period (%s WIB)', async (time) => {
+  mocks.now = Date.parse(`2030-01-02T${time}+07:00`);
+  const client = mount();
+  expect(screen.getByRole('button', { name: 'Pindah court' })).toBeEnabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Pindah court' }));
+  fireEvent.click(await screen.findByRole('radio', { name: 'Court B' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi pindah court' }));
+  await waitFor(() => expect(mocks.move).toHaveBeenCalledWith('detail', 'old', 'new'));
+  client.clear();
+});
+it.each(['10:30:00', '10:30:01', '11:00:00'])('disables court changes at or after the cutoff (%s WIB)', (time) => {
+  mocks.now = Date.parse(`2030-01-02T${time}+07:00`);
+  const client = mount();
+  expect(screen.getByRole('button', { name: 'Pindah court' })).toBeDisabled();
+  expect(screen.getByText(/sebelum 30 menit setelah jam mulai/)).toBeInTheDocument();
+  expect(mocks.options).not.toHaveBeenCalled();
   client.clear();
 });

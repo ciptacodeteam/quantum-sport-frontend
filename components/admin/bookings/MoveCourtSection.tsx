@@ -6,7 +6,8 @@ import { toast } from 'sonner';
 import { getAdminCourtChangeOptionsApi, changeAdminCourtApi } from '@/api/admin/bookedCourt';
 import { useHasRole } from '@/hooks/useRoleAccess';
 import { useBookingClock } from '@/hooks/useBookingClock';
-import { parseScheduleDatetime, formatScheduleSlotTime } from '@/lib/admin-schedule-time';
+import { formatScheduleSlotTime } from '@/lib/admin-schedule-time';
+import { isCourtWallSlotBookable } from '@/lib/booking-time-policy';
 import { getApiErrorMessage } from '@/lib/api-error';
 import { Button } from '@/components/ui/button';
 import type { Booking, BookingDetail } from '@/types/model';
@@ -29,7 +30,7 @@ export default function MoveCourtSection({
     (booking.purpose ?? 'REGULAR') === 'REGULAR' &&
     booking.invoice?.status === 'PAID' &&
     !!detail.slot &&
-    parseScheduleDatetime(detail.slot.startAt).valueOf() > now;
+    isCourtWallSlotBookable(detail.slot.startAt, now);
   const options = useQuery({
     queryKey: ['admin', 'court-changes', detail.id, detail.slotId],
     queryFn: ({ signal }) => getAdminCourtChangeOptionsApi(detail.id, signal),
@@ -98,7 +99,7 @@ export default function MoveCourtSection({
       </div>
       {!eligible && (
         <p className="text-muted-foreground text-xs">
-          Pindah court tersedia untuk booking reguler yang terkonfirmasi, lunas, dan belum mulai.
+          Pindah court tersedia untuk booking reguler yang terkonfirmasi dan lunas, sebelum 30 menit setelah jam mulai.
         </p>
       )}
       {open && eligible && (
