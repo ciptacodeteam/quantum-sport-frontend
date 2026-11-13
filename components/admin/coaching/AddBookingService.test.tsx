@@ -97,8 +97,8 @@ it('requires an offline payment method before confirming the selected service', 
   );
   expect(invalidate).toHaveBeenCalledWith({ queryKey: ['admin', 'schedule'] });
 });
-it('closes at 13:15 WIB and does not load offers for an elapsed hour', () => {
-  mocks.now = Date.parse('2026-11-02T13:15:00+07:00');
+it('closes at 13:30 WIB and does not load offers for an elapsed hour', () => {
+  mocks.now = Date.parse('2026-11-02T13:30:00+07:00');
   mount();
   expect(screen.getByText(/melewati batas pemesanan/)).toBeInTheDocument();
   expect(mocks.available).not.toHaveBeenCalled();

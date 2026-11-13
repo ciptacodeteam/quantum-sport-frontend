@@ -1,6 +1,6 @@
 import { parseScheduleDatetime } from './admin-schedule-time';
 
-export const COURT_BOOKING_GRACE_MINUTES = 15;
+export const COURT_BOOKING_GRACE_MINUTES = 30;
 
 export function isCourtSlotBookable(startAt: number, now: number): boolean {
   return startAt + COURT_BOOKING_GRACE_MINUTES * 60_000 > now;
@@ -11,8 +11,8 @@ export function isCourtWallSlotBookable(startAt: Date | string, now: number): bo
   return isCourtSlotBookable(parseScheduleDatetime(startAt).valueOf(), now);
 }
 
-// Visibility is separate from whether a slot can still be booked.
-export const SCHEDULE_SLOT_VISIBILITY_MINUTES = 30;
+// Close bookings and hide the schedule row at the same 30-minute boundary.
+export const SCHEDULE_SLOT_VISIBILITY_MINUTES = COURT_BOOKING_GRACE_MINUTES;
 
 export function isScheduleSlotVisible(startAt: number, now: number): boolean {
   return startAt + SCHEDULE_SLOT_VISIBILITY_MINUTES * 60_000 > now;

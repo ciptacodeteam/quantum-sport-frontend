@@ -145,7 +145,7 @@ export default function AddBookingService({
       </div>
       {!canAdd ? (
         <p className="text-muted-foreground text-sm">
-          Waktu ini sudah melewati batas pemesanan 15 menit.
+          Waktu ini sudah melewati batas pemesanan 30 menit.
         </p>
       ) : available.isError ? (
         <div role="alert">

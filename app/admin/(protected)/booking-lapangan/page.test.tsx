@@ -178,9 +178,9 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-it('hides the current hour at exactly start +15 minutes while the admin tab stays open', () => {
+it('hides the current hour at exactly start +30 minutes while the admin tab stays open', () => {
   vi.useFakeTimers();
-  vi.setSystemTime(new Date('2040-01-02T13:14:59+07:00'));
+  vi.setSystemTime(new Date('2040-01-02T13:29:59+07:00'));
   fixtures.slots.forEach((slot) => {
     slot.startAt = '2040-01-02T13:00:00Z';
     slot.endAt = '2040-01-02T14:00:00Z';
@@ -198,7 +198,7 @@ it('hides the current hour at exactly start +15 minutes while the admin tab stay
 
 it('removes an added slot from the admin cart once its grace period expires', () => {
   vi.useFakeTimers();
-  vi.setSystemTime(new Date('2040-01-02T12:14:59+07:00'));
+  vi.setSystemTime(new Date('2040-01-02T12:29:59+07:00'));
   render(<BookingLapangan />);
   fireEvent.click(screen.getByRole('button', { name: /Court A/ }));
   fireEvent.click(screen.getByRole('button', { name: '12:00' }));

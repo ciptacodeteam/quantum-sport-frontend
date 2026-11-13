@@ -590,7 +590,7 @@ export default function BookingLapangan() {
           !isCourtWallSlotBookable(slot.startAt, Date.now())
       )
     ) {
-      toast.error('Slot sudah tidak tersedia atau melewati batas pemesanan 15 menit.');
+      toast.error('Slot sudah tidak tersedia atau melewati batas pemesanan 30 menit.');
       return;
     }
 
@@ -720,7 +720,7 @@ export default function BookingLapangan() {
           )
       )
     ) {
-      toast.error('Ada slot yang melewati batas pemesanan 15 menit. Silakan pilih ulang.');
+      toast.error('Ada slot yang melewati batas pemesanan 30 menit. Silakan pilih ulang.');
       return;
     }
     if (!internalBooking && !localCustomerId && !(storeWalkInName && storeWalkInPhone)) {

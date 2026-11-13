@@ -111,10 +111,17 @@ it.each(['/booking', '/booking/tennis'])(
   'automatically hides elapsed court rows at 30 minutes in %s',
   async (pathname) => {
     mocks.pathname = pathname;
-    mocks.now = '2030-01-02 10:29:59';
+    mocks.now = '2030-01-02 10:22:00';
     const client = mount();
     expect(screen.getByText('10:00', { selector: 'td' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Court C, 10:00, Unavailable' })).toBeDisabled();
+    const slot = screen.getByRole('button', { name: 'Court C, 10:00, Available' });
+    expect(slot).toBeEnabled();
+    fireEvent.click(slot);
+    await act(async () => {
+      mocks.now = '2030-01-02 10:29:59';
+      window.dispatchEvent(new Event('focus'));
+    });
+    expect(screen.getByRole('button', { name: 'Court C, 10:00, dipilih' })).toBeEnabled();
     await act(async () => {
       mocks.now = '2030-01-02 10:30:00';
       window.dispatchEvent(new Event('focus'));

@@ -142,7 +142,7 @@ it('hides the action for cancelled coaches and elapsed hours', () => {
   mount({ status: 'CANCELLED' });
   expect(screen.queryByRole('button')).toBeNull();
   cleanup();
-  mocks.now = Date.parse('2026-11-02T13:15:00+07:00');
+  mocks.now = Date.parse('2026-11-02T13:30:00+07:00');
   mount();
   expect(screen.queryByRole('button')).toBeNull();
 });

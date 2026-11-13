@@ -10,10 +10,13 @@ it.each([
   ['2026-10-28T14:59:59+07:00', true],
   ['2026-10-28T15:00:00+07:00', true],
   ['2026-10-28T15:14:59.999+07:00', true],
-  ['2026-10-28T15:15:00+07:00', false],
-  ['2026-10-28T15:16:00+07:00', false],
+  ['2026-10-28T15:15:00+07:00', true],
+  ['2026-10-28T15:22:00+07:00', true],
+  ['2026-10-28T15:29:59.999+07:00', true],
+  ['2026-10-28T15:30:00+07:00', false],
+  ['2026-10-28T15:31:00+07:00', false],
   ['2026-10-29T15:00:00+07:00', false]
-])('keeps the 15:00 slot bookable until 15:15 WIB at %s', (now, allowed) => {
+])('keeps the 15:00 slot bookable until 15:30 WIB at %s', (now, allowed) => {
   expect(isCourtSlotBookable(Date.parse('2026-10-28T15:00:00+07:00'), Date.parse(now))).toBe(
     allowed
   );
@@ -22,7 +25,9 @@ it.each([
 it.each([
   ['2026-11-01T13:00:00+07:00', true],
   ['2026-11-01T13:14:59.999+07:00', true],
-  ['2026-11-01T13:15:00+07:00', false],
+  ['2026-11-01T13:15:00+07:00', true],
+  ['2026-11-01T13:22:00+07:00', true],
+  ['2026-11-01T13:29:59.999+07:00', true],
   ['2026-11-01T13:30:00+07:00', false]
 ])('interprets API wall timestamps using the same grace period at %s', (now, allowed) => {
   for (const value of [

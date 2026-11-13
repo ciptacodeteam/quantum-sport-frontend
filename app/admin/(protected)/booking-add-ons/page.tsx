@@ -367,7 +367,7 @@ export default function BookingAddOns() {
       )
     ) {
       toast.error(
-        'Ada slot yang tidak valid atau melewati batas pemesanan 15 menit. Silakan pilih ulang.'
+        'Ada slot yang tidak valid atau melewati batas pemesanan 30 menit. Silakan pilih ulang.'
       );
       return;
     }
