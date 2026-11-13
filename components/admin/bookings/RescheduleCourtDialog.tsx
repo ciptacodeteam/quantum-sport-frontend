@@ -6,7 +6,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { id as indonesia } from 'date-fns/locale';
 import { IconCalendar, IconCheck } from '@tabler/icons-react';
 import { toast } from 'sonner';
-import { rescheduleBookedCourtApi } from '@/api/admin/bookedCourt';
+import { adminPaymentMethodsQueryOptions } from '@/queries/admin/paymentMethod';
+import { Label } from '@/components/ui/label';
+import { rescheduleBookedCourtApi, getRescheduleCourtQuoteApi } from '@/api/admin/bookedCourt';
 import { formatBookingSlotDate } from '@/lib/booking-display';
 import { parseScheduleDatetime } from '@/lib/admin-schedule-time';
 import { useIsSuperAdmin } from '@/hooks/useRoleAccess';
@@ -38,12 +40,7 @@ const currency = (value: number) => `Rp ${new Intl.NumberFormat('id-ID').format(
 const time = (value: Date | string) => formatBookingSlotDate(value, 'HH:mm');
 const slotMoment = (value: Date | string) => parseScheduleDatetime(value);
 
-export function RescheduleCourtDialog({
-  detail,
-  canReschedule,
-  membershipCovered = false,
-  onSuccess
-}: Props) {
+export function RescheduleCourtDialog({ detail, canReschedule, onSuccess }: Props) {
   const role = useIsSuperAdmin() ? 'SUPER_ADMIN' : undefined;
   const rescheduleNotice = getRescheduleNotice(role);
   const queryClient = useQueryClient();
@@ -105,18 +102,31 @@ export function RescheduleCourtDialog({
     !!detail.slot &&
     slotMoment(slot.endAt).valueOf() - slotMoment(slot.startAt).valueOf() ===
       slotMoment(detail.slot.endAt).valueOf() - slotMoment(detail.slot.startAt).valueOf();
-  const samePrice = (slot: Slot) =>
-    membershipCovered ||
-    ((slot.discountPrice ?? 0) > 0 ? slot.discountPrice : slot.price) ===
-      ((detail.discountPrice ?? 0) > 0 ? detail.discountPrice : detail.price);
   const isSelectable = (slot: Slot) =>
     slot.id !== currentSlotId &&
     slot.isAvailable &&
     slotMoment(slot.startAt).isAfter(dayjs()) &&
-    sameDuration(slot) &&
-    samePrice(slot);
+    sameDuration(slot);
   const selectedCourtSlots = selectedCourtId ? slotsByCourt.get(selectedCourtId) || [] : [];
   const selectedSlot = selectedCourtSlots.find((slot) => slot.id === selectedSlotId);
+  const [paymentMethodId, setPaymentMethodId] = useState('');
+  const quote = useQuery({
+    queryKey: ['admin', 'court-reschedule-quote', detail.id, selectedSlotId],
+    queryFn: () => getRescheduleCourtQuoteApi(detail.id, selectedSlotId!),
+    enabled: open && !!selectedSlot,
+    retry: false,
+    staleTime: 0
+  });
+  const methodsQuery = useQuery({
+    ...adminPaymentMethodsQueryOptions,
+    enabled: open && (quote.data?.priceDifference ?? 0) > 0
+  });
+  const methods = (methodsQuery.data ?? []).filter(
+    (method) =>
+      method.isActive &&
+      (method.isOffline ||
+        ['CASH', 'EDC', 'QRIS_STATIC', 'BANK_TRANSFER_MANUAL'].includes(method.channel ?? ''))
+  );
   const selectedCourt = courts.find((court) => court.id === selectedCourtId);
 
   useEffect(() => {
@@ -130,13 +140,18 @@ export function RescheduleCourtDialog({
 
   const resetState = useCallback(() => {
     setSelectedSlotId(null);
+    setPaymentMethodId('');
     setSelectedDate(defaultDate);
     setSelectedCourtId(sourceCourtId ?? null);
     setCalendarOpen(false);
   }, [defaultDate, sourceCourtId]);
 
   const mutation = useMutation({
-    mutationFn: (slotId: string) => rescheduleBookedCourtApi(detail.id, slotId),
+    mutationFn: (slotId: string) =>
+      rescheduleBookedCourtApi(detail.id, slotId, {
+        expectedDifference: quote.data?.priceDifference,
+        ...(paymentMethodId ? { paymentMethodId } : {})
+      }),
     onSuccess: () => {
       toast.success('Lapangan dan layanan terkait berhasil dijadwalkan ulang.');
       void queryClient.invalidateQueries({ queryKey: ['admin', 'bookings'] });
@@ -198,10 +213,73 @@ export function RescheduleCourtDialog({
             {courtSport
               ? `Pilih lapangan ${sportLabel} dan jadwal pengganti.`
               : 'Memastikan jenis lapangan pemesanan.'}{' '}
-            Durasi harus sama; harga reguler harus sama. Slot membership mengikuti jam paket.
+            Durasi harus sama. Tarif lebih tinggi dikenakan selisih; tarif lebih rendah tidak
+            mendapat refund. Slot membership mengikuti jam paket.
           </DialogDescription>
         </DialogHeader>
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5 sm:px-6">
+          {selectedSlot && (
+            <section
+              className="space-y-3 rounded-lg border p-4"
+              aria-label="Selisih biaya reschedule"
+            >
+              <h3 className="text-sm font-semibold">Perhitungan biaya</h3>
+              {quote.isFetching ? (
+                <p role="status">Menghitung selisih lapangan dan layanan...</p>
+              ) : quote.isError ? (
+                <p role="alert" className="text-destructive text-sm">
+                  {(quote.error as any)?.response?.data?.message ??
+                    'Perhitungan gagal. Pilih jadwal lain atau coba lagi.'}
+                </p>
+              ) : (
+                quote.data && (
+                  <>
+                    <p className="text-sm">
+                      Pembayaran lapangan sebelumnya: {currency(quote.data.previousCourtPrice)}
+                    </p>
+                    <p className="text-sm">
+                      Tarif lapangan tujuan: {currency(quote.data.targetCourtPrice)}
+                    </p>
+                    <p className="text-sm">
+                      Tambahan lapangan: {currency(quote.data.courtDifference)}
+                    </p>
+                    <p className="text-sm">
+                      Tambahan layanan: {currency(quote.data.serviceDifference)}
+                    </p>
+                    <p className="font-semibold">
+                      Total tambahan: {currency(quote.data.priceDifference)}
+                    </p>
+                    <p className="text-muted-foreground text-xs">
+                      Jika tarif tujuan lebih rendah, pembayaran sebelumnya tetap berlaku dan
+                      selisihnya hangus.
+                    </p>
+                    {quote.data.priceDifference > 0 && (
+                      <div className="space-y-2">
+                        <Label htmlFor="reschedule-payment">Metode pembayaran selisih</Label>
+                        <select
+                          id="reschedule-payment"
+                          className="bg-background h-10 w-full rounded-md border px-3 text-sm"
+                          value={paymentMethodId}
+                          onChange={(event) => setPaymentMethodId(event.target.value)}
+                          disabled={mutation.isPending}
+                        >
+                          <option value="">Pilih metode pembayaran</option>
+                          {methods.map((method) => (
+                            <option key={method.id} value={method.id}>
+                              {method.name}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-muted-foreground text-xs">
+                          Konfirmasi setelah pembayaran selisih diterima.
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )
+              )}
+            </section>
+          )}
           <div className="bg-muted/40 space-y-2 rounded-lg border px-3 py-3">
             <p className="text-muted-foreground text-xs">Jadwal saat ini</p>
             <div className="flex flex-wrap items-start justify-between gap-2">
@@ -218,7 +296,9 @@ export function RescheduleCourtDialog({
                     : '-'}
                 </p>
               </div>
-              <span className="text-sm font-semibold tabular-nums">{currency(detail.price)}</span>
+              <span className="text-sm font-semibold tabular-nums">
+                {currency(detail.discountPrice ?? detail.price)}
+              </span>
             </div>
           </div>
           {!courtSport ? (
@@ -385,9 +465,7 @@ export function RescheduleCourtDialog({
                                           ? 'Tidak tersedia'
                                           : !sameDuration(slot)
                                             ? 'Durasi berbeda'
-                                            : !samePrice(slot)
-                                              ? 'Harga berbeda'
-                                              : 'Sudah lewat'}
+                                            : 'Sudah lewat'}
                                 </span>
                               )}
                             </button>
@@ -429,7 +507,15 @@ export function RescheduleCourtDialog({
             </Button>
             <Button
               className="rounded-lg"
-              disabled={!canSave || mutation.isPending}
+              disabled={
+                !canSave ||
+                mutation.isPending ||
+                quote.isFetching ||
+                quote.isError ||
+                !quote.data ||
+                ((quote.data.priceDifference ?? 0) > 0 &&
+                  !methods.some((method) => method.id === paymentMethodId))
+              }
               loading={mutation.isPending}
               onClick={() => {
                 if (

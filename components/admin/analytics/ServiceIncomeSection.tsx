@@ -368,7 +368,8 @@ export default function ServiceIncomeSection({
                   <td className="min-w-44 px-4 py-4 text-xs tabular-nums">
                     <p>{row.startAt.slice(0, 16)}</p>
                     <p className="text-muted-foreground mt-1">
-                      s.d. {row.endAt.slice(11, 16)} · {hours(row.hours)} jam
+                      s.d. {row.endAt.slice(11, 16)} ·{' '}
+                      {row.hours === 0 ? 'Selisih reschedule' : `${hours(row.hours)} jam`}
                     </p>
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap tabular-nums">

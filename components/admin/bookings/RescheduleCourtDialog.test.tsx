@@ -5,6 +5,13 @@ import { RescheduleCourtDialog, type BookingDetailWithSlot } from './RescheduleC
 
 const mocks = vi.hoisted(() => ({
   isSuperAdmin: false,
+  quote: {
+    priceDifference: 0,
+    courtDifference: 0,
+    serviceDifference: 0,
+    previousCourtPrice: 150000,
+    targetCourtPrice: 150000
+  },
   mutate: vi.fn(),
   queries: vi.fn(),
   sourceSport: undefined as string | undefined,
@@ -49,7 +56,13 @@ vi.mock('@tanstack/react-query', async (importOriginal) => ({
   useQuery: (options: any) => {
     mocks.queries(options);
     return {
-      data: options.queryKey.includes('slots') ? mocks.data : { sport: mocks.sourceSport },
+      data: options.queryKey.includes('court-reschedule-quote')
+        ? mocks.quote
+        : options.queryKey.includes('payment-methods')
+          ? [{ id: 'cash', name: 'Tunai', isActive: true, isOffline: true }]
+          : options.queryKey.includes('slots')
+            ? mocks.data
+            : { sport: mocks.sourceSport },
       isFetching: false,
       isError: false
     };
@@ -76,6 +89,13 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.sourceSport = undefined;
   mocks.isSuperAdmin = false;
+  mocks.quote = {
+    priceDifference: 0,
+    courtDifference: 0,
+    serviceDifference: 0,
+    previousCourtPrice: 150000,
+    targetCourtPrice: 150000
+  };
 });
 afterEach(cleanup);
 it.each(['PADEL', 'TENNIS'] as const)(
@@ -166,4 +186,41 @@ it('allows super admin to reschedule after the original deadline, including an o
   } finally {
     vi.useRealTimers();
   }
+});
+
+it('allows a more expensive slot and requires a payment method for the quoted increase', () => {
+  mocks.quote = {
+    priceDifference: 50000,
+    courtDifference: 50000,
+    serviceDifference: 0,
+    previousCourtPrice: 150000,
+    targetCourtPrice: 200000
+  };
+  render(<RescheduleCourtDialog detail={detail('PADEL')} canReschedule />);
+  fireEvent.click(screen.getByRole('button', { name: /Reschedule/ }));
+  fireEvent.click(screen.getByRole('button', { name: /10:00–11:00/ }));
+  expect(screen.getByLabelText('Selisih biaya reschedule')).toHaveTextContent('50.000');
+  const save = screen.getByRole('button', { name: 'Simpan jadwal' });
+  expect(save).toBeDisabled();
+  fireEvent.change(screen.getByLabelText('Metode pembayaran selisih'), {
+    target: { value: 'cash' }
+  });
+  expect(save).toBeEnabled();
+  fireEvent.click(save);
+  expect(mocks.mutate).toHaveBeenCalledWith('new-padel');
+});
+it('allows a cheaper destination with no refund and no extra payment', () => {
+  mocks.quote = {
+    priceDifference: 0,
+    courtDifference: 0,
+    serviceDifference: 0,
+    previousCourtPrice: 250000,
+    targetCourtPrice: 150000
+  };
+  render(<RescheduleCourtDialog detail={detail('PADEL')} canReschedule />);
+  fireEvent.click(screen.getByRole('button', { name: /Reschedule/ }));
+  fireEvent.click(screen.getByRole('button', { name: /10:00–11:00/ }));
+  expect(screen.getByLabelText('Selisih biaya reschedule')).toHaveTextContent('hangus');
+  expect(screen.queryByLabelText('Metode pembayaran selisih')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Simpan jadwal' })).toBeEnabled();
 });

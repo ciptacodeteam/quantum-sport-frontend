@@ -40,8 +40,9 @@ export default function RescheduleCourtSection({
         />
       </div>
       <p className="text-muted-foreground text-xs leading-relaxed">
-        Durasi dan harga mengikuti aturan reschedule. Coach dan ballboy yang terhubung harus
-        tersedia pada jadwal pengganti.
+        Tarif lebih tinggi dikenakan selisih. Tarif lebih rendah tidak mendapat refund; nilai
+        pembayaran sebelumnya tetap berlaku. Coach dan ballboy yang terhubung harus tersedia pada
+        jadwal pengganti.
       </p>
     </section>
   );

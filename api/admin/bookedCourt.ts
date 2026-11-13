@@ -1,7 +1,14 @@
 import { adminApi } from '@/lib/adminApi';
 
-export async function rescheduleBookedCourtApi(id: string, slotId: string) {
-  const { data } = await adminApi.put(`/booked-courts/${id}/reschedule`, { newSlotId: slotId });
+export async function rescheduleBookedCourtApi(
+  id: string,
+  slotId: string,
+  options: { expectedDifference?: number; paymentMethodId?: string } = {}
+) {
+  const { data } = await adminApi.put(`/booked-courts/${id}/reschedule`, {
+    newSlotId: slotId,
+    ...options
+  });
   return data;
 }
 
@@ -20,6 +27,25 @@ export async function changeAdminCourtApi(id: string, sourceSlotId: string, newS
   const { data } = await adminApi.put(`/booked-courts/${encodeURIComponent(id)}/change-court`, {
     sourceSlotId,
     newSlotId
+  });
+  return data.data;
+}
+
+export type RescheduleCourtQuote = {
+  priceDifference: number;
+  courtDifference: number;
+  serviceDifference: number;
+  previousCourtPrice: number;
+  targetCourtPrice: number;
+  retainedCourtPrice: number;
+};
+export async function getRescheduleCourtQuoteApi(
+  id: string,
+  slotId: string
+): Promise<RescheduleCourtQuote> {
+  const { data } = await adminApi.put(`/booked-courts/${id}/reschedule`, {
+    newSlotId: slotId,
+    preview: true
   });
   return data.data;
 }
