@@ -9,7 +9,6 @@ import Link from 'next/link';
 import CancelCoachDialog from './CancelCoachDialog';
 import ReplaceCoachDialog from './ReplaceCoachDialog';
 import { useQuery } from '@tanstack/react-query';
-import CoachClubSettlementToggle from './CoachClubSettlementToggle';
 import { createColumnHelper } from '@tanstack/react-table';
 import { coachingApi, type CoachingBooking } from '@/api/admin/coaching';
 import { useHasRole } from '@/hooks/useRoleAccess';
@@ -58,7 +57,10 @@ export default function CoachingBookings({ kind }: { kind: 'COACH' | 'BALLBOY' }
     col.display({
       id: 'price',
       header: 'Harga layanan',
-      cell: ({ row }) => `Rp ${row.original.price.toLocaleString('id-ID')}`
+      cell: ({ row }) =>
+        row.original.isClubSettled
+          ? 'Lunas · Rp 0'
+          : `Rp ${row.original.price.toLocaleString('id-ID')}`
     }),
     col.display({
       id: 'status',
@@ -78,7 +80,15 @@ export default function CoachingBookings({ kind }: { kind: 'COACH' | 'BALLBOY' }
           col.display({
             id: 'clubSettlement',
             header: 'Lunas ke Club',
-            cell: ({ row }) => <CoachClubSettlementToggle booking={row.original} />
+            cell: ({ row }) => (
+              <Badge variant={row.original.isClubSettled ? 'lightSuccess' : 'lightWarning'}>
+                {row.original.isInHouse
+                  ? 'In-house'
+                  : row.original.isClubSettled
+                    ? 'Lunas ke Club'
+                    : 'Belum lunas ke Club'}
+              </Badge>
+            )
           })
         ]
       : []),

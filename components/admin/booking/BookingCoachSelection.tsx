@@ -13,6 +13,8 @@ import { coachingApi, type CoachingPerson } from '@/api/admin/coaching';
 import { coachingGroupApi, type CoachingGroup } from '@/api/admin/coachingGroup';
 import { useAdminCourtSports } from '@/hooks/useAdminCourtSports';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { useHasRole } from '@/hooks/useRoleAccess';
 import { Badge } from '@/components/ui/badge';
 import ParticipantCountInput from './ParticipantCountInput';
 import { Label } from '@/components/ui/label';
@@ -27,6 +29,7 @@ export default function BookingCoachSelection({
   selected,
   onSelect,
   onParticipantsChange,
+  onSettlementChange,
   disabled,
   active = true,
   embedded = false
@@ -36,6 +39,7 @@ export default function BookingCoachSelection({
   selected: SelectedCoach[];
   onSelect: (session: Session, coach: SelectedCoach | null) => void;
   onParticipantsChange?: (slotId: string, participants: number) => void;
+  onSettlementChange?: (slotId: string, isSettled: boolean) => void;
   disabled?: boolean;
   active?: boolean;
   embedded?: boolean;
@@ -144,6 +148,7 @@ export default function BookingCoachSelection({
             )}
             onSelect={(coach) => onSelect(session, coach)}
             onParticipantsChange={onParticipantsChange}
+            onSettlementChange={onSettlementChange}
             disabled={disabled}
             active={active || selected.length > 0}
           />
@@ -163,6 +168,7 @@ function CoachSession({
   selected,
   onSelect,
   onParticipantsChange,
+  onSettlementChange,
   disabled,
   active
 }: {
@@ -175,9 +181,11 @@ function CoachSession({
   selected: SelectedCoach[];
   onSelect: (coach: SelectedCoach | null) => void;
   onParticipantsChange?: (slotId: string, participants: number) => void;
+  onSettlementChange?: (slotId: string, isSettled: boolean) => void;
   disabled?: boolean;
   active?: boolean;
 }) {
+  const canSettle = useHasRole(['ADMIN']);
   const [openGroup, setOpenGroup] = useState<string | null>(
     selected[0]?.coachingGroupId ?? (selected.length ? 'independent' : null)
   );
@@ -329,15 +337,18 @@ function CoachSession({
                           <span className="block text-sm font-medium">{coach.name}</span>
                           {option && (
                             <span className="text-muted-foreground block text-xs">
-                              Rp {option.price.toLocaleString('id-ID')}
-                              {option.additionalHourPrice != null && (
-                                <span className="block text-xs">
-                                  {group.id !== 'independent'
-                                    ? 'Member tambahan Rp '
-                                    : 'Jam berikutnya Rp '}
-                                  {option.additionalHourPrice.toLocaleString('id-ID')}/jam
-                                </span>
-                              )}
+                              {chosen && chosenCoach?.isClubSettled
+                                ? 'Lunas · Rp 0'
+                                : `Rp ${option.price.toLocaleString('id-ID')}`}
+                              {!chosenCoach?.isClubSettled &&
+                                option.additionalHourPrice != null && (
+                                  <span className="block text-xs">
+                                    {group.id !== 'independent'
+                                      ? 'Member tambahan Rp '
+                                      : 'Jam berikutnya Rp '}
+                                    {option.additionalHourPrice.toLocaleString('id-ID')}/jam
+                                  </span>
+                                )}
                             </span>
                           )}
                         </span>
@@ -354,6 +365,23 @@ function CoachSession({
                               : 'Tidak tersedia'}
                         </Badge>
                       </button>
+                      {chosen && chosenCoach && onSettlementChange && canSettle && (
+                        <div className="border-primary/10 flex items-center justify-between gap-3 border-t px-3 py-3">
+                          <Label htmlFor={`settled-${chosenCoach.slotId}`} className="text-xs">
+                            {chosenCoach.isClubSettled ? 'Lunas ke Club' : 'Belum lunas ke Club'}
+                          </Label>
+                          <Switch
+                            id={`settled-${chosenCoach.slotId}`}
+                            aria-label={`Lunas ke Club · ${coach.name}`}
+                            checked={chosenCoach.isClubSettled === true}
+                            disabled={disabled}
+                            onCheckedChange={(checked) => {
+                              if (chosenCoach.slotId)
+                                onSettlementChange(chosenCoach.slotId, checked);
+                            }}
+                          />
+                        </div>
+                      )}
                       {chosen && chosenCoach?.coachingGroupId && (
                         <ClubMemberCount
                           coach={chosenCoach}

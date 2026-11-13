@@ -552,3 +552,23 @@ it('recalculates the club coach total and sends the edited member count at check
     })
   );
 });
+
+it('removes a settled coach price from the customer checkout and sends settlement per slot', async () => {
+  useBookingStore.setState({ useMembership: false });
+  render(<BookingAddOns />);
+  fireEvent.click(screen.getByRole('button', { name: 'Pilih Coach A' }));
+  act(() => useBookingStore.getState().updateCoachSettlement('coach-slot', true));
+  expect(useBookingStore.getState().coachTotal).toBe(0);
+  expect(mocks.summary.totalAmount).toBe(300000);
+  choosePayment();
+  await act(async () =>
+    fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }))
+  );
+  expect(mocks.mutate).toHaveBeenCalledWith(
+    expect.objectContaining({
+      coachSlots: ['coach-slot'],
+      coachSettlements: [{ slotId: 'coach-slot', isSettled: true }],
+      expectedTotal: 300000
+    })
+  );
+});

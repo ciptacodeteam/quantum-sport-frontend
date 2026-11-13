@@ -13,6 +13,7 @@ export type AdminCheckoutPayload = {
   totalHours: number;
   courtSlots?: string[];
   coachSlots?: string[];
+  coachSettlements?: { slotId: string; isSettled: boolean }[];
   coachGroups?: { slotId: string; coachingGroupId: string; participants?: number }[];
   ballboySlots?: Array<string | { slotId: string; courtSlotId: string }>;
   inventories?: {

@@ -67,7 +67,7 @@ export default function CoachBallboyIncomePage() {
     <div className="flex min-w-0 flex-col gap-6">
       <AppSectionHeader
         title="Income Layanan"
-        description="Rekap hak pendapatan jasa untuk club. Coach yang sudah ditandai Lunas ke Club tidak masuk tagihan."
+        description="Rekap hak pendapatan jasa untuk club. Coach yang sudah Lunas ke Club tampil dengan nominal Rp0 dan tidak menambah tagihan."
         className="mb-0 gap-4 pb-0 sm:items-center"
       >
         <div className="flex flex-wrap items-center gap-3">

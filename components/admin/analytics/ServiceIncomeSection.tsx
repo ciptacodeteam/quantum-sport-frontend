@@ -153,9 +153,8 @@ export default function ServiceIncomeSection({
             Berdasarkan tanggal pembayaran pelanggan (WIB), bukan tanggal latihan. Biaya lapangan
             dan administrasi tidak termasuk. Potongan Coach Club hanya mengubah biaya lapangan,
             bukan tarif jasa. Coach in-house tidak termasuk hak club. Invoice belum lunas, refund,
-            dan jasa yang dibatalkan tidak dihitung. Coach yang ditandai Lunas ke Club juga tidak
-            masuk rekap dan rincian tagihan. Penanda lunas dicatat manual oleh Admin atau Super
-            Admin.
+            dan jasa yang dibatalkan tidak dihitung. Coach yang ditandai Lunas ke Club tetap tampil
+            dengan nominal Rp0 dan status Lunas, tanpa menambah pendapatan.
           </p>
         </div>
       </Card>
@@ -349,6 +348,14 @@ export default function ServiceIncomeSection({
                   <td className="min-w-40 px-4 py-4 text-xs tabular-nums">{time(row.paidAt)}</td>
                   <td className="min-w-44 px-4 py-4">
                     <p className="font-medium">{row.staffName}</p>
+                    {row.service === 'COACH' && (
+                      <Badge
+                        variant={row.isClubSettled ? 'lightSuccess' : 'lightWarning'}
+                        className="mt-1"
+                      >
+                        {row.isClubSettled ? 'Lunas' : 'Belum lunas'}
+                      </Badge>
+                    )}
                     {row.description && (
                       <p className="text-muted-foreground mt-1 text-xs whitespace-pre-line">
                         {row.description}

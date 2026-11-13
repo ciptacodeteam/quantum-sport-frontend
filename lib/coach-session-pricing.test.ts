@@ -73,3 +73,20 @@ it.each([1, 2, 3, 4, 5])(
     ).toBe(150000 * hours + 50000);
   }
 );
+
+it('zeros only settled coach lines and restores the current member and hourly rates when reopened', () => {
+  const selected = [
+    {
+      ...coach(10),
+      slotId: 'first',
+      coachingGroupId: 'club',
+      participants: 2,
+      isClubSettled: true
+    },
+    { ...coach(11), slotId: 'second', coachingGroupId: 'club', participants: 3 }
+  ];
+  expect(pricedCoaches(selected).map((coach) => coach.chargedPrice)).toEqual([0, 400000]);
+  expect(coachSessionsTotal(selected.map((coach) => ({ ...coach, isClubSettled: false })))).toBe(
+    700000
+  );
+});

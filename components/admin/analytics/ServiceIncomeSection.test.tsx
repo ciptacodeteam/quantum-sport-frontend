@@ -205,3 +205,19 @@ it('shows the booked member count alongside the recorded coach income', () => {
   render(<ServiceIncomeSection data={data} isLoading={false} />);
   expect(screen.getByText('Jumlah member: 2')).toBeInTheDocument();
 });
+
+it('displays a settled coach with zero amounts and a Lunas badge', () => {
+  const row = {
+    ...serviceIncomeFixture.rows[0],
+    service: 'COACH' as const,
+    isClubSettled: true,
+    servicePrice: 0,
+    amount: 0,
+    discount: 0
+  };
+  const data = { ...serviceIncomeFixture, rows: [row] };
+  render(<ServiceIncomeSection data={data} isLoading={false} />);
+  const table = screen.getByRole('table', { name: 'Detail transaksi pendapatan jasa' });
+  expect(within(table).getByText('Lunas')).toBeInTheDocument();
+  expect(within(table).getAllByText(/Rp.*0$/).length).toBeGreaterThanOrEqual(3);
+});

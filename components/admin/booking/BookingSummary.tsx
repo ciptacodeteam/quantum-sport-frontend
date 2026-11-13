@@ -819,14 +819,16 @@ export default function BookingSummary({
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       <span className="text-primary font-semibold">
-                        {formatCurrency(coach.chargedPrice)}
-                        {coach.coachingGroupId && (coach.participants ?? 1) > 1 && (
-                          <span className="text-muted-foreground block text-right text-[10px] font-normal">
-                            {formatCurrency(coach.hourlyPrice)} + {(coach.participants ?? 1) - 1} ×{' '}
-                            {formatCurrency(coach.additionalHourPrice ?? coach.price)}
-                          </span>
-                        )}
-                        {coach.isAdditionalHour && (
+                        {coach.isClubSettled ? 'Lunas · Rp 0' : formatCurrency(coach.chargedPrice)}
+                        {!coach.isClubSettled &&
+                          coach.coachingGroupId &&
+                          (coach.participants ?? 1) > 1 && (
+                            <span className="text-muted-foreground block text-right text-[10px] font-normal">
+                              {formatCurrency(coach.hourlyPrice)} + {(coach.participants ?? 1) - 1}{' '}
+                              × {formatCurrency(coach.additionalHourPrice ?? coach.price)}
+                            </span>
+                          )}
+                        {!coach.isClubSettled && coach.isAdditionalHour && (
                           <span className="block text-right text-[10px] font-normal">
                             Jam berikutnya
                           </span>

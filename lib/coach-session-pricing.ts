@@ -26,7 +26,11 @@ export function pricedCoaches(coaches: SelectedCoach[]) {
   }
   return coaches.map((coach) => {
     const pricing = charged.get(coach)!;
-    return { ...coach, ...pricing, chargedPrice: pricing.hourlyPrice + pricing.extraMemberPrice };
+    return {
+      ...coach,
+      ...pricing,
+      chargedPrice: coach.isClubSettled ? 0 : pricing.hourlyPrice + pricing.extraMemberPrice
+    };
   });
 }
 export const coachSessionsTotal = (coaches: SelectedCoach[]) =>

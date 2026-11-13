@@ -65,6 +65,7 @@ export default function BookingAddOns() {
     removeBallboy,
     addCoach,
     updateCoachParticipants,
+    updateCoachSettlement,
     removeCoach,
     removeBookingItem,
     setMembershipDiscount,
@@ -494,6 +495,10 @@ export default function BookingAddOns() {
             ...(coach.participants != null ? { participants: coach.participants } : {})
           }));
         if (coachGroups.length) payload.coachGroups = coachGroups;
+        const coachSettlements = selectedCoaches
+          .filter((coach) => coach.isClubSettled)
+          .map((coach) => ({ slotId: coach.slotId!, isSettled: true }));
+        if (coachSettlements.length) payload.coachSettlements = coachSettlements;
         confirmCheckout(payload);
       } catch {
         toast.error(
@@ -801,6 +806,7 @@ export default function BookingAddOns() {
                       sport={courtSport}
                       selected={selectedCoaches}
                       onParticipantsChange={updateCoachParticipants}
+                      onSettlementChange={updateCoachSettlement}
                       disabled={
                         isConfirming ||
                         isCheckingCoaches ||

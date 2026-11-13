@@ -8,8 +8,10 @@ const mocks = vi.hoisted(() => ({
   people: vi.fn(),
   groups: vi.fn(),
   availability: vi.fn(),
-  select: vi.fn()
+  select: vi.fn(),
+  canSettle: true
 }));
+vi.mock('@/hooks/useRoleAccess', () => ({ useHasRole: () => mocks.canSettle }));
 vi.mock('@/hooks/useAdminCourtSports', () => ({
   useAdminCourtSports: () => ({ branchId: 'cemara' })
 }));
@@ -29,6 +31,11 @@ function Harness({ sessions = [session] }: { sessions?: (typeof session)[] }) {
       sessions={sessions}
       sport="PADEL"
       selected={selected}
+      onSettlementChange={(slotId, isClubSettled) =>
+        setSelected((current) =>
+          current.map((coach) => (coach.slotId === slotId ? { ...coach, isClubSettled } : coach))
+        )
+      }
       onParticipantsChange={(slotId, participants) => {
         setSelected((current) =>
           current.map((coach) => (coach.slotId === slotId ? { ...coach, participants } : coach))
@@ -57,6 +64,7 @@ function mount(sessions?: (typeof session)[]) {
 }
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.canSettle = true;
   mocks.people.mockResolvedValue([
     { id: 'available', name: 'Coach Andi', role: 'COACH', coachType: 'PADEL', isActive: true },
     { id: 'busy', name: 'Coach Budi', role: 'COACH', coachType: 'PADEL', isActive: true },
@@ -282,5 +290,31 @@ it('replaces club member counts after clearing, validates on blur and supports i
   expect(screen.getByRole('button', { name: 'Tambah member Coach Andi' })).toBeDisabled();
   fireEvent.click(screen.getByRole('button', { name: 'Tanpa coach' }));
   expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
+  client.clear();
+});
+
+it('marks only the selected coach session settled and restores its price when reopened', async () => {
+  const client = mount();
+  fireEvent.click(await screen.findByRole('button', { name: /SR Academy/ }));
+  const coach = screen.getByRole('button', { name: 'Pilih Coach Andi' });
+  await waitFor(() => expect(coach).toBeEnabled());
+  fireEvent.click(coach);
+  const toggle = screen.getByRole('switch', { name: 'Lunas ke Club · Coach Andi' });
+  fireEvent.click(toggle);
+  expect(toggle).toBeChecked();
+  expect(coach).toHaveTextContent('Lunas · Rp 0');
+  fireEvent.click(toggle);
+  expect(toggle).not.toBeChecked();
+  expect(coach).toHaveTextContent('200.000');
+  client.clear();
+});
+it('does not expose settlement controls to cashiers', async () => {
+  mocks.canSettle = false;
+  const client = mount();
+  fireEvent.click(await screen.findByRole('button', { name: /SR Academy/ }));
+  const coach = screen.getByRole('button', { name: 'Pilih Coach Andi' });
+  await waitFor(() => expect(coach).toBeEnabled());
+  fireEvent.click(coach);
+  expect(screen.queryByRole('switch')).not.toBeInTheDocument();
   client.clear();
 });
