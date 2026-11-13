@@ -1046,18 +1046,11 @@ export default function SchedulePage() {
                                             className="focus-visible:ring-ring flex min-h-16 w-full flex-col items-center justify-center gap-0.5 px-3 py-2 text-center outline-none focus-visible:ring-2 focus-visible:ring-inset"
                                             aria-label={`Detail booking ${bookingCell.customerName}, ${court.name}, ${startTime}`}
                                           >
-                                            <span className="flex max-w-full flex-wrap items-center justify-center gap-1.5">
-                                              <span
-                                                className="min-w-0 truncate text-xs font-medium"
-                                                title={bookingCell.customerName}
-                                              >
-                                                {bookingCell.customerName}
-                                              </span>
-                                              {bookingCell.booking.membershipUserId && (
-                                                <Badge variant="outline" className="shrink-0 text-[10px]">
-                                                  Membership
-                                                </Badge>
-                                              )}
+                                            <span
+                                              className="max-w-full truncate text-xs font-medium"
+                                              title={bookingCell.customerName}
+                                            >
+                                              {bookingCell.customerName}
                                             </span>
                                             {bookingCell.customerPhone &&
                                               bookingCell.customerPhone !== '-' && (
@@ -1113,12 +1106,22 @@ export default function SchedulePage() {
                                                     : ''}
                                                 </span>
                                               ))}
-                                            <Badge
-                                              variant={BOOKING_STATUS_BADGE_VARIANT[status]}
-                                              className="shrink-0 px-2 py-0 text-xs font-normal"
-                                            >
-                                              {BOOKING_STATUS_MAP[status]}
-                                            </Badge>
+                                            <span className="flex flex-wrap items-center justify-center gap-1">
+                                              <Badge
+                                                variant={BOOKING_STATUS_BADGE_VARIANT[status]}
+                                                className="shrink-0 px-2 py-0 text-xs font-normal"
+                                              >
+                                                {BOOKING_STATUS_MAP[status]}
+                                              </Badge>
+                                              {bookingCell.booking.membershipUserId && (
+                                                <Badge
+                                                  variant="lightInfo"
+                                                  className="border-blue-200 px-1.5 py-0 text-[10px] font-normal"
+                                                >
+                                                  Membership
+                                                </Badge>
+                                              )}
+                                            </span>
                                           </button>
                                         </DialogTrigger>
                                         <ScheduleBookingDialogLayout
@@ -1140,11 +1143,21 @@ export default function SchedulePage() {
                                                   <p className="text-muted-foreground text-sm">
                                                     Status
                                                   </p>
-                                                  <Badge
-                                                    variant={BOOKING_STATUS_BADGE_VARIANT[status]}
-                                                  >
-                                                    {BOOKING_STATUS_MAP[status]}
-                                                  </Badge>
+                                                  <div className="flex flex-wrap items-center gap-1">
+                                                    <Badge
+                                                      variant={BOOKING_STATUS_BADGE_VARIANT[status]}
+                                                    >
+                                                      {BOOKING_STATUS_MAP[status]}
+                                                    </Badge>
+                                                    {bookingCell.booking.membershipUserId && (
+                                                      <Badge
+                                                        variant="lightInfo"
+                                                        className="border-blue-200 px-1.5 py-0 text-[10px] font-normal"
+                                                      >
+                                                        Membership
+                                                      </Badge>
+                                                    )}
+                                                  </div>
                                                 </div>
                                                 <div>
                                                   <p className="text-muted-foreground text-sm">
@@ -1167,14 +1180,9 @@ export default function SchedulePage() {
                                                   <p className="text-muted-foreground text-sm">
                                                     Pelanggan
                                                   </p>
-                                                  <div className="flex flex-wrap items-center gap-1.5">
-                                                    <p className="font-medium">
-                                                      {bookingCell.customerName}
-                                                    </p>
-                                                    {bookingCell.booking.membershipUserId && (
-                                                      <Badge variant="outline">Membership</Badge>
-                                                    )}
-                                                  </div>
+                                                  <p className="font-medium">
+                                                    {bookingCell.customerName}
+                                                  </p>
                                                   {bookingCell.customerPhone &&
                                                     bookingCell.customerPhone !== '-' && (
                                                       <p className="text-muted-foreground text-xs">
