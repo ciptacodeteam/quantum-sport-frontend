@@ -1,10 +1,12 @@
 import type * as ReactQuery from '@tanstack/react-query';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { RescheduleCourtDialog, type BookingDetailWithSlot } from './RescheduleCourtDialog';
 
 const mocks = vi.hoisted(() => ({
   isSuperAdmin: false,
+  quoteError: null as unknown,
+  refetchQuote: vi.fn(),
   quote: {
     priceDifference: 0,
     courtDifference: 0,
@@ -64,7 +66,9 @@ vi.mock('@tanstack/react-query', async (importOriginal) => ({
             ? mocks.data
             : { sport: mocks.sourceSport },
       isFetching: false,
-      isError: false
+      isError: options.queryKey.includes('court-reschedule-quote') && !!mocks.quoteError,
+      error: options.queryKey.includes('court-reschedule-quote') ? mocks.quoteError : null,
+      refetch: mocks.refetchQuote
     };
   },
   useMutation: () => ({ mutate: mocks.mutate, isPending: false }),
@@ -89,6 +93,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.sourceSport = undefined;
   mocks.isSuperAdmin = false;
+  mocks.quoteError = null;
   mocks.quote = {
     priceDifference: 0,
     courtDifference: 0,
@@ -157,12 +162,12 @@ it('disables rescheduling less than 48 hours before the original slot', () => {
 });
 
 it('prevents saving when the H-2 deadline passes while the dialog is open', () => {
-  const time = vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2040-01-03T08:59:59Z'));
+  const time = vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2040-01-03T01:59:59Z'));
   try {
     render(<RescheduleCourtDialog detail={detail('PADEL')} canReschedule />);
     fireEvent.click(screen.getByRole('button', { name: 'Reschedule' }));
     fireEvent.click(screen.getByRole('button', { name: /10:00–11:00/ }));
-    time.mockReturnValue(Date.parse('2040-01-03T09:00:00.001Z'));
+    time.mockReturnValue(Date.parse('2040-01-03T02:00:00.001Z'));
     fireEvent.click(screen.getByRole('button', { name: 'Simpan jadwal' }));
     expect(mocks.mutate).not.toHaveBeenCalled();
   } finally {
@@ -173,13 +178,13 @@ it('prevents saving when the H-2 deadline passes while the dialog is open', () =
 it('allows super admin to reschedule after the original deadline, including an ongoing session', () => {
   mocks.isSuperAdmin = true;
   vi.useFakeTimers({ toFake: ['Date'] });
-  vi.setSystemTime(new Date('2040-01-05T02:30:00Z'));
+  vi.setSystemTime(new Date('2040-01-05T02:29:59Z'));
   try {
     render(<RescheduleCourtDialog detail={detail('PADEL')} canReschedule />);
     const trigger = screen.getByRole('button', { name: 'Reschedule' });
     expect(trigger).toBeEnabled();
     fireEvent.click(trigger);
-    expect(screen.getByText(/Super Admin dapat reschedule kapan saja/)).toBeInTheDocument();
+    expect(screen.getByText(/Super Admin dapat reschedule hingga sebelum 30 menit/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /10:00–11:00/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Simpan jadwal' }));
     expect(mocks.mutate).toHaveBeenCalledWith('new-padel');
@@ -223,4 +228,61 @@ it('allows a cheaper destination with no refund and no extra payment', () => {
   expect(screen.getByLabelText('Selisih biaya reschedule')).toHaveTextContent('hangus');
   expect(screen.queryByLabelText('Metode pembayaran selisih')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Simpan jadwal' })).toBeEnabled();
+});
+
+it('automatically disables the super-admin trigger at 30 minutes after the start', () => {
+  mocks.isSuperAdmin = true;
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2040-01-05T02:29:59Z'));
+  try {
+    render(<RescheduleCourtDialog detail={detail('PADEL')} canReschedule />);
+    expect(screen.getByRole('button', { name: 'Reschedule' })).toBeEnabled();
+    act(() => vi.advanceTimersByTime(1000));
+    expect(screen.getByRole('button', { name: 'Reschedule' })).toBeDisabled();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it('prevents super admin saving when the 30-minute cutoff passes with the dialog open', () => {
+  mocks.isSuperAdmin = true;
+  const time = vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2040-01-05T02:29:59Z'));
+  try {
+    render(<RescheduleCourtDialog detail={detail('PADEL')} canReschedule />);
+    fireEvent.click(screen.getByRole('button', { name: 'Reschedule' }));
+    fireEvent.click(screen.getByRole('button', { name: /10:00–11:00/ }));
+    time.mockReturnValue(Date.parse('2040-01-05T02:30:00Z'));
+    fireEvent.click(screen.getByRole('button', { name: 'Simpan jadwal' }));
+    expect(mocks.mutate).not.toHaveBeenCalled();
+  } finally {
+    time.mockRestore();
+  }
+});
+
+it('automatically closes cashier rescheduling at the H-2 boundary in WIB', () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2040-01-03T09:00:00+07:00'));
+  try {
+    render(<RescheduleCourtDialog detail={detail('PADEL')} canReschedule />);
+    expect(screen.getByRole('button', { name: 'Reschedule' })).toBeEnabled();
+    act(() => vi.advanceTimersByTime(1000));
+    expect(screen.getByRole('button', { name: 'Reschedule' })).toBeDisabled();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it.each([
+  { message: 'Coach yang dipesan tidak tersedia pada jadwal pengganti. Pilih jadwal lain.' },
+  { msg: 'Jam pengganti tidak sesuai ketentuan membership.' }
+])('shows the normalized quote rejection and allows retrying the same slot: %o', (error) => {
+  mocks.quoteError = error;
+  render(<RescheduleCourtDialog detail={detail('PADEL')} canReschedule />);
+  fireEvent.click(screen.getByRole('button', { name: 'Reschedule' }));
+  fireEvent.click(screen.getByRole('button', { name: /10:00–11:00/ }));
+  expect(screen.getByRole('alert')).toHaveTextContent(error.message ?? error.msg!);
+  expect(screen.getByRole('button', { name: 'Simpan jadwal' })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Coba lagi' }));
+  expect(mocks.refetchQuote).toHaveBeenCalledOnce();
+  expect(mocks.mutate).not.toHaveBeenCalled();
 });

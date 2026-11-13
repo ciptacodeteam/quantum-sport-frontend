@@ -14,6 +14,7 @@ import { parseScheduleDatetime } from '@/lib/admin-schedule-time';
 import { useIsSuperAdmin } from '@/hooks/useRoleAccess';
 import { canRescheduleAt, getRescheduleNotice } from '@/lib/reschedule-policy';
 import { cn } from '@/lib/utils';
+import { getApiErrorMessage } from '@/lib/api-error';
 import { adminCourtQueryOptions, adminCourtsWithSlotsQueryOptions } from '@/queries/admin/court';
 import type { BookingDetail, Court, Slot } from '@/types/model';
 import { Button } from '@/components/ui/button';
@@ -425,10 +426,17 @@ export function RescheduleCourtDialog({ detail, canReschedule, onSuccess }: Prop
               {quote.isFetching ? (
                 <p role="status">Menghitung selisih lapangan dan layanan...</p>
               ) : quote.isError ? (
-                <p role="alert" className="text-destructive text-sm">
-                  {(quote.error as any)?.response?.data?.message ??
-                    'Perhitungan gagal. Pilih jadwal lain atau coba lagi.'}
-                </p>
+                <div className="space-y-3">
+                  <p role="alert" className="text-destructive text-sm">
+                    {getApiErrorMessage(
+                      quote.error,
+                      'Perhitungan gagal. Pilih jadwal lain atau coba lagi.'
+                    )}
+                  </p>
+                  <Button variant="outline" size="sm" onClick={() => void quote.refetch()}>
+                    Coba lagi
+                  </Button>
+                </div>
               ) : (
                 quote.data && (
                   <>
