@@ -284,3 +284,22 @@ it('sums the recorded court and service breakdown across invoices grouped by boo
   expect(screen.getByText('210.000', { exact: false })).toBeInTheDocument();
   expect(screen.getByText('400.000', { exact: false })).toBeInTheDocument();
 });
+
+it('shows a Cancel badge and zero revenue for a cancelled in-house package sale', () => {
+  render(
+    <IncomeTransactionTable
+      transactions={[
+        {
+          ...transaction(1, 'InHouse'),
+          amount: 4500000,
+          netAmount: 0,
+          excludedAmount: 4500000,
+          cancellationStatus: 'CANCELLED',
+          paymentStatus: 'CANCELLED'
+        }
+      ]}
+    />
+  );
+  expect(screen.getByText('Cancel')).toBeInTheDocument();
+  expect(screen.getByText('Nominal dibatalkan tidak masuk revenue.')).toBeInTheDocument();
+});

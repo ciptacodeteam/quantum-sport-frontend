@@ -21,7 +21,7 @@ vi.mock('@/api/admin/inhouseCoaching', () => ({
     usage: vi.fn(),
     savePlan: mocks.save,
     sell: mocks.sell,
-    deleteWallet: mocks.remove
+    cancelWallet: mocks.remove
   }
 }));
 vi.mock('@tanstack/react-query', () => ({
@@ -218,16 +218,16 @@ it.each(['ADMIN', 'CASHIER'])('lets %s confirm deletion of an unused package', (
   mocks.role = role;
   mocks.wallets = [unusedWallet];
   render(<InHouseCoaching />);
-  fireEvent.click(screen.getByRole('button', { name: 'Hapus' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
   expect(mocks.remove).not.toHaveBeenCalled();
   expect(screen.getByRole('dialog')).toHaveTextContent('Invoice dan pembayaran tetap tersimpan');
-  fireEvent.click(screen.getByRole('button', { name: 'Hapus paket' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel paket' }));
   expect(mocks.remove).toHaveBeenCalledWith('wallet');
 });
 it('lets the user cancel deletion', () => {
   mocks.wallets = [unusedWallet];
   render(<InHouseCoaching />);
-  fireEvent.click(screen.getByRole('button', { name: 'Hapus' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
   fireEvent.click(screen.getByRole('button', { name: 'Batal' }));
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   expect(mocks.remove).not.toHaveBeenCalled();
@@ -235,13 +235,13 @@ it('lets the user cancel deletion', () => {
 it('hides deletion for used and restored packages', () => {
   mocks.wallets = [{ ...unusedWallet, _count: { usages: 1 } }];
   render(<InHouseCoaching />);
-  expect(screen.queryByRole('button', { name: 'Hapus' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
 });
 it('hides deletion from viewers', () => {
   mocks.role = 'ADMIN_VIEWER';
   mocks.wallets = [unusedWallet];
   render(<InHouseCoaching />);
-  expect(screen.queryByRole('button', { name: 'Hapus' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
 });
 
 it('does not allow selecting a different coach in the profile package editor', () => {
@@ -356,4 +356,19 @@ it('filters the package cards by sport and excludes inactive packages', () => {
     screen.getByRole('button', { name: 'Pilih paket Coach Tennis · Tennis Lima Jam' })
   ).toHaveAttribute('aria-pressed', 'false');
   expect(screen.getByRole('button', { name: 'Terima pembayaran & tambah kuota' })).toBeDisabled();
+});
+
+it('keeps a cancelled package visible with a Cancel badge and no cancel action', () => {
+  mocks.wallets = [
+    {
+      ...unusedWallet,
+      deletedAt: '2026-11-13T08:00:00Z',
+      invoice: { id: 'invoice', number: 'INV-CANCEL', status: 'CANCELLED' }
+    }
+  ];
+  render(<InHouseCoaching />);
+  expect(screen.getByText('Cancel')).toBeInTheDocument();
+  expect(screen.getByText('INV-CANCEL')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
+  expect(screen.getByText('0 / 5 jam')).toBeInTheDocument();
 });

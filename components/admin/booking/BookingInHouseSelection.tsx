@@ -19,6 +19,7 @@ import { Label } from '@/components/ui/label';
 export function usableInHouseWallets(wallets: InHouseWallet[], sport: string) {
   return wallets.filter(
     (w) =>
+      !w.deletedAt &&
       w.remainingMinutes >= 60 &&
       w.invoice?.status === 'PAID' &&
       w.staff.isActive &&

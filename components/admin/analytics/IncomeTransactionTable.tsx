@@ -131,7 +131,11 @@ function CancellationStatus({
   return (
     <div className="mt-2 space-y-1.5">
       <Badge variant={fullyCancelled ? 'lightDestructive' : 'lightWarning'}>
-        {fullyCancelled ? 'Dibatalkan' : 'Sebagian dibatalkan'}
+        {fullyCancelled
+          ? invoices.every((invoice) => invoice.source === 'InHouse')
+            ? 'Cancel'
+            : 'Dibatalkan'
+          : 'Sebagian dibatalkan'}
       </Badge>
       <p className="text-muted-foreground text-xs font-normal">
         Nominal dibatalkan tidak masuk revenue.

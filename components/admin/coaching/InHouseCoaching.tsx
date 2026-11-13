@@ -85,6 +85,8 @@ export default function InHouseCoaching() {
   const methods = useQuery({ ...adminPaymentMethodsQueryOptions, enabled: ready && canSell });
   const refresh = () => {
     void client.invalidateQueries({ queryKey: ['admin', 'inhouse'] });
+    void client.invalidateQueries({ queryKey: ['admin', 'analytics'] });
+    void client.invalidateQueries({ queryKey: ['admin', 'transactions'] });
   };
   const sell = useMutation({
     mutationFn: () => inHouseApi.sell({ packageId, userId, paymentMethodId: methodId, requestId }),
@@ -97,13 +99,13 @@ export default function InHouseCoaching() {
     onError: (e) => toast.error(getApiErrorMessage(e, 'Pembelian belum berhasil.'))
   });
   const remove = useMutation({
-    mutationFn: (id: string) => inHouseApi.deleteWallet(id),
+    mutationFn: (id: string) => inHouseApi.cancelWallet(id),
     onSuccess: () => {
       refresh();
       setDeleting(null);
-      toast.success('Paket coaching dihapus.');
+      toast.success('Paket coaching dibatalkan dan dikeluarkan dari revenue.');
     },
-    onError: (e) => toast.error(getApiErrorMessage(e, 'Paket belum berhasil dihapus.'))
+    onError: (e) => toast.error(getApiErrorMessage(e, 'Paket belum berhasil dibatalkan.'))
   });
   const availablePlans = (plans.data ?? []).filter(
     (plan) =>
@@ -216,12 +218,12 @@ export default function InHouseCoaching() {
       >
         <DialogContent className="rounded-md">
           <DialogHeader>
-            <DialogTitle>Hapus paket coaching?</DialogTitle>
+            <DialogTitle>Cancel paket coaching?</DialogTitle>
             <DialogDescription>
-              Hapus {deleting?.packageName} milik {deleting?.user.name} ({deleting?.staff.name})
-              dengan kuota {deleting ? deleting.remainingMinutes / 60 : 0} jam? Paket akan dihapus
-              dari saldo kuota dan tidak bisa dipakai untuk booking. Invoice dan pembayaran tetap
-              tersimpan. Tindakan ini tidak mengembalikan pembayaran.
+              Batalkan {deleting?.packageName} milik {deleting?.user.name} ({deleting?.staff.name})
+              dengan kuota {deleting ? deleting.remainingMinutes / 60 : 0} jam? Paket tidak bisa
+              dipakai untuk booking dan nilainya tidak dihitung sebagai revenue. Invoice dan
+              pembayaran tetap tersimpan sebagai riwayat Cancel. Tindakan ini tidak mengirim refund.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -239,7 +241,7 @@ export default function InHouseCoaching() {
               disabled={remove.isPending}
               onClick={() => deleting && remove.mutate(deleting.id)}
             >
-              {remove.isPending ? 'Menghapus…' : 'Hapus paket'}
+              {remove.isPending ? 'Membatalkan…' : 'Cancel paket'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -534,6 +536,7 @@ export default function InHouseCoaching() {
                               'Coach / paket',
                               'Sisa / total jam',
                               'Invoice pembelian',
+                              'Status',
                               ...(canSell ? ['Aksi'] : [])
                             ]
                           : [
@@ -567,7 +570,10 @@ export default function InHouseCoaching() {
                                 </p>
                               </td>
                               <td className="px-4 py-4 font-semibold whitespace-nowrap tabular-nums">
-                                {wallet.remainingMinutes / 60} / {wallet.totalMinutes / 60} jam
+                                {wallet.deletedAt || wallet.invoice?.status === 'CANCELLED'
+                                  ? 0
+                                  : wallet.remainingMinutes / 60}{' '}
+                                / {wallet.totalMinutes / 60} jam
                               </td>
                               <td className="px-4 py-4 align-middle">
                                 {wallet.invoice && (
@@ -581,10 +587,25 @@ export default function InHouseCoaching() {
                                   </Link>
                                 )}
                               </td>
+                              <td className="px-4 py-4 align-middle">
+                                <Badge
+                                  variant={
+                                    wallet.deletedAt || wallet.invoice?.status === 'CANCELLED'
+                                      ? 'lightDestructive'
+                                      : 'lightSuccess'
+                                  }
+                                >
+                                  {wallet.deletedAt || wallet.invoice?.status === 'CANCELLED'
+                                    ? 'Cancel'
+                                    : 'Aktif'}
+                                </Badge>
+                              </td>
                               {canSell && (
                                 <td className="px-4 py-4 align-middle">
-                                  {wallet.remainingMinutes === wallet.totalMinutes &&
-                                  wallet._count?.usages === 0 ? (
+                                  {wallet.deletedAt || wallet.invoice?.status === 'CANCELLED' ? (
+                                    <span className="text-muted-foreground">—</span>
+                                  ) : wallet.remainingMinutes === wallet.totalMinutes &&
+                                    wallet._count?.usages === 0 ? (
                                     <Button
                                       variant="ghost"
                                       className="text-destructive hover:bg-destructive/5 hover:text-destructive rounded-md border-0 shadow-none"
@@ -592,7 +613,7 @@ export default function InHouseCoaching() {
                                       disabled={remove.isPending}
                                       onClick={() => setDeleting(wallet)}
                                     >
-                                      Hapus
+                                      Cancel
                                     </Button>
                                   ) : (
                                     <Badge
