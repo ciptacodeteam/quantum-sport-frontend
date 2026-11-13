@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from '@/lib/dayjs';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { id as indonesia } from 'date-fns/locale';
-import { IconCalendar, IconCheck } from '@tabler/icons-react';
+import { IconCalendar, IconCheck, IconChevronDown } from '@tabler/icons-react';
 import { toast } from 'sonner';
 import { adminPaymentMethodsQueryOptions } from '@/queries/admin/paymentMethod';
 import { Label } from '@/components/ui/label';
@@ -218,68 +218,6 @@ export function RescheduleCourtDialog({ detail, canReschedule, onSuccess }: Prop
           </DialogDescription>
         </DialogHeader>
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5 sm:px-6">
-          {selectedSlot && (
-            <section
-              className="space-y-3 rounded-lg border p-4"
-              aria-label="Selisih biaya reschedule"
-            >
-              <h3 className="text-sm font-semibold">Perhitungan biaya</h3>
-              {quote.isFetching ? (
-                <p role="status">Menghitung selisih lapangan dan layanan...</p>
-              ) : quote.isError ? (
-                <p role="alert" className="text-destructive text-sm">
-                  {(quote.error as any)?.response?.data?.message ??
-                    'Perhitungan gagal. Pilih jadwal lain atau coba lagi.'}
-                </p>
-              ) : (
-                quote.data && (
-                  <>
-                    <p className="text-sm">
-                      Pembayaran lapangan sebelumnya: {currency(quote.data.previousCourtPrice)}
-                    </p>
-                    <p className="text-sm">
-                      Tarif lapangan tujuan: {currency(quote.data.targetCourtPrice)}
-                    </p>
-                    <p className="text-sm">
-                      Tambahan lapangan: {currency(quote.data.courtDifference)}
-                    </p>
-                    <p className="text-sm">
-                      Tambahan layanan: {currency(quote.data.serviceDifference)}
-                    </p>
-                    <p className="font-semibold">
-                      Total tambahan: {currency(quote.data.priceDifference)}
-                    </p>
-                    <p className="text-muted-foreground text-xs">
-                      Jika tarif tujuan lebih rendah, pembayaran sebelumnya tetap berlaku dan
-                      selisihnya hangus.
-                    </p>
-                    {quote.data.priceDifference > 0 && (
-                      <div className="space-y-2">
-                        <Label htmlFor="reschedule-payment">Metode pembayaran selisih</Label>
-                        <select
-                          id="reschedule-payment"
-                          className="bg-background h-10 w-full rounded-md border px-3 text-sm"
-                          value={paymentMethodId}
-                          onChange={(event) => setPaymentMethodId(event.target.value)}
-                          disabled={mutation.isPending}
-                        >
-                          <option value="">Pilih metode pembayaran</option>
-                          {methods.map((method) => (
-                            <option key={method.id} value={method.id}>
-                              {method.name}
-                            </option>
-                          ))}
-                        </select>
-                        <p className="text-muted-foreground text-xs">
-                          Konfirmasi setelah pembayaran selisih diterima.
-                        </p>
-                      </div>
-                    )}
-                  </>
-                )
-              )}
-            </section>
-          )}
           <div className="bg-muted/40 space-y-2 rounded-lg border px-3 py-3">
             <p className="text-muted-foreground text-xs">Jadwal saat ini</p>
             <div className="flex flex-wrap items-start justify-between gap-2">
@@ -477,6 +415,83 @@ export function RescheduleCourtDialog({ detail, canReschedule, onSuccess }: Prop
                 </>
               )}
             </>
+          )}
+          {selectedSlot && (
+            <section
+              className="space-y-3 rounded-lg border p-4"
+              aria-label="Selisih biaya reschedule"
+            >
+              <h3 className="text-sm font-semibold">Perhitungan biaya</h3>
+              {quote.isFetching ? (
+                <p role="status">Menghitung selisih lapangan dan layanan...</p>
+              ) : quote.isError ? (
+                <p role="alert" className="text-destructive text-sm">
+                  {(quote.error as any)?.response?.data?.message ??
+                    'Perhitungan gagal. Pilih jadwal lain atau coba lagi.'}
+                </p>
+              ) : (
+                quote.data && (
+                  <>
+                    <dl className="space-y-3 text-sm">
+                      {(
+                        [
+                          ['Pembayaran lapangan sebelumnya', quote.data.previousCourtPrice],
+                          ['Tarif lapangan tujuan', quote.data.targetCourtPrice],
+                          ['Tambahan lapangan', quote.data.courtDifference],
+                          ['Tambahan layanan', quote.data.serviceDifference]
+                        ] as const
+                      ).map(([label, amount]) => (
+                        <div
+                          key={label}
+                          className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
+                        >
+                          <dt className="text-muted-foreground">{label}</dt>
+                          <dd className="font-medium tabular-nums">{currency(amount)}</dd>
+                        </div>
+                      ))}
+                      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-t pt-3 font-semibold">
+                        <dt>Total tambahan</dt>
+                        <dd className="text-primary tabular-nums">
+                          {currency(quote.data.priceDifference)}
+                        </dd>
+                      </div>
+                    </dl>
+                    <p className="text-muted-foreground text-xs">
+                      Jika tarif tujuan lebih rendah, pembayaran sebelumnya tetap berlaku dan
+                      selisihnya hangus.
+                    </p>
+                    {quote.data.priceDifference > 0 && (
+                      <div className="space-y-2">
+                        <Label htmlFor="reschedule-payment">Metode pembayaran selisih</Label>
+                        <div className="relative">
+                          <select
+                            id="reschedule-payment"
+                            className="bg-background border-input focus-visible:border-ring focus-visible:ring-ring/50 h-11 w-full min-w-0 appearance-none truncate rounded-lg border py-2 pr-12 pl-4 text-sm outline-none focus-visible:ring-2 disabled:opacity-50"
+                            value={paymentMethodId}
+                            onChange={(event) => setPaymentMethodId(event.target.value)}
+                            disabled={mutation.isPending}
+                          >
+                            <option value="">Pilih metode pembayaran</option>
+                            {methods.map((method) => (
+                              <option key={method.id} value={method.id}>
+                                {method.name}
+                              </option>
+                            ))}
+                          </select>
+                          <IconChevronDown
+                            aria-hidden="true"
+                            className="text-muted-foreground pointer-events-none absolute top-1/2 right-4 size-4 -translate-y-1/2"
+                          />
+                        </div>
+                        <p className="text-muted-foreground text-xs">
+                          Konfirmasi setelah pembayaran selisih diterima.
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )
+              )}
+            </section>
           )}
         </div>
         <footer className="bg-muted/20 flex shrink-0 flex-wrap items-center justify-between gap-3 border-t px-5 py-4 sm:px-6">
