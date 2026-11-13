@@ -42,7 +42,7 @@ const pack: TrackedPackage = {
   startDate: '2026-10-01T00:00:00Z',
   endDate: '2030-01-01T00:00:00Z',
   remainingDays: 100,
-  purchaseInvoice: null,
+  purchaseInvoice: { number: 'INV-PACK', status: 'PAID' },
   usage: [
     {
       id: 'used',
@@ -172,21 +172,39 @@ it('offers recovery for failures and explains an empty package list', () => {
   view.rerender(<MyPackagesPage />);
   expect(screen.getByText('Belum ada paket')).toBeInTheDocument();
 });
-it('shows payment continuation for an unpaid package instead of offering its use', () => {
+it.each(['PENDING', 'CANCELLED', 'FAILED', 'EXPIRED', 'REFUNDED'])(
+  'shows the empty state instead of an owned package for a %s purchase',
+  (paymentStatus) => {
+    mocks.packs = [
+      {
+        ...pack,
+        status: paymentStatus === 'PENDING' ? 'PENDING' : 'PAYMENT_FAILED',
+        purchaseInvoice: { number: 'INV-INCOMPLETE', status: paymentStatus },
+        usage: []
+      }
+    ];
+    render(<MyPackagesPage />);
+    expect(screen.getByText('Belum ada paket')).toBeInTheDocument();
+    expect(screen.queryByText('Silver Member')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pembelian tidak selesai')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Lanjutkan pembayaran' })).not.toBeInTheDocument();
+  }
+);
+it('shows only paid packages when failed purchases are returned alongside an owned package', () => {
   mocks.packs = [
     {
       ...pack,
-      status: 'PENDING',
-      purchaseInvoice: { number: 'INV-PACK', status: 'PENDING' },
-      usage: []
-    }
+      id: 'failed',
+      name: 'Failed Pack',
+      status: 'PAYMENT_FAILED',
+      purchaseInvoice: { number: 'INV-FAILED', status: 'CANCELLED' }
+    },
+    pack
   ];
   render(<MyPackagesPage />);
-  expect(screen.getByRole('link', { name: 'Lanjutkan pembayaran' })).toHaveAttribute(
-    'href',
-    '/invoice/INV-PACK'
-  );
-  expect(screen.queryByRole('link', { name: 'Gunakan paket' })).toBeNull();
+  expect(screen.getByText('Silver Member')).toBeInTheDocument();
+  expect(screen.queryByText('Failed Pack')).not.toBeInTheDocument();
+  expect(screen.queryByRole('combobox', { name: 'Pilih paket' })).not.toBeInTheDocument();
 });
 
 it('shows debt settled by a newly purchased package separately from played hours', () => {

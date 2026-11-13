@@ -155,7 +155,11 @@ export default function MyPackagesPage() {
     refetchOnWindowFocus: true,
     retry: (failureCount, error) => (error as ApiErrorResponse)?.code !== 401 && failureCount < 2
   });
-  const packs = data?.packages || [];
+  const packs = (data?.packages ?? []).filter(
+    (pack) =>
+      pack.purchaseInvoice?.status === 'PAID' &&
+      !['PENDING', 'PAYMENT_FAILED'].includes(pack.status)
+  );
   const pack =
     packs.find((item) => item.id === selectedId) ||
     packs.find((item) => item.status === 'ACTIVE') ||
