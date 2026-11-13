@@ -185,7 +185,7 @@ function CoachSession({
   disabled?: boolean;
   active?: boolean;
 }) {
-  const canSettle = useHasRole(['ADMIN']);
+  const canSettle = useHasRole(['ADMIN', 'CASHIER']);
   const [openGroup, setOpenGroup] = useState<string | null>(
     selected[0]?.coachingGroupId ?? (selected.length ? 'independent' : null)
   );

@@ -10,7 +10,7 @@ import { formatBookingDate } from '@/lib/booking-display';
 import { handleMutationError } from '@/lib/handle-mutation-error';
 
 export default function CoachClubSettlementToggle({ booking }: { booking: CoachingBooking }) {
-  const canEdit = useHasRole(['ADMIN']);
+  const canEdit = useHasRole(['ADMIN', 'CASHIER']);
   const client = useQueryClient();
   const settled = booking.isClubSettled === true;
   const mutation = useMutation({

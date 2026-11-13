@@ -9,9 +9,11 @@ const mocks = vi.hoisted(() => ({
   groups: vi.fn(),
   availability: vi.fn(),
   select: vi.fn(),
-  canSettle: true
+  role: 'ADMIN'
 }));
-vi.mock('@/hooks/useRoleAccess', () => ({ useHasRole: () => mocks.canSettle }));
+vi.mock('@/hooks/useRoleAccess', () => ({
+  useHasRole: (roles: string[]) => mocks.role === 'SUPER_ADMIN' || roles.includes(mocks.role)
+}));
 vi.mock('@/hooks/useAdminCourtSports', () => ({
   useAdminCourtSports: () => ({ branchId: 'cemara' })
 }));
@@ -64,7 +66,7 @@ function mount(sessions?: (typeof session)[]) {
 }
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.canSettle = true;
+  mocks.role = 'ADMIN';
   mocks.people.mockResolvedValue([
     { id: 'available', name: 'Coach Andi', role: 'COACH', coachType: 'PADEL', isActive: true },
     { id: 'busy', name: 'Coach Budi', role: 'COACH', coachType: 'PADEL', isActive: true },
@@ -293,23 +295,27 @@ it('replaces club member counts after clearing, validates on blur and supports i
   client.clear();
 });
 
-it('marks only the selected coach session settled and restores its price when reopened', async () => {
-  const client = mount();
-  fireEvent.click(await screen.findByRole('button', { name: /SR Academy/ }));
-  const coach = screen.getByRole('button', { name: 'Pilih Coach Andi' });
-  await waitFor(() => expect(coach).toBeEnabled());
-  fireEvent.click(coach);
-  const toggle = screen.getByRole('switch', { name: 'Lunas ke Club · Coach Andi' });
-  fireEvent.click(toggle);
-  expect(toggle).toBeChecked();
-  expect(coach).toHaveTextContent('Lunas · Rp 0');
-  fireEvent.click(toggle);
-  expect(toggle).not.toBeChecked();
-  expect(coach).toHaveTextContent('200.000');
-  client.clear();
-});
-it('does not expose settlement controls to cashiers', async () => {
-  mocks.canSettle = false;
+it.each(['ADMIN', 'SUPER_ADMIN', 'CASHIER'])(
+  '%s can mark a selected coach settled and reopen it',
+  async (role) => {
+    mocks.role = role;
+    const client = mount();
+    fireEvent.click(await screen.findByRole('button', { name: /SR Academy/ }));
+    const coach = screen.getByRole('button', { name: 'Pilih Coach Andi' });
+    await waitFor(() => expect(coach).toBeEnabled());
+    fireEvent.click(coach);
+    const toggle = screen.getByRole('switch', { name: 'Lunas ke Club · Coach Andi' });
+    fireEvent.click(toggle);
+    expect(toggle).toBeChecked();
+    expect(coach).toHaveTextContent('Lunas · Rp 0');
+    fireEvent.click(toggle);
+    expect(toggle).not.toBeChecked();
+    expect(coach).toHaveTextContent('200.000');
+    client.clear();
+  }
+);
+it('does not expose settlement controls to viewers', async () => {
+  mocks.role = 'ADMIN_VIEWER';
   const client = mount();
   fireEvent.click(await screen.findByRole('button', { name: /SR Academy/ }));
   const coach = screen.getByRole('button', { name: 'Pilih Coach Andi' });

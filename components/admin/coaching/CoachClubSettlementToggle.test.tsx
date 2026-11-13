@@ -77,14 +77,21 @@ it('blocks repeated clicks while saving', async () => {
   expect(mocks.setClubSettlement).toHaveBeenCalledTimes(1);
 });
 
-it.each([false, true])('cashiers can view settlement=%s without a toggle', (isClubSettled) => {
+it.each([false, true])('cashiers can edit settlement=%s', async (isClubSettled) => {
   mocks.role = 'CASHIER';
   mount({ isClubSettled });
   expect(
     screen.getByText(isClubSettled ? 'Lunas ke Club' : 'Belum lunas ke Club')
   ).toBeInTheDocument();
-  expect(screen.queryByRole('switch')).toBeNull();
-  expect(mocks.setClubSettlement).not.toHaveBeenCalled();
+  expect(screen.getByRole('switch')).toBeEnabled();
+  fireEvent.click(screen.getByRole('switch'));
+  await waitFor(() =>
+    expect(mocks.setClubSettlement).toHaveBeenCalledWith(
+      'coach-line',
+      !isClubSettled,
+      isClubSettled
+    )
+  );
 });
 it.each(['ADMIN', 'SUPER_ADMIN'])('allows %s to use the settlement toggle', (role) => {
   mocks.role = role;
