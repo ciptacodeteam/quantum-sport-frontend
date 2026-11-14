@@ -72,6 +72,8 @@ export default function ServiceIncomeSection({
 }) {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [inHouseSearch, setInHouseSearch] = useState('');
+  const [inHousePage, setInHousePage] = useState(1);
   if (isLoading)
     return (
       <div className="space-y-6" role="status" aria-label="Memuat pendapatan coach dan ballboy">
@@ -92,9 +94,128 @@ export default function ServiceIncomeSection({
   const currentPage = Math.min(page, pages);
   const visible = filtered.slice((currentPage - 1) * 20, currentPage * 20);
   const filteredTotal = filtered.reduce((sum, row) => sum + row.amount, 0);
+  const inHouse = data.inHouse;
+  const inHouseTerm = inHouseSearch.trim().toLocaleLowerCase('id-ID');
+  const inHouseRows = (inHouse?.rows ?? []).filter((row) =>
+    `${row.invoiceNumber ?? ''} ${row.customerName} ${row.staffName} ${row.packageName}`
+      .toLocaleLowerCase('id-ID')
+      .includes(inHouseTerm)
+  );
+  const inHousePages = Math.max(1, Math.ceil(inHouseRows.length / 20));
+  const currentInHousePage = Math.min(inHousePage, inHousePages);
 
   return (
     <div className="space-y-8">
+      {inHouse && (
+        <Card className="gap-5 py-6" role="region" aria-label="Pemakaian coach in-house">
+          <CardHeader className="gap-2 px-6 sm:px-8">
+            <CardTitle className="text-base">Pemakaian coach in-house</CardTitle>
+            <CardDescription>
+              Paket dan booking satuan berdasarkan tanggal sesi WIB. Alokasi paket tidak menambah
+              hak club atau pendapatan baru.
+              {` ${inHouse.sessions} sesi · ${hours(inHouse.hours)} jam.`}
+            </CardDescription>
+            <p className="text-sm">
+              Nilai jasa / alokasi coach: {formatCurrency(inHouse.coachAmount)} · Tambahan peserta
+              paket: {formatCurrency(inHouse.extraAmount)}
+            </p>
+            <SearchInput
+              aria-label="Cari pemakaian in-house"
+              placeholder="Cari pelanggan, coach, paket, atau invoice…"
+              value={inHouseSearch}
+              onChange={(event) => {
+                setInHouseSearch(event.target.value);
+                setInHousePage(1);
+              }}
+            />
+          </CardHeader>
+          <CardContent className="space-y-4 px-6 sm:px-8">
+            <ReportTable
+              label="Detail pemakaian coach in-house"
+              numericFrom={4}
+              headers={[
+                'Pelanggan / invoice',
+                'Coach',
+                'Paket',
+                'Jadwal sesi (WIB)',
+                'Jam / peserta',
+                'Nilai jasa / alokasi coach',
+                'Peserta tambahan'
+              ]}
+            >
+              {inHouseRows.length ? (
+                inHouseRows
+                  .slice((currentInHousePage - 1) * 20, currentInHousePage * 20)
+                  .map((row) => (
+                    <tr key={row.id}>
+                      <td className="min-w-44 px-4 py-4">
+                        <p className="font-medium">{row.customerName}</p>
+                        {row.invoiceId && (
+                          <Link
+                            className="text-primary text-xs hover:underline"
+                            href={`/admin/kelola-transaksi/${row.invoiceId}`}
+                          >
+                            {row.invoiceNumber}
+                          </Link>
+                        )}
+                      </td>
+                      <td className="px-4 py-4">{row.staffName}</td>
+                      <td className="px-4 py-4">{row.packageName}</td>
+                      <td className="min-w-44 px-4 py-4 text-xs tabular-nums">
+                        <p>{row.startAt.slice(0, 16)}</p>
+                        <p>s.d. {row.endAt.slice(11, 16)}</p>
+                      </td>
+                      <td className="px-4 py-4 tabular-nums">
+                        {hours(row.hours)} jam
+                        {row.participants !== null && ` / ${row.participants} peserta`}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap tabular-nums">
+                        {formatCurrency(row.coachAmount)}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap tabular-nums">
+                        {row.extraAmount === null
+                          ? 'Termasuk biaya jasa'
+                          : formatCurrency(row.extraAmount)}
+                      </td>
+                    </tr>
+                  ))
+              ) : (
+                <tr>
+                  <td colSpan={7} className="text-muted-foreground px-4 py-12 text-center">
+                    {inHouseTerm
+                      ? 'Tidak ada pemakaian yang cocok dengan pencarian.'
+                      : 'Belum ada pemakaian in-house yang sesuai periode dan filter. Filter club hanya berlaku untuk jasa club.'}
+                  </td>
+                </tr>
+              )}
+            </ReportTable>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-muted-foreground text-xs">{inHouseRows.length} sesi</p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentInHousePage <= 1}
+                  onClick={() => setInHousePage(currentInHousePage - 1)}
+                >
+                  Sebelumnya
+                </Button>
+                <span className="text-xs">
+                  {currentInHousePage} / {inHousePages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentInHousePage >= inHousePages}
+                  onClick={() => setInHousePage(currentInHousePage + 1)}
+                >
+                  Berikutnya
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
       <Card className="gap-6 py-6 sm:py-8" role="region" aria-label="Ringkasan hak club">
         <CardHeader className="gap-2 px-6 sm:px-8">
           <div className="flex flex-wrap items-center justify-between gap-3">

@@ -1,7 +1,7 @@
 export type ServiceIncomeFilters = {
   clubId?: string;
   staffId?: string;
-  service?: 'COACH' | 'BALLBOY';
+  service?: 'COACH' | 'BALLBOY' | 'INHOUSE';
 };
 export type ServiceIncomeRow = {
   id: string;
@@ -27,6 +27,28 @@ export type ServiceIncomeRow = {
   amount: number;
 };
 export type ServiceIncomeReport = {
+  inHouse?: {
+    sessions: number;
+    hours: number;
+    coachAmount: number;
+    extraAmount: number;
+    rows: {
+      id: string;
+      bookingId: string;
+      invoiceId: string | null;
+      invoiceNumber: string | null;
+      customerName: string;
+      staffId: string;
+      staffName: string;
+      packageName: string;
+      startAt: string;
+      endAt: string;
+      hours: number;
+      participants: number | null;
+      coachAmount: number;
+      extraAmount: number | null;
+    }[];
+  };
   dateRange: { startDate: string; endDate: string };
   summary: {
     totalAmount: number;

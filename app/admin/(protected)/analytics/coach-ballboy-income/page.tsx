@@ -43,7 +43,11 @@ export default function CoachBallboyIncomePage() {
     placeholderData: keepPreviousData
   });
   const setFilter = (key: keyof ServiceIncomeFilters, value: string) =>
-    setFilters((current) => ({ ...current, [key]: value === 'all' ? undefined : value }));
+    setFilters((current) => ({
+      ...current,
+      ...(key === 'service' && value === 'INHOUSE' ? { clubId: undefined } : {}),
+      [key]: value === 'all' ? undefined : value
+    }));
   const exportReport = async () => {
     setExporting(true);
     try {
@@ -67,7 +71,7 @@ export default function CoachBallboyIncomePage() {
     <div className="flex min-w-0 flex-col gap-6">
       <AppSectionHeader
         title="Income Layanan"
-        description="Rekap hak pendapatan jasa untuk club. Coach yang sudah Lunas ke Club tampil dengan nominal Rp0 dan tidak menambah tagihan."
+        description="Rekap hak pendapatan club dan pemakaian coach in-house. Pemakaian paket ditampilkan terpisah dari hak club."
         className="mb-0 gap-4 pb-0 sm:items-center"
       >
         <div className="flex flex-wrap items-center gap-3">
@@ -113,6 +117,7 @@ export default function CoachBallboyIncomePage() {
                   <SelectItem value="all">Coach & Ballboy</SelectItem>
                   <SelectItem value="COACH">Coach</SelectItem>
                   <SelectItem value="BALLBOY">Ballboy</SelectItem>
+                  <SelectItem value="INHOUSE">Coach in-house</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -120,6 +125,7 @@ export default function CoachBallboyIncomePage() {
               <Label htmlFor="service-income-club">Club / Grup Coaching</Label>
               <Select
                 value={filters.clubId ?? 'all'}
+                disabled={filters.service === 'INHOUSE'}
                 onValueChange={(value) => setFilter('clubId', value)}
               >
                 <SelectTrigger id="service-income-club" className="w-full">
@@ -157,7 +163,7 @@ export default function CoachBallboyIncomePage() {
           </div>
           <p className="text-muted-foreground text-xs leading-relaxed">
             Mengikuti cabang yang dipilih di navigasi admin. Periode menggunakan tanggal pembayaran
-            (WIB), maksimal 366 hari.
+            (WIB) untuk hak club dan tanggal sesi (WIB) untuk pemakaian in-house, maksimal 366 hari.
           </p>
         </CardContent>
       </Card>

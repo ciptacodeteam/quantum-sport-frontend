@@ -221,3 +221,55 @@ it('displays a settled coach with zero amounts and a Lunas badge', () => {
   expect(within(table).getByText('Lunas')).toBeInTheDocument();
   expect(within(table).getAllByText(/Rp.*0$/).length).toBeGreaterThanOrEqual(3);
 });
+
+it('shows searchable in-house customers separately from club entitlements', () => {
+  render(
+    <ServiceIncomeSection
+      isLoading={false}
+      data={{
+        ...serviceIncomeFixture,
+        inHouse: {
+          sessions: 1,
+          hours: 1,
+          coachAmount: 200000,
+          extraAmount: 100000,
+          rows: [
+            {
+              id: 'usage',
+              bookingId: 'booking',
+              invoiceId: 'invoice',
+              invoiceNumber: 'INV-INHOUSE',
+              customerName: 'Pemakai Paket',
+              staffId: 'coach',
+              staffName: 'Coach In-house',
+              packageName: 'Paket 10 Jam',
+              startAt: '2026-11-10 12:00:00',
+              endAt: '2026-11-10 13:00:00',
+              hours: 1,
+              participants: 2,
+              coachAmount: 200000,
+              extraAmount: 100000
+            }
+          ]
+        }
+      }}
+    />
+  );
+  const region = screen.getByRole('region', { name: 'Pemakaian coach in-house' });
+  expect(within(region).getByText('Pemakai Paket')).toBeInTheDocument();
+  expect(within(region).getByText('Coach In-house')).toBeInTheDocument();
+  expect(
+    within(region).getByText(/tidak menambah hak club atau pendapatan baru/)
+  ).toBeInTheDocument();
+  expect(within(region).getByRole('link', { name: 'INV-INHOUSE' })).toHaveAttribute(
+    'href',
+    '/admin/kelola-transaksi/invoice'
+  );
+  fireEvent.change(within(region).getByRole('textbox', { name: 'Cari pemakaian in-house' }), {
+    target: { value: 'tidak ada' }
+  });
+  expect(within(region).queryByText('Pemakai Paket')).not.toBeInTheDocument();
+  expect(
+    within(region).getByText('Tidak ada pemakaian yang cocok dengan pencarian.')
+  ).toBeInTheDocument();
+});
