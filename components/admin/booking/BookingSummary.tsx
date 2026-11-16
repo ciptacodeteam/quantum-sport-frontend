@@ -259,6 +259,7 @@ export default function BookingSummary({
   width = 'w-full min-w-0'
 }: BookingSummaryProps) {
   const membershipChoiceId = useId();
+  const descriptionId = useId();
   // Customer selection states
   const [isCustomerOpen, setIsCustomerOpen] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
@@ -536,16 +537,6 @@ export default function BookingSummary({
                           onChange={(e) => setWalkInPhoneLocal(e.target.value)}
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="walkInNote">Note</Label>
-                        <Textarea
-                          id="walkInNote"
-                          placeholder="Contoh: minta lapangan dekat lobby, DP cash, atau catatan customer"
-                          value={adminNoteLocal}
-                          onChange={(e) => setAdminNoteLocal(e.target.value)}
-                          className="min-h-24"
-                        />
-                      </div>
                       <div className="flex justify-end gap-2 pt-2">
                         <Button
                           type="button"
@@ -576,11 +567,6 @@ export default function BookingSummary({
                       {walkInPhone && (
                         <span className="text-muted-foreground ml-1">({walkInPhone})</span>
                       )}
-                      {adminNote && (
-                        <p className="text-muted-foreground mt-1 whitespace-pre-line">
-                          Note: {adminNote}
-                        </p>
-                      )}
                     </div>
                     <Button type="button" variant="ghost" size="sm" onClick={onWalkInClear}>
                       Hapus
@@ -608,6 +594,27 @@ export default function BookingSummary({
                   </Button>
                 </div>
               )}
+            </div>
+          )}
+
+          {onAdminNoteChange && (
+            <div className="space-y-2">
+              <Label htmlFor={descriptionId}>Description / Keterangan booking</Label>
+              <Textarea
+                id={descriptionId}
+                placeholder="Contoh: permintaan lapangan atau keterangan pemesanan"
+                value={adminNoteLocal}
+                maxLength={1000}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setAdminNoteLocal(value);
+                  onAdminNoteChange(value || null);
+                }}
+                className="min-h-24"
+              />
+              <p className="text-muted-foreground text-xs">
+                Catatan internal untuk admin/kasir. Maksimal 1.000 karakter.
+              </p>
             </div>
           )}
 

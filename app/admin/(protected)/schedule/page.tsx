@@ -1,4 +1,5 @@
 'use client';
+import { parseBookingAdminNote } from '@/lib/booking-admin-note';
 import BookingAdminNotes from '@/components/admin/bookings/BookingAdminNotes';
 import { bookingPurposeLabel, isInternalBooking } from '@/lib/booking-purpose';
 import { useAdminCourtSports } from '@/hooks/useAdminCourtSports';
@@ -1013,6 +1014,9 @@ export default function SchedulePage() {
                               </td>
                               {courts.map((court) => {
                                 const bookingCell = bookingsMap.get(court.id)?.get(startTime);
+                                const bookingDescription = parseBookingAdminNote(
+                                  bookingCell?.booking.adminNote ?? ''
+                                ).note;
                                 const status = bookingCell?.status || BookingStatus.HOLD;
                                 const isBooked = !!bookingCell;
 
@@ -1052,6 +1056,14 @@ export default function SchedulePage() {
                                             >
                                               {bookingCell.customerName}
                                             </span>
+                                            {bookingDescription && (
+                                              <span
+                                                className="max-w-full truncate text-xs"
+                                                title={bookingDescription}
+                                              >
+                                                {bookingDescription}
+                                              </span>
+                                            )}
                                             {bookingCell.customerPhone &&
                                               bookingCell.customerPhone !== '-' && (
                                                 <span className="text-muted-foreground text-xs tabular-nums">
@@ -1227,7 +1239,9 @@ export default function SchedulePage() {
                                                 )}
                                                 {bookingCell.booking.adminNote && (
                                                   <div className="col-span-2">
-                                                    <BookingAdminNotes note={bookingCell.booking.adminNote} />
+                                                    <BookingAdminNotes
+                                                      note={bookingCell.booking.adminNote}
+                                                    />
                                                   </div>
                                                 )}
                                               </div>

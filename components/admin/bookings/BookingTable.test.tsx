@@ -231,3 +231,32 @@ it('summarizes multiple courts and dates without expanding each schedule', () =>
   expect(screen.getByText('60 slot · 5 tanggal')).toBeInTheDocument();
   expect(container.querySelectorAll('p')).toHaveLength(3);
 });
+
+it('shows the booking description without mixing court-change history into the table', () => {
+  render(<BookingTable courtSport="PADEL" />);
+  const column = mocks.table.columns.find((column: any) => column.id === 'adminDescription');
+  expect(column.header).toBe('Description');
+  const note = 'Minta lapangan dekat lobby\nHubungi sebelum mulai';
+  const value = column.accessorFn({ adminNote: note });
+  render(column.cell({ getValue: () => value }));
+  expect(screen.getByText(/Minta lapangan dekat lobby/)).toHaveAttribute('title', note);
+  expect(column.accessorFn({ adminNote: null })).toBe('');
+  expect(column.cell({ getValue: () => '' })).toBe('-');
+  const history =
+    '[COURT_CHANGE] ' +
+    JSON.stringify({
+      at: '2026-11-16T01:00:00Z',
+      actorId: 'admin',
+      from: {
+        court: 'Court 1',
+        startAt: '2026-11-16T09:00:00+07:00',
+        endAt: '2026-11-16T10:00:00+07:00'
+      },
+      to: {
+        court: 'Court 2',
+        startAt: '2026-11-16T09:00:00+07:00',
+        endAt: '2026-11-16T10:00:00+07:00'
+      }
+    });
+  expect(column.accessorFn({ adminNote: note + '\n' + history })).toBe(note);
+});

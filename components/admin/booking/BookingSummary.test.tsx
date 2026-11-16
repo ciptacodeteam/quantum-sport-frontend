@@ -351,3 +351,31 @@ it('shows the management court tariff and subtotal rather than the original cour
   expect(courts.getByText('Rp 100.000')).toBeInTheDocument();
   expect(screen.queryByText('Rp 300.000')).not.toBeInTheDocument();
 });
+
+it('lets admins enter a description for an existing customer and clear it without opening walk-in', () => {
+  const onChange = vi.fn();
+  render(
+    <BookingSummary
+      bookingItems={[]}
+      courtTotal={0}
+      totalAmount={0}
+      selectedCustomerId="customer"
+      selectedCustomerName="Pelanggan Terdaftar"
+      adminNote="Catatan sebelumnya"
+      onAdminNoteChange={onChange}
+      onCustomerSelect={vi.fn()}
+      onCustomerClear={vi.fn()}
+      onWalkInSet={vi.fn()}
+      onWalkInClear={vi.fn()}
+    />
+  );
+  const input = screen.getByRole('textbox', { name: 'Description / Keterangan booking' });
+  expect(input).toHaveValue('Catatan sebelumnya');
+  expect(input).toHaveAttribute('maxlength', '1000');
+  fireEvent.change(input, {
+    target: { value: 'Minta lapangan dekat lobby\nHubungi sebelum mulai' }
+  });
+  expect(onChange).toHaveBeenLastCalledWith('Minta lapangan dekat lobby\nHubungi sebelum mulai');
+  fireEvent.change(input, { target: { value: '' } });
+  expect(onChange).toHaveBeenLastCalledWith(null);
+});

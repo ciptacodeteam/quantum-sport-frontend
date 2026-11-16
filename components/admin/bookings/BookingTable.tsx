@@ -1,6 +1,7 @@
 'use client';
 import BookingDateFilter from '@/components/admin/bookings/BookingDateFilter';
 import { useBookingDateFilter } from '@/hooks/useBookingDateFilter';
+import { parseBookingAdminNote } from '@/lib/booking-admin-note';
 
 import {
   approveBookingApi,
@@ -186,6 +187,22 @@ const BookingTable = ({ courtSport }: BookingTableProps) => {
             </div>
           );
         }
+      }),
+      colHelper.accessor((booking) => parseBookingAdminNote(booking.adminNote ?? '').note, {
+        id: 'adminDescription',
+        header: 'Description',
+        enableSorting: false,
+        cell: ({ getValue }) =>
+          getValue() ? (
+            <p
+              className="line-clamp-2 max-w-64 text-sm break-words whitespace-pre-line"
+              title={getValue()}
+            >
+              {getValue()}
+            </p>
+          ) : (
+            '-'
+          )
       }),
       colHelper.accessor('details', {
         header: 'Keterangan',
