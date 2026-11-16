@@ -41,7 +41,11 @@ export function selectMembershipSlots(
       reason = 'Membership sudah berakhir';
     else if (membership.isSuspended) reason = 'Membership sedang ditangguhkan';
     else if (Date.parse(membership.startDate) > now) reason = 'Membership belum aktif';
-    else if ((membership.membership.sport ?? 'PADEL') !== (item.sport ?? sport ?? 'PADEL'))
+    else if (
+      !membership.membership.sport ||
+      !(item.sport ?? sport) ||
+      membership.membership.sport !== (item.sport ?? sport)
+    )
       reason = 'Olahraga tidak sesuai paket';
     else if (
       !isTimeAllowedForMembershipType(membership.membership.type ?? 'ALL_HOUR', item.timeSlot, {

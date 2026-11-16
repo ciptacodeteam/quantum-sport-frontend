@@ -53,8 +53,8 @@ export async function verifyCustomerPhoneApi(id: string) {
   return data;
 }
 
-export async function getCustomerMembershipApi(id: string) {
-  const { data } = await adminApi.get(`/customers/${id}/membership`);
+export async function getCustomerMembershipApi(id: string, sport?: 'PADEL' | 'TENNIS') {
+  const { data } = await adminApi.get(`/customers/${id}/membership`, { params: { sport } });
   return data;
 }
 

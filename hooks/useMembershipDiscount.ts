@@ -102,6 +102,11 @@ export function useMembershipDiscount(
   requestedSlotIds?: string[] | null,
   deferredUsage: boolean = false
 ): MembershipDiscountResult {
+  const bookingSport = courtSport ?? bookingItems[0]?.sport;
+  const suppliedMembershipMatches =
+    !!membershipData &&
+    (!membershipData.activeMembership ||
+      membershipData.activeMembership.membership.sport === bookingSport);
   const {
     rules: tariffRules,
     isPending: isTariffLoading,
@@ -110,20 +115,28 @@ export function useMembershipDiscount(
   // Fetch membership for current user if isUser is true
   const { data: userMembershipData } = useQuery({
     ...myMembershipQueryOptions,
-    enabled: isUser && !membershipData
+    enabled: isUser && !suppliedMembershipMatches
   });
 
   // Fetch membership for customer (admin context) if customerId is provided
   const { data: adminMembershipData } = useQuery({
-    ...adminCustomerMembershipQueryOptions(customerId || ''),
-    enabled: !isUser && !!customerId && !membershipData
+    ...adminCustomerMembershipQueryOptions(customerId || '', bookingSport),
+    enabled: !isUser && !!customerId && !suppliedMembershipMatches
   });
 
   // Use provided membership data, user membership data, or admin membership data
-  const activeMembershipData = membershipData || userMembershipData || adminMembershipData;
+  const activeMembershipData = suppliedMembershipMatches
+    ? membershipData
+    : isUser
+      ? userMembershipData
+      : customerId
+        ? adminMembershipData
+        : null;
 
   return useMemo(() => {
-    const activeMembership = activeMembershipData?.activeMembership ?? null;
+    const candidate = activeMembershipData?.activeMembership ?? null;
+    const activeMembership =
+      bookingSport && candidate?.membership.sport === bookingSport ? candidate : null;
     if (requestedSlotIds !== undefined) {
       return {
         activeMembership,
@@ -138,10 +151,12 @@ export function useMembershipDiscount(
         )
       };
     }
-    const membershipSport = activeMembership?.membership.sport ?? 'PADEL';
+    const membershipSport = activeMembership?.membership.sport;
     const membershipType = activeMembership?.membership.type ?? 'ALL_HOUR';
-    const bookingSport = courtSport ?? bookingItems[0]?.sport;
-    const isMatchingSport = !bookingSport || membershipSport === bookingSport;
+    const isMatchingSport =
+      !!bookingSport &&
+      membershipSport === bookingSport &&
+      bookingItems.every((item) => (item.sport ?? bookingSport) === membershipSport);
     const eligibleBookingItems = bookingItems.filter((booking) =>
       isTimeAllowedForMembershipType(membershipType, booking.timeSlot, {
         rules: tariffRules,
@@ -199,6 +214,7 @@ export function useMembershipDiscount(
     activeMembershipData,
     bookingItems,
     courtSport,
+    bookingSport,
     useMembership,
     requestedSlotIds,
     deferredUsage,

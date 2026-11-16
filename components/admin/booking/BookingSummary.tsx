@@ -129,6 +129,7 @@ export interface BookingSummaryProps {
         id: string;
         name: string;
         price: number;
+        sport?: 'PADEL' | 'TENNIS';
       };
     } | null;
   } | null;
@@ -644,6 +645,12 @@ export default function BookingSummary({
                 </Badge>
               </div>
               <div className="space-y-1 text-[11px]">
+                <div>
+                  <span className="text-muted-foreground">Olahraga:</span>{' '}
+                  <span className="font-medium">
+                    {membershipDiscount.activeMembership.membership.sport}
+                  </span>
+                </div>
                 <div>
                   <span className="text-muted-foreground">Paket:</span>{' '}
                   <span className="font-medium">

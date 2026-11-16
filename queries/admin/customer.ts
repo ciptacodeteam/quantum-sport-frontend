@@ -40,10 +40,10 @@ export type CustomerMembershipResponse = {
   } | null;
 };
 
-export const adminCustomerMembershipQueryOptions = (id: string) =>
+export const adminCustomerMembershipQueryOptions = (id: string, sport?: 'PADEL' | 'TENNIS') =>
   queryOptions({
-    queryKey: ['admin', 'customers', id, 'membership'],
-    queryFn: () => getCustomerMembershipApi(id),
+    queryKey: ['admin', 'customers', id, 'membership', sport],
+    queryFn: () => getCustomerMembershipApi(id, sport),
     select: (res) => res.data as CustomerMembershipResponse,
     enabled: !!id
   });
