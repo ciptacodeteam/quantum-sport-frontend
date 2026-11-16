@@ -429,7 +429,7 @@ function TariffEditor({ rules, sport }: { rules: TariffRule[]; sport: 'PADEL' | 
             className="bg-background space-y-4 rounded-2xl border p-5 sm:p-7"
           >
             <div>
-              <h3 className="font-semibold">Tarif Management · Coach In-house</h3>
+              <h3 className="font-semibold">Tarif Management · Lapangan & Coach In-house</h3>
               <p className="text-muted-foreground mt-1 text-sm">
                 Harga khusus pelanggan Management untuk booking dashboard admin/kasir. Berlaku per
                 jam sesuai cabang, olahraga, dan tanggal efektif aturan ini.

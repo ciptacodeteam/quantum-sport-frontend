@@ -50,6 +50,8 @@ import { IconChevronDown, IconX } from '@tabler/icons-react';
  * Props for the BookingSummary component
  */
 export interface BookingSummaryProps {
+  managementCourtPrices?: Record<string, number>;
+  managementCoverage?: number;
   inHouseCoverage?: number;
   inHouseCourtPrices?: Record<string, number>;
   inHouseExtras?: number;
@@ -234,6 +236,8 @@ export default function BookingSummary({
   inHouseExtras = 0,
   inHouseSingleTotal = 0,
   inHousePricingPending = false,
+  managementCourtPrices = {},
+  managementCoverage = 0,
   membershipDiscountDetails,
   useMembership = true,
   onUseMembershipChange,
@@ -363,11 +367,13 @@ export default function BookingSummary({
 
   const hasInHouseCourtPrices = Object.keys(inHouseCourtPrices).length > 0;
   const courtTariff = (item: BookingItem) =>
-    inHouseCourtPrices[item.slotId] === undefined
-      ? 'regular'
-      : inHouseCourtPrices[item.slotId] === 0
-        ? 'package'
-        : 'inhouse';
+    managementCourtPrices[item.slotId] !== undefined
+      ? 'management'
+      : inHouseCourtPrices[item.slotId] === undefined
+        ? 'regular'
+        : inHouseCourtPrices[item.slotId] === 0
+          ? 'package'
+          : 'inhouse';
 
   const getPricing = (booking: BookingItem) => {
     const normalPrice = booking.normalPrice ?? booking.price;
@@ -375,17 +381,24 @@ export default function BookingSummary({
     const effectivePrice = discountPrice > 0 ? discountPrice : booking.price;
     const displayPrice = membershipDiscount.canUseMembership
       ? normalPrice
-      : (inHouseCourtPrices[booking.slotId] ?? effectivePrice);
+      : (managementCourtPrices[booking.slotId] ??
+        inHouseCourtPrices[booking.slotId] ??
+        effectivePrice);
     return { normalPrice, discountPrice, effectivePrice, displayPrice };
   };
 
   // Bundled discount is only relevant when add-ons (coaches) are shown
   const bundleDiscount =
     showAddOns && !membershipDiscount.canUseMembership && selectedCoaches.length > 0
-      ? calculateAdminCoachingDiscount(bookingItems, selectedCoaches, tariffRules)
+      ? calculateAdminCoachingDiscount(
+          bookingItems.filter((item) => managementCourtPrices[item.slotId] === undefined),
+          selectedCoaches,
+          tariffRules
+        )
       : 0;
 
-  const courtSubtotal = (membershipDiscount.originalTotal ?? courtTotal) - inHouseCoverage;
+  const courtSubtotal =
+    (membershipDiscount.originalTotal ?? courtTotal) - inHouseCoverage - managementCoverage;
   const finalTotal = Math.max(0, totalAmount - bundleDiscount);
 
   const handleCustomerSelect = (customer: CustomerSearchResult) => {
@@ -734,18 +747,21 @@ export default function BookingSummary({
                             <p className="text-muted-foreground">
                               {booking.startTime} - {booking.endTime}
                             </p>
-                            {hasInHouseCourtPrices && (
+                            {(hasInHouseCourtPrices ||
+                              Object.keys(managementCourtPrices).length > 0) && (
                               <p
                                 className={cn(
                                   'mt-1 text-[10px] font-medium',
                                   isInHouse ? 'text-primary' : 'text-muted-foreground'
                                 )}
                               >
-                                {isInHouse
-                                  ? displayPrice === 0
-                                    ? 'Lapangan termasuk paket in-house'
-                                    : 'Tarif lapangan in-house'
-                                  : 'Tarif reguler'}
+                                {courtTariff(booking.items[0]) === 'management'
+                                  ? 'Tarif Management'
+                                  : isInHouse
+                                    ? displayPrice === 0
+                                      ? 'Lapangan termasuk paket in-house'
+                                      : 'Tarif lapangan in-house'
+                                    : 'Tarif reguler'}
                               </p>
                             )}
                             {booking.items.length > 1 && (
@@ -998,7 +1014,7 @@ export default function BookingSummary({
             <div className="flex items-center justify-between text-lg font-bold">
               <span>Total</span>
               <span className="text-primary">
-                {inHousePricingPending ? 'Periksa tarif in-house…' : formatCurrency(finalTotal)}
+                {inHousePricingPending ? 'Periksa tarif…' : formatCurrency(finalTotal)}
               </span>
             </div>
           </div>

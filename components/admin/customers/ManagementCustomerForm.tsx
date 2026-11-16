@@ -106,7 +106,7 @@ export function ManagementCustomerForm({
         </div>
       )}
       <p className="text-muted-foreground text-xs leading-relaxed">
-        Harga khusus hanya untuk coaching satuan in-house yang dipesan melalui dashboard
+        Harga khusus untuk lapangan dan coaching satuan in-house yang dipesan melalui dashboard
         admin/kasir. Tarif mengikuti cabang, olahraga, dan tanggal bermain. Booking website dan
         paket prabayar mengikuti tarif reguler masing-masing.
       </p>

@@ -6,6 +6,8 @@ import BookingAddOns from './page';
 
 const mocks = vi.hoisted(() => ({
   hourlyCoaches: [] as any[],
+  customer: { id: 'customer', isManagement: false } as any,
+  tariffRules: [] as any[],
   payable: 300000,
   mutate: vi.fn(),
   push: vi.fn(),
@@ -100,13 +102,15 @@ vi.mock('@tanstack/react-query', async (importOriginal) => ({
   useQuery: (options: any) => {
     mocks.queries(options.queryKey);
     return {
-      data: options.queryKey.includes('booking-coaches')
-        ? []
-        : options.queryKey[1] === 'coaching'
-          ? mocks.hourlyCoaches
-          : options.queryKey.includes('payment-methods')
-            ? mocks.methods
-            : mocks.inventory,
+      data: options.queryKey.includes('customers')
+        ? mocks.customer
+        : options.queryKey.includes('booking-coaches')
+          ? []
+          : options.queryKey[1] === 'coaching'
+            ? mocks.hourlyCoaches
+            : options.queryKey.includes('payment-methods')
+              ? mocks.methods
+              : mocks.inventory,
       isPending: false,
       isError: false
     };
@@ -119,7 +123,9 @@ vi.mock('@tanstack/react-query', async (importOriginal) => ({
     return { mutate: mocks.mutate, isPending: false };
   }
 }));
-vi.mock('@/hooks/useTariffPeriods', () => ({ useTariffPeriods: () => ({ rules: [] }) }));
+vi.mock('@/hooks/useTariffPeriods', () => ({
+  useTariffPeriods: () => ({ rules: mocks.tariffRules })
+}));
 vi.mock('@/hooks/useMembershipDiscount', () => ({
   useMembershipDiscount: () => ({
     canUseMembership: false,
@@ -165,6 +171,8 @@ function confirmBooking() {
 
 beforeEach(() => {
   mocks.hourlyCoaches = [];
+  mocks.customer = { id: 'customer', isManagement: false };
+  mocks.tariffRules = [];
   vi.clearAllMocks();
   mocks.payable = 300000;
   HTMLElement.prototype.scrollIntoView = vi.fn();
@@ -569,6 +577,43 @@ it('removes a settled coach price from the customer checkout and sends settlemen
       coachSlots: ['coach-slot'],
       coachSettlements: [{ slotId: 'coach-slot', isSettled: true }],
       expectedTotal: 300000
+    })
+  );
+});
+
+it('previews and submits the 100000 management court tariff without selecting any coach', async () => {
+  mocks.customer = { id: 'customer', isManagement: true };
+  mocks.tariffRules = [
+    {
+      id: 'tariff',
+      branchId: 'cemara',
+      sport: 'PADEL',
+      effectiveFrom: '2026-01-01',
+      happyStart: 6,
+      happyEnd: 15,
+      peakStart: 15,
+      peakEnd: 24,
+      managementCourtHourlyPrice: 100000,
+      managementCoachHourlyPrice: 0
+    }
+  ];
+  const item = useBookingStore.getState().bookingItems[0];
+  useBookingStore.setState({
+    bookingItems: [{ ...item, price: 300000, normalPrice: 300000, discountPrice: 0 }],
+    useMembership: false
+  });
+  render(<BookingAddOns />);
+  expect(mocks.summary.managementCourtPrices).toEqual({ [item.slotId]: 100000 });
+  expect(mocks.summary.totalAmount).toBe(100000);
+  choosePayment();
+  await act(async () =>
+    fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi Booking' }))
+  );
+  expect(mocks.mutate).toHaveBeenCalledWith(
+    expect.objectContaining({
+      expectedTotal: 100000,
+      courtSlots: [item.slotId],
+      userId: 'customer'
     })
   );
 });

@@ -17,6 +17,7 @@ import { useTariffPeriods } from '@/hooks/useTariffPeriods';
 import { useBookingClock } from '@/hooks/useBookingClock';
 import { isCourtWallSlotBookable } from '@/lib/booking-time-policy';
 import { resolveTariffPeriod, tariffBand } from '@/lib/tariff-period';
+import { managementCourtPricing } from '@/lib/management-pricing';
 
 import RecurringBookingRules from '@/components/admin/booking/RecurringBookingRules';
 import RecurringBookingDialog from '@/components/admin/booking/RecurringBookingDialog';
@@ -33,7 +34,7 @@ import { formatSlotTime } from '@/lib/time-utils';
 import { currentAdminBookingDate, jakartaCalendarDate } from '@/lib/admin-booking-date';
 import { cn } from '@/lib/utils';
 import { adminCourtCostingQueryOptions } from '@/queries/admin/court';
-import type { CustomerSearchResult } from '@/queries/admin/customer';
+import { adminCustomerQueryOptions, type CustomerSearchResult } from '@/queries/admin/customer';
 import { useBookingStore } from '@/stores/useBookingStore';
 import { useBranchStore } from '@/stores/useBranchStore';
 import type { Court, Slot } from '@/types/model';
@@ -371,6 +372,11 @@ export default function BookingLapangan() {
   // Generate standard time slots (06:00 to 23:00) to ensure all possible slots are shown
   // even if they're not in the API response (e.g., fully booked)
   const { rules: tariffRules } = useTariffPeriods(true);
+  const managementCustomerQuery = useQuery({
+    ...adminCustomerQueryOptions(localCustomerId),
+    enabled: !!localCustomerId,
+    staleTime: 0
+  });
   const standardTimeSlots = useMemo(() => {
     const slots: string[] = [];
     for (let hour = 0; hour <= 23; hour++) {
@@ -687,7 +693,14 @@ export default function BookingLapangan() {
   };
 
   // Use membership discount calculation
-  const totalPrice = membershipDiscount.discountedTotal;
+  const managementPricing = managementCourtPricing(
+    bookingItemsForDiscount,
+    tariffRules,
+    managementCustomerQuery.data ?? selectedCustomer,
+    [],
+    internalBooking || membershipDiscount.canUseMembership
+  );
+  const totalPrice = membershipDiscount.discountedTotal - managementPricing.coverage;
 
   const internalBookingMutation = useMutation({
     mutationFn: createInternalCourtBookingApi,
@@ -1521,6 +1534,8 @@ export default function BookingLapangan() {
               setBookingAdminNote(null);
             }}
             courtTotal={internalBooking ? 0 : membershipDiscount.originalTotal}
+            managementCourtPrices={managementPricing.courtPrices}
+            managementCoverage={managementPricing.coverage}
             totalAmount={internalBooking ? 0 : totalPrice}
             membershipDiscountDetails={
               internalBooking

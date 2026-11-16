@@ -3,6 +3,7 @@ import BookingInHouseSelection, {
   usableInHouseWallets
 } from '@/components/admin/booking/BookingInHouseSelection';
 import { adminInHouseCourtPrices, adminInHousePricing } from '@/lib/admin-inhouse-pricing';
+import { managementCourtPricing } from '@/lib/management-pricing';
 import { coachingApi } from '@/api/admin/coaching';
 import { inHouseApi } from '@/api/admin/inhouseCoaching';
 import { useAdminCourtSports } from '@/hooks/useAdminCourtSports';
@@ -233,20 +234,40 @@ export default function BookingAddOns() {
     setMembershipDiscount(membershipDiscount.discountAmount);
   }, [membershipDiscount.discountAmount, setMembershipDiscount]);
 
+  const managementPricing = managementCourtPricing(
+    bookingItems,
+    tariffRules,
+    managementCustomer,
+    inHouseSelections.map((choice) => choice.courtSlotId),
+    membershipDiscount.canUseMembership
+  );
+  const managementPricingReady =
+    !bookingItems.length ||
+    (!tariffQuery.isPending &&
+      !tariffQuery.isError &&
+      (!selectedCustomerId ||
+        (!managementCustomerQuery.isPending &&
+          !managementCustomerQuery.isError &&
+          !!managementCustomer)));
   const totalAmount =
     membershipDiscount.discountedTotal +
     coachTotal +
     ballboyTotal -
     inHouseCoverage +
     inHouseExtras +
-    inHouseSingleTotal;
+    inHouseSingleTotal -
+    managementPricing.coverage;
 
   const amountDue = Math.max(
     0,
     totalAmount -
       (membershipDiscount.canUseMembership
         ? 0
-        : calculateAdminCoachingDiscount(bookingItems, selectedCoaches, tariffRules))
+        : calculateAdminCoachingDiscount(
+            bookingItems.filter((item) => managementPricing.courtPrices[item.slotId] === undefined),
+            selectedCoaches,
+            tariffRules
+          ))
   );
   const paymentMethods = useQuery({ ...adminPaymentMethodsQueryOptions, enabled: amountDue > 0 });
   const offlineMethods = (paymentMethods.data ?? []).filter(isOfflinePaymentMethod);
@@ -356,6 +377,12 @@ export default function BookingAddOns() {
 
   const handleConfirmBooking = async () => {
     if (isConfirming || isCheckingCoaches) return;
+    if (!managementPricingReady) {
+      toast.error(
+        'Tarif atau data pelanggan belum dapat dimuat. Periksa kembali sebelum konfirmasi.'
+      );
+      return;
+    }
     if (
       bookingItems.some(
         (item) =>
@@ -936,10 +963,12 @@ export default function BookingAddOns() {
                 }
           }
           inHouseCoverage={inHouseCoverage}
+          managementCourtPrices={managementPricing.courtPrices}
+          managementCoverage={managementPricing.coverage}
           inHouseCourtPrices={inHouseCourtPrices}
           inHouseExtras={inHouseExtras}
           inHouseSingleTotal={inHouseSingleTotal}
-          inHousePricingPending={inHouseLoading || !inHouseReady}
+          inHousePricingPending={inHouseLoading || !inHouseReady || !managementPricingReady}
           paymentControls={
             <OfflinePaymentSelection
               amountDue={amountDue}
@@ -964,7 +993,8 @@ export default function BookingAddOns() {
               isCheckingCoaches ||
               bookingItems.length === 0 ||
               !paymentReady ||
-              !inHouseReady,
+              !inHouseReady ||
+              !managementPricingReady,
             loading: isConfirming || isCheckingCoaches
           }}
           secondaryActions={[

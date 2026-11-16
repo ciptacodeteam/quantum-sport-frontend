@@ -311,3 +311,43 @@ it('replaces court prices per coached hour, updates the subtotal and restores pr
   expect(courts.getByText('Rp 300.000')).toBeInTheDocument();
   expect(courts.queryByText('Tarif lapangan in-house')).not.toBeInTheDocument();
 });
+
+it('shows the management court tariff and subtotal rather than the original court price', () => {
+  render(
+    <BookingSummary
+      bookingItems={[
+        {
+          slotId: 'court-slot',
+          courtId: 'court',
+          courtName: 'Court 2',
+          date: '2026-11-16',
+          timeSlot: '18:00 - 19:00',
+          endTime: '19:00',
+          price: 300000
+        }
+      ]}
+      courtTotal={300000}
+      totalAmount={100000}
+      managementCourtPrices={{ 'court-slot': 100000 }}
+      managementCoverage={200000}
+      selectedCustomerId={null}
+      showCustomerSelection={false}
+      showMembershipInfo={false}
+      onCustomerSelect={vi.fn()}
+      onCustomerClear={vi.fn()}
+      onWalkInSet={vi.fn()}
+      onWalkInClear={vi.fn()}
+      membershipDiscountDetails={{
+        canUseMembership: false,
+        discountAmount: 0,
+        slotsToDeduct: 0,
+        originalTotal: 300000,
+        activeMembership: null
+      }}
+    />
+  );
+  const courts = within(screen.getByRole('region', { name: 'Court bookings' }));
+  expect(courts.getByText('Tarif Management')).toBeInTheDocument();
+  expect(courts.getByText('Rp 100.000')).toBeInTheDocument();
+  expect(screen.queryByText('Rp 300.000')).not.toBeInTheDocument();
+});
