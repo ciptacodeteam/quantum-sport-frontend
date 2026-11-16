@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   getMembershipMembers,
@@ -11,6 +11,13 @@ import AppSectionHeader from '@/components/ui/app-section-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -219,6 +226,14 @@ export default function MembershipMembersSection() {
   const [sport, setSport] = useState<'' | 'PADEL' | 'TENNIS'>('');
   const [page, setPage] = useState(1);
   const [member, setMember] = useState<MembershipMember | null>(null);
+  useEffect(() => {
+    if (search.trim() === q) return;
+    const timeout = window.setTimeout(() => {
+      setQuery(search.trim());
+      setPage(1);
+    }, 300);
+    return () => window.clearTimeout(timeout);
+  }, [search, q]);
   const result = useQuery({
     queryKey: ['admin', 'membership-members', { q, sport, page }],
     queryFn: ({ signal }) => getMembershipMembers({ q, page, sport: sport || undefined }, signal)
@@ -246,23 +261,34 @@ export default function MembershipMembersSection() {
             placeholder="Nama, telepon, email, atau nama paket"
           />
         </div>
-        <div className="space-y-2">
+        <div className="w-full space-y-2 sm:w-48">
           <Label htmlFor="member-sport">Olahraga</Label>
-          <select
-            id="member-sport"
-            className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-            value={sport}
-            onChange={(event) => {
-              setSport(event.target.value as typeof sport);
+          <Select
+            value={sport || 'all'}
+            onValueChange={(value) => {
+              setSport(value === 'all' ? '' : (value as 'PADEL' | 'TENNIS'));
               setPage(1);
             }}
           >
-            <option value="">Semua olahraga</option>
-            <option value="PADEL">Padel</option>
-            <option value="TENNIS">Tennis</option>
-          </select>
+            <SelectTrigger id="member-sport" className="bg-background w-full gap-4 pr-4 pl-3">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent
+              align="start"
+              className="min-w-(--radix-select-trigger-width) rounded-lg p-1"
+            >
+              <SelectItem value="all" className="min-h-10 rounded-md pl-3">
+                Semua olahraga
+              </SelectItem>
+              <SelectItem value="PADEL" className="min-h-10 rounded-md pl-3">
+                Padel
+              </SelectItem>
+              <SelectItem value="TENNIS" className="min-h-10 rounded-md pl-3">
+                Tennis
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <Button type="submit">Cari</Button>
         <Button
           type="button"
           variant="outline"
@@ -272,6 +298,11 @@ export default function MembershipMembersSection() {
           Muat ulang
         </Button>
       </form>
+      {search.trim() !== q && (
+        <p role="status" className="text-muted-foreground text-sm">
+          Mencari member...
+        </p>
+      )}
       {result.isPending ? (
         <p role="status">Memuat daftar member...</p>
       ) : result.isError ? (

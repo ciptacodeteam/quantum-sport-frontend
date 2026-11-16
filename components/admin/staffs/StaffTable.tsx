@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ROLE_MAP } from '@/lib/constants';
 import { formatBookingDate } from '@/lib/booking-display';
 import { formatPhone, getNameInitial, hasCreatePermission, hasEditPermission } from '@/lib/utils';
@@ -14,7 +15,7 @@ import { IconPencil, IconPlus, IconEye } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { createColumnHelper } from '@tanstack/react-table';
 import Link from 'next/link';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 const helper = createColumnHelper<Staff>();
 const initialColumnVisibility = { createdAt: false };
@@ -22,6 +23,11 @@ const initialColumnVisibility = { createdAt: false };
 export default function StaffTable() {
   const { data: me } = useQuery(adminProfileQueryOptions);
   const query = useQuery(adminStaffsQueryOptions);
+  const [statusFilter, setStatusFilter] = useState('active');
+  const filteredStaff = useMemo(
+    () => (query.data ?? []).filter((staff) => staff.isActive === (statusFilter === 'active')),
+    [query.data, statusFilter]
+  );
   const canEdit = hasEditPermission(me?.role);
   const columns = useMemo(
     () => [
@@ -124,27 +130,36 @@ export default function StaffTable() {
 
   return (
     <div className="[&_thead]:bg-muted/50 min-w-0">
-      <DataTable
-        loading={query.isPending}
-        data={query.data || []}
-        columns={columns}
-        enableRowSelection={false}
-        getRowId={(staff) => staff.id}
-        searchPlaceholder="Cari nama, email, atau telepon..."
-        columnVisibilityLabel="Kolom"
-        initialColumnVisibility={initialColumnVisibility}
-        columnVisibilityStorageKey="quantum:staffs:columns"
-        addButton={
-          hasCreatePermission(me?.role) ? (
-            <Button asChild className="rounded-lg">
-              <Link href="/admin/kelola-karyawan/tambah">
-                <IconPlus />
-                Tambah karyawan
-              </Link>
-            </Button>
-          ) : undefined
-        }
-      />
+      <Tabs value={statusFilter} onValueChange={setStatusFilter} className="gap-4">
+        <TabsList aria-label="Status karyawan">
+          <TabsTrigger value="active">Aktif</TabsTrigger>
+          <TabsTrigger value="inactive">Nonaktif</TabsTrigger>
+        </TabsList>
+        <TabsContent value={statusFilter}>
+          <DataTable
+            key={statusFilter}
+            loading={query.isPending}
+            data={filteredStaff}
+            columns={columns}
+            enableRowSelection={false}
+            getRowId={(staff) => staff.id}
+            searchPlaceholder="Cari nama, email, atau telepon..."
+            columnVisibilityLabel="Kolom"
+            initialColumnVisibility={initialColumnVisibility}
+            columnVisibilityStorageKey="quantum:staffs:columns"
+            addButton={
+              hasCreatePermission(me?.role) ? (
+                <Button asChild className="rounded-lg">
+                  <Link href="/admin/kelola-karyawan/tambah">
+                    <IconPlus />
+                    Tambah karyawan
+                  </Link>
+                </Button>
+              ) : undefined
+            }
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

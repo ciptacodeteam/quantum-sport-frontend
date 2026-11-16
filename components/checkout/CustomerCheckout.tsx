@@ -1155,43 +1155,45 @@ export default function CustomerCheckout({ ballboyOnly = false }: { ballboyOnly?
                 </div>
               )}
 
-              {/* Card Payment Selection - Show only if CARDS channel is selected */}
-              {!isCoveredByMembership && selectedPaymentMethod?.channel === 'CARDS' && (
-                <div className="min-w-0 border border-black/15 bg-[#f8f8f6] p-5 sm:p-6">
-                  {!newCardData ? (
-                    <SavedCardSelector
-                      onCardSelect={(card, cvv) => {
-                        setSelectedCard(card);
-                        setSelectedCardCvv(cvv);
-                      }}
-                      onAddNewCard={handleAddNewCard}
-                      isLoading={checkoutMutation.isPending}
-                    />
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium">Kartu Baru</p>
-                          <p className="text-muted-foreground text-xs">
-                            {newCardData.cardholderName}
-                          </p>
-                          <p className="text-muted-foreground text-xs">
-                            •••• •••• •••• {newCardData.cardNumber.slice(-4)}
-                          </p>
+              {/* Core card checkout collects details here; Snap collects them in its payment window. */}
+              {!useSnapCheckout &&
+                !isCoveredByMembership &&
+                selectedPaymentMethod?.channel === 'CARDS' && (
+                  <div className="min-w-0 border border-black/15 bg-[#f8f8f6] p-5 sm:p-6">
+                    {!newCardData ? (
+                      <SavedCardSelector
+                        onCardSelect={(card, cvv) => {
+                          setSelectedCard(card);
+                          setSelectedCardCvv(cvv);
+                        }}
+                        onAddNewCard={handleAddNewCard}
+                        isLoading={checkoutMutation.isPending}
+                      />
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium">Kartu Baru</p>
+                            <p className="text-muted-foreground text-xs">
+                              {newCardData.cardholderName}
+                            </p>
+                            <p className="text-muted-foreground text-xs">
+                              •••• •••• •••• {newCardData.cardNumber.slice(-4)}
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setNewCardData(null)}
+                          >
+                            Ganti Kartu
+                          </Button>
                         </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setNewCardData(null)}
-                        >
-                          Ganti Kartu
-                        </Button>
                       </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                    )}
+                  </div>
+                )}
 
               {!isCoveredByMembership && (
                 <div className="space-y-3 border border-black/15 bg-[#f8f8f6] p-5 sm:p-6">

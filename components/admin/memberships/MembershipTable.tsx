@@ -3,6 +3,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -39,6 +40,7 @@ const initialColumnVisibility = {
 const MembershipTable = () => {
   const { data: me } = useQuery(adminProfileQueryOptions);
   const [sportFilter, setSportFilter] = useState<MembershipSportFilter>('all');
+  const [statusFilter, setStatusFilter] = useState('active');
 
   const columns = useMemo(
     () => [
@@ -146,50 +148,63 @@ const MembershipTable = () => {
     [sportFilter]
   );
   const { data, isPending } = useQuery(adminMembershipsQueryOptions(queryParams));
+  const filteredMemberships = useMemo(
+    () => (data ?? []).filter((membership) => membership.isActive === (statusFilter === 'active')),
+    [data, statusFilter]
+  );
 
   return (
     <div className="[&_thead]:bg-muted/50 w-full min-w-0">
-      <DataTable
-        loading={isPending}
-        data={data || []}
-        columns={columns}
-        enableRowSelection={false}
-        getRowId={(membership) => membership.id}
-        searchPlaceholder="Cari Value Pack..."
-        columnVisibilityLabel="Kolom"
-        initialColumnVisibility={initialColumnVisibility}
-        columnVisibilityStorageKey="quantum:memberships:columns"
-        rightActions={
-          <div className="flex items-center gap-2">
-            <label htmlFor="membership-sport-filter" className="text-sm font-medium">
-              Kategori:
-            </label>
-            <Select
-              value={sportFilter}
-              onValueChange={(value) => setSportFilter(value as MembershipSportFilter)}
-            >
-              <SelectTrigger id="membership-sport-filter" className="h-9 w-32">
-                <SelectValue placeholder="Semua" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua</SelectItem>
-                <SelectItem value="PADEL">Padel</SelectItem>
-                <SelectItem value="TENNIS">Tennis</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        }
-        addButton={
-          hasCreatePermission(me?.role) ? (
-            <Button asChild className="rounded-lg">
-              <Link href="/admin/kelola-membership/tambah" prefetch>
-                <IconPlus />
-                Tambah Value Pack
-              </Link>
-            </Button>
-          ) : undefined
-        }
-      />
+      <Tabs value={statusFilter} onValueChange={setStatusFilter} className="gap-4">
+        <TabsList aria-label="Status Value Pack">
+          <TabsTrigger value="active">Aktif</TabsTrigger>
+          <TabsTrigger value="inactive">Nonaktif</TabsTrigger>
+        </TabsList>
+        <TabsContent value={statusFilter}>
+          <DataTable
+            key={statusFilter}
+            loading={isPending}
+            data={filteredMemberships}
+            columns={columns}
+            enableRowSelection={false}
+            getRowId={(membership) => membership.id}
+            searchPlaceholder="Cari Value Pack..."
+            columnVisibilityLabel="Kolom"
+            initialColumnVisibility={initialColumnVisibility}
+            columnVisibilityStorageKey="quantum:memberships:columns"
+            rightActions={
+              <div className="flex items-center gap-2">
+                <label htmlFor="membership-sport-filter" className="text-sm font-medium">
+                  Kategori:
+                </label>
+                <Select
+                  value={sportFilter}
+                  onValueChange={(value) => setSportFilter(value as MembershipSportFilter)}
+                >
+                  <SelectTrigger id="membership-sport-filter" className="h-9 w-32">
+                    <SelectValue placeholder="Semua" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua</SelectItem>
+                    <SelectItem value="PADEL">Padel</SelectItem>
+                    <SelectItem value="TENNIS">Tennis</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            }
+            addButton={
+              hasCreatePermission(me?.role) ? (
+                <Button asChild className="rounded-lg">
+                  <Link href="/admin/kelola-membership/tambah" prefetch>
+                    <IconPlus />
+                    Tambah Value Pack
+                  </Link>
+                </Button>
+              ) : undefined
+            }
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

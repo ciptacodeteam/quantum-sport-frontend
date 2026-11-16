@@ -62,6 +62,23 @@ beforeEach(() => {
   mocks.save.mockResolvedValue({});
 });
 afterEach(cleanup);
+it('shows active ballboys first and separates inactive profiles into their own tab', async () => {
+  mocks.kind = 'BALLBOY';
+  mocks.list.mockResolvedValue([
+    ...people,
+    { ...people[2], id: 'inactive-ballboy', name: 'Ballboy Nonaktif', isActive: false }
+  ]);
+  mount();
+  expect(await screen.findByText('Ballboy Ibnu')).toBeInTheDocument();
+  expect(screen.getByRole('tab', { name: 'Aktif' })).toHaveAttribute('aria-selected', 'true');
+  expect(screen.queryByText('Ballboy Nonaktif')).not.toBeInTheDocument();
+  fireEvent.mouseDown(screen.getByRole('tab', { name: 'Nonaktif' }), { button: 0 });
+  expect(await screen.findByText('Ballboy Nonaktif')).toBeInTheDocument();
+  expect(screen.queryByText('Ballboy Ibnu')).not.toBeInTheDocument();
+  expect(screen.queryByText('Coach B')).not.toBeInTheDocument();
+  fireEvent.mouseDown(screen.getByRole('tab', { name: 'Aktif' }), { button: 0 });
+  expect(await screen.findByText('Ballboy Ibnu')).toBeInTheDocument();
+});
 it.each(['COACH', 'BALLBOY'])(
   'uses the standard searchable table and column controls for %s profiles',
   async (kind) => {

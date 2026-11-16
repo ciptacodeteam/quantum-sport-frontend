@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen, within, waitFor } from '@testing-library/react';
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { TrackedPackage } from '@/types/membership-tracking';
 const mocks = vi.hoisted(() => ({ list: vi.fn(), tracking: vi.fn() }));
@@ -66,6 +66,13 @@ const pack: TrackedPackage = {
   ]
 };
 let client: QueryClient;
+const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+beforeAll(() => {
+  HTMLElement.prototype.scrollIntoView = vi.fn();
+});
+afterAll(() => {
+  HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
+});
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.list.mockResolvedValue({ packages: [member], total: 21, page: 1, pageSize: 20 });
@@ -112,20 +119,43 @@ it('applies search, sport and pagination on the server, resetting the page for a
     )
   );
   fireEvent.change(screen.getByLabelText('Cari member atau paket'), { target: { value: 'Jim' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Cari' }));
   await waitFor(() =>
     expect(mocks.list).toHaveBeenLastCalledWith(
       { q: 'Jim', sport: undefined, page: 1 },
       expect.any(AbortSignal)
     )
   );
-  fireEvent.change(screen.getByLabelText('Olahraga'), { target: { value: 'TENNIS' } });
+  fireEvent.keyDown(screen.getByRole('combobox', { name: 'Olahraga' }), { key: 'ArrowDown' });
+  fireEvent.click(await screen.findByRole('option', { name: 'Tennis' }));
   await waitFor(() =>
     expect(mocks.list).toHaveBeenLastCalledWith(
       { q: 'Jim', sport: 'TENNIS', page: 1 },
       expect.any(AbortSignal)
     )
   );
+});
+it('updates matching members while typing and restores the list when cleared', async () => {
+  mocks.list.mockImplementation(async ({ q }: { q: string }) => ({
+    packages: q
+      ? [{ ...member, id: 'andi-pack', user: { ...member.user, name: 'Andi' } }]
+      : [member],
+    total: 1,
+    page: 1,
+    pageSize: 20
+  }));
+  mount();
+  await screen.findByText('Jim');
+  const input = screen.getByLabelText('Cari member atau paket');
+  const initialCalls = mocks.list.mock.calls.length;
+  fireEvent.change(input, { target: { value: 'An' } });
+  fireEvent.change(input, { target: { value: 'Andi' } });
+  expect(mocks.list).toHaveBeenCalledTimes(initialCalls);
+  expect(await screen.findByText('Andi')).toBeInTheDocument();
+  expect(screen.queryByText('Jim')).not.toBeInTheDocument();
+  expect(mocks.list.mock.calls.map(([params]) => params.q)).not.toContain('An');
+  fireEvent.change(input, { target: { value: '' } });
+  expect(await screen.findByText('Jim')).toBeInTheDocument();
+  expect(screen.queryByText('Andi')).not.toBeInTheDocument();
 });
 it('distinguishes a failed request from an empty member report', async () => {
   mocks.list.mockRejectedValueOnce({ msg: 'Server sedang sibuk.' });

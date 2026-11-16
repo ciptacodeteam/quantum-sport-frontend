@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { createColumnHelper } from '@tanstack/react-table';
 import { IconPencil, IconCalendar, IconPlus } from '@tabler/icons-react';
 import { DataTable } from '@/components/ui/data-table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -57,6 +58,7 @@ export default function CoachingCatalog({ groupId, inHouse = false }: CoachingCa
     queryFn: () => coachingGroupApi.list(branchId),
     enabled: hasAccess && !inHouse && kind === 'COACH' && !!branchId && branchId !== 'all'
   });
+  const [statusFilter, setStatusFilter] = useState('active');
   const [editing, setEditing] = useState<CoachingPerson | null>(null);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<CoachingProfile>({
@@ -110,13 +112,14 @@ export default function CoachingCatalog({ groupId, inHouse = false }: CoachingCa
       (query.data ?? []).filter(
         (person) =>
           person.role === kind &&
+          (kind !== 'BALLBOY' || person.isActive === (statusFilter === 'active')) &&
           (!inHouse || person.isInHouseCoach === true) &&
           (!groupId ||
             (groupId === 'independent'
               ? !person.coachingGroups?.length
               : person.coachingGroups?.some((membership) => membership.group.id === groupId)))
       ),
-    [query.data, kind, groupId, inHouse]
+    [query.data, kind, groupId, inHouse, statusFilter]
   );
   const columns = useMemo(
     () => [
@@ -193,6 +196,35 @@ export default function CoachingCatalog({ groupId, inHouse = false }: CoachingCa
     ],
     [beginEdit, branchId, kind, groupId]
   );
+  const catalogTable = (
+    <DataTable
+      key={`${kind}:${groupId ?? 'all'}:${kind === 'BALLBOY' ? statusFilter : 'all'}`}
+      data={people}
+      columns={columns}
+      loading={query.isPending}
+      enableRowSelection={false}
+      getRowId={(person) => person.id}
+      searchPlaceholder={`Cari ${kind === 'COACH' ? 'coach' : 'ballboy'}, olahraga, atau telepon...`}
+      columnVisibilityLabel="Kolom"
+      columnVisibilityStorageKey={`quantum:coaching-catalog:columns:${kind}`}
+      addButton={
+        <Button
+          className="h-9 rounded-lg"
+          onClick={() => beginEdit()}
+          disabled={
+            !branchId ||
+            branchId === 'all' ||
+            (!!groupId &&
+              groupId !== 'independent' &&
+              !groups.data?.some((group) => group.id === groupId && group.isActive))
+          }
+        >
+          <IconPlus />
+          Tambah {inHouse ? 'Coach In-house' : kind === 'COACH' ? 'Coach' : 'Ballboy'}
+        </Button>
+      }
+    />
+  );
   if (isLoading || !hasAccess) return <p className="p-6">Memuat...</p>;
   return (
     <main className="w-full min-w-0 space-y-6">
@@ -226,33 +258,17 @@ export default function CoachingCatalog({ groupId, inHouse = false }: CoachingCa
         </div>
       ) : (
         <div className="[&_thead]:bg-muted/50 min-w-0 [&_td]:align-middle [&_th]:text-xs">
-          <DataTable
-            key={`${kind}:${groupId ?? 'all'}`}
-            data={people}
-            columns={columns}
-            loading={query.isPending}
-            enableRowSelection={false}
-            getRowId={(person) => person.id}
-            searchPlaceholder={`Cari ${kind === 'COACH' ? 'coach' : 'ballboy'}, olahraga, atau telepon...`}
-            columnVisibilityLabel="Kolom"
-            columnVisibilityStorageKey={`quantum:coaching-catalog:columns:${kind}`}
-            addButton={
-              <Button
-                className="h-9 rounded-lg"
-                onClick={() => beginEdit()}
-                disabled={
-                  !branchId ||
-                  branchId === 'all' ||
-                  (!!groupId &&
-                    groupId !== 'independent' &&
-                    !groups.data?.some((group) => group.id === groupId && group.isActive))
-                }
-              >
-                <IconPlus />
-                Tambah {inHouse ? 'Coach In-house' : kind === 'COACH' ? 'Coach' : 'Ballboy'}
-              </Button>
-            }
-          />
+          {kind === 'BALLBOY' ? (
+            <Tabs value={statusFilter} onValueChange={setStatusFilter} className="gap-4">
+              <TabsList aria-label="Status ballboy">
+                <TabsTrigger value="active">Aktif</TabsTrigger>
+                <TabsTrigger value="inactive">Nonaktif</TabsTrigger>
+              </TabsList>
+              <TabsContent value={statusFilter}>{catalogTable}</TabsContent>
+            </Tabs>
+          ) : (
+            catalogTable
+          )}
         </div>
       )}
       <Dialog
