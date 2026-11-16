@@ -25,10 +25,11 @@ export default function MoveCourtSection({
   const [open, setOpen] = useState(false);
   const [targetId, setTargetId] = useState('');
   const [error, setError] = useState('');
+  const isTraining = booking.purpose === 'COACH_TRAINING';
   const eligible =
     booking.status === 'CONFIRMED' &&
-    (booking.purpose ?? 'REGULAR') === 'REGULAR' &&
-    booking.invoice?.status === 'PAID' &&
+    (isTraining ||
+      ((booking.purpose ?? 'REGULAR') === 'REGULAR' && booking.invoice?.status === 'PAID')) &&
     !!detail.slot &&
     isCourtWallSlotBookable(detail.slot.startAt, now);
   const options = useQuery({
@@ -99,7 +100,8 @@ export default function MoveCourtSection({
       </div>
       {!eligible && (
         <p className="text-muted-foreground text-xs">
-          Pindah court tersedia untuk booking reguler yang terkonfirmasi dan lunas, sebelum 30 menit setelah jam mulai.
+          Pindah court tersedia untuk booking reguler yang lunas atau Training Coach, dengan status
+          terkonfirmasi, sebelum 30 menit setelah jam mulai.
         </p>
       )}
       {open && eligible && (
@@ -118,8 +120,9 @@ export default function MoveCourtSection({
             </div>
           ) : !options.data?.length ? (
             <p role="status" className="text-muted-foreground text-sm">
-              Tidak ada court kosong dengan tanggal, jam, olahraga, dan tarif yang sama di cabang
-              ini.
+              {isTraining
+                ? 'Tidak ada court kosong dengan tanggal, jam, dan olahraga yang sama di cabang ini.'
+                : 'Tidak ada court kosong dengan tanggal, jam, olahraga, dan tarif yang sama di cabang ini.'}
             </p>
           ) : (
             <fieldset disabled={move.isPending} className="grid gap-2 sm:grid-cols-2">

@@ -3,7 +3,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import MoveCourtSection from './MoveCourtSection';
 import type { Booking, BookingDetail } from '@/types/model';
-const mocks = vi.hoisted(() => ({ canWrite: true, now: Date.parse('2030-01-02T09:00:00+07:00'), options: vi.fn(), move: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  canWrite: true,
+  now: Date.parse('2030-01-02T09:00:00+07:00'),
+  options: vi.fn(),
+  move: vi.fn()
+}));
 vi.mock('@/hooks/useRoleAccess', () => ({ useHasRole: () => mocks.canWrite }));
 vi.mock('@/hooks/useBookingClock', () => ({
   useBookingClock: () => mocks.now
@@ -92,9 +97,38 @@ it('keeps the original booking when another request takes the chosen court', asy
   client.clear();
 });
 
-it.each(['10:00:00', '10:15:00', '10:29:59'])('allows court changes during the grace period (%s WIB)', async (time) => {
-  mocks.now = Date.parse(`2030-01-02T${time}+07:00`);
-  const client = mount();
+it.each(['10:00:00', '10:15:00', '10:29:59'])(
+  'allows court changes during the grace period (%s WIB)',
+  async (time) => {
+    mocks.now = Date.parse(`2030-01-02T${time}+07:00`);
+    const client = mount();
+    expect(screen.getByRole('button', { name: 'Pindah court' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Pindah court' }));
+    fireEvent.click(await screen.findByRole('radio', { name: 'Court B' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Konfirmasi pindah court' }));
+    await waitFor(() => expect(mocks.move).toHaveBeenCalledWith('detail', 'old', 'new'));
+    client.clear();
+  }
+);
+it.each(['10:30:00', '10:30:01', '11:00:00'])(
+  'disables court changes at or after the cutoff (%s WIB)',
+  (time) => {
+    mocks.now = Date.parse(`2030-01-02T${time}+07:00`);
+    const client = mount();
+    expect(screen.getByRole('button', { name: 'Pindah court' })).toBeDisabled();
+    expect(screen.getByText(/sebelum 30 menit setelah jam mulai/)).toBeInTheDocument();
+    expect(mocks.options).not.toHaveBeenCalled();
+    client.clear();
+  }
+);
+
+it('allows confirmed Training Coach reservations to move without an invoice', async () => {
+  const client = mount({
+    ...booking,
+    purpose: 'COACH_TRAINING',
+    invoice: null,
+    totalPrice: 0
+  } as unknown as Booking);
   expect(screen.getByRole('button', { name: 'Pindah court' })).toBeEnabled();
   fireEvent.click(screen.getByRole('button', { name: 'Pindah court' }));
   fireEvent.click(await screen.findByRole('radio', { name: 'Court B' }));
@@ -102,11 +136,13 @@ it.each(['10:00:00', '10:15:00', '10:29:59'])('allows court changes during the g
   await waitFor(() => expect(mocks.move).toHaveBeenCalledWith('detail', 'old', 'new'));
   client.clear();
 });
-it.each(['10:30:00', '10:30:01', '11:00:00'])('disables court changes at or after the cutoff (%s WIB)', (time) => {
-  mocks.now = Date.parse(`2030-01-02T${time}+07:00`);
-  const client = mount();
+it.each(['HOLD', 'CANCELLED'])('keeps %s Training Coach reservations disabled', (status) => {
+  const client = mount({
+    ...booking,
+    purpose: 'COACH_TRAINING',
+    invoice: null,
+    status
+  } as unknown as Booking);
   expect(screen.getByRole('button', { name: 'Pindah court' })).toBeDisabled();
-  expect(screen.getByText(/sebelum 30 menit setelah jam mulai/)).toBeInTheDocument();
-  expect(mocks.options).not.toHaveBeenCalled();
   client.clear();
 });
