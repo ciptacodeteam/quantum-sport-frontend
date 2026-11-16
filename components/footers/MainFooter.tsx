@@ -30,7 +30,16 @@ export default function MainFooter() {
             <Image src={LogoImage} alt="Black Padel" sizes="144px" className="h-auto w-36" />
           </BranchLink>
           <p className="max-w-xs">Book courts and manage your padel activities in one place.</p>
-          <address className="max-w-xs not-italic">{clubLocations[0].address}</address>
+          <address className="max-w-xs not-italic">
+            <a
+              href={clubLocations[0].mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={linkClassName}
+            >
+              {clubLocations[0].address}
+            </a>
+          </address>
           <address className="max-w-xs not-italic">
             <a
               href="https://maps.google.com/maps?vet=10CAAQoqAOahcKEwjwxdOnoM2XAxUAAAAAHQAAAAAQBQ..i&udm&fvr=1&pvq=Cg0vZy8xMXkwcDkxeTFoIhEKC2JsYWNrIHBhZGVsEAIYAw&lqi=CgtibGFjayBwYWRlbEiv6MPUgr2AgAhaExAAEAEYASILYmxhY2sgcGFkZWySAQtwYWRlbF9jb3VydA&cs=1&um=1&ie=UTF-8&fb=1&gl=id&sa=X&ftid=0x3031310010a25ae9:0x14bf370c5ed5f418"
@@ -72,10 +81,10 @@ export default function MainFooter() {
             <p>
               Email:{' '}
               <a
-                href="mailto:quantumsportsandsocialclub@gmail.com"
+                href="mailto:blackpadel.id@gmail.com"
                 className={`${linkClassName} break-words text-[#ad422b]`}
               >
-                quantumsportsandsocialclub@gmail.com
+                blackpadel.id@gmail.com
               </a>
             </p>
             <p>

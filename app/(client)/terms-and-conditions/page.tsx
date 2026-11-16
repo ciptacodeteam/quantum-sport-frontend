@@ -291,10 +291,10 @@ export default function TermsAndConditionsPage() {
                 <p>
                   <strong>Email:</strong>{' '}
                   <a
-                    href="mailto:quantumsportsandsocialclub@gmail.com"
+                    href="mailto:blackpadel.id@gmail.com"
                     className="break-words text-[#ad422b] underline-offset-4 hover:underline"
                   >
-                    quantumsportsandsocialclub@gmail.com
+                    blackpadel.id@gmail.com
                   </a>
                 </p>
                 <p>

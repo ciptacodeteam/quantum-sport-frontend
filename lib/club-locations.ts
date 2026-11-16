@@ -5,7 +5,7 @@ export const clubLocations = [
     name: 'Black Padel Cemara',
     address:
       'Jl. Cemara No. 51, Pulo Brayan Bengkel Baru, Medan Timur, Kota Medan, Sumatera Utara 20237, Indonesia.',
-    mapsUrl: 'https://maps.app.goo.gl/a5b6EUoXWiCnqQVj8',
+    mapsUrl: 'https://maps.app.goo.gl/sF9peSMU6RjtZ9f39',
     coordinates: [98.6904522, 3.6294502],
     openingHours: '06.00–00.00',
     rating: '4.8'

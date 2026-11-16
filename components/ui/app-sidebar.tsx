@@ -65,6 +65,10 @@ const data: { navMain: AppSidebarItem[]; navSecondary: AppSidebarItem[] } = {
         {
           title: 'Business Insights',
           url: '/admin/analytics/business-insights'
+        },
+        {
+          title: 'Membership Member',
+          url: '/admin/analytics/membership-members'
         }
       ]
     },
