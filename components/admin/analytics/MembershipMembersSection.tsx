@@ -250,9 +250,9 @@ export default function MembershipMembersSection() {
           setQuery(search.trim());
           setPage(1);
         }}
-        className="flex flex-wrap items-end gap-3"
+        className="grid grid-cols-1 items-end gap-3 sm:grid-cols-[minmax(0,1fr)_12rem_auto]"
       >
-        <div className="min-w-52 flex-1 space-y-2">
+        <div className="flex min-w-0 flex-col gap-2">
           <Label htmlFor="member-search">Cari member atau paket</Label>
           <Input
             id="member-search"
@@ -261,7 +261,7 @@ export default function MembershipMembersSection() {
             placeholder="Nama, telepon, email, atau nama paket"
           />
         </div>
-        <div className="w-full space-y-2 sm:w-48">
+        <div className="flex min-w-0 flex-col gap-2">
           <Label htmlFor="member-sport">Olahraga</Label>
           <Select
             value={sport || 'all'}
@@ -292,6 +292,7 @@ export default function MembershipMembersSection() {
         <Button
           type="button"
           variant="outline"
+          className="h-9 w-full sm:w-auto"
           onClick={() => void result.refetch()}
           disabled={result.isFetching}
         >
