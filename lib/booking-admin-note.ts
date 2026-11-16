@@ -20,11 +20,18 @@ export type BookingHistoryEntry = {
   raw: string;
 };
 
-/** Keep original notes intact; only recognized audit lines become history. */
+/** Translate generated notes and audit lines while preserving manual notes. */
 export function parseBookingAdminNote(note: string) {
   const notes: string[] = [];
   const history: BookingHistoryEntry[] = [];
   for (const line of note.split('\n')) {
+    const recurringNote = line.match(
+      /^(\s*)Booking rutin membership\. Kuota dipotong saat jam bermain \(WIB\)\.(?:\s*Aturan:\s*[a-zA-Z0-9_-]+)?(\s*)$/
+    );
+    if (recurringNote) {
+      notes.push('Pemesanan rutin keanggotaan. Kuota dipotong saat jam bermain (WIB).');
+      continue;
+    }
     const marker = line.match(/^\[(COURT_CHANGE|COURT_RESCHEDULE)\] (.+)$/);
     if (marker) {
       try {
@@ -33,7 +40,7 @@ export function parseBookingAdminNote(note: string) {
         const date = (value: string) => formatBookingDate(value, 'DD MMM YYYY · HH:mm');
         const end = formatBookingDate(audit.to.endAt, 'HH:mm');
         history.push({
-          title: changedCourt ? 'Pindah lapangan' : 'Reschedule lapangan',
+          title: changedCourt ? 'Pindah lapangan' : 'Ubah jadwal lapangan',
           at: audit.at,
           description: changedCourt
             ? `${audit.from.court} → ${audit.to.court}\n${date(audit.to.startAt)}–${end} WIB\nTanggal, jam, dan biaya tetap.`

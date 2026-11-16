@@ -160,12 +160,11 @@ const MainHeader = ({ onBack, backHref, showBack = false, withBranchLabel = true
                 title="Profil saya"
                 aria-current={isActive('/profile') ? 'page' : undefined}
                 className={cn(
-                  'hidden min-h-11 min-w-11 shrink-0 items-center justify-center gap-2 rounded-full border border-black/15 px-3 text-xs font-medium transition-colors hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ad422b] lg:inline-flex',
+                  'hidden size-11 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ad422b] lg:inline-flex',
                   isActive('/profile') ? 'bg-[#ad422b]/10 text-[#ad422b]' : 'text-[#171717]'
                 )}
               >
                 <UserRound className="size-5" strokeWidth={1.5} aria-hidden="true" />
-                <span className="hidden xl:inline">Profil</span>
               </Link>
             )}
             <CartSheet minimal />

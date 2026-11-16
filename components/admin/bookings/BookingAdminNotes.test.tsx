@@ -43,11 +43,8 @@ it('separates manual notes from old and new audit events, showing newest first i
   expect(items[1]).toHaveTextContent('13 Nov 2026 · 13:23:29 WIB');
   expect(items[1]).toHaveTextContent('13 Nov 2026 · 18:00 WIB');
   expect(items[1]).toHaveTextContent('Nama lapangan tidak tercatat pada riwayat lama.');
-  for (const item of items) {
-    const technical = within(item).getByText('Detail teknis').closest('details');
-    expect(technical).not.toHaveAttribute('open');
-    expect(technical).toHaveTextContent('admin-id');
-  }
+  expect(screen.queryByText('Detail teknis')).not.toBeInTheDocument();
+  expect(screen.queryByText(/admin-id/)).not.toBeInTheDocument();
 });
 
 it('renders reschedule history with both schedules and retains malformed records as notes', () => {
@@ -58,9 +55,25 @@ it('renders reschedule history with both schedules and retains malformed records
   const bad = '[COURT_RESCHEDULE] malformed';
   const parsed = parseBookingAdminNote(`${bad}\n[COURT_RESCHEDULE] ${JSON.stringify(moved)}`);
   expect(parsed.note).toBe(bad);
-  expect(parsed.history[0]).toMatchObject({ title: 'Reschedule lapangan' });
+  expect(parsed.history[0]).toMatchObject({ title: 'Ubah jadwal lapangan' });
   expect(parsed.history[0].description).toContain('Court 1 · 13 Nov 2026 · 19:00 WIB');
   expect(parsed.history[0].description).toContain('Court 5 · 14 Nov 2026 · 18:00–19:00 WIB');
+});
+
+it('translates recurring membership notes without showing the internal rule ID', () => {
+  const generated =
+    'Booking rutin membership. Kuota dipotong saat jam bermain (WIB). Aturan: cmvxtpc810076o548agqzl7zs';
+  render(<BookingAdminNotes note={`${generated}\nPelanggan meminta lapangan berdekatan.`} />);
+  const notes = screen.getByRole('region', { name: 'Catatan admin' });
+  expect(notes).toHaveTextContent(
+    'Pemesanan rutin keanggotaan. Kuota dipotong saat jam bermain (WIB).'
+  );
+  expect(notes).toHaveTextContent('Pelanggan meminta lapangan berdekatan.');
+  expect(notes).not.toHaveTextContent('cmvxtpc810076o548agqzl7zs');
+  expect(notes).not.toHaveTextContent('Aturan:');
+  expect(parseBookingAdminNote(generated.replace(/ Aturan:.*/, '')).note).toBe(
+    'Pemesanan rutin keanggotaan. Kuota dipotong saat jam bermain (WIB).'
+  );
 });
 
 it('keeps ordinary notes and does not invent history for invalid audit data', () => {

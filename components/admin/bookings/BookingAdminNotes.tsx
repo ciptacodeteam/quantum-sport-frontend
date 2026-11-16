@@ -31,10 +31,6 @@ export default function BookingAdminNotes({ note }: { note: string }) {
                 <p className="leading-relaxed break-words whitespace-pre-line">
                   {entry.description}
                 </p>
-                <details className="text-muted-foreground text-xs">
-                  <summary className="cursor-pointer">Detail teknis</summary>
-                  <p className="mt-2 break-all whitespace-pre-wrap">{entry.raw}</p>
-                </details>
               </li>
             ))}
           </ol>

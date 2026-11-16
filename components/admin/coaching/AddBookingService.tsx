@@ -22,6 +22,11 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 
+function isServiceRequestRejected(error: unknown) {
+  const code = (error as { code?: unknown } | null)?.code;
+  return typeof code === 'number' && code >= 400 && code < 500 && code !== 408 && code !== 429;
+}
+
 export default function AddBookingService({
   detailId,
   startAt,
@@ -61,7 +66,7 @@ export default function AddBookingService({
     enabled: canWrite && canAdd,
     staleTime: 10000,
     retry: false,
-    refetchInterval: 10000
+    refetchInterval: (query) => (isServiceRequestRejected(query.state.error) ? false : 10000)
   });
   const selected = (available.data ?? []).filter((option) => slotIds.includes(option.slotId));
   const groups = Array.from(
@@ -149,10 +154,16 @@ export default function AddBookingService({
         </p>
       ) : available.isError ? (
         <div role="alert">
-          <p>Layanan belum dapat dimuat.</p>
-          <Button variant="outline" onClick={() => void available.refetch()}>
-            Coba lagi
-          </Button>
+          <p>
+            {isServiceRequestRejected(available.error)
+              ? getApiErrorMessage(available.error, 'Layanan tidak dapat ditambahkan pada slot ini.')
+              : 'Layanan belum dapat dimuat. Periksa koneksi lalu coba lagi.'}
+          </p>
+          {!isServiceRequestRejected(available.error) && (
+            <Button variant="outline" onClick={() => void available.refetch()}>
+              Coba lagi
+            </Button>
+          )}
         </div>
       ) : available.isPending ? (
         <div

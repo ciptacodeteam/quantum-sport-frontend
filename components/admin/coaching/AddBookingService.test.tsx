@@ -270,3 +270,13 @@ it('shows a retry action immediately on a failed search instead of repeated auto
   expect(mocks.available).toHaveBeenCalledTimes(2);
   client.clear();
 });
+
+it('explains an in-house restriction without offering a retry', async () => {
+  const message =
+    'Jam ini menggunakan paket in-house. Coach club tidak dapat ditambahkan pada jam yang sama.';
+  mocks.available.mockRejectedValue({ code: 400, msg: message });
+  const { client } = mount();
+  expect(await screen.findByRole('alert')).toHaveTextContent(message);
+  expect(screen.queryByRole('button', { name: 'Coba lagi' })).not.toBeInTheDocument();
+  client.clear();
+});
