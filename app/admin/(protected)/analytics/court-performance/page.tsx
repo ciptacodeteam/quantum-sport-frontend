@@ -613,6 +613,8 @@ function CourtPerformanceContent({ branch }: { branch: string | null | undefined
                           <Link
                             className="text-primary mt-1 block text-xs whitespace-nowrap hover:underline"
                             href={`/admin/kelola-transaksi/${r.invoiceId}`}
+                            rel="noopener noreferrer"
+                            target="_blank"
                           >
                             {r.invoiceNumber} ↗
                           </Link>

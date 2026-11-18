@@ -151,6 +151,10 @@ it('shows payment timestamps in WIB and links service rows to their invoice', ()
   );
   expect(details).toHaveTextContent(/06 Nov 2026.*00[.:]30/);
   expect(details).toHaveTextContent('2026-11-10 12:00');
+  for (const link of within(details).getAllByRole('link')) {
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  }
 });
 
 it('searches detail rows and recalculates their footer without changing overall rights', () => {

@@ -74,11 +74,13 @@ it('applies service, club and staff filters to the report and Excel export', asy
   mount();
   await screen.findByText('Hak 150000');
   await select('Jenis jasa', 'Coach');
+  await select('Tipe olahraga', 'Keduanya (Padel & Tennis)');
   await select('Club / Grup Coaching', 'Club A');
   await select('Coach / Ballboy', 'Coach Andi');
   await waitFor(() =>
     expect(mocks.get.mock.lastCall?.[2]).toEqual({
       service: 'COACH',
+      coachType: 'PADEL_TENNIS',
       clubId: 'club-a',
       staffId: 'staff-a'
     })

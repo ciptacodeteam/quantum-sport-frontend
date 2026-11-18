@@ -69,7 +69,11 @@ export default function PaymentResultPage() {
             <div className="flex flex-col gap-3">
               {reference ? (
                 <Button asChild className="h-12 rounded-full bg-[#111111] px-7">
-                  <Link href={`/invoice/${encodeURIComponent(reference)}`}>
+                  <Link
+                    href={`/invoice/${encodeURIComponent(reference)}`}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
                     Lihat detail transaksi
                   </Link>
                 </Button>

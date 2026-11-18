@@ -103,7 +103,24 @@ export default function CoachBallboyIncomePage() {
               </Button>
             )}
           </div>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="space-y-2">
+              <Label htmlFor="service-income-sport">Tipe olahraga</Label>
+              <Select
+                value={filters.coachType ?? 'all'}
+                onValueChange={(value) => setFilter('coachType', value)}
+              >
+                <SelectTrigger id="service-income-sport" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua tipe</SelectItem>
+                  <SelectItem value="PADEL">Padel</SelectItem>
+                  <SelectItem value="TENNIS">Tennis</SelectItem>
+                  <SelectItem value="PADEL_TENNIS">Keduanya (Padel & Tennis)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="service-income-type">Jenis jasa</Label>
               <Select
@@ -163,7 +180,8 @@ export default function CoachBallboyIncomePage() {
           </div>
           <p className="text-muted-foreground text-xs leading-relaxed">
             Mengikuti cabang yang dipilih di navigasi admin. Periode menggunakan tanggal pembayaran
-            (WIB) untuk hak club dan tanggal sesi (WIB) untuk pemakaian in-house, maksimal 366 hari.
+            (WIB) untuk hak club dan tanggal sesi (WIB) untuk pemakaian in-house, maksimal 366 hari.{' '}
+            Keduanya khusus untuk coach bertipe Padel & Tennis.
           </p>
         </CardContent>
       </Card>

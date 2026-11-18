@@ -1,4 +1,5 @@
 export type ServiceIncomeFilters = {
+  coachType?: 'PADEL' | 'TENNIS' | 'PADEL_TENNIS';
   clubId?: string;
   staffId?: string;
   service?: 'COACH' | 'BALLBOY' | 'INHOUSE';

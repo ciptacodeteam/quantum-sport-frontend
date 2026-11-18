@@ -72,6 +72,8 @@ function HistoryItem({ invoice }: { invoice: Invoice }) {
     <Link
       href={`/invoice/${encodeURIComponent(invoice.number)}`}
       className="group flex min-w-0 flex-col border border-black/15 bg-white p-5 transition-colors hover:border-[#ad422b]/50 focus-visible:outline-2 focus-visible:outline-[#ad422b] sm:p-6"
+      rel="noopener noreferrer"
+      target="_blank"
     >
       <div className="flex items-start justify-between gap-3">
         <h2 className="min-w-0 text-lg font-medium tracking-tight break-words">Invoice</h2>

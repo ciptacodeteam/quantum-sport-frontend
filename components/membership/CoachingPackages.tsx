@@ -149,6 +149,8 @@ export default function CoachingPackages({
             <BranchLink
               className="mt-5 block text-xs text-[#ad422b] hover:underline"
               href={`/invoice/${encodeURIComponent(pack.purchaseInvoice.number)}`}
+              rel="noopener noreferrer"
+              target="_blank"
             >
               Invoice pembelian · {pack.purchaseInvoice.number}
             </BranchLink>
@@ -172,6 +174,8 @@ export default function CoachingPackages({
                         <BranchLink
                           className="text-sm font-medium break-all hover:underline"
                           href={`/invoice/${encodeURIComponent(usage.invoiceNumber)}`}
+                          rel="noopener noreferrer"
+                          target="_blank"
                         >
                           {usage.invoiceNumber}
                         </BranchLink>

@@ -76,7 +76,12 @@ const InvoiceTable = () => {
         id: 'actions',
         header: 'Aksi',
         cell: ({ row }) => (
-          <Link href={`/admin/kelola-transaksi/${row.original.id}`} prefetch>
+          <Link
+            href={`/admin/kelola-transaksi/${row.original.id}`}
+            prefetch
+            rel="noopener noreferrer"
+            target="_blank"
+          >
             <Button size="icon" variant="lightInfo" aria-label="Lihat detail">
               <IconEye />
             </Button>

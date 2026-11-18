@@ -136,6 +136,8 @@ function UsageRow({ usage }: { usage: TrackedPackage['usage'][number] }) {
     <BranchLink
       href={`/invoice/${encodeURIComponent(usage.invoiceNumber)}`}
       className="block border border-black/15 p-4 transition-colors hover:border-[#ad422b]/40 focus-visible:outline-2 focus-visible:outline-[#ad422b] sm:p-5"
+      rel="noopener noreferrer"
+      target="_blank"
     >
       {content}
     </BranchLink>
@@ -372,6 +374,8 @@ export default function MyPackagesPage() {
                       >
                         <BranchLink
                           href={`/invoice/${encodeURIComponent(pack.purchaseInvoice.number)}`}
+                          rel="noopener noreferrer"
+                          target="_blank"
                         >
                           Lanjutkan pembayaran
                         </BranchLink>

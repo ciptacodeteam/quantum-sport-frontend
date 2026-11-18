@@ -125,7 +125,11 @@ export default function CoachingBookingDetail({
                     </div>
                   </dl>
                   <Button asChild variant="outline" className="w-full">
-                    <Link href={`/admin/kelola-transaksi/${booking.invoice.id}`}>
+                    <Link
+                      href={`/admin/kelola-transaksi/${booking.invoice.id}`}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
                       Buka detail invoice <ExternalLink aria-hidden="true" />
                     </Link>
                   </Button>

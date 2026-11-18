@@ -154,6 +154,8 @@ export default function ServiceIncomeSection({
                           <Link
                             className="text-primary text-xs hover:underline"
                             href={`/admin/kelola-transaksi/${row.invoiceId}`}
+                            rel="noopener noreferrer"
+                            target="_blank"
                           >
                             {row.invoiceNumber}
                           </Link>
@@ -461,6 +463,8 @@ export default function ServiceIncomeSection({
                     <Link
                       className="text-primary text-xs font-medium hover:underline"
                       href={`/admin/kelola-transaksi/${row.invoiceId}`}
+                      rel="noopener noreferrer"
+                      target="_blank"
                     >
                       {row.invoiceNumber}
                     </Link>

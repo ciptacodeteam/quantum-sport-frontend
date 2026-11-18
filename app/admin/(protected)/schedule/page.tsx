@@ -1,5 +1,6 @@
 'use client';
-import BookingAdminNotes from '@/components/admin/bookings/BookingAdminNotes';
+import BookingDescription from '@/components/admin/bookings/BookingDescription';
+import { parseBookingAdminNote } from '@/lib/booking-admin-note';
 import { bookingPurposeLabel, isInternalBooking } from '@/lib/booking-purpose';
 import { useAdminCourtSports } from '@/hooks/useAdminCourtSports';
 
@@ -57,7 +58,7 @@ import {
   IconChevronLeft,
   IconChevronRight
 } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { useMemo, useState, useEffect } from 'react';
 import dayjs from 'dayjs';
@@ -240,6 +241,7 @@ interface BookingCell {
 }
 
 export default function SchedulePage() {
+  const queryClient = useQueryClient();
   const today = new Date(dayjs().tz('Asia/Jakarta').format('YYYY-MM-DD') + 'T00:00:00');
   today.setHours(0, 0, 0, 0);
 
@@ -1013,6 +1015,9 @@ export default function SchedulePage() {
                               </td>
                               {courts.map((court) => {
                                 const bookingCell = bookingsMap.get(court.id)?.get(startTime);
+                                const description = parseBookingAdminNote(
+                                  bookingCell?.booking.adminNote ?? ''
+                                ).note;
                                 const status = bookingCell?.status || BookingStatus.HOLD;
                                 const isBooked = !!bookingCell;
 
@@ -1052,6 +1057,14 @@ export default function SchedulePage() {
                                             >
                                               {bookingCell.customerName}
                                             </span>
+                                            {description && (
+                                              <span
+                                                className="line-clamp-2 max-w-full text-xs break-words whitespace-pre-line"
+                                                title={description}
+                                              >
+                                                {description}
+                                              </span>
+                                            )}
                                             {bookingCell.customerPhone &&
                                               bookingCell.customerPhone !== '-' && (
                                                 <span className="text-muted-foreground text-xs tabular-nums">
@@ -1225,13 +1238,21 @@ export default function SchedulePage() {
                                                     </p>
                                                   </div>
                                                 )}
-                                                {bookingCell.booking.adminNote && (
-                                                  <div className="col-span-2">
-                                                    <BookingAdminNotes
-                                                      note={bookingCell.booking.adminNote}
-                                                    />
-                                                  </div>
-                                                )}
+                                                <div className="col-span-2">
+                                                  <BookingDescription
+                                                    key={`${bookingCell.booking.id}:${bookingCell.booking.adminNote ?? ''}`}
+                                                    bookingId={bookingCell.booking.id}
+                                                    note={bookingCell.booking.adminNote}
+                                                    onSuccess={() => {
+                                                      void queryClient.invalidateQueries({
+                                                        queryKey: ['admin', 'schedule']
+                                                      });
+                                                      void queryClient.invalidateQueries({
+                                                        queryKey: ['admin', 'bookings']
+                                                      });
+                                                    }}
+                                                  />
+                                                </div>
                                               </div>
                                             </>
                                           }

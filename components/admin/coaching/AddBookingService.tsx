@@ -156,7 +156,10 @@ export default function AddBookingService({
         <div role="alert">
           <p>
             {isServiceRequestRejected(available.error)
-              ? getApiErrorMessage(available.error, 'Layanan tidak dapat ditambahkan pada slot ini.')
+              ? getApiErrorMessage(
+                  available.error,
+                  'Layanan tidak dapat ditambahkan pada slot ini.'
+                )
               : 'Layanan belum dapat dimuat. Periksa koneksi lalu coba lagi.'}
           </p>
           {!isServiceRequestRejected(available.error) && (
@@ -350,7 +353,13 @@ export default function AddBookingService({
           </p>
           <div className="flex flex-wrap gap-2">
             <Button asChild variant="outline" size="sm">
-              <Link href={`/admin/kelola-transaksi/${created.invoiceId}`}>Lihat invoice</Link>
+              <Link
+                href={`/admin/kelola-transaksi/${created.invoiceId}`}
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                Lihat invoice
+              </Link>
             </Button>
             <Button
               variant="outline"
