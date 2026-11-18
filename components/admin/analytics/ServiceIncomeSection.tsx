@@ -302,8 +302,8 @@ export default function ServiceIncomeSection({
         <CardHeader className="gap-2 px-6 sm:px-8">
           <CardTitle className="text-base">Rekap hak per club</CardTitle>
           <CardDescription>
-            Dasar perhitungan pembayaran ke masing-masing club. Nama club coach mengikuti catatan
-            saat booking.
+            Dasar perhitungan pembayaran ke masing-masing club. Riwayat mengikuti grup coach saat
+            ini. Jika coach memiliki beberapa grup, digunakan grup yang tercatat pada transaksi.
           </CardDescription>
         </CardHeader>
         <CardContent className="px-6 sm:px-8">

@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useMemo, useState } from 'react';
 import { createColumnHelper } from '@tanstack/react-table';
-import { IconPencil, IconCalendar, IconPlus } from '@tabler/icons-react';
+import { IconPencil, IconCalendar, IconPlus, IconPower, IconTrash } from '@tabler/icons-react';
 import { DataTable } from '@/components/ui/data-table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Link from 'next/link';
@@ -21,7 +21,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription
+  DialogDescription,
+  DialogFooter
 } from '@/components/ui/dialog';
 import {
   Select,
@@ -61,6 +62,37 @@ export default function CoachingCatalog({ groupId, inHouse = false }: CoachingCa
   const [statusFilter, setStatusFilter] = useState('active');
   const [editing, setEditing] = useState<CoachingPerson | null>(null);
   const [open, setOpen] = useState(false);
+  const [profileAction, setProfileAction] = useState<{
+    person: CoachingPerson;
+    remove: boolean;
+  } | null>(null);
+  const lifecycle = useMutation({
+    mutationFn: (action: { person: CoachingPerson; remove: boolean }) =>
+      action.remove
+        ? coachingApi.remove(action.person.id)
+        : coachingApi.setActive(action.person.id, !action.person.isActive),
+    onSuccess: (_result, action) => {
+      setProfileAction(null);
+      for (const key of [
+        ['admin', 'coaching'],
+        ['admin', 'coaching-groups'],
+        ['admin', 'inhouse'],
+        ['admin', 'schedule'],
+        ['coaches'],
+        ['coach']
+      ]) {
+        void client.invalidateQueries({ queryKey: key });
+      }
+      toast.success(
+        action.remove
+          ? 'Coach berhasil dihapus.'
+          : action.person.isActive
+            ? 'Coach dinonaktifkan.'
+            : 'Coach diaktifkan kembali.'
+      );
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error, 'Perubahan coach belum berhasil.'))
+  });
   const [draft, setDraft] = useState<CoachingProfile>({
     name: '',
     kind,
@@ -75,6 +107,7 @@ export default function CoachingCatalog({ groupId, inHouse = false }: CoachingCa
       setOpen(false);
       void client.invalidateQueries({ queryKey: ['admin', 'coaching'] });
       void client.invalidateQueries({ queryKey: ['admin', 'coaching-groups'] });
+      void client.invalidateQueries({ queryKey: ['admin', 'analytics'] });
       toast.success('Profil layanan disimpan.');
     },
     onError: (error) => toast.error(getApiErrorMessage(error, 'Profil belum dapat disimpan.'))
@@ -190,11 +223,45 @@ export default function CoachingCatalog({ groupId, inHouse = false }: CoachingCa
                 <IconCalendar />
               </Link>
             </Button>
+            {row.original.role === 'COACH' && (
+              <>
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  disabled={!branchId || branchId === 'all' || lifecycle.isPending}
+                  aria-label={`${row.original.isActive ? 'Nonaktifkan' : 'Aktifkan'} ${row.original.name}`}
+                  title={row.original.isActive ? 'Nonaktifkan coach' : 'Aktifkan coach'}
+                  onClick={() => setProfileAction({ person: row.original, remove: false })}
+                >
+                  <IconPower />
+                </Button>
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  className="text-destructive"
+                  disabled={
+                    !branchId ||
+                    branchId === 'all' ||
+                    !row.original.canDelete ||
+                    lifecycle.isPending
+                  }
+                  aria-label={`Hapus ${row.original.name}`}
+                  title={
+                    row.original.canDelete
+                      ? 'Hapus coach'
+                      : 'Coach yang memiliki riwayat pemesanan atau paket pelanggan tidak dapat dihapus'
+                  }
+                  onClick={() => setProfileAction({ person: row.original, remove: true })}
+                >
+                  <IconTrash />
+                </Button>
+              </>
+            )}
           </div>
         )
       })
     ],
-    [beginEdit, branchId, kind, groupId]
+    [beginEdit, branchId, kind, groupId, lifecycle.isPending]
   );
   const catalogTable = (
     <DataTable
@@ -228,6 +295,53 @@ export default function CoachingCatalog({ groupId, inHouse = false }: CoachingCa
   if (isLoading || !hasAccess) return <p className="p-6">Memuat...</p>;
   return (
     <main className="w-full min-w-0 space-y-6">
+      <Dialog
+        open={!!profileAction}
+        onOpenChange={(value) => {
+          if (!value && !lifecycle.isPending) setProfileAction(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {profileAction?.remove
+                ? 'Hapus coach?'
+                : profileAction?.person.isActive
+                  ? 'Nonaktifkan coach?'
+                  : 'Aktifkan coach?'}
+            </DialogTitle>
+            <DialogDescription>
+              {profileAction?.remove
+                ? `Hapus ${profileAction.person.name} beserta jadwal kosong, tarif, dan paket yang belum terjual? Hanya coach tanpa riwayat pemesanan atau paket pelanggan yang dapat dihapus.`
+                : profileAction?.person.isActive
+                  ? `${profileAction.person.name} tidak akan tersedia untuk pemesanan baru. Data dan riwayat pemesanan tetap tersimpan.`
+                  : `${profileAction?.person.name} akan tersedia kembali untuk pemesanan sesuai jadwalnya.`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              disabled={lifecycle.isPending}
+              onClick={() => setProfileAction(null)}
+            >
+              Batal
+            </Button>
+            <Button
+              variant={profileAction?.remove ? 'destructive' : 'default'}
+              disabled={lifecycle.isPending}
+              onClick={() => profileAction && lifecycle.mutate(profileAction)}
+            >
+              {lifecycle.isPending
+                ? 'Memproses…'
+                : profileAction?.remove
+                  ? 'Hapus coach'
+                  : profileAction?.person.isActive
+                    ? 'Nonaktifkan coach'
+                    : 'Aktifkan coach'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">

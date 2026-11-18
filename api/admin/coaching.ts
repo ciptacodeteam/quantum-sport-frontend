@@ -22,6 +22,7 @@ export type CoachingPerson = {
   isInHouseCoach?: boolean;
   inHousePlans?: { id: string }[];
   isActive: boolean;
+  canDelete?: boolean;
   rollingServiceSchedule?: RollingServiceSchedule | null;
 };
 export type CoachingProfile = {
@@ -107,6 +108,9 @@ export type CoachCancellationPreview = {
   refundRequired: boolean;
 };
 export const coachingApi = {
+  setActive: async (id: string, isActive: boolean) =>
+    (await adminApi.patch(`/coaching/${id}/status`, { isActive })).data.data,
+  remove: async (id: string) => (await adminApi.delete(`/coaching/${id}`)).data.data,
   rescheduleCourt: async (kind: 'COACH' | 'BALLBOY', id: string) =>
     (await adminApi.get(`/coaching/bookings/${id}/reschedule-court`, { params: { kind } })).data
       .data as { detail: BookingDetail; membershipCovered: boolean },

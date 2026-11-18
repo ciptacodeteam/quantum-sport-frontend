@@ -2,7 +2,14 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import CoachingCatalog from './CoachingCatalog';
-const mocks = vi.hoisted(() => ({ list: vi.fn(), save: vi.fn(), groups: vi.fn(), kind: 'COACH' }));
+const mocks = vi.hoisted(() => ({
+  list: vi.fn(),
+  save: vi.fn(),
+  groups: vi.fn(),
+  remove: vi.fn(),
+  setActive: vi.fn(),
+  kind: 'COACH'
+}));
 vi.mock('@/api/admin/coachingGroup', () => ({ coachingGroupApi: { list: mocks.groups } }));
 vi.mock('@/api/admin/coaching', () => ({ coachingApi: mocks }));
 vi.mock('@/hooks/useRoleAccess', () => ({
@@ -23,7 +30,8 @@ const people = [
     role: 'COACH',
     coachType: 'PADEL',
     phone: '08111111111',
-    isActive: true
+    isActive: true,
+    canDelete: true
   },
   {
     id: 'coach-b',
@@ -60,8 +68,37 @@ beforeEach(() => {
   mocks.list.mockResolvedValue(people);
   mocks.groups.mockResolvedValue([]);
   mocks.save.mockResolvedValue({});
+  mocks.remove.mockResolvedValue({});
+  mocks.setActive.mockResolvedValue({});
 });
 afterEach(cleanup);
+it('confirms deletion of a coach without bookings and refreshes the list', async () => {
+  mount();
+  fireEvent.click(await screen.findByRole('button', { name: 'Hapus Coach A' }));
+  expect(mocks.remove).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Hapus coach' }));
+  await waitFor(() => expect(mocks.remove).toHaveBeenCalledWith('coach-a'));
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+});
+it('blocks deletion of a coach with history and allows deactivation', async () => {
+  mocks.list.mockResolvedValue([{ ...people[0], canDelete: false }]);
+  mount();
+  expect(await screen.findByRole('button', { name: 'Hapus Coach A' })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Nonaktifkan Coach A' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Nonaktifkan coach' }));
+  await waitFor(() => expect(mocks.setActive).toHaveBeenCalledWith('coach-a', false));
+  expect(mocks.remove).not.toHaveBeenCalled();
+});
+it('reactivates an inactive coach and lets the user cancel deletion', async () => {
+  mount();
+  fireEvent.click(await screen.findByRole('button', { name: 'Aktifkan Coach B' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Aktifkan coach' }));
+  await waitFor(() => expect(mocks.setActive).toHaveBeenCalledWith('coach-b', true));
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  fireEvent.click(screen.getByRole('button', { name: 'Hapus Coach A' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Batal' }));
+  expect(mocks.remove).not.toHaveBeenCalled();
+});
 it('shows active ballboys first and separates inactive profiles into their own tab', async () => {
   mocks.kind = 'BALLBOY';
   mocks.list.mockResolvedValue([
