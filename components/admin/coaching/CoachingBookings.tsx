@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { coachingGroupApi } from '@/api/admin/coachingGroup';
 import { Eye } from 'lucide-react';
 import CoachingBookingDetail from './CoachingBookingDetail';
 import BookingDateFilter from '@/components/admin/bookings/BookingDateFilter';
@@ -24,18 +25,34 @@ export default function CoachingBookings({ kind }: { kind: 'COACH' | 'BALLBOY' }
   const [detailId, setDetailId] = useState<string | null>(null);
   const { branchId } = useAdminCourtSports();
   const { dateRange, setDateRange, dateParams } = useBookingDateFilter();
+  const [clubFilter, setClubFilter] = useState({ branchId, value: '' });
+  const clubId = kind === 'COACH' && clubFilter.branchId === branchId ? clubFilter.value : '';
+  const bookingParams = { ...dateParams, ...(clubId ? { coachingGroupId: clubId } : {}) };
+  const clubs = useQuery({
+    queryKey: ['admin', 'coaching-groups', branchId],
+    queryFn: () => coachingGroupApi.list(branchId),
+    enabled: kind === 'COACH'
+  });
   const canManageCoaches = useHasRole(['SUPER_ADMIN']);
   const canCancelServices = useHasRole(
     kind === 'BALLBOY' ? ['SUPER_ADMIN', 'ADMIN', 'CASHIER'] : ['SUPER_ADMIN', 'CASHIER']
   );
   const query = useQuery({
-    queryKey: ['admin', 'coaching', branchId, 'bookings', kind, dateParams],
-    queryFn: () => coachingApi.bookings(kind, dateParams),
+    queryKey: ['admin', 'coaching', branchId, 'bookings', kind, bookingParams],
+    queryFn: () => coachingApi.bookings(kind, bookingParams),
     refetchInterval: 15000
   });
   const col = createColumnHelper<CoachingBooking>();
   const columns = [
     col.accessor('name', { header: kind === 'COACH' ? 'Coach' : 'Ballboy' }),
+    ...(kind === 'COACH'
+      ? [
+          col.accessor('coachingGroupName', {
+            header: 'Club',
+            cell: ({ getValue }) => getValue() || '-'
+          })
+        ]
+      : []),
     col.display({
       id: 'customer',
       header: 'Pelanggan',
@@ -174,7 +191,37 @@ export default function CoachingBookings({ kind }: { kind: 'COACH' | 'BALLBOY' }
           loading={query.isPending}
           enableRowSelection={false}
           enableColumnVisibility={false}
-          rightActions={<BookingDateFilter value={dateRange} onChange={setDateRange} />}
+          rightActions={
+            <div className="flex flex-wrap items-center gap-2">
+              {kind === 'COACH' && (
+                <div className="flex items-center gap-2">
+                  <label htmlFor="coaching-bookings-club" className="text-sm">
+                    Club
+                  </label>
+                  <select
+                    id="coaching-bookings-club"
+                    className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                    value={clubId}
+                    onChange={(event) => setClubFilter({ branchId, value: event.target.value })}
+                    disabled={clubs.isPending || clubs.isError}
+                  >
+                    <option value="">Semua club</option>
+                    {clubs.data?.map((club) => (
+                      <option key={club.id} value={club.id}>
+                        {club.name}
+                      </option>
+                    ))}
+                  </select>
+                  {clubs.isError && (
+                    <Button variant="outline" onClick={() => void clubs.refetch()}>
+                      Muat ulang club
+                    </Button>
+                  )}
+                </div>
+              )}
+              <BookingDateFilter value={dateRange} onChange={setDateRange} />
+            </div>
+          }
         />
       )}
     </main>

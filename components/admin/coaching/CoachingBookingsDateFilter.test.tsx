@@ -2,7 +2,8 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import CoachingBookings from './CoachingBookings';
-const mocks = vi.hoisted(() => ({ bookings: vi.fn() }));
+const mocks = vi.hoisted(() => ({ bookings: vi.fn(), clubs: vi.fn() }));
+vi.mock('@/api/admin/coachingGroup', () => ({ coachingGroupApi: { list: mocks.clubs } }));
 vi.mock('@/api/admin/coaching', () => ({ coachingApi: mocks }));
 vi.mock('@/hooks/use-mobile', () => ({ useIsMobile: () => false }));
 vi.mock('@/hooks/useAdminCourtSports', () => ({
@@ -15,6 +16,7 @@ vi.mock('@/components/ui/data-table', () => ({
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.bookings.mockResolvedValue([]);
+  mocks.clubs.mockResolvedValue([{ id: 'club-a', name: 'Club A' }]);
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date(2026, 10, 3, 12));
 });
@@ -62,5 +64,55 @@ it('uses the Jakarta day for Today even when the UTC calendar is still on yester
       dateTo: '2026-11-03'
     })
   );
+  client.clear();
+});
+
+it('filters coach bookings by club together with the playing date and resets to all clubs', async () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={client}>
+      <CoachingBookings kind="COACH" />
+    </QueryClientProvider>
+  );
+  await screen.findByRole('option', { name: 'Club A' });
+  expect(mocks.clubs).toHaveBeenCalledWith('cemara');
+  fireEvent.change(screen.getByRole('combobox', { name: 'Club' }), { target: { value: 'club-a' } });
+  await waitFor(() =>
+    expect(mocks.bookings.mock.lastCall).toEqual(['COACH', { coachingGroupId: 'club-a' }])
+  );
+  fireEvent.click(screen.getByRole('button', { name: /^Date range:/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Today' }));
+  await waitFor(() =>
+    expect(mocks.bookings.mock.lastCall).toEqual([
+      'COACH',
+      {
+        coachingGroupId: 'club-a',
+        dateFrom: '2026-11-03',
+        dateTo: '2026-11-03'
+      }
+    ])
+  );
+  fireEvent.change(screen.getByRole('combobox', { name: 'Club' }), { target: { value: '' } });
+  await waitFor(() =>
+    expect(mocks.bookings.mock.lastCall).toEqual([
+      'COACH',
+      {
+        dateFrom: '2026-11-03',
+        dateTo: '2026-11-03'
+      }
+    ])
+  );
+  client.clear();
+});
+
+it('does not show a club filter for ballboy bookings', () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={client}>
+      <CoachingBookings kind="BALLBOY" />
+    </QueryClientProvider>
+  );
+  expect(screen.queryByRole('combobox', { name: 'Club' })).toBeNull();
+  expect(mocks.clubs).not.toHaveBeenCalled();
   client.clear();
 });

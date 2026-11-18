@@ -506,8 +506,8 @@ export function DataTable<TData extends RowData>({
                     <TableHead
                       key={header.id}
                       className={cn(
-                        'hover:!bg-gray-100 dark:hover:!bg-gray-800',
-                        header.column.id === '_select' && 'w-9'
+                        'ps-5 hover:!bg-gray-100 dark:hover:!bg-gray-800',
+                        header.column.id === '_select' && 'w-9 ps-3'
                       )}
                       onClick={
                         header.column.getCanSort()
@@ -518,7 +518,7 @@ export function DataTable<TData extends RowData>({
                     >
                       <div
                         className={cn(
-                          'flex-between relative p-3 text-nowrap select-none',
+                          'flex-between relative py-3 text-nowrap select-none',
                           header.column.getCanSort() ? 'cursor-pointer' : 'cursor-default'
                         )}
                         style={{ width: meta?.width || 'auto' }}

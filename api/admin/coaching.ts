@@ -65,6 +65,7 @@ export type CoachingBooking = {
   createdAt?: string;
   cashier?: { id: string; name: string } | null;
   name: string;
+  coachingGroupId?: string | null;
   coachingGroupName?: string | null;
   customer: string;
   phone: string | null;
@@ -206,7 +207,10 @@ export const coachingApi = {
       slotId: string;
       price: number;
     },
-  bookings: async (kind: 'COACH' | 'BALLBOY', dates: { dateFrom?: string; dateTo?: string } = {}) =>
+  bookings: async (
+    kind: 'COACH' | 'BALLBOY',
+    dates: { dateFrom?: string; dateTo?: string; coachingGroupId?: string } = {}
+  ) =>
     (await adminApi.get('/coaching/bookings', { params: { kind, ...dates } })).data
       .data as CoachingBooking[]
 };
