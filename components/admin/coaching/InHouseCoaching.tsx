@@ -1,6 +1,6 @@
 'use client';
 import { WalletCards, History } from 'lucide-react';
-import { IconCheck, IconUser } from '@tabler/icons-react';
+import { IconCheck, IconUser, IconUserPlus } from '@tabler/icons-react';
 import { Badge } from '@/components/ui/badge';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -14,6 +14,8 @@ import { getApiErrorMessage } from '@/lib/api-error';
 import { isOfflinePaymentMethod } from '@/lib/offline-payment';
 import { formatCurrency } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import OfflinePaymentSelection from '@/components/admin/booking/OfflinePaymentSelection';
 import { Separator } from '@/components/ui/separator';
@@ -35,7 +37,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter
+  DialogFooter,
+  DialogTrigger
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 const buttonClass = 'rounded-md border-0 shadow-none';
@@ -59,6 +62,10 @@ export default function InHouseCoaching() {
     return () => clearTimeout(timer);
   }, [q]);
   const [userId, setUserId] = useState('');
+  const [walkIn, setWalkIn] = useState<{ name: string; phone: string } | null>(null);
+  const [walkInOpen, setWalkInOpen] = useState(false);
+  const [walkInName, setWalkInName] = useState('');
+  const [walkInPhone, setWalkInPhone] = useState('');
   const [customerLabel, setCustomerLabel] = useState('');
   const [packageId, setPackageId] = useState('');
   const [methodId, setMethodId] = useState('');
@@ -89,9 +96,21 @@ export default function InHouseCoaching() {
     void client.invalidateQueries({ queryKey: ['admin', 'transactions'] });
   };
   const sell = useMutation({
-    mutationFn: () => inHouseApi.sell({ packageId, userId, paymentMethodId: methodId, requestId }),
-    onSuccess: () => {
+    mutationFn: () =>
+      inHouseApi.sell({
+        packageId,
+        paymentMethodId: methodId,
+        requestId,
+        ...(walkIn ? { name: walkIn.name, phone: walkIn.phone } : { userId })
+      }),
+    onSuccess: (wallet) => {
+      if (walkIn && wallet.userId) {
+        setUserId(wallet.userId);
+        setCustomerLabel(`${walkIn.name} · ${walkIn.phone}`);
+        setWalkIn(null);
+      }
       refresh();
+      void client.invalidateQueries({ queryKey: ['admin', 'customers'] });
       setRequestId(crypto.randomUUID());
       setPackageId('');
       toast.success('Pembayaran dicatat dan kuota coaching ditambahkan.');
@@ -119,7 +138,82 @@ export default function InHouseCoaching() {
   const selectedMethod = offlineMethods.find((method) => method.id === methodId);
   const customerPicker = (
     <div className="space-y-3">
-      <p className="text-muted-foreground text-sm font-medium">Pelanggan</p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-muted-foreground text-sm font-medium">Pelanggan</p>
+        {canSell && tab === 'quota' && (
+          <Dialog open={walkInOpen} onOpenChange={setWalkInOpen}>
+            <DialogTrigger asChild>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={sell.isPending}
+                onClick={() => {
+                  setWalkInName(walkIn?.name ?? '');
+                  setWalkInPhone(walkIn?.phone ?? '');
+                }}
+              >
+                <IconUserPlus className="size-4" /> Walk-in
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Tambah Walk-in Customer</DialogTitle>
+                <DialogDescription>
+                  Isi nama dan nomor WhatsApp pelanggan untuk pembelian paket coaching.
+                </DialogDescription>
+              </DialogHeader>
+              <form
+                className="space-y-4"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (!walkInName.trim() || !walkInPhone.trim()) return;
+                  setWalkIn({ name: walkInName.trim(), phone: walkInPhone.trim() });
+                  setUserId('');
+                  setCustomerLabel('');
+                  setIsCustomerOpen(false);
+                  setQ('');
+                  setRequestId(crypto.randomUUID());
+                  setWalkInOpen(false);
+                }}
+              >
+                <div className="space-y-2">
+                  <Label htmlFor="inhouse-walkin-name">Nama</Label>
+                  <Input
+                    id="inhouse-walkin-name"
+                    placeholder="Nama pelanggan"
+                    required
+                    maxLength={100}
+                    value={walkInName}
+                    onChange={(event) => setWalkInName(event.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="inhouse-walkin-phone">Nomor WhatsApp</Label>
+                  <Input
+                    id="inhouse-walkin-phone"
+                    type="tel"
+                    placeholder="08xxxxxxxxxx"
+                    required
+                    minLength={5}
+                    maxLength={30}
+                    value={walkInPhone}
+                    onChange={(event) => setWalkInPhone(event.target.value)}
+                  />
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setWalkInOpen(false)}>
+                    Batal
+                  </Button>
+                  <Button type="submit" disabled={!walkInName.trim() || !walkInPhone.trim()}>
+                    Simpan
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
+      </div>
       <Popover open={isCustomerOpen} onOpenChange={setIsCustomerOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -127,6 +221,7 @@ export default function InHouseCoaching() {
             role="combobox"
             aria-label="Pelanggan"
             aria-expanded={isCustomerOpen}
+            disabled={sell.isPending}
             className="h-10 w-full min-w-0 justify-start gap-2 rounded-lg shadow-none"
           >
             <IconUser className="text-muted-foreground size-4 shrink-0" />
@@ -166,6 +261,7 @@ export default function InHouseCoaching() {
                       value={`${customer.name} ${customer.phone}`}
                       onSelect={() => {
                         setUserId(customer.id);
+                        setWalkIn(null);
                         setCustomerLabel(`${customer.name} · ${customer.phone}`);
                         setRequestId(crypto.randomUUID());
                         setIsCustomerOpen(false);
@@ -184,6 +280,25 @@ export default function InHouseCoaching() {
           </Command>
         </PopoverContent>
       </Popover>
+      {walkIn && tab === 'quota' && (
+        <div className="bg-muted/60 rounded-md border px-3 py-2 text-xs">
+          <p className="font-medium">Walk-in: {walkIn.name}</p>
+          <p className="text-muted-foreground mt-1">{walkIn.phone}</p>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="mt-2 h-6 px-2 text-xs"
+            disabled={sell.isPending}
+            onClick={() => {
+              setWalkIn(null);
+              setRequestId(crypto.randomUUID());
+            }}
+          >
+            Hapus walk-in
+          </Button>
+        </div>
+      )}
       {userId && (
         <div className="bg-muted/60 rounded-md border px-3 py-2 text-xs">
           <div className="flex items-center gap-2 font-medium">
@@ -195,6 +310,7 @@ export default function InHouseCoaching() {
             variant="ghost"
             size="sm"
             className="mt-2 h-6 px-2 text-xs"
+            disabled={sell.isPending}
             onClick={() => {
               setUserId('');
               setCustomerLabel('');
@@ -488,7 +604,7 @@ export default function InHouseCoaching() {
                         className="h-10 w-full rounded-lg"
                         onClick={() => sell.mutate()}
                         disabled={
-                          !userId ||
+                          (!userId && !walkIn) ||
                           !selectedPlan ||
                           !selectedMethod ||
                           methods.isPending ||

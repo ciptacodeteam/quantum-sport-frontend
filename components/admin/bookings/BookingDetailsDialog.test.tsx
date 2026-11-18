@@ -4,6 +4,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { BookingStatus } from '@/lib/constants';
 import type { Booking } from '@/types/model';
 import BookingDetailsDialog from './BookingDetailsDialog';
+vi.mock('@/hooks/useRoleAccess', () => ({ useHasRole: () => true }));
 vi.mock('./RescheduleCourtDialog', () => ({
   RescheduleCourtDialog: ({ detail, canReschedule }: any) => (
     <button disabled={!canReschedule}>Reschedule {detail.id}</button>

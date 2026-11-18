@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/table';
 import { getApiErrorMessage } from '@/lib/api-error';
 import { membershipTypeLabels } from '@/lib/membership-hours';
+import { membershipUsageBalance } from '@/lib/membership-usage-balance';
 import {
   bookingScheduleInJakarta,
   formatBookingDate,
@@ -54,7 +55,7 @@ const statuses: Record<TrackedPackage['status'], string> = {
 const hours = (value: number) => value.toLocaleString('id-ID', { maximumFractionDigits: 2 });
 
 export function MembershipUsage({ pack }: { pack: TrackedPackage }) {
-  const usage = [...pack.usage].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+  const { rows, otherMutationHours, balanceBeforeUsage } = membershipUsageBalance(pack);
   return (
     <div className="min-w-0 space-y-5">
       <div className="flex flex-wrap justify-between gap-2">
@@ -101,27 +102,39 @@ export function MembershipUsage({ pack }: { pack: TrackedPackage }) {
       <div>
         <h3 className="mb-2 font-semibold">Mutasi pemakaian</h3>
         <p className="text-muted-foreground mb-3 text-xs">
-          Pemakaian ditampilkan per pemesanan. Jam ditahan belum menjadi pemakaian final; pemesanan
-          dibatalkan tidak dihitung sebagai pemakaian.
+          In = kuota masuk, Out = kuota keluar. Saldo setelah dihitung mundur dari sisa kuota saat
+          ini berdasarkan status pemesanan terbaru, bukan saldo historis saat transaksi. Jam ditahan
+          mengurangi kuota tersedia dan belum menjadi pemakaian final; pemesanan dibatalkan bernilai
+          0.
         </p>
+        {otherMutationHours !== 0 && (
+          <p className="mb-3 rounded-lg border p-3 text-xs" role="note">
+            Ada mutasi bersih {otherMutationHours > 0 ? '+' : '−'}
+            {hours(Math.abs(otherMutationHours))} jam di luar riwayat pemesanan, termasuk pelunasan
+            atau pengalihan kekurangan bila ada. Waktu perubahan tidak tersedia; untuk perhitungan
+            saldo, mutasi ini ditempatkan sebelum pemesanan yang ditampilkan.
+          </p>
+        )}
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Tanggal pemesanan (WIB)</TableHead>
               <TableHead>Invoice / Jadwal bermain</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="text-right">Mutasi jam</TableHead>
+              <TableHead className="text-right">In (jam)</TableHead>
+              <TableHead className="text-right">Out (jam)</TableHead>
+              <TableHead className="text-right">Saldo setelah (perhitungan)</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {usage.length === 0 && (
+            {rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={4} className="py-8 text-center">
+                <TableCell colSpan={6} className="py-8 text-center">
                   Belum ada pemakaian pada paket ini.
                 </TableCell>
               </TableRow>
             )}
-            {usage.map((entry) => {
+            {rows.map(({ entry, outHours, balanceAfter }) => {
               const confirmed = entry.status === 'CONFIRMED';
               const held = entry.status === 'HOLD';
               return (
@@ -159,16 +172,54 @@ export function MembershipUsage({ pack }: { pack: TrackedPackage }) {
                             ? 'Kedaluwarsa'
                             : 'Tidak terpakai'}
                   </TableCell>
+                  <TableCell className="text-muted-foreground text-right align-top tabular-nums">
+                    0 jam
+                  </TableCell>
                   <TableCell className="text-right align-top font-semibold tabular-nums">
-                    {confirmed
-                      ? `−${hours(entry.hours)} jam`
-                      : held
-                        ? `${hours(entry.hours)} jam ditahan`
-                        : '0 jam'}
+                    {outHours > 0 ? `−${hours(outHours)} jam` : '0 jam'}
+                    {held && <p className="text-muted-foreground text-xs font-normal">Ditahan</p>}
+                  </TableCell>
+                  <TableCell className="bg-muted/30 text-right align-top font-semibold tabular-nums">
+                    {hours(balanceAfter)} jam
                   </TableCell>
                 </TableRow>
               );
             })}
+            {otherMutationHours !== 0 && (
+              <TableRow>
+                <TableCell className="text-muted-foreground align-top">
+                  Waktu tidak tersedia
+                </TableCell>
+                <TableCell className="min-w-56 align-top whitespace-normal">
+                  Mutasi bersih di luar riwayat pemesanan
+                </TableCell>
+                <TableCell className="align-top">Rekonsiliasi saldo</TableCell>
+                <TableCell className="text-right align-top tabular-nums">
+                  {otherMutationHours > 0 ? `+${hours(otherMutationHours)} jam` : '0 jam'}
+                </TableCell>
+                <TableCell className="text-right align-top tabular-nums">
+                  {otherMutationHours < 0 ? `−${hours(Math.abs(otherMutationHours))} jam` : '0 jam'}
+                </TableCell>
+                <TableCell className="bg-muted/30 text-right align-top font-semibold tabular-nums">
+                  {hours(balanceBeforeUsage)} jam
+                </TableCell>
+              </TableRow>
+            )}
+            <TableRow>
+              <TableCell className="text-muted-foreground">—</TableCell>
+              <TableCell>
+                <p className="font-medium">Kuota paket</p>
+                <p className="text-muted-foreground text-xs">{pack.purchaseInvoice?.number}</p>
+              </TableCell>
+              <TableCell>Kuota masuk</TableCell>
+              <TableCell className="text-right font-semibold tabular-nums">
+                +{hours(pack.totalHours)} jam
+              </TableCell>
+              <TableCell className="text-right tabular-nums">0 jam</TableCell>
+              <TableCell className="bg-muted/30 text-right font-semibold tabular-nums">
+                {hours(pack.totalHours)} jam
+              </TableCell>
+            </TableRow>
           </TableBody>
         </Table>
       </div>

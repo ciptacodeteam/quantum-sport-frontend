@@ -1,5 +1,7 @@
 'use client';
 
+import CoachingPackages from '@/components/membership/CoachingPackages';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import MainHeader from '@/components/headers/MainHeader';
 import MainBottomNavigation from '@/components/footers/MainBottomNavigation';
 import { Button } from '@/components/ui/button';
@@ -145,12 +147,13 @@ function UsageRow({ usage }: { usage: TrackedPackage['usage'][number] }) {
 export default function MyPackagesPage() {
   const { data: user, isPending: profilePending } = useQuery(profileQueryOptions);
   const staff = !!user && 'role' in user;
+  const [tab, setTab] = useState('lapangan');
   const [selectedId, setSelectedId] = useState('');
   const openAuth = useAuthModalStore((state) => state.open);
   const setRedirect = useAuthRedirectStore((state) => state.setRedirectPath);
   const { data, isPending, isError, error, isFetching, refetch } = useQuery({
     ...myMembershipTrackingQueryOptions(user?.id || 'guest'),
-    enabled: !profilePending && !!user?.id && !staff,
+    enabled: !profilePending && !!user?.id && !staff && tab === 'lapangan',
     refetchInterval: 30000,
     refetchOnWindowFocus: true,
     retry: (failureCount, error) => (error as ApiErrorResponse)?.code !== 401 && failureCount < 2
@@ -184,229 +187,243 @@ export default function MyPackagesPage() {
             <ArrowUpRight className="size-3.5" aria-hidden="true" />
           </BranchLink>
         </header>
-        {!profilePending && (!user?.id || staff || expiredSession) ? (
-          <PageState
-            title={
-              staff
-                ? 'Paket untuk akun pelanggan'
-                : expiredSession
-                  ? 'Sesi Anda telah berakhir'
-                  : 'Masuk untuk melihat paket'
-            }
-            action={
-              staff ? (
-                <Button asChild className={actionClass}>
-                  <BranchLink href="/profile">Kembali ke profil</BranchLink>
-                </Button>
-              ) : (
-                <Button className={actionClass} onClick={signIn}>
-                  Masuk ke akun
-                </Button>
-              )
-            }
-          >
-            {staff
-              ? 'Gunakan akun pelanggan untuk melihat paket dan pemakaian jam bermain.'
-              : 'Lihat sisa jam, masa berlaku, dan riwayat pemakaian Value Pack Anda.'}
-          </PageState>
-        ) : profilePending || (isPending && !data) ? (
-          <div role="status" className="border border-black/10 bg-[#f8f8f6] p-6">
-            <p className="flex items-center gap-2 text-sm text-black/50">
-              <LoaderCircle
-                className="size-4 animate-spin motion-reduce:animate-none"
-                aria-hidden="true"
-              />
-              Memuat paket Anda…
-            </p>
-            <div
-              className="mt-6 grid gap-5 motion-safe:animate-pulse lg:grid-cols-[320px_1fr]"
-              aria-hidden="true"
-            >
-              <div className="h-40 bg-black/5" />
-              <div className="h-56 bg-black/5" />
-            </div>
-          </div>
-        ) : isError && !data ? (
-          <PageState
-            title="Paket belum dapat dimuat"
-            action={
-              <Button className={actionClass} onClick={() => void refetch()} disabled={isFetching}>
-                Coba lagi
-              </Button>
-            }
-          >
-            Terjadi kendala saat mengambil data paket. Silakan coba lagi.
-          </PageState>
-        ) : !pack ? (
-          <PageState
-            title="Belum ada paket"
-            action={
-              <Button asChild className={actionClass}>
-                <BranchLink href="/membership">Lihat Value Pack</BranchLink>
-              </Button>
-            }
-          >
-            Paket yang Anda beli dan riwayat penggunaannya akan muncul di sini.
-          </PageState>
-        ) : (
-          <>
-            {packs.length > 1 && (
-              <div className="mb-6 max-w-md">
-                <label
-                  htmlFor="package-selector"
-                  className="mb-2 block text-xs font-medium text-black/55"
-                >
-                  Pilih paket
-                </label>
-                <Select value={pack.id} onValueChange={setSelectedId}>
-                  <SelectTrigger
-                    id="package-selector"
-                    className="h-auto w-full gap-3 rounded-none border-black/15 bg-white px-4 py-3 text-left text-[#171717] shadow-none transition-[border-color,box-shadow] hover:border-black/30 focus-visible:border-[#ad422b] focus-visible:ring-[#ad422b]/10 data-[size=default]:h-auto data-[state=open]:border-[#ad422b] [&>svg]:transition-transform [&>svg]:duration-200 [&[data-state=open]>svg]:rotate-180"
-                  >
-                    <span className="min-w-0 flex-1">
-                      <SelectValue>
-                        <PackageSummary pack={pack} />
-                      </SelectValue>
-                    </span>
-                  </SelectTrigger>
-                  <SelectContent
-                    align="start"
-                    sideOffset={6}
-                    className="w-(--radix-select-trigger-width) rounded-none border-black/15 bg-white text-[#171717] shadow-sm"
-                  >
-                    {packs.map((item) => (
-                      <SelectItem
-                        key={item.id}
-                        value={item.id}
-                        textValue={`${item.name} · ${labels[item.status]}`}
-                        className="cursor-pointer rounded-none px-3 py-3 focus:bg-[#f8f8f6] focus:text-[#171717] data-[state=checked]:bg-[#f8f8f6] [&>span:first-child]:hidden [&>span:last-child]:min-w-0 [&>span:last-child]:flex-1"
-                      >
-                        <PackageSummary pack={item} />
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            <div className="grid items-start gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
-              <section
-                aria-label="Saldo paket"
-                className="min-w-0 border border-black/15 bg-[#f8f8f6] p-5 sm:p-6 lg:sticky lg:top-28"
+        <Tabs value={tab} onValueChange={setTab}>
+          <TabsList className="mb-6 grid h-11 w-full max-w-sm grid-cols-2">
+            <TabsTrigger value="lapangan">Lapangan</TabsTrigger>
+            <TabsTrigger value="coach">Coach</TabsTrigger>
+          </TabsList>
+          <TabsContent value={tab}>
+            {!profilePending && (!user?.id || staff || (tab === 'lapangan' && expiredSession)) ? (
+              <PageState
+                title={
+                  staff
+                    ? 'Paket untuk akun pelanggan'
+                    : expiredSession
+                      ? 'Sesi Anda telah berakhir'
+                      : 'Masuk untuk melihat paket'
+                }
+                action={
+                  staff ? (
+                    <Button asChild className={actionClass}>
+                      <BranchLink href="/profile">Kembali ke profil</BranchLink>
+                    </Button>
+                  ) : (
+                    <Button className={actionClass} onClick={signIn}>
+                      Masuk ke akun
+                    </Button>
+                  )
+                }
               >
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                  <p className="text-[10px] tracking-wider text-black/45 uppercase">
-                    {pack.sport === 'TENNIS' ? 'Tennis' : 'Padel'} ·{' '}
-                    {membershipTypeLabels[pack.type]}
-                  </p>
-                  <span className="text-xs text-[#ad422b]">{labels[pack.status]}</span>
+                {staff
+                  ? 'Gunakan akun pelanggan untuk melihat paket dan pemakaian jam bermain.'
+                  : 'Lihat sisa jam, masa berlaku, dan riwayat pemakaian Value Pack Anda.'}
+              </PageState>
+            ) : tab === 'coach' && !profilePending && user?.id ? (
+              <CoachingPackages key={user.id} userId={user.id} onSignIn={signIn} />
+            ) : profilePending || (isPending && !data) ? (
+              <div role="status" className="border border-black/10 bg-[#f8f8f6] p-6">
+                <p className="flex items-center gap-2 text-sm text-black/50">
+                  <LoaderCircle
+                    className="size-4 animate-spin motion-reduce:animate-none"
+                    aria-hidden="true"
+                  />
+                  Memuat paket Anda…
+                </p>
+                <div
+                  className="mt-6 grid gap-5 motion-safe:animate-pulse lg:grid-cols-[320px_1fr]"
+                  aria-hidden="true"
+                >
+                  <div className="h-40 bg-black/5" />
+                  <div className="h-56 bg-black/5" />
                 </div>
-                <h2 className="text-xl font-medium tracking-tight break-words">{pack.name}</h2>
-                <dl className="mt-6">
-                  <div>
-                    <dt className="text-xs text-black/45">
-                      {['PENDING', 'PAYMENT_FAILED'].includes(pack.status)
-                        ? 'Jam paket'
-                        : 'Sisa waktu bermain'}
-                    </dt>
-                    <dd className="mt-2 text-4xl font-medium tracking-tight tabular-nums">
-                      {number(
-                        ['PENDING', 'PAYMENT_FAILED'].includes(pack.status)
-                          ? pack.totalHours
-                          : pack.remainingHours
-                      )}{' '}
-                      <span className="text-sm font-normal text-black/45">
-                        / {number(pack.totalHours)} jam
-                      </span>
-                    </dd>
-                  </div>
-                  {!['PENDING', 'PAYMENT_FAILED'].includes(pack.status) && (
-                    <div className="mt-5 space-y-3 border-t border-black/15 pt-5 text-xs">
-                      <div className="flex justify-between gap-4">
-                        <dt className="text-black/45">Terpakai pada booking</dt>
-                        <dd>{number(pack.usedHours)} jam</dd>
-                      </div>
-                      {!!pack.debtTransferredHours && (
-                        <div className="flex justify-between gap-4">
-                          <dt className="text-black/45">Minus dialihkan ke paket baru</dt>
-                          <dd>{number(pack.debtTransferredHours)} jam</dd>
-                        </div>
-                      )}
-                      {!!pack.debtSettledHours && (
-                        <div className="flex justify-between gap-4">
-                          <dt className="text-black/45">Kuota untuk pelunasan minus</dt>
-                          <dd>{number(pack.debtSettledHours)} jam</dd>
-                        </div>
-                      )}
-                      {pack.heldHours > 0 && (
-                        <div className="flex justify-between gap-4">
-                          <dt className="text-black/45">Ditahan untuk pembayaran</dt>
-                          <dd>{number(pack.heldHours)} jam</dd>
-                        </div>
-                      )}
-                      <div className="flex flex-wrap justify-between gap-2">
-                        <dt className="text-black/45">Berlaku hingga</dt>
-                        <dd>{dayjs(pack.endDate).tz('Asia/Jakarta').format('D MMM YYYY')}</dd>
-                      </div>
-                    </div>
-                  )}
-                </dl>
-                {pack.status === 'PENDING' && pack.purchaseInvoice && (
+              </div>
+            ) : isError && !data ? (
+              <PageState
+                title="Paket belum dapat dimuat"
+                action={
                   <Button
-                    asChild
-                    className="mt-6 h-11 w-full rounded-full bg-[#111111] text-xs text-white"
+                    className={actionClass}
+                    onClick={() => void refetch()}
+                    disabled={isFetching}
                   >
-                    <BranchLink
-                      href={`/invoice/${encodeURIComponent(pack.purchaseInvoice.number)}`}
+                    Coba lagi
+                  </Button>
+                }
+              >
+                Terjadi kendala saat mengambil data paket. Silakan coba lagi.
+              </PageState>
+            ) : !pack ? (
+              <PageState
+                title="Belum ada paket"
+                action={
+                  <Button asChild className={actionClass}>
+                    <BranchLink href="/membership">Lihat Value Pack</BranchLink>
+                  </Button>
+                }
+              >
+                Paket yang Anda beli dan riwayat penggunaannya akan muncul di sini.
+              </PageState>
+            ) : (
+              <>
+                {packs.length > 1 && (
+                  <div className="mb-6 max-w-md">
+                    <label
+                      htmlFor="package-selector"
+                      className="mb-2 block text-xs font-medium text-black/55"
                     >
-                      Lanjutkan pembayaran
-                    </BranchLink>
-                  </Button>
+                      Pilih paket
+                    </label>
+                    <Select value={pack.id} onValueChange={setSelectedId}>
+                      <SelectTrigger
+                        id="package-selector"
+                        className="h-auto w-full gap-3 rounded-none border-black/15 bg-white px-4 py-3 text-left text-[#171717] shadow-none transition-[border-color,box-shadow] hover:border-black/30 focus-visible:border-[#ad422b] focus-visible:ring-[#ad422b]/10 data-[size=default]:h-auto data-[state=open]:border-[#ad422b] [&>svg]:transition-transform [&>svg]:duration-200 [&[data-state=open]>svg]:rotate-180"
+                      >
+                        <span className="min-w-0 flex-1">
+                          <SelectValue>
+                            <PackageSummary pack={pack} />
+                          </SelectValue>
+                        </span>
+                      </SelectTrigger>
+                      <SelectContent
+                        align="start"
+                        sideOffset={6}
+                        className="w-(--radix-select-trigger-width) rounded-none border-black/15 bg-white text-[#171717] shadow-sm"
+                      >
+                        {packs.map((item) => (
+                          <SelectItem
+                            key={item.id}
+                            value={item.id}
+                            textValue={`${item.name} · ${labels[item.status]}`}
+                            className="cursor-pointer rounded-none px-3 py-3 focus:bg-[#f8f8f6] focus:text-[#171717] data-[state=checked]:bg-[#f8f8f6] [&>span:first-child]:hidden [&>span:last-child]:min-w-0 [&>span:last-child]:flex-1"
+                          >
+                            <PackageSummary pack={item} />
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 )}
-                {pack.status === 'ACTIVE' && (
-                  <Button
-                    asChild
-                    className="mt-6 h-11 w-full rounded-full bg-[#111111] text-xs text-white"
+                <div className="grid items-start gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+                  <section
+                    aria-label="Saldo paket"
+                    className="min-w-0 border border-black/15 bg-[#f8f8f6] p-5 sm:p-6 lg:sticky lg:top-28"
                   >
-                    <BranchLink href={pack.sport === 'TENNIS' ? '/booking/tennis' : '/booking'}>
-                      Gunakan paket
-                    </BranchLink>
-                  </Button>
-                )}
-              </section>
-              <section aria-labelledby="usage-title" className="min-w-0">
-                <h2 id="usage-title" className="mb-5 text-lg font-medium tracking-tight">
-                  Riwayat pemakaian
-                </h2>
-                {pack.usage.length ? (
-                  <div className="space-y-3">
-                    {pack.usage.map((usage) => (
-                      <UsageRow key={usage.id} usage={usage} />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="border-y border-black/15 py-8">
-                    <CalendarDays
-                      className="mb-4 size-7 text-[#ad422b]"
-                      strokeWidth={1.25}
-                      aria-hidden="true"
-                    />
-                    <h3 className="text-base font-medium">Belum ada pemakaian tercatat</h3>
-                    <p className="mt-2 max-w-md text-sm leading-relaxed text-black/50">
-                      Booking yang menggunakan paket ini akan tampil di sini, beserta lapangan,
-                      jadwal, dan jumlah jamnya.
-                    </p>
-                  </div>
-                )}
-                {pack.heldHours > 0 && (
-                  <p className="mt-5 text-xs leading-relaxed text-black/45">
-                    Jam yang ditahan sudah mengurangi saldo tersedia selama booking menunggu
-                    pembayaran.
-                  </p>
-                )}
-              </section>
-            </div>
-          </>
-        )}
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                      <p className="text-[10px] tracking-wider text-black/45 uppercase">
+                        {pack.sport === 'TENNIS' ? 'Tennis' : 'Padel'} ·{' '}
+                        {membershipTypeLabels[pack.type]}
+                      </p>
+                      <span className="text-xs text-[#ad422b]">{labels[pack.status]}</span>
+                    </div>
+                    <h2 className="text-xl font-medium tracking-tight break-words">{pack.name}</h2>
+                    <dl className="mt-6">
+                      <div>
+                        <dt className="text-xs text-black/45">
+                          {['PENDING', 'PAYMENT_FAILED'].includes(pack.status)
+                            ? 'Jam paket'
+                            : 'Sisa waktu bermain'}
+                        </dt>
+                        <dd className="mt-2 text-4xl font-medium tracking-tight tabular-nums">
+                          {number(
+                            ['PENDING', 'PAYMENT_FAILED'].includes(pack.status)
+                              ? pack.totalHours
+                              : pack.remainingHours
+                          )}{' '}
+                          <span className="text-sm font-normal text-black/45">
+                            / {number(pack.totalHours)} jam
+                          </span>
+                        </dd>
+                      </div>
+                      {!['PENDING', 'PAYMENT_FAILED'].includes(pack.status) && (
+                        <div className="mt-5 space-y-3 border-t border-black/15 pt-5 text-xs">
+                          <div className="flex justify-between gap-4">
+                            <dt className="text-black/45">Terpakai pada booking</dt>
+                            <dd>{number(pack.usedHours)} jam</dd>
+                          </div>
+                          {!!pack.debtTransferredHours && (
+                            <div className="flex justify-between gap-4">
+                              <dt className="text-black/45">Minus dialihkan ke paket baru</dt>
+                              <dd>{number(pack.debtTransferredHours)} jam</dd>
+                            </div>
+                          )}
+                          {!!pack.debtSettledHours && (
+                            <div className="flex justify-between gap-4">
+                              <dt className="text-black/45">Kuota untuk pelunasan minus</dt>
+                              <dd>{number(pack.debtSettledHours)} jam</dd>
+                            </div>
+                          )}
+                          {pack.heldHours > 0 && (
+                            <div className="flex justify-between gap-4">
+                              <dt className="text-black/45">Ditahan untuk pembayaran</dt>
+                              <dd>{number(pack.heldHours)} jam</dd>
+                            </div>
+                          )}
+                          <div className="flex flex-wrap justify-between gap-2">
+                            <dt className="text-black/45">Berlaku hingga</dt>
+                            <dd>{dayjs(pack.endDate).tz('Asia/Jakarta').format('D MMM YYYY')}</dd>
+                          </div>
+                        </div>
+                      )}
+                    </dl>
+                    {pack.status === 'PENDING' && pack.purchaseInvoice && (
+                      <Button
+                        asChild
+                        className="mt-6 h-11 w-full rounded-full bg-[#111111] text-xs text-white"
+                      >
+                        <BranchLink
+                          href={`/invoice/${encodeURIComponent(pack.purchaseInvoice.number)}`}
+                        >
+                          Lanjutkan pembayaran
+                        </BranchLink>
+                      </Button>
+                    )}
+                    {pack.status === 'ACTIVE' && (
+                      <Button
+                        asChild
+                        className="mt-6 h-11 w-full rounded-full bg-[#111111] text-xs text-white"
+                      >
+                        <BranchLink href={pack.sport === 'TENNIS' ? '/booking/tennis' : '/booking'}>
+                          Gunakan paket
+                        </BranchLink>
+                      </Button>
+                    )}
+                  </section>
+                  <section aria-labelledby="usage-title" className="min-w-0">
+                    <h2 id="usage-title" className="mb-5 text-lg font-medium tracking-tight">
+                      Riwayat pemakaian
+                    </h2>
+                    {pack.usage.length ? (
+                      <div className="space-y-3">
+                        {pack.usage.map((usage) => (
+                          <UsageRow key={usage.id} usage={usage} />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="border-y border-black/15 py-8">
+                        <CalendarDays
+                          className="mb-4 size-7 text-[#ad422b]"
+                          strokeWidth={1.25}
+                          aria-hidden="true"
+                        />
+                        <h3 className="text-base font-medium">Belum ada pemakaian tercatat</h3>
+                        <p className="mt-2 max-w-md text-sm leading-relaxed text-black/50">
+                          Booking yang menggunakan paket ini akan tampil di sini, beserta lapangan,
+                          jadwal, dan jumlah jamnya.
+                        </p>
+                      </div>
+                    )}
+                    {pack.heldHours > 0 && (
+                      <p className="mt-5 text-xs leading-relaxed text-black/45">
+                        Jam yang ditahan sudah mengurangi saldo tersedia selama booking menunggu
+                        pembayaran.
+                      </p>
+                    )}
+                  </section>
+                </div>
+              </>
+            )}
+          </TabsContent>
+        </Tabs>
       </main>
       <MainBottomNavigation />
     </div>

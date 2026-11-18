@@ -1,9 +1,11 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { TrackedPackage } from '@/types/membership-tracking';
+import type { CoachingPackage } from '@/types/coaching-tracking';
 const mocks = vi.hoisted(() => ({
   user: { id: 'customer' } as { id: string; role?: string } | null,
   packs: [] as TrackedPackage[],
+  coachPacks: [] as CoachingPackage[],
   error: null as { code: number } | null,
   options: vi.fn(),
   refetch: vi.fn()
@@ -14,12 +16,17 @@ vi.mock('@/queries/profile', () => ({ profileQueryOptions: { queryKey: ['profile
 vi.mock('@/queries/membership', () => ({
   myMembershipTrackingQueryOptions: (id: string) => ({ queryKey: ['tracking', id] })
 }));
+vi.mock('@/queries/coaching-packages', () => ({
+  myCoachingPackagesQueryOptions: (id: string) => ({ queryKey: ['coach-tracking', id] })
+}));
 vi.mock('@tanstack/react-query', () => ({
   useQuery: (options: { queryKey: string[] }) => {
     if (options.queryKey[0] === 'profile') return { data: mocks.user, isPending: false };
     mocks.options(options);
     return {
-      data: mocks.error ? undefined : { packages: mocks.packs },
+      data: mocks.error
+        ? undefined
+        : { packages: options.queryKey[0] === 'coach-tracking' ? mocks.coachPacks : mocks.packs },
       isPending: false,
       isFetching: false,
       isError: !!mocks.error,
@@ -66,6 +73,7 @@ const pack: TrackedPackage = {
 beforeEach(() => {
   mocks.user = { id: 'customer' };
   mocks.packs = [];
+  mocks.coachPacks = [];
   mocks.error = null;
   vi.clearAllMocks();
 });
@@ -211,4 +219,129 @@ it('shows debt settled by a newly purchased package separately from played hours
   mocks.packs = [{ ...pack, remainingHours: 8, usedHours: 0, debtSettledHours: 2, usage: [] }];
   render(<MyPackagesPage />);
   expect(screen.getByText('Kuota untuk pelunasan minus')).toBeInTheDocument();
+});
+
+const coachingPack: CoachingPackage = {
+  id: 'coach-pack',
+  name: 'Coaching 5 Jam',
+  coachName: 'Coach Andi',
+  coachType: 'PADEL',
+  branchName: 'Cemara',
+  status: 'ACTIVE',
+  totalHours: 5,
+  remainingHours: 4,
+  usedHours: 1,
+  createdAt: '2026-11-16T02:00:00Z',
+  purchaseInvoice: { number: 'INV-COACH-PACK', status: 'PAID' },
+  usage: [
+    {
+      id: 'usage',
+      hours: 1,
+      participants: 2,
+      createdAt: '2026-11-17T02:00:00Z',
+      restoredAt: null,
+      status: 'CONFIRMED',
+      startAt: '2026-11-18T15:00:00Z',
+      endAt: '2026-11-18T16:00:00Z',
+      courtName: 'Court 1',
+      branchName: 'Cemara',
+      invoiceNumber: 'INV-COACH'
+    }
+  ]
+};
+function selectTab(name: string) {
+  fireEvent.mouseDown(screen.getByRole('tab', { name }), { button: 0, ctrlKey: false });
+}
+it('switches between court and coach packages with coaching balances and session tracking', () => {
+  mocks.packs = [pack];
+  mocks.coachPacks = [coachingPack];
+  render(<MyPackagesPage />);
+  expect(screen.getByRole('tab', { name: 'Lapangan' })).toHaveAttribute('aria-selected', 'true');
+  expect(screen.queryByText('Coaching 5 Jam')).not.toBeInTheDocument();
+  selectTab('Coach');
+  expect(screen.getByText('Coaching 5 Jam')).toBeInTheDocument();
+  expect(screen.getByText('Coach Andi')).toBeInTheDocument();
+  expect(screen.getByText('Sisa waktu coaching').parentElement).toHaveTextContent('4 / 5 jam');
+  expect(screen.getByText(/15:00–16:00 WIB/)).toBeInTheDocument();
+  expect(screen.getByText('−1 jam')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'INV-COACH' })).toHaveAttribute(
+    'href',
+    '/invoice/INV-COACH'
+  );
+  expect(screen.queryByText('Silver Member')).not.toBeInTheDocument();
+  selectTab('Lapangan');
+  expect(screen.getByText('Silver Member')).toBeInTheDocument();
+});
+it('shows returned coaching quota without treating a cancelled session as usage', () => {
+  mocks.coachPacks = [
+    {
+      ...coachingPack,
+      usage: [{ ...coachingPack.usage[0], status: 'RESTORED', restoredAt: '2026-11-18T02:00:00Z' }]
+    }
+  ];
+  render(<MyPackagesPage />);
+  selectTab('Coach');
+  expect(screen.getByText('Dibatalkan · kuota dikembalikan')).toBeInTheDocument();
+  expect(screen.getByText('0 jam')).toBeInTheDocument();
+  expect(screen.getByText(/\+1 jam dikembalikan/)).toBeInTheDocument();
+  expect(screen.queryByText('−1 jam')).not.toBeInTheDocument();
+});
+it('offers a coach empty state independently of court packages and supports retry', () => {
+  mocks.packs = [pack];
+  const view = render(<MyPackagesPage />);
+  selectTab('Coach');
+  expect(screen.getByText('Belum ada paket coaching')).toBeInTheDocument();
+  mocks.error = { code: 500 };
+  view.rerender(<MyPackagesPage />);
+  fireEvent.click(screen.getByRole('button', { name: 'Coba lagi' }));
+  expect(mocks.refetch).toHaveBeenCalledOnce();
+});
+it.each([null, { id: 'staff', role: 'ADMIN' }])(
+  'does not request coach tracking for guests or staff: %j',
+  (user) => {
+    mocks.user = user;
+    render(<MyPackagesPage />);
+    selectTab('Coach');
+    expect(
+      mocks.options.mock.calls.some(([options]) => options.queryKey[0] === 'coach-tracking')
+    ).toBe(false);
+    expect(
+      screen.getByText(user ? 'Paket untuk akun pelanggan' : 'Masuk untuk melihat paket')
+    ).toBeInTheDocument();
+  }
+);
+
+it('switches between coaching packages and shows unused quota independently', async () => {
+  mocks.coachPacks = [
+    coachingPack,
+    {
+      ...coachingPack,
+      id: 'other',
+      name: 'Coaching Tennis',
+      coachName: 'Coach Budi',
+      coachType: 'TENNIS',
+      remainingHours: 5,
+      usedHours: 0,
+      usage: []
+    }
+  ];
+  render(<MyPackagesPage />);
+  selectTab('Coach');
+  fireEvent.keyDown(screen.getByRole('combobox', { name: 'Pilih paket coach' }), {
+    key: 'ArrowDown'
+  });
+  fireEvent.click(await screen.findByRole('option', { name: /Coaching Tennis/ }));
+  expect(screen.getByRole('heading', { name: 'Coaching Tennis' })).toBeInTheDocument();
+  expect(screen.getByText('Sisa waktu coaching').parentElement).toHaveTextContent('5 / 5 jam');
+  expect(screen.getByText('Belum ada pemakaian coaching tercatat')).toBeInTheDocument();
+  expect(screen.queryByText('INV-COACH')).not.toBeInTheDocument();
+});
+
+it('asks the customer to sign in again when coach tracking returns an expired session', () => {
+  mocks.error = { code: 401 };
+  render(<MyPackagesPage />);
+  selectTab('Coach');
+  expect(screen.getByText('Sesi Anda telah berakhir')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Masuk ke akun' })).toBeInTheDocument();
+  expect(screen.queryByText('Coaching 5 Jam')).not.toBeInTheDocument();
 });

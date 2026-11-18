@@ -189,6 +189,49 @@ it('selects a package card and submits the customer and offline method', async (
   );
 });
 
+async function chooseWalkIn() {
+  fireEvent.click(screen.getByRole('button', { name: 'Walk-in' }));
+  expect(screen.getByRole('button', { name: 'Simpan' })).toBeDisabled();
+  fireEvent.change(screen.getByLabelText('Nama'), { target: { value: ' Pelanggan Baru ' } });
+  fireEvent.change(screen.getByLabelText('Nomor WhatsApp'), { target: { value: '081234567890' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Simpan' }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Walk-in' })).toHaveFocus());
+}
+it('sells a coaching package to a walk-in using name and phone instead of a customer ID', async () => {
+  render(<InHouseCoaching />);
+  await chooseWalkIn();
+  expect(screen.getByText('Walk-in: Pelanggan Baru')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Pilih paket Andi · 5 jam' }));
+  fireEvent.click(screen.getByRole('combobox', { name: 'Metode pembayaran offline' }));
+  fireEvent.click(await screen.findByRole('option', { name: 'Tunai' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Terima pembayaran & tambah kuota' }));
+  expect(mocks.sell).toHaveBeenCalledWith({
+    packageId: 'plan',
+    name: 'Pelanggan Baru',
+    phone: '081234567890',
+    paymentMethodId: 'cash',
+    requestId: expect.any(String)
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Hapus walk-in' }));
+  expect(screen.getByRole('button', { name: 'Terima pembayaran & tambah kuota' })).toBeDisabled();
+});
+it('replaces a walk-in when selecting an existing customer', async () => {
+  render(<InHouseCoaching />);
+  await chooseWalkIn();
+  fireEvent.click(screen.getByRole('combobox', { name: 'Pelanggan' }));
+  fireEvent.change(screen.getByLabelText('Cari nama atau nomor WhatsApp'), {
+    target: { value: 'Budi' }
+  });
+  fireEvent.click(await screen.findByRole('option', { name: /Budi/ }));
+  expect(screen.queryByText('Walk-in: Pelanggan Baru')).not.toBeInTheDocument();
+  expect(screen.getByRole('combobox', { name: 'Pelanggan' })).toHaveTextContent('Budi');
+});
+it('hides walk-in sales from read-only staff', () => {
+  mocks.role = 'ADMIN_VIEWER';
+  render(<InHouseCoaching />);
+  expect(screen.queryByRole('button', { name: 'Walk-in' })).not.toBeInTheDocument();
+});
+
 it('clears an initial zero while editing an amount and restores zero if left blank', () => {
   renderCoachPlans();
   const amount = screen.getByLabelText('Bagian lapangan per jam (Rp)') as HTMLInputElement;

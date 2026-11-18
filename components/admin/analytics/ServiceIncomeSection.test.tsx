@@ -4,6 +4,25 @@ import ServiceIncomeSection from './ServiceIncomeSection';
 import type { ServiceIncomeReport } from '@/types/service-income';
 
 afterEach(cleanup);
+
+it('shows a zero-price coach booking in the service transaction details', () => {
+  const row = {
+    ...serviceIncomeFixture.rows[0],
+    servicePrice: 0,
+    discount: 0,
+    amount: 0,
+    isClubSettled: false
+  };
+  render(
+    <ServiceIncomeSection data={{ ...serviceIncomeFixture, rows: [row] }} isLoading={false} />
+  );
+  const table = screen.getByRole('table', { name: 'Detail transaksi pendapatan jasa' });
+  expect(within(table).getByText('Coach Andi')).toBeInTheDocument();
+  expect(within(table).getByText('Coach · Club A')).toBeInTheDocument();
+  expect(within(table).getByText('Belum lunas')).toBeInTheDocument();
+  const coachRow = within(table).getByText('Coach Andi').closest('tr')!;
+  expect(within(coachRow).getAllByText(/Rp\s*0/)).toHaveLength(3);
+});
 export const serviceIncomeFixture: ServiceIncomeReport = {
   dateRange: { startDate: '2026-10-31T17:00:00Z', endDate: '2026-11-30T16:59:59.999Z' },
   summary: {

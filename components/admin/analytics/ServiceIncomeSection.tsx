@@ -275,7 +275,8 @@ export default function ServiceIncomeSection({
             dan administrasi tidak termasuk. Potongan Coach Club hanya mengubah biaya lapangan,
             bukan tarif jasa. Coach in-house tidak termasuk hak club. Invoice belum lunas, refund,
             dan jasa yang dibatalkan tidak dihitung. Coach yang ditandai Lunas ke Club tetap tampil
-            dengan nominal Rp0 dan status Lunas, tanpa menambah pendapatan.
+            dengan nominal Rp0 dan status Lunas, tanpa menambah pendapatan. Booking coach dengan
+            harga Rp0 juga tetap ditampilkan dan dapat difilter per club untuk pemantauan sesi.
           </p>
         </div>
       </Card>

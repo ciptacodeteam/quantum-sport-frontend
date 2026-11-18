@@ -14,6 +14,14 @@ export async function getBookingApi(id: string, signal?: AbortSignal) {
   return data;
 }
 
+export async function updateBookingDescriptionApi(
+  id: string,
+  payload: { description: string; expectedAdminNote: string | null }
+): Promise<{ data: { id: string; adminNote: string | null } }> {
+  const { data } = await adminApi.put(`/bookings/${id}/description`, payload);
+  return data;
+}
+
 export async function getOngoingBookingsApi() {
   const { data } = await adminApi.get('/bookings/ongoing-schedule');
   return data;

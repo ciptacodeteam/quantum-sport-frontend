@@ -103,10 +103,15 @@ it('shows the current balance and opens the selected member mutation history', a
   expect(dialog.getByText('15 Nov 2026 · 08:00')).toBeInTheDocument();
   const rows = dialog.getAllByRole('row');
   expect(rows[1]).toHaveTextContent('INV-HELD');
-  expect(rows[1]).toHaveTextContent('1 jam ditahan');
+  expect(rows[1]).toHaveTextContent('−1 jam');
+  expect(within(rows[1]).getAllByRole('cell')[5]).toHaveTextContent('6 jam');
+  expect(within(rows[2]).getAllByRole('cell')[5]).toHaveTextContent('7 jam');
   expect(rows[3]).toHaveTextContent('INV-CANCELLED');
   expect(rows[3]).toHaveTextContent('0 jam');
   expect(dialog.queryByText('−2 jam')).not.toBeInTheDocument();
+  expect(dialog.getByRole('columnheader', { name: 'In (jam)' })).toBeInTheDocument();
+  expect(dialog.getByRole('columnheader', { name: 'Out (jam)' })).toBeInTheDocument();
+  expect(dialog.getByText('+10 jam')).toBeInTheDocument();
 });
 it('applies search, sport and pagination on the server, resetting the page for a new search', async () => {
   mount();

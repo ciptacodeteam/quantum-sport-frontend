@@ -1,5 +1,5 @@
 'use client';
-import BookingAdminNotes from './BookingAdminNotes';
+import BookingDescription from './BookingDescription';
 import { bookingPurposeLabel, isInternalBooking } from '@/lib/booking-purpose';
 
 import { Badge } from '@/components/ui/badge';
@@ -273,9 +273,12 @@ export default function BookingDetailsDialog({
             </p>
           </section>
         )}
-        {booking.adminNote && (
-          <BookingAdminNotes note={booking.adminNote} />
-        )}
+        <BookingDescription
+          key={`${booking.id}:${booking.adminNote ?? ''}`}
+          bookingId={booking.id}
+          note={booking.adminNote}
+          onSuccess={onRescheduleSuccess}
+        />
         {booking.cancellationReason && (
           <section className="border-destructive/20 bg-destructive/5 space-y-1.5 rounded-lg border p-3">
             <h3 className="text-destructive text-xs font-medium">Alasan pembatalan</h3>

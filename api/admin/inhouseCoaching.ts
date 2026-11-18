@@ -70,12 +70,16 @@ export const inHouseApi = {
     ).data.data as InHouseWallet[],
   cancelWallet: async (id: string) =>
     (await adminApi.post(`/inhouse-coaching/wallets/${id}/cancel`)).data.data,
-  sell: async (input: {
-    packageId: string;
-    userId: string;
-    paymentMethodId: string;
-    requestId: string;
-  }) => (await adminApi.post('/inhouse-coaching/sales', input)).data.data,
+  sell: async (
+    input: {
+      packageId: string;
+      paymentMethodId: string;
+      requestId: string;
+    } & (
+      | { userId: string; name?: never; phone?: never }
+      | { name: string; phone: string; userId?: never }
+    )
+  ) => (await adminApi.post('/inhouse-coaching/sales', input)).data.data,
   usage: async (userId?: string) =>
     (await adminApi.get('/inhouse-coaching/usage', { params: { userId } })).data
       .data as InHouseUsage[]
