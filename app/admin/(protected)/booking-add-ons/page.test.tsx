@@ -582,7 +582,7 @@ it('removes a settled coach price from the customer checkout and sends settlemen
 });
 
 it('previews and submits the 100000 management court tariff without selecting any coach', async () => {
-  mocks.customer = { id: 'customer', isManagement: true };
+  mocks.customer = { id: 'customer', isManagement: true, managementCourtHourlyPrice: 100000 };
   mocks.tariffRules = [
     {
       id: 'tariff',

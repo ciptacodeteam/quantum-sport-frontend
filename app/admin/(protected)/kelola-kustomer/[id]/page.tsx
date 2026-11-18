@@ -134,8 +134,8 @@ export default function EditCustomerPage({ params }: { params: Promise<IdParams>
                     <ResetCustomerPassword customerId={id} />
                     {canManage && (
                       <CustomerSettingsCard
-                        title="Kategori Management"
-                        description="Fasilitas harga coaching in-house untuk booking dari dashboard."
+                        title="Pengaturan Management"
+                        description="Label, masa berlaku, dan tarif lapangan serta coach In-house untuk akun ini."
                       >
                         <ManagementCustomerForm
                           key={`${id}-${customer.updatedAt}`}

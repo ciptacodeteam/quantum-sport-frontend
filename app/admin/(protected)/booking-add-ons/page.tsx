@@ -236,7 +236,6 @@ export default function BookingAddOns() {
 
   const managementPricing = managementCourtPricing(
     bookingItems,
-    tariffRules,
     managementCustomer,
     inHouseSelections.map((choice) => choice.courtSlotId),
     membershipDiscount.canUseMembership

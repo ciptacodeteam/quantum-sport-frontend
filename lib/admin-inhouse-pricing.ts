@@ -30,9 +30,9 @@ export function adminInHousePricing(
       const bands = resolveTariffPeriod(rules, court.date, court.sport);
       const managementRate = choice.walletId
         ? null
-        : managementInHouseRate(managementCustomer, court.date, bands);
+        : managementInHouseRate(managementCustomer, court.date);
       const coachHourlyPrice = managementRate?.coach ?? terms.hourlyPrice;
-      const courtShare = managementRate ? 0 : terms.courtHourlyShare;
+      const courtShare = managementRate?.coach != null ? 0 : terms.courtHourlyShare;
       const band = court.timeSlot ? tariffBand(court.timeSlot, bands) : null;
       const discount =
         choice.walletId ||
@@ -59,7 +59,7 @@ export function adminInHousePricing(
       totals.coverage += base - courtDue;
       totals.singleTotal +=
         choice.planId || choice.staffId
-          ? fixedCourtPrice != null || choice.staffId
+          ? managementRate?.coach != null || fixedCourtPrice != null || choice.staffId
             ? coachHourlyPrice - courtShare
             : discount === null
               ? coachHourlyPrice

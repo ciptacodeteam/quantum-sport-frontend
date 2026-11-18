@@ -25,6 +25,8 @@ export type AdminProfile = {
 
 export type UserProfile = {
   isManagement?: boolean;
+  managementCourtHourlyPrice?: number;
+  managementCoachHourlyPrice?: number;
   managementValidFrom?: string | null;
   managementValidUntil?: string | null;
   id: string;

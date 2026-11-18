@@ -1,6 +1,6 @@
 'use client';
 import { managementInHouseRate, type ManagementCustomer } from '@/lib/management-pricing';
-import { resolveTariffPeriod, type TariffRule } from '@/lib/tariff-period';
+import type { TariffRule } from '@/lib/tariff-period';
 import type { CoachingPerson } from '@/api/admin/coaching';
 import { useState } from 'react';
 import BookingServiceSessionPicker, { serviceSessionDate } from './BookingServiceSessionPicker';
@@ -193,13 +193,7 @@ function InHouseSession({
     tariffRules,
     managementCustomer
   );
-  const managementRate = prepaid
-    ? null
-    : managementInHouseRate(
-        managementCustomer,
-        session.date,
-        resolveTariffPeriod(tariffRules, session.date, session.sport)
-      );
+  const managementRate = prepaid ? null : managementInHouseRate(managementCustomer, session.date);
   const courtBase = (session.discountPrice ?? 0) > 0 ? session.discountPrice! : session.price;
   const courtDue = courtBase - pricing.coverage;
   const coachDue = pricing.singleTotal;
@@ -360,7 +354,7 @@ function InHouseSession({
             </p>
             {managementCustomer?.isManagement && !prepaid && !managementRate && (
               <p className="text-muted-foreground text-xs">
-                Tarif Management belum tersedia atau di luar masa berlaku. Tarif reguler digunakan.
+                Tarif akun belum diatur atau di luar masa berlaku. Harga normal digunakan.
               </p>
             )}
             {available.isError ? (

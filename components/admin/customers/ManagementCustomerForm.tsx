@@ -32,12 +32,20 @@ export function ManagementCustomerForm({
   const [phone, setPhone] = useState('');
   const [from, setFrom] = useState(customer?.managementValidFrom?.slice(0, 10) ?? '');
   const [until, setUntil] = useState(customer?.managementValidUntil?.slice(0, 10) ?? '');
+  const [courtPrice, setCourtPrice] = useState(String(customer?.managementCourtHourlyPrice ?? 0));
+  const [coachPrice, setCoachPrice] = useState(String(customer?.managementCoachHourlyPrice ?? 0));
+  const validPrices = [courtPrice, coachPrice].every(
+    (value) =>
+      /^\d+$/.test(value) && Number.isSafeInteger(Number(value)) && Number(value) <= 2147483647
+  );
   const validDates = !from || !until || from <= until;
   const save = useMutation({
     mutationFn: () =>
       customer
         ? updateManagementCustomerApi(customer.id, {
             isManagement: enabled,
+            managementCourtHourlyPrice: enabled ? Number(courtPrice) : 0,
+            managementCoachHourlyPrice: enabled ? Number(coachPrice) : 0,
             managementValidFrom: from || null,
             managementValidUntil: until || null
           })
@@ -50,7 +58,7 @@ export function ManagementCustomerForm({
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ['admin', 'customers'] });
       toast.success(
-        customer ? 'Kategori Management diperbarui.' : 'Pelanggan Management berhasil dibuat.'
+        customer ? 'Pengaturan Management diperbarui.' : 'Pelanggan Management berhasil dibuat.'
       );
       onSaved?.();
     }
@@ -61,7 +69,8 @@ export function ManagementCustomerForm({
       className="space-y-4"
       onSubmit={(event) => {
         event.preventDefault();
-        if (allowed && validDates && !save.isPending) save.mutate();
+        if (allowed && validDates && (!customer || !enabled || validPrices) && !save.isPending)
+          save.mutate();
       }}
     >
       {!customer && (
@@ -107,8 +116,8 @@ export function ManagementCustomerForm({
       )}
       <p className="text-muted-foreground text-xs leading-relaxed">
         Harga khusus untuk lapangan dan coaching satuan in-house yang dipesan melalui dashboard
-        admin/kasir. Tarif mengikuti cabang, olahraga, dan tanggal bermain. Booking website dan
-        paket prabayar mengikuti tarif reguler masing-masing.
+        admin/kasir. Tarif akun berlaku untuk semua lapangan selama masa berlaku Management. Booking
+        website, membership, dan paket prabayar mengikuti ketentuan masing-masing.
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-2">
@@ -133,6 +142,48 @@ export function ManagementCustomerForm({
           />
         </div>
       </div>
+      {customer && enabled && (
+        <fieldset className="space-y-3 rounded-lg border p-4" disabled={save.isPending}>
+          <legend className="px-1 text-sm font-medium">Tarif khusus akun Management</legend>
+          <p className="text-muted-foreground text-xs">
+            Berlaku untuk semua lapangan dan coach In-house. Rp0 mengikuti harga normal, bukan
+            gratis. Peserta tambahan tetap Rp100.000/orang/jam.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="management-court-price">Lapangan per jam (Rp)</Label>
+              <Input
+                id="management-court-price"
+                type="number"
+                min={0}
+                max={2147483647}
+                step={1}
+                required
+                value={courtPrice}
+                onChange={(event) => setCourtPrice(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="management-coach-price">Coach In-house per jam (Rp)</Label>
+              <Input
+                id="management-coach-price"
+                type="number"
+                min={0}
+                max={2147483647}
+                step={1}
+                required
+                value={coachPrice}
+                onChange={(event) => setCoachPrice(event.target.value)}
+              />
+            </div>
+          </div>
+          {!validPrices && (
+            <p role="alert" className="text-destructive text-xs">
+              Isi harga dengan angka bulat mulai dari Rp0.
+            </p>
+          )}
+        </fieldset>
+      )}
       {!validDates && (
         <p role="alert" className="text-destructive text-xs">
           Tanggal berakhir harus sama atau setelah tanggal mulai.
@@ -148,13 +199,14 @@ export function ManagementCustomerForm({
         disabled={
           save.isPending ||
           !validDates ||
+          (customer && enabled && !validPrices) ||
           (!customer && (name.trim().length < 3 || phone.trim().length < 10))
         }
       >
         {save.isPending
           ? 'Menyimpan…'
           : customer
-            ? 'Simpan kategori Management'
+            ? 'Simpan pengaturan Management'
             : 'Buat pelanggan Management'}
       </Button>
     </form>

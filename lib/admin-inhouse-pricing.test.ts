@@ -263,18 +263,33 @@ it('applies approved Management prices per hour only to direct dashboard selecti
       managementCoachHourlyPrice: 600000
     }
   ];
-  expect(adminInHousePricing([session], [choice], [], [], rules, { isManagement: true })).toEqual({
+  expect(
+    adminInHousePricing([session], [choice], [], [], rules, {
+      isManagement: true,
+      managementCourtHourlyPrice: 200000,
+      managementCoachHourlyPrice: 600000
+    })
+  ).toEqual({
     coverage: 100000,
     singleTotal: 600000,
     extras: 100000
   });
   expect(
-    adminInHouseCourtPrices([session], [choice], [], [], rules, { isManagement: true })
+    adminInHouseCourtPrices([session], [choice], [], [], rules, {
+      isManagement: true,
+      managementCourtHourlyPrice: 200000,
+      managementCoachHourlyPrice: 600000
+    })
   ).toEqual({ court: 200000 });
   for (const customer of [
     undefined,
     { isManagement: false },
-    { isManagement: true, managementValidUntil: '2030-01-01' }
+    {
+      isManagement: true,
+      managementCourtHourlyPrice: 200000,
+      managementCoachHourlyPrice: 600000,
+      managementValidUntil: '2030-01-01'
+    }
   ])
     expect(adminInHousePricing([session], [choice], [], [], rules, customer)).toEqual({
       coverage: 50000,
@@ -282,3 +297,35 @@ it('applies approved Management prices per hour only to direct dashboard selecti
       extras: 100000
     });
 });
+
+it.each([
+  [0, 0, 300000, 750000],
+  [200000, 0, 200000, 750000],
+  [0, 600000, 300000, 600000],
+  [200000, 600000, 200000, 600000]
+])(
+  'quotes account court=%s coach=%s independently with zero using normal prices',
+  (courtRate, coachRate, courtDue, coachDue) => {
+    const session = { ...datedCourts[0], slotId: 'court', timeSlot: '12:00 - 13:00' };
+    const choice: InHouseChoice = {
+      staffId: 'andi',
+      hourlyPrice: 750000,
+      courtSlotId: 'court',
+      coachSlotId: 'coach',
+      participants: 2
+    };
+    const account = {
+      isManagement: true,
+      managementCourtHourlyPrice: courtRate,
+      managementCoachHourlyPrice: coachRate
+    };
+    expect(adminInHousePricing([session], [choice], [], [], [], account)).toEqual({
+      coverage: 300000 - courtDue,
+      singleTotal: coachDue,
+      extras: 100000
+    });
+    expect(adminInHouseCourtPrices([session], [choice], [], [], [], account)).toEqual({
+      court: courtDue
+    });
+  }
+);

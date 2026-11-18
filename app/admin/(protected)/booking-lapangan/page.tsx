@@ -695,7 +695,6 @@ export default function BookingLapangan() {
   // Use membership discount calculation
   const managementPricing = managementCourtPricing(
     bookingItemsForDiscount,
-    tariffRules,
     managementCustomerQuery.data ?? selectedCustomer,
     [],
     internalBooking || membershipDiscount.canUseMembership

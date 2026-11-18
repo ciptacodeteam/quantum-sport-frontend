@@ -50,6 +50,8 @@ export const adminCustomerMembershipQueryOptions = (id: string, sport?: 'PADEL' 
 
 export type CustomerSearchResult = {
   isManagement?: boolean;
+  managementCourtHourlyPrice?: number;
+  managementCoachHourlyPrice?: number;
   managementValidFrom?: string | null;
   managementValidUntil?: string | null;
   id: string;

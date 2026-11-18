@@ -1,35 +1,34 @@
 import type { BookingItem } from '@/stores/useBookingStore';
-import { resolveTariffPeriod, type TariffRule } from './tariff-period';
 
 export type ManagementCustomer = {
   isManagement?: boolean;
+  managementCourtHourlyPrice?: number | null;
+  managementCoachHourlyPrice?: number | null;
   managementValidFrom?: string | Date | null;
   managementValidUntil?: string | Date | null;
 };
-export type ManagementTariff = {
-  managementCourtHourlyPrice?: number | null;
-  managementCoachHourlyPrice?: number | null;
-};
+
 const dateKey = (value: string | Date) =>
   value instanceof Date ? value.toISOString().slice(0, 10) : value.slice(0, 10);
 /** Dashboard quotes only; the server verifies customer eligibility again. */
 export function managementInHouseRate(
   customer: ManagementCustomer | null | undefined,
-  playingAt: string,
-  tariff: ManagementTariff
+  playingAt: string
 ) {
   if (!customer?.isManagement) return null;
   const day = dateKey(playingAt);
   if (customer.managementValidFrom && day < dateKey(customer.managementValidFrom)) return null;
   if (customer.managementValidUntil && day > dateKey(customer.managementValidUntil)) return null;
-  if (tariff.managementCourtHourlyPrice == null || tariff.managementCoachHourlyPrice == null)
-    return null;
-  return { court: tariff.managementCourtHourlyPrice, coach: tariff.managementCoachHourlyPrice };
+  const court =
+    (customer.managementCourtHourlyPrice ?? 0) > 0 ? customer.managementCourtHourlyPrice! : null;
+  const coach =
+    (customer.managementCoachHourlyPrice ?? 0) > 0 ? customer.managementCoachHourlyPrice! : null;
+  if (court === null && coach === null) return null;
+  return { court, coach };
 }
 /** Court-only/club bookings; in-house selections price their own court component. */
 export function managementCourtPricing(
   sessions: BookingItem[],
-  rules: TariffRule[],
   customer?: ManagementCustomer | null,
   excludedSlots: string[] = [],
   membershipCovered = false
@@ -39,12 +38,8 @@ export function managementCourtPricing(
   if (membershipCovered) return { courtPrices, coverage };
   for (const session of sessions) {
     if (excludedSlots.includes(session.slotId)) continue;
-    const rate = managementInHouseRate(
-      customer,
-      session.date,
-      resolveTariffPeriod(rules, session.date, session.sport)
-    );
-    if (!rate) continue;
+    const rate = managementInHouseRate(customer, session.date);
+    if (rate?.court == null) continue;
     const [start, end] = session.timeSlot.split(' - ');
     const minutes = (value: string) => Number(value.slice(0, 2)) * 60 + Number(value.slice(3, 5));
     const startMinutes = minutes(start);

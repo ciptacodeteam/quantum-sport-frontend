@@ -1,7 +1,6 @@
 import { expect, it } from 'vitest';
-import { managementCourtPricing } from './management-pricing';
+import { managementCourtPricing, managementInHouseRate } from './management-pricing';
 import type { BookingItem } from '@/stores/useBookingStore';
-import type { TariffRule } from './tariff-period';
 const session: BookingItem = {
   slotId: 'slot',
   courtId: 'court',
@@ -12,61 +11,45 @@ const session: BookingItem = {
   sport: 'PADEL',
   price: 300000
 };
-const rules: TariffRule[] = [
-  {
-    id: 'tariff',
-    branchId: 'cemara',
-    sport: 'PADEL',
-    effectiveFrom: '2026-11-01',
-    happyStart: 6,
-    happyEnd: 15,
-    peakStart: 15,
-    peakEnd: 24,
-    managementCourtHourlyPrice: 100000,
-    managementCoachHourlyPrice: 0
+const customer = {
+  isManagement: true,
+  managementCourtHourlyPrice: 100000,
+  managementCoachHourlyPrice: 0
+};
+it('uses the account court price for every court and sport without requiring a coach or global tariff', () => {
+  for (const sport of ['PADEL', 'TENNIS'] as const) {
+    expect(managementCourtPricing([{ ...session, sport }], customer)).toEqual({
+      courtPrices: { slot: 100000 },
+      coverage: 200000
+    });
   }
-];
-it('applies the management court rate without requiring a coach', () => {
-  expect(managementCourtPricing([session], rules, { isManagement: true })).toEqual({
-    courtPrices: { slot: 100000 },
-    coverage: 200000
-  });
 });
 it.each([
-  { isManagement: false },
-  { isManagement: true, managementValidUntil: '2026-11-15' },
-  { isManagement: true, managementValidFrom: '2026-11-17' }
-])('keeps normal pricing for an ineligible customer %j', (customer) => {
-  expect(managementCourtPricing([session], rules, customer)).toEqual({
-    courtPrices: {},
-    coverage: 0
-  });
+  { ...customer, isManagement: false },
+  { ...customer, managementValidUntil: '2026-11-15' },
+  { ...customer, managementValidFrom: '2026-11-17' },
+  { ...customer, managementCourtHourlyPrice: 0 }
+])('keeps normal court pricing for %j', (account) => {
+  expect(managementCourtPricing([session], account)).toEqual({ courtPrices: {}, coverage: 0 });
 });
 it('keeps membership and in-house selections under their existing pricing policy', () => {
-  expect(managementCourtPricing([session], rules, { isManagement: true }, ['slot']).coverage).toBe(
-    0
-  );
-  expect(managementCourtPricing([session], rules, { isManagement: true }, [], true).coverage).toBe(
-    0
-  );
+  expect(managementCourtPricing([session], customer, ['slot']).coverage).toBe(0);
+  expect(managementCourtPricing([session], customer, [], true).coverage).toBe(0);
 });
-it('respects sport and tariff effective date and supports zero tariffs and multi-hour slots', () => {
+it('uses slot duration and keeps account prices isolated', () => {
   expect(
-    managementCourtPricing([{ ...session, sport: 'TENNIS' }], rules, { isManagement: true })
-      .courtPrices
-  ).toEqual({});
-  expect(
-    managementCourtPricing([{ ...session, date: '2026-10-31' }], rules, { isManagement: true })
-      .courtPrices
-  ).toEqual({});
-  expect(
-    managementCourtPricing([session], [{ ...rules[0], managementCourtHourlyPrice: 0 }], {
-      isManagement: true
-    }).courtPrices.slot
-  ).toBe(0);
-  expect(
-    managementCourtPricing([{ ...session, timeSlot: '18:00 - 20:00', endTime: '20:00' }], rules, {
-      isManagement: true
-    }).courtPrices.slot
+    managementCourtPricing([{ ...session, timeSlot: '18:00 - 20:00', endTime: '20:00' }], customer)
+      .courtPrices.slot
   ).toBe(200000);
+  expect(
+    managementCourtPricing([session], { ...customer, managementCourtHourlyPrice: 50000 })
+      .courtPrices.slot
+  ).toBe(50000);
+  expect(managementInHouseRate(customer, session.date)).toEqual({ court: 100000, coach: null });
+  expect(
+    managementInHouseRate(
+      { ...customer, managementCourtHourlyPrice: 0, managementCoachHourlyPrice: 50000 },
+      session.date
+    )
+  ).toEqual({ court: null, coach: 50000 });
 });

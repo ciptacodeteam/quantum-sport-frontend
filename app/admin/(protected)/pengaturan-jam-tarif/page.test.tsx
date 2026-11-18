@@ -355,26 +355,10 @@ it('restores independent in-house amounts from scheduled history', () => {
   );
 });
 
-it('saves and disables both Management prices together without changing regular rates', () => {
+it('keeps account Management prices out of the tariff editor', () => {
   render(<TariffPeriodPage />);
-  fireEvent.click(screen.getByRole('checkbox', { name: 'Aktifkan tarif Management' }));
-  fireEvent.change(screen.getByLabelText('Lapangan Management per jam (Rp)'), {
-    target: { value: '200000' }
-  });
-  fireEvent.change(screen.getByLabelText('Coach Management per jam (Rp)'), {
-    target: { value: '600000' }
-  });
-  fireEvent.click(screen.getByRole('button', { name: 'Simpan Aturan Jam Tarif' }));
-  expect(mocks.save).toHaveBeenLastCalledWith(
-    expect.objectContaining({
-      managementCourtHourlyPrice: 200000,
-      managementCoachHourlyPrice: 600000,
-      inHouseCourtHourlyPrice: null
-    })
-  );
-  fireEvent.click(screen.getByRole('checkbox', { name: 'Aktifkan tarif Management' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Simpan Aturan Jam Tarif' }));
-  expect(mocks.save).toHaveBeenLastCalledWith(
-    expect.objectContaining({ managementCourtHourlyPrice: null, managementCoachHourlyPrice: null })
-  );
+  expect(
+    screen.queryByRole('checkbox', { name: 'Aktifkan tarif Management' })
+  ).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Lapangan Management per jam (Rp)')).not.toBeInTheDocument();
 });

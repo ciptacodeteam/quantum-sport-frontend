@@ -74,12 +74,44 @@ it.each(['CASHIER', 'ADMIN_VIEWER', 'COACH'])(
 it('lets an admin revoke Management without editing normal customer identity', async () => {
   mount({ id: 'customer', isManagement: true } as Customer);
   fireEvent.click(screen.getByRole('switch', { name: 'Pelanggan Management' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Simpan kategori Management' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Simpan pengaturan Management' }));
   await waitFor(() =>
     expect(mocks.update).toHaveBeenCalledWith('customer', {
       isManagement: false,
+      managementCourtHourlyPrice: 0,
+      managementCoachHourlyPrice: 0,
       managementValidFrom: null,
       managementValidUntil: null
     })
   );
+});
+
+it('loads and saves account prices, including zero as normal pricing', async () => {
+  mount({
+    id: 'customer',
+    isManagement: true,
+    managementCourtHourlyPrice: 100000,
+    managementCoachHourlyPrice: 50000
+  } as Customer);
+  expect(screen.getByLabelText('Lapangan per jam (Rp)')).toHaveValue(100000);
+  fireEvent.change(screen.getByLabelText('Coach In-house per jam (Rp)'), {
+    target: { value: '0' }
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Simpan pengaturan Management' }));
+  await waitFor(() =>
+    expect(mocks.update).toHaveBeenCalledWith(
+      'customer',
+      expect.objectContaining({
+        isManagement: true,
+        managementCourtHourlyPrice: 100000,
+        managementCoachHourlyPrice: 0
+      })
+    )
+  );
+});
+it('hides special prices until the account is classified as Management', () => {
+  mount({ id: 'customer', isManagement: false } as Customer);
+  expect(screen.queryByLabelText('Lapangan per jam (Rp)')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('switch', { name: 'Pelanggan Management' }));
+  expect(screen.getByLabelText('Lapangan per jam (Rp)')).toHaveValue(0);
 });

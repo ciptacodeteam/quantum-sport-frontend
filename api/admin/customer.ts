@@ -67,6 +67,8 @@ export async function searchCustomersApi(params: { q: string; limit?: string }) 
 
 export type ManagementCustomerInput = {
   isManagement: boolean;
+  managementCourtHourlyPrice?: number;
+  managementCoachHourlyPrice?: number;
   managementValidFrom: string | null;
   managementValidUntil: string | null;
 };
