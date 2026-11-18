@@ -13,7 +13,15 @@ vi.mock('@/hooks/useRoleAccess', () => ({ useHasRole: () => false }));
 vi.mock('@/components/ui/data-table', () => ({
   DataTable: ({ rightActions }: any) => <div>{rightActions}</div>
 }));
+const originalScrollIntoView = Object.getOwnPropertyDescriptor(
+  HTMLElement.prototype,
+  'scrollIntoView'
+);
 beforeEach(() => {
+  Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+    configurable: true,
+    value: vi.fn()
+  });
   vi.clearAllMocks();
   mocks.bookings.mockResolvedValue([]);
   mocks.clubs.mockResolvedValue([{ id: 'club-a', name: 'Club A' }]);
@@ -22,6 +30,9 @@ beforeEach(() => {
 });
 afterEach(() => {
   cleanup();
+  if (originalScrollIntoView)
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', originalScrollIntoView);
+  else Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView');
   vi.useRealTimers();
 });
 it.each(['COACH', 'BALLBOY'] as const)(
@@ -74,9 +85,11 @@ it('filters coach bookings by club together with the playing date and resets to 
       <CoachingBookings kind="COACH" />
     </QueryClientProvider>
   );
+  await waitFor(() => expect(screen.getByRole('combobox', { name: 'Club' })).not.toBeDisabled());
+  fireEvent.keyDown(screen.getByRole('combobox', { name: 'Club' }), { key: 'ArrowDown' });
   await screen.findByRole('option', { name: 'Club A' });
   expect(mocks.clubs).toHaveBeenCalledWith('cemara');
-  fireEvent.change(screen.getByRole('combobox', { name: 'Club' }), { target: { value: 'club-a' } });
+  fireEvent.click(screen.getByRole('option', { name: 'Club A' }));
   await waitFor(() =>
     expect(mocks.bookings.mock.lastCall).toEqual(['COACH', { coachingGroupId: 'club-a' }])
   );
@@ -92,7 +105,8 @@ it('filters coach bookings by club together with the playing date and resets to 
       }
     ])
   );
-  fireEvent.change(screen.getByRole('combobox', { name: 'Club' }), { target: { value: '' } });
+  fireEvent.keyDown(screen.getByRole('combobox', { name: 'Club' }), { key: 'ArrowDown' });
+  fireEvent.click(await screen.findByRole('option', { name: 'Semua club' }));
   await waitFor(() =>
     expect(mocks.bookings.mock.lastCall).toEqual([
       'COACH',

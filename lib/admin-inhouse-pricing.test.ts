@@ -288,7 +288,7 @@ it('applies approved Management prices per hour only to direct dashboard selecti
       isManagement: true,
       managementCourtHourlyPrice: 200000,
       managementCoachHourlyPrice: 600000,
-      managementValidUntil: '2030-01-01'
+      managementValidFrom: '2099-01-01'
     }
   ])
     expect(adminInHousePricing([session], [choice], [], [], rules, customer)).toEqual({

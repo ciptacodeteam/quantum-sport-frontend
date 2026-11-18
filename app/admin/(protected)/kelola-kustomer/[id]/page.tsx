@@ -135,7 +135,7 @@ export default function EditCustomerPage({ params }: { params: Promise<IdParams>
                     {canManage && (
                       <CustomerSettingsCard
                         title="Pengaturan Management"
-                        description="Label, masa berlaku, dan tarif lapangan serta coach In-house untuk akun ini."
+                        description="Label Management, tarif coaching In-house, dan tarif lapangan Tennis/Padel untuk akun ini."
                       >
                         <ManagementCustomerForm
                           key={`${id}-${customer.updatedAt}`}

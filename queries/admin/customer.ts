@@ -52,6 +52,10 @@ export type CustomerSearchResult = {
   isManagement?: boolean;
   managementCourtHourlyPrice?: number;
   managementCoachHourlyPrice?: number;
+  managementPadelHappyHourlyPrice?: number;
+  managementPadelPeakHourlyPrice?: number;
+  managementTennisHappyHourlyPrice?: number;
+  managementTennisPeakHourlyPrice?: number;
   managementValidFrom?: string | null;
   managementValidUntil?: string | null;
   id: string;

@@ -31,14 +31,18 @@ export function ManagementCustomerForm({
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [from, setFrom] = useState(customer?.managementValidFrom?.slice(0, 10) ?? '');
-  const [until, setUntil] = useState(customer?.managementValidUntil?.slice(0, 10) ?? '');
   const [courtPrice, setCourtPrice] = useState(String(customer?.managementCourtHourlyPrice ?? 0));
   const [coachPrice, setCoachPrice] = useState(String(customer?.managementCoachHourlyPrice ?? 0));
-  const validPrices = [courtPrice, coachPrice].every(
+  const [courtRates, setCourtRates] = useState({
+    managementPadelHappyHourlyPrice: String(customer?.managementPadelHappyHourlyPrice ?? 0),
+    managementPadelPeakHourlyPrice: String(customer?.managementPadelPeakHourlyPrice ?? 0),
+    managementTennisHappyHourlyPrice: String(customer?.managementTennisHappyHourlyPrice ?? 0),
+    managementTennisPeakHourlyPrice: String(customer?.managementTennisPeakHourlyPrice ?? 0)
+  });
+  const validPrices = [courtPrice, coachPrice, ...Object.values(courtRates)].every(
     (value) =>
       /^\d+$/.test(value) && Number.isSafeInteger(Number(value)) && Number(value) <= 2147483647
   );
-  const validDates = !from || !until || from <= until;
   const save = useMutation({
     mutationFn: () =>
       customer
@@ -46,14 +50,17 @@ export function ManagementCustomerForm({
             isManagement: enabled,
             managementCourtHourlyPrice: enabled ? Number(courtPrice) : 0,
             managementCoachHourlyPrice: enabled ? Number(coachPrice) : 0,
+            ...Object.fromEntries(
+              Object.entries(courtRates).map(([key, value]) => [key, enabled ? Number(value) : 0])
+            ),
             managementValidFrom: from || null,
-            managementValidUntil: until || null
+            managementValidUntil: null
           })
         : createManagementCustomerApi({
             name: name.trim(),
             phone: phone.trim(),
             managementValidFrom: from || null,
-            managementValidUntil: until || null
+            managementValidUntil: null
           }),
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ['admin', 'customers'] });
@@ -69,8 +76,7 @@ export function ManagementCustomerForm({
       className="space-y-4"
       onSubmit={(event) => {
         event.preventDefault();
-        if (allowed && validDates && (!customer || !enabled || validPrices) && !save.isPending)
-          save.mutate();
+        if (allowed && (!customer || !enabled || validPrices) && !save.isPending) save.mutate();
       }}
     >
       {!customer && (
@@ -116,10 +122,10 @@ export function ManagementCustomerForm({
       )}
       <p className="text-muted-foreground text-xs leading-relaxed">
         Harga khusus untuk lapangan dan coaching satuan in-house yang dipesan melalui dashboard
-        admin/kasir. Tarif akun berlaku untuk semua lapangan selama masa berlaku Management. Booking
-        website, membership, dan paket prabayar mengikuti ketentuan masing-masing.
+        admin/kasir. Tarif coaching dan booking lapangan biasa diatur terpisah untuk akun ini.
+        Booking website, membership, dan paket prabayar mengikuti ketentuan masing-masing.
       </p>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="max-w-sm">
         <div className="space-y-2">
           <Label htmlFor="management-from">Berlaku mulai (opsional)</Label>
           <Input
@@ -130,28 +136,17 @@ export function ManagementCustomerForm({
             disabled={save.isPending || !enabled}
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="management-until">Berlaku sampai (opsional)</Label>
-          <Input
-            id="management-until"
-            type="date"
-            min={from || undefined}
-            value={until}
-            onChange={(event) => setUntil(event.target.value)}
-            disabled={save.isPending || !enabled}
-          />
-        </div>
       </div>
       {customer && enabled && (
         <fieldset className="space-y-3 rounded-lg border p-4" disabled={save.isPending}>
-          <legend className="px-1 text-sm font-medium">Tarif khusus akun Management</legend>
+          <legend className="px-1 text-sm font-medium">Coaching In-house</legend>
           <p className="text-muted-foreground text-xs">
-            Berlaku untuk semua lapangan dan coach In-house. Rp0 mengikuti harga normal, bukan
-            gratis. Peserta tambahan tetap Rp100.000/orang/jam.
+            Harga lapangan saat coaching dan harga coach berlaku untuk semua lapangan. Rp0 mengikuti
+            harga normal. Peserta tambahan tetap Rp100.000/orang/jam.
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="management-court-price">Lapangan per jam (Rp)</Label>
+              <Label htmlFor="management-court-price">Lapangan coaching per jam (Rp)</Label>
               <Input
                 id="management-court-price"
                 type="number"
@@ -184,10 +179,47 @@ export function ManagementCustomerForm({
           )}
         </fieldset>
       )}
-      {!validDates && (
-        <p role="alert" className="text-destructive text-xs">
-          Tanggal berakhir harus sama atau setelah tanggal mulai.
-        </p>
+      {customer && enabled && (
+        <fieldset className="space-y-4 rounded-lg border p-4" disabled={save.isPending}>
+          <legend className="px-1 text-sm font-medium">
+            Booking lapangan biasa (tanpa coaching In-house)
+          </legend>
+          <p className="text-muted-foreground text-xs">
+            Berlaku untuk semua lapangan sesuai olahraga. Jam Happy Hour dan Peak Hour mengikuti
+            pengaturan cabang dan tanggal bermain. Rp0 mengikuti harga normal.
+          </p>
+          {(['PADEL', 'TENNIS'] as const).map((sport) => (
+            <div key={sport} className="space-y-3">
+              <p className="text-sm font-medium">{sport === 'PADEL' ? 'Padel' : 'Tennis'}</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {(['Happy', 'Peak'] as const).map((band) => {
+                  const key =
+                    `management${sport === 'PADEL' ? 'Padel' : 'Tennis'}${band}HourlyPrice` as keyof typeof courtRates;
+                  const id = `management-${sport.toLowerCase()}-${band.toLowerCase()}`;
+                  return (
+                    <div key={key} className="space-y-2">
+                      <Label htmlFor={id}>
+                        {sport === 'PADEL' ? 'Padel' : 'Tennis'} · {band} Hour per jam (Rp)
+                      </Label>
+                      <Input
+                        id={id}
+                        type="number"
+                        min={0}
+                        max={2147483647}
+                        step={1}
+                        required
+                        value={courtRates[key]}
+                        onChange={(event) =>
+                          setCourtRates((current) => ({ ...current, [key]: event.target.value }))
+                        }
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </fieldset>
       )}
       {save.isError && (
         <p role="alert" className="text-destructive text-sm">
@@ -198,7 +230,6 @@ export function ManagementCustomerForm({
         type="submit"
         disabled={
           save.isPending ||
-          !validDates ||
           (customer && enabled && !validPrices) ||
           (!customer && (name.trim().length < 3 || phone.trim().length < 10))
         }

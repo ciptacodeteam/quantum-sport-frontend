@@ -20,6 +20,13 @@ import { getTwoWordName } from '@/lib/utils';
 import { DataTable } from '@/components/ui/data-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 
 export default function CoachingBookings({ kind }: { kind: 'COACH' | 'BALLBOY' }) {
   const [detailId, setDetailId] = useState<string | null>(null);
@@ -198,20 +205,28 @@ export default function CoachingBookings({ kind }: { kind: 'COACH' | 'BALLBOY' }
                   <label htmlFor="coaching-bookings-club" className="text-sm">
                     Club
                   </label>
-                  <select
-                    id="coaching-bookings-club"
-                    className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-                    value={clubId}
-                    onChange={(event) => setClubFilter({ branchId, value: event.target.value })}
+                  <Select
+                    value={clubId || 'all'}
+                    onValueChange={(value) =>
+                      setClubFilter({ branchId, value: value === 'all' ? '' : value })
+                    }
                     disabled={clubs.isPending || clubs.isError}
                   >
-                    <option value="">Semua club</option>
-                    {clubs.data?.map((club) => (
-                      <option key={club.id} value={club.id}>
-                        {club.name}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger
+                      id="coaching-bookings-club"
+                      className="bg-background min-w-44 gap-4"
+                    >
+                      <SelectValue placeholder="Semua club" />
+                    </SelectTrigger>
+                    <SelectContent align="start">
+                      <SelectItem value="all">Semua club</SelectItem>
+                      {clubs.data?.map((club) => (
+                        <SelectItem key={club.id} value={club.id}>
+                          {club.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   {clubs.isError && (
                     <Button variant="outline" onClick={() => void clubs.refetch()}>
                       Muat ulang club

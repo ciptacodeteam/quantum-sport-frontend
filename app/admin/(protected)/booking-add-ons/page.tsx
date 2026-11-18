@@ -238,7 +238,8 @@ export default function BookingAddOns() {
     bookingItems,
     managementCustomer,
     inHouseSelections.map((choice) => choice.courtSlotId),
-    membershipDiscount.canUseMembership
+    membershipDiscount.canUseMembership,
+    tariffRules
   );
   const managementPricingReady =
     !bookingItems.length ||

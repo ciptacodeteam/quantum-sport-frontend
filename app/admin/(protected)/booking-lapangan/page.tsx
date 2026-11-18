@@ -697,7 +697,8 @@ export default function BookingLapangan() {
     bookingItemsForDiscount,
     managementCustomerQuery.data ?? selectedCustomer,
     [],
-    internalBooking || membershipDiscount.canUseMembership
+    internalBooking || membershipDiscount.canUseMembership,
+    tariffRules
   );
   const totalPrice = membershipDiscount.discountedTotal - managementPricing.coverage;
 

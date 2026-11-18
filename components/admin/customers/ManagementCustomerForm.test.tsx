@@ -38,7 +38,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 it.each(['ADMIN', 'SUPER_ADMIN'])(
-  'allows %s to create a Management customer with explicit dates',
+  'allows %s to create a Management customer with an optional start date',
   async (role) => {
     mocks.role = role;
     mount();
@@ -49,16 +49,16 @@ it.each(['ADMIN', 'SUPER_ADMIN'])(
     fireEvent.change(screen.getByLabelText('Nomor WhatsApp'), {
       target: { value: '081234567890' }
     });
-    fireEvent.change(screen.getByLabelText('Berlaku sampai (opsional)'), {
-      target: { value: '2026-12-31' }
+    fireEvent.change(screen.getByLabelText('Berlaku mulai (opsional)'), {
+      target: { value: '2026-11-01' }
     });
     fireEvent.click(screen.getByRole('button', { name: 'Buat pelanggan Management' }));
     await waitFor(() =>
       expect(mocks.create).toHaveBeenCalledWith({
         name: 'Management Customer',
         phone: '081234567890',
-        managementValidFrom: null,
-        managementValidUntil: '2026-12-31'
+        managementValidFrom: '2026-11-01',
+        managementValidUntil: null
       })
     );
   }
@@ -80,6 +80,10 @@ it('lets an admin revoke Management without editing normal customer identity', a
       isManagement: false,
       managementCourtHourlyPrice: 0,
       managementCoachHourlyPrice: 0,
+      managementPadelHappyHourlyPrice: 0,
+      managementPadelPeakHourlyPrice: 0,
+      managementTennisHappyHourlyPrice: 0,
+      managementTennisPeakHourlyPrice: 0,
       managementValidFrom: null,
       managementValidUntil: null
     })
@@ -93,7 +97,7 @@ it('loads and saves account prices, including zero as normal pricing', async () 
     managementCourtHourlyPrice: 100000,
     managementCoachHourlyPrice: 50000
   } as Customer);
-  expect(screen.getByLabelText('Lapangan per jam (Rp)')).toHaveValue(100000);
+  expect(screen.getByLabelText('Lapangan coaching per jam (Rp)')).toHaveValue(100000);
   fireEvent.change(screen.getByLabelText('Coach In-house per jam (Rp)'), {
     target: { value: '0' }
   });
@@ -111,7 +115,45 @@ it('loads and saves account prices, including zero as normal pricing', async () 
 });
 it('hides special prices until the account is classified as Management', () => {
   mount({ id: 'customer', isManagement: false } as Customer);
-  expect(screen.queryByLabelText('Lapangan per jam (Rp)')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Lapangan coaching per jam (Rp)')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('switch', { name: 'Pelanggan Management' }));
-  expect(screen.getByLabelText('Lapangan per jam (Rp)')).toHaveValue(0);
+  expect(screen.getByLabelText('Lapangan coaching per jam (Rp)')).toHaveValue(0);
+});
+
+it('saves separate coaching and Tennis/Padel Happy/Peak prices without an end date', async () => {
+  mount({
+    id: 'customer',
+    isManagement: true,
+    managementCourtHourlyPrice: 200000,
+    managementCoachHourlyPrice: 600000,
+    managementValidUntil: '2020-01-01'
+  } as Customer);
+  expect(screen.queryByLabelText('Berlaku sampai (opsional)')).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Padel · Happy Hour per jam (Rp)'), {
+    target: { value: '100000' }
+  });
+  fireEvent.change(screen.getByLabelText('Padel · Peak Hour per jam (Rp)'), {
+    target: { value: '150000' }
+  });
+  fireEvent.change(screen.getByLabelText('Tennis · Happy Hour per jam (Rp)'), {
+    target: { value: '80000' }
+  });
+  fireEvent.change(screen.getByLabelText('Tennis · Peak Hour per jam (Rp)'), {
+    target: { value: '120000' }
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Simpan pengaturan Management' }));
+  await waitFor(() =>
+    expect(mocks.update).toHaveBeenCalledWith(
+      'customer',
+      expect.objectContaining({
+        managementCourtHourlyPrice: 200000,
+        managementCoachHourlyPrice: 600000,
+        managementPadelHappyHourlyPrice: 100000,
+        managementPadelPeakHourlyPrice: 150000,
+        managementTennisHappyHourlyPrice: 80000,
+        managementTennisPeakHourlyPrice: 120000,
+        managementValidUntil: null
+      })
+    )
+  );
 });
